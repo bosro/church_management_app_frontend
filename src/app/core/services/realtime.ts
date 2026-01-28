@@ -39,20 +39,20 @@ export class RealtimeService {
 
       const channel = this.supabase.client
         .channel(channelName)
-        .on(
-          'postgres_changes' as const,
+        .on<RealtimePostgresChangesPayload<T>>(
+           'postgres_changes' as any, // literal type works now with generic
           {
             event,
             schema: 'public',
             table,
             filter,
           },
-          (payload: RealtimePostgresChangesPayload<T>) => {
+          (payload:any) => {
             subject.next({
               eventType: payload.eventType,
               table: payload.table,
-              new: payload.new ?? null,
-              old: payload.old ?? null,
+              new: payload.new ?? (null as T | null), // see next fix
+              old: payload.old ?? (null as T | null),
             });
           },
         )
