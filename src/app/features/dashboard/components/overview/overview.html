@@ -1,0 +1,134 @@
+<!-- src/app/features/dashboard/components/overview/overview.component.html -->
+<div class="dashboard-layout">
+  <!-- Sidebar -->
+  <app-sidebar></app-sidebar>
+
+  <!-- Main Content -->
+  <div class="dashboard-content">
+    <!-- Header -->
+    <app-header></app-header>
+
+    <!-- Dashboard Body -->
+    <div class="dashboard-body">
+      <!-- Loading State -->
+      <div *ngIf="loading" class="loading-container">
+        <app-loading-spinner size="large" message="Loading dashboard..."></app-loading-spinner>
+      </div>
+
+      <!-- Dashboard Content -->
+      <div *ngIf="!loading" class="dashboard-grid">
+        <!-- Left Section -->
+        <div class="dashboard-main">
+          <!-- Stats Cards -->
+          <div class="stats-grid">
+            <app-stats-card
+              title="Total Members"
+              [value]="dashboardStats?.active_members || 0"
+              icon="ri-group-line"
+              iconBg="#DDD6FE"
+              iconColor="#7C3AED"
+              [trend]="8.5"
+              trendText="Up from last month"
+              trendUp="true"
+            ></app-stats-card>
+
+            <app-stats-card
+              title="Attendance this week"
+              [value]="dashboardStats?.attendance_this_month || 0"
+              icon="ri-calendar-check-line"
+              iconBg="#D1FAE5"
+              iconColor="#10B981"
+              [trend]="4.3"
+              trendText="Down from last month"
+              trendUp="false"
+            ></app-stats-card>
+
+            <app-stats-card
+              title="New Members"
+              [value]="dashboardStats?.new_members_this_month || 0"
+              icon="ri-user-add-line"
+              iconBg="#DDD6FE"
+              iconColor="#7C3AED"
+              [trend]="4.3"
+              trendText="Down from last month"
+              trendUp="false"
+            ></app-stats-card>
+          </div>
+
+          <!-- Revenue Chart -->
+          <app-revenue-chart
+            [chartData]="revenueData"
+          ></app-revenue-chart>
+
+          <!-- Upcoming Birthdays -->
+          <app-birthday-list
+            [birthdays]="upcomingBirthdays"
+            (viewAll)="viewAllBirthdays()"
+            (viewMember)="viewMember($event)"
+          ></app-birthday-list>
+        </div>
+
+        <!-- Right Sidebar -->
+        <div class="dashboard-sidebar">
+          <!-- Quick Actions -->
+          <div class="quick-actions-card">
+            <h3>Quick Actions</h3>
+            <div class="action-grid">
+              <button class="action-btn action-purple" (click)="navigateToAddMembers()">
+                <i class="ri-user-add-line"></i>
+                <span>Add Members</span>
+              </button>
+
+              <button class="action-btn action-pink" (click)="navigateToCheckIn()">
+                <i class="ri-file-list-3-line"></i>
+                <span>Check In</span>
+              </button>
+
+              <button class="action-btn action-black" (click)="navigateToCreateEvent()">
+                <i class="ri-calendar-event-line"></i>
+                <span>Create Event</span>
+              </button>
+
+              <button class="action-btn action-teal" (click)="navigateToRecordGiving()">
+                <i class="ri-money-dollar-circle-line"></i>
+                <span>Record Giving</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Pastors -->
+          <div class="team-card">
+            <h3>Pastors</h3>
+            <div class="team-list">
+              <div *ngFor="let pastor of pastors" class="team-member">
+                <div class="member-avatar">
+                  <img *ngIf="pastor.avatar" [src]="pastor.avatar" [alt]="pastor.name" />
+                  <div *ngIf="!pastor.avatar" class="avatar-placeholder">
+                    {{ pastor.name.charAt(0) }}
+                  </div>
+                </div>
+                <span class="member-name">{{ pastor.name }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Shepherds -->
+          <div class="team-card">
+            <h3>Shepherds</h3>
+            <div class="team-list">
+              <div *ngFor="let shepherd of shepherds" class="team-member">
+                <div class="member-avatar">
+                  <img *ngIf="shepherd.avatar" [src]="shepherd.avatar" [alt]="shepherd.name" />
+                  <div *ngIf="!shepherd.avatar" class="avatar-placeholder">
+                    {{ shepherd.name.charAt(0) }}
+                  </div>
+                </div>
+                <span class="member-name">{{ shepherd.name }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

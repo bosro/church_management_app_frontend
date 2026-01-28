@@ -1,0 +1,210 @@
+<!-- src/app/features/finance/components/create-pledge/create-pledge.component.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+
+  <div class="dashboard-content">
+    <app-header></app-header>
+
+    <div class="dashboard-body">
+      <div class="create-pledge-container">
+        <!-- Page Header -->
+        <div class="page-header">
+          <div class="header-left">
+            <button class="back-btn" (click)="cancel()">
+              <i class="ri-arrow-left-line"></i>
+            </button>
+            <div>
+              <h1>Create Pledge</h1>
+              <p class="subtitle">Record a new member pledge</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Success Message -->
+        <div *ngIf="successMessage" class="success-alert">
+          <i class="ri-checkbox-circle-line"></i>
+          <span>{{ successMessage }}</span>
+        </div>
+
+        <!-- Error Message -->
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i>
+          <span>{{ errorMessage }}</span>
+        </div>
+
+        <!-- Form -->
+        <div class="form-card">
+          <form [formGroup]="pledgeForm" (ngSubmit)="onSubmit()">
+            <!-- Member Selection -->
+            <div class="form-section">
+              <h3>Select Member *</h3>
+              <p class="section-hint">Search and select the member making this pledge</p>
+
+              <div *ngIf="!selectedMember" class="member-search">
+                <div class="search-input-wrapper">
+                  <i class="ri-search-line search-icon"></i>
+                  <input
+                    type="text"
+                    [formControl]="searchControl"
+                    placeholder="Search member by name, email, or phone..."
+                    class="search-input"
+                  />
+                  <i *ngIf="searching" class="ri-loader-4-line spin"></i>
+                </div>
+
+                <!-- Search Results -->
+                <div class="search-results" *ngIf="searchResults.length > 0">
+                  <div
+                    *ngFor="let member of searchResults"
+                    class="search-result-item"
+                    (click)="selectMember(member)"
+                  >
+                    <div class="member-avatar-small">
+                      <img *ngIf="member.photo_url" [src]="member.photo_url" [alt]="getMemberFullName(member)" />
+                      <div *ngIf="!member.photo_url" class="avatar-placeholder-small">
+                        {{ getMemberInitials(member) }}
+                      </div>
+                    </div>
+                    <div class="member-info-small">
+                      <p class="member-name-small">{{ getMemberFullName(member) }}</p>
+                      <p class="member-meta-small">{{ member.member_number }}</p>
+                    </div>
+                    <i class="ri-arrow-right-circle-line"></i>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Selected Member -->
+              <div *ngIf="selectedMember" class="selected-member">
+                <div class="member-avatar-medium">
+                  <img *ngIf="selectedMember.photo_url" [src]="selectedMember.photo_url" [alt]="getMemberFullName(selectedMember)" />
+                  <div *ngIf="!selectedMember.photo_url" class="avatar-placeholder-medium">
+                    {{ getMemberInitials(selectedMember) }}
+                  </div>
+                </div>
+                <div class="member-info-medium">
+                  <p class="member-name-medium">{{ getMemberFullName(selectedMember) }}</p>
+                  <p class="member-number">{{ selectedMember.member_number }}</p>
+                </div>
+                <button type="button" class="btn-remove-member" (click)="removeMember()">
+                  <i class="ri-close-line"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Pledge Details -->
+            <div class="form-section">
+              <h3>Pledge Details</h3>
+
+              <div class="form-grid">
+                <!-- Pledge Amount -->
+                <div class="form-group">
+                  <label for="pledge_amount">Pledge Amount *</label>
+                  <input
+                    id="pledge_amount"
+                    type="number"
+                    formControlName="pledge_amount"
+                    placeholder="0.00"
+                    step="0.01"
+                    min="0"
+                    [class.error]="pledgeForm.get('pledge_amount')?.invalid && pledgeForm.get('pledge_amount')?.touched"
+                  />
+                  <span
+                    *ngIf="pledgeForm.get('pledge_amount')?.invalid && pledgeForm.get('pledge_amount')?.touched"
+                    class="error-message"
+                  >
+                    {{ getErrorMessage('pledge_amount') }}
+                  </span>
+                </div>
+
+                <!-- Currency -->
+                <div class="form-group">
+                  <label for="currency">Currency *</label>
+                  <select
+                    id="currency"
+                    formControlName="currency"
+                    [class.error]="pledgeForm.get('currency')?.invalid && pledgeForm.get('currency')?.touched"
+                  >
+                    <option *ngFor="let curr of currencies" [value]="curr">{{ curr }}</option>
+                  </select>
+                </div>
+
+                <!-- Category -->
+                <div class="form-group">
+                  <label for="category_id">Category (Optional)</label>
+                  <select id="category_id" formControlName="category_id">
+                    <option value="">General</option>
+                    <option *ngFor="let category of categories" [value]="category.id">
+                      {{ category.name }}
+                    </option>
+                  </select>
+                </div>
+
+                <!-- Pledge Date -->
+                <div class="form-group">
+                  <label for="pledge_date">Pledge Date *</label>
+                  <input
+                    id="pledge_date"
+                    type="date"
+                    formControlName="pledge_date"
+                    [class.error]="pledgeForm.get('pledge_date')?.invalid && pledgeForm.get('pledge_date')?.touched"
+                  />
+                  <span
+                    *ngIf="pledgeForm.get('pledge_date')?.invalid && pledgeForm.get('pledge_date')?.touched"
+                    class="error-message"
+                  >
+                    {{ getErrorMessage('pledge_date') }}
+                  </span>
+                </div>
+
+                <!-- Due Date -->
+                <div class="form-group">
+                  <label for="due_date">Due Date (Optional)</label>
+                  <input
+                    id="due_date"
+                    type="date"
+                    formControlName="due_date"
+                  />
+                </div>
+
+                <!-- Notes -->
+                <div class="form-group full-width">
+                  <label for="notes">Notes</label>
+                  <textarea
+                    id="notes"
+                    formControlName="notes"
+                    placeholder="Add any additional notes..."
+                    rows="3"
+                  ></textarea>
+                </div>
+              </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="form-actions">
+              <button
+                type="button"
+                class="btn-secondary"
+                (click)="cancel()"
+                [disabled]="loading"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                class="btn-primary"
+                [disabled]="loading"
+              >
+                <span *ngIf="!loading">Create Pledge</span>
+                <span *ngIf="loading">
+                  <i class="ri-loader-4-line spin"></i>
+                  Creating...
+                </span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

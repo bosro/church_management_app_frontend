@@ -1,0 +1,312 @@
+<!-- src/app/features/members/components/member-list/member-list.component.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+
+  <div class="dashboard-content">
+    <app-header></app-header>
+
+    <div class="dashboard-body">
+      <div class="members-container">
+        <!-- Page Header -->
+        <div class="page-header">
+          <div class="header-left">
+            <h1>Members</h1>
+            <p class="subtitle">Manage your church members</p>
+          </div>
+          <div class="header-actions">
+            <button class="btn-secondary" (click)="importMembers()">
+              <i class="ri-upload-line"></i>
+              <span>Import</span>
+            </button>
+            <button class="btn-secondary" (click)="exportMembers()">
+              <i class="ri-download-line"></i>
+              <span>Export</span>
+            </button>
+            <button class="btn-primary" (click)="addMember()">
+              <i class="ri-user-add-line"></i>
+              <span>Add Member</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="stats-grid" *ngIf="statistics">
+          <div class="stat-card">
+            <div class="stat-icon" style="background: #DDD6FE; color: #7C3AED;">
+              <i class="ri-group-line"></i>
+            </div>
+            <div class="stat-info">
+              <p class="stat-label">Total Members</p>
+              <h3 class="stat-value">{{ statistics.total_members || 0 }}</h3>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon" style="background: #D1FAE5; color: #10B981;">
+              <i class="ri-user-add-line"></i>
+            </div>
+            <div class="stat-info">
+              <p class="stat-label">Active Members</p>
+              <h3 class="stat-value">{{ statistics.active_members || 0 }}</h3>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon" style="background: #DBEAFE; color: #3B82F6;">
+              <i class="ri-user-star-line"></i>
+            </div>
+            <div class="stat-info">
+              <p class="stat-label">New This Month</p>
+              <h3 class="stat-value">{{ statistics.new_members_this_month || 0 }}</h3>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon" style="background: #FEF3C7; color: #F59E0B;">
+              <i class="ri-user-heart-line"></i>
+            </div>
+            <div class="stat-info">
+              <p class="stat-label">New This Year</p>
+              <h3 class="stat-value">{{ statistics.new_members_this_year || 0 }}</h3>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filters & Search -->
+        <div class="filters-card">
+          <form [formGroup]="filterForm" class="filters-form">
+            <!-- Search -->
+            <div class="filter-group search-group">
+              <i class="ri-search-line search-icon"></i>
+              <input
+                type="text"
+                formControlName="search"
+                placeholder="Search members by name, email, or phone..."
+                class="search-input"
+              />
+            </div>
+
+            <!-- Gender Filter -->
+            <div class="filter-group">
+              <select formControlName="gender" class="filter-select">
+                <option value="">All Genders</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+
+            <!-- Status Filter -->
+            <div class="filter-group">
+              <select formControlName="status" class="filter-select">
+                <option value="">All Status</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+                <option value="transferred">Transferred</option>
+                <option value="deceased">Deceased</option>
+              </select>
+            </div>
+
+            <!-- Clear Filters -->
+            <button type="button" class="btn-clear" (click)="clearFilters()">
+              <i class="ri-close-line"></i>
+              Clear
+            </button>
+
+            <!-- View Toggle -->
+            <button type="button" class="btn-icon" (click)="toggleViewMode()" title="Toggle view">
+              <i [class]="viewMode === 'list' ? 'ri-grid-line' : 'ri-list-check'"></i>
+            </button>
+          </form>
+        </div>
+
+        <!-- Loading State -->
+        <div *ngIf="loading" class="loading-container">
+          <app-loading-spinner message="Loading members..."></app-loading-spinner>
+        </div>
+
+        <!-- Members List View -->
+        <div *ngIf="!loading && viewMode === 'list'" class="members-table-card">
+          <div class="table-wrapper">
+            <table class="members-table">
+              <thead>
+                <tr>
+                  <th>Member</th>
+                  <th>Member Number</th>
+                  <th>Contact</th>
+                  <th>Gender</th>
+                  <th>Age</th>
+                  <th>Join Date</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  *ngFor="let member of members"
+                  class="member-row"
+                  (click)="viewMember(member.id)"
+                >
+                  <td>
+                    <div class="member-cell">
+                      <div class="member-avatar">
+                        <img *ngIf="member.photo_url" [src]="member.photo_url" [alt]="getMemberFullName(member)" />
+                        <div *ngIf="!member.photo_url" class="avatar-placeholder">
+                          {{ getMemberInitials(member) }}
+                        </div>
+                      </div>
+                      <div class="member-info">
+                        <p class="member-name">{{ getMemberFullName(member) }}</p>
+                        <p class="member-meta" *ngIf="member.occupation">{{ member.occupation }}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="member-number">{{ member.member_number }}</span>
+                  </td>
+                  <td>
+                    <div class="contact-info">
+                      <p *ngIf="member.email">
+                        <i class="ri-mail-line"></i>
+                        {{ member.email }}
+                      </p>
+                      <p *ngIf="member.phone_primary">
+                        <i class="ri-phone-line"></i>
+                        {{ member.phone_primary }}
+                      </p>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="capitalize">{{ member.gender || '-' }}</span>
+                  </td>
+                  <td>
+                    <span *ngIf="calculateAge(member.date_of_birth) !== null">
+                      {{ calculateAge(member.date_of_birth) }} years
+                    </span>
+                    <span *ngIf="calculateAge(member.date_of_birth) === null">-</span>
+                  </td>
+                  <td>{{ member.join_date | date:'MMM d, y' }}</td>
+                  <td>
+                    <span class="status-badge" [ngClass]="getStatusClass(member.membership_status)">
+                      {{ member.membership_status }}
+                    </span>
+                  </td>
+                  <td>
+                    <div class="action-buttons">
+                      <button class="btn-icon-small" (click)="editMember(member.id, $event)" title="Edit">
+                        <i class="ri-edit-line"></i>
+                      </button>
+                      <button class="btn-icon-small btn-danger" (click)="deleteMember(member.id, $event)" title="Delete">
+                        <i class="ri-delete-bin-line"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+
+                <!-- Empty State -->
+                <tr *ngIf="members.length === 0">
+                  <td colspan="8" class="empty-state">
+                    <i class="ri-user-line"></i>
+                    <p>No members found</p>
+                    <button class="btn-primary-small" (click)="addMember()">
+                      Add Your First Member
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination -->
+          <div class="pagination" *ngIf="totalPages > 1">
+            <button
+              class="pagination-btn"
+              [disabled]="currentPage === 1"
+              (click)="previousPage()"
+            >
+              <i class="ri-arrow-left-s-line"></i>
+              Previous
+            </button>
+
+            <div class="pagination-pages">
+              <span class="page-info">
+                Page {{ currentPage }} of {{ totalPages }} ({{ totalMembers }} members)
+              </span>
+            </div>
+
+            <button
+              class="pagination-btn"
+              [disabled]="currentPage === totalPages"
+              (click)="nextPage()"
+            >
+              Next
+              <i class="ri-arrow-right-s-line"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Members Grid View -->
+        <div *ngIf="!loading && viewMode === 'grid'" class="members-grid">
+          <div
+            *ngFor="let member of members"
+            class="member-card"
+            (click)="viewMember(member.id)"
+          >
+            <div class="card-header">
+              <div class="member-avatar-large">
+                <img *ngIf="member.photo_url" [src]="member.photo_url" [alt]="getMemberFullName(member)" />
+                <div *ngIf="!member.photo_url" class="avatar-placeholder-large">
+                  {{ getMemberInitials(member) }}
+                </div>
+              </div>
+              <span class="status-badge-small" [ngClass]="getStatusClass(member.membership_status)">
+                {{ member.membership_status }}
+              </span>
+            </div>
+
+            <div class="card-body">
+              <h4 class="member-name">{{ getMemberFullName(member) }}</h4>
+              <p class="member-number">{{ member.member_number }}</p>
+
+              <div class="member-details">
+                <p *ngIf="member.email">
+                  <i class="ri-mail-line"></i>
+                  {{ member.email }}
+                </p>
+                <p *ngIf="member.phone_primary">
+                  <i class="ri-phone-line"></i>
+                  {{ member.phone_primary }}
+                </p>
+                <p *ngIf="member.date_of_birth">
+                  <i class="ri-calendar-line"></i>
+                  {{ calculateAge(member.date_of_birth) }} years old
+                </p>
+              </div>
+            </div>
+
+            <div class="card-footer">
+              <button class="btn-card" (click)="editMember(member.id, $event)">
+                <i class="ri-edit-line"></i>
+                Edit
+              </button>
+              <button class="btn-card btn-danger" (click)="deleteMember(member.id, $event)">
+                <i class="ri-delete-bin-line"></i>
+                Delete
+              </button>
+            </div>
+          </div>
+
+          <!-- Empty State -->
+          <div *ngIf="members.length === 0" class="empty-grid-state">
+            <i class="ri-user-line"></i>
+            <p>No members found</p>
+            <button class="btn-primary" (click)="addMember()">
+              <i class="ri-user-add-line"></i>
+              Add Your First Member
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

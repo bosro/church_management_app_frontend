@@ -1,0 +1,357 @@
+<!-- src/app/features/ministries/components/ministry-detail/ministry-detail.component.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+
+  <div class="dashboard-content">
+    <app-header></app-header>
+
+    <div class="dashboard-body">
+      <div class="ministry-detail-container">
+        <!-- Loading State -->
+        <div *ngIf="loading" class="loading-container">
+          <app-loading-spinner size="large" message="Loading ministry details..."></app-loading-spinner>
+        </div>
+
+        <!-- Ministry Details -->
+        <div *ngIf="!loading && ministry">
+          <!-- Header -->
+          <div class="detail-header">
+            <button class="back-btn" (click)="goBack()">
+              <i class="ri-arrow-left-line"></i>
+            </button>
+            <div class="header-actions">
+              <button class="btn-secondary" (click)="exportMinistryReport()">
+                <i class="ri-download-line"></i>
+                Export
+              </button>
+              <button class="btn-secondary" (click)="editMinistry()">
+                <i class="ri-edit-line"></i>
+                Edit
+              </button>
+              <button class="btn-danger" (click)="deleteMinistry()">
+                <i class="ri-delete-bin-line"></i>
+                Delete
+              </button>
+            </div>
+          </div>
+
+          <!-- Success Message -->
+          <div *ngIf="successMessage" class="success-alert">
+            <i class="ri-checkbox-circle-line"></i>
+            <span>{{ successMessage }}</span>
+          </div>
+
+          <!-- Error Message -->
+          <div *ngIf="errorMessage" class="error-alert">
+            <i class="ri-error-warning-line"></i>
+            <span>{{ errorMessage }}</span>
+          </div>
+
+          <!-- Ministry Info Card -->
+          <div class="ministry-info-card">
+            <div class="info-header">
+              <div class="ministry-icon-large">
+                <i class="ri-community-line"></i>
+              </div>
+              <div>
+                <h1>{{ ministry.name }}</h1>
+                <p class="ministry-description" *ngIf="ministry.description">
+                  {{ ministry.description }}
+                </p>
+              </div>
+            </div>
+
+            <div class="info-grid">
+              <div class="info-item" *ngIf="ministry.meeting_day">
+                <i class="ri-calendar-line"></i>
+                <div>
+                  <p class="info-label">Meeting Day</p>
+                  <p class="info-value">{{ ministry.meeting_day }}</p>
+                </div>
+              </div>
+
+              <div class="info-item" *ngIf="ministry.meeting_time">
+                <i class="ri-time-line"></i>
+                <div>
+                  <p class="info-label">Meeting Time</p>
+                  <p class="info-value">{{ ministry.meeting_time }}</p>
+                </div>
+              </div>
+
+              <div class="info-item" *ngIf="ministry.meeting_location">
+                <i class="ri-map-pin-line"></i>
+                <div>
+                  <p class="info-label">Meeting Location</p>
+                  <p class="info-value">{{ ministry.meeting_location }}</p>
+                </div>
+              </div>
+
+              <div class="info-item">
+                <i class="ri-group-line"></i>
+                <div>
+                  <p class="info-label">Total Members</p>
+                  <p class="info-value">{{ ministry.member_count || 0 }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tabs -->
+          <div class="tabs-container">
+            <div class="tabs">
+              <button
+                class="tab"
+                [class.active]="activeTab === 'members'"
+                (click)="switchTab('members')"
+              >
+                Members ({{ members.length }})
+              </button>
+              <button
+                class="tab"
+                [class.active]="activeTab === 'leaders'"
+                (click)="switchTab('leaders')"
+              >
+                Leaders ({{ leaders.length }})
+              </button>
+            </div>
+          </div>
+
+          <!-- Tab Content -->
+          <div class="tab-content">
+            <!-- Members Tab -->
+            <div *ngIf="activeTab === 'members'" class="members-tab">
+              <div class="tab-header">
+                <h3>Ministry Members</h3>
+                <button class="btn-primary" (click)="toggleAddMember()">
+                  <i [class]="showAddMember ? 'ri-close-line' : 'ri-add-line'"></i>
+                  <span>{{ showAddMember ? 'Cancel' : 'Add Member' }}</span>
+                </button>
+              </div>
+
+              <!-- Add Member Section -->
+              <div *ngIf="showAddMember" class="add-member-section">
+                <h4>Search and Add Member</h4>
+                <div class="search-input-wrapper">
+                  <i class="ri-search-line search-icon"></i>
+                  <input
+                    type="text"
+                    [formControl]="searchControl"
+                    placeholder="Search member by name, email, or phone..."
+                    class="search-input"
+                  />
+                  <i *ngIf="searching" class="ri-loader-4-line spin"></i>
+                </div>
+
+                <!-- Search Results -->
+                <div class="search-results" *ngIf="searchResults.length > 0">
+                  <div
+                    *ngFor="let member of searchResults"
+                    class="search-result-item"
+                    (click)="addMemberToMinistry(member)"
+                  >
+                    <div class="member-avatar-small">
+                      <img *ngIf="member.photo_url" [src]="member.photo_url" [alt]="getMemberName(member)" />
+                      <div *ngIf="!member.photo_url" class="avatar-placeholder-small">
+                        {{ getMemberInitials(member) }}
+                      </div>
+                    </div>
+                    <div class="member-info-small">
+                      <p class="member-name-small">{{ getMemberName(member) }}</p>
+                      <p class="member-meta-small">{{ member.member_number }}</p>
+                    </div>
+                    <i class="ri-add-circle-line"></i>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Members List -->
+              <div class="members-grid">
+                <div *ngFor="let membership of members" class="member-card">
+                  <div class="member-avatar-medium">
+                    <img
+                      *ngIf="membership.member?.photo_url"
+                      [src]="membership.member.photo_url"
+                      [alt]="getMemberName(membership.member)"
+                    />
+                    <div *ngIf="!membership.member?.photo_url" class="avatar-placeholder-medium">
+                      {{ getMemberInitials(membership.member) }}
+                    </div>
+                  </div>
+                  <div class="member-info">
+                    <h4>{{ getMemberName(membership.member) }}</h4>
+                    <p class="member-number">{{ membership.member.member_number }}</p>
+                    <p class="member-role" *ngIf="membership.role">{{ membership.role }}</p>
+                    <p class="member-meta">Joined: {{ membership.joined_date | date:'MMM d, y' }}</p>
+                  </div>
+                  <button class="btn-remove" (click)="removeMember(membership.id)">
+                    <i class="ri-close-line"></i>
+                  </button>
+                </div>
+
+                <div *ngIf="members.length === 0" class="empty-state">
+                  <i class="ri-user-line"></i>
+                  <h3>No Members Yet</h3>
+                  <p>Add members to this ministry to get started</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Leaders Tab -->
+            <div *ngIf="activeTab === 'leaders'" class="leaders-tab">
+              <div class="tab-header">
+                <h3>Ministry Leaders</h3>
+                <button class="btn-primary" (click)="toggleAddLeader()">
+                  <i [class]="showAddLeader ? 'ri-close-line' : 'ri-add-line'"></i>
+                  <span>{{ showAddLeader ? 'Cancel' : 'Add Leader' }}</span>
+                </button>
+              </div>
+
+              <!-- Add Leader Section -->
+              <div *ngIf="showAddLeader" class="add-leader-section">
+                <h4>Add Ministry Leader</h4>
+
+                <!-- Member Selection -->
+                <div class="form-group" *ngIf="!selectedMemberForLeader">
+                  <label>Select Member</label>
+                  <div class="search-input-wrapper">
+                    <i class="ri-search-line search-icon"></i>
+                    <input
+                      type="text"
+                      [formControl]="searchControl"
+                      placeholder="Search member..."
+                      class="search-input"
+                    />
+                    <i *ngIf="searching" class="ri-loader-4-line spin"></i>
+                  </div>
+
+                  <div class="search-results" *ngIf="searchResults.length > 0">
+                    <div
+                      *ngFor="let member of searchResults"
+                      class="search-result-item"
+                      (click)="selectMemberForLeader(member)"
+                    >
+                      <div class="member-avatar-small">
+                        <img *ngIf="member.photo_url" [src]="member.photo_url" [alt]="getMemberName(member)" />
+                        <div *ngIf="!member.photo_url" class="avatar-placeholder-small">
+                          {{ getMemberInitials(member) }}
+                        </div>
+                      </div>
+                      <div class="member-info-small">
+                        <p class="member-name-small">{{ getMemberName(member) }}</p>
+                        <p class="member-meta-small">{{ member.member_number }}</p>
+                      </div>
+                      <i class="ri-arrow-right-circle-line"></i>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Selected Member Display -->
+                <div *ngIf="selectedMemberForLeader" class="selected-member">
+                  <div class="member-avatar-medium">
+                    <img
+                      *ngIf="selectedMemberForLeader.photo_url"
+                      [src]="selectedMemberForLeader.photo_url"
+                      [alt]="getMemberName(selectedMemberForLeader)"
+                    />
+                    <div *ngIf="!selectedMemberForLeader.photo_url" class="avatar-placeholder-medium">
+                      {{ getMemberInitials(selectedMemberForLeader) }}
+                    </div>
+                  </div>
+                  <div class="member-info-medium">
+                    <p class="member-name-medium">{{ getMemberName(selectedMemberForLeader) }}</p>
+                    <p class="member-number">{{ selectedMemberForLeader.member_number }}</p>
+                  </div>
+                  <button class="btn-remove-small" (click)="selectedMemberForLeader = null">
+                    <i class="ri-close-line"></i>
+                  </button>
+                </div>
+
+                <!-- Leader Details Form -->
+                <div *ngIf="selectedMemberForLeader" class="leader-form">
+                  <div class="form-group">
+                    <label>Position *</label>
+                    <input
+                      type="text"
+                      [(ngModel)]="leaderPosition"
+                      placeholder="e.g., Ministry Head, Co-leader"
+                      class="form-input"
+                    />
+                  </div>
+
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label>Start Date *</label>
+                      <input
+                        type="date"
+                        [(ngModel)]="leaderStartDate"
+                        class="form-input"
+                      />
+                    </div>
+
+                    <div class="form-group">
+                      <label>End Date (Optional)</label>
+                      <input
+                        type="date"
+                        [(ngModel)]="leaderEndDate"
+                        class="form-input"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    class="btn-submit"
+                    (click)="addLeader()"
+                    [disabled]="addingLeader"
+                  >
+                    <span *ngIf="!addingLeader">Add Leader</span>
+                    <span *ngIf="addingLeader">
+                      <i class="ri-loader-4-line spin"></i>
+                      Adding...
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Leaders List -->
+              <div class="leaders-grid">
+                <div *ngFor="let leadership of leaders" class="leader-card">
+                  <div class="leader-badge">
+                    <i class="ri-star-fill"></i>
+                  </div>
+                  <div class="member-avatar-medium">
+                    <img
+                      *ngIf="leadership.member?.photo_url"
+                      [src]="leadership.member.photo_url"
+                      [alt]="getMemberName(leadership.member)"
+                    />
+                    <div *ngIf="!leadership.member?.photo_url" class="avatar-placeholder-medium">
+                      {{ getMemberInitials(leadership.member) }}
+                    </div>
+                  </div>
+                  <div class="leader-info">
+                    <h4>{{ getMemberName(leadership.member) }}</h4>
+                    <p class="leader-position">{{ leadership.position }}</p>
+                    <p class="leader-dates">
+                      {{ leadership.start_date | date:'MMM y' }} -
+                      {{ leadership.end_date ? (leadership.end_date | date:'MMM y') : 'Present' }}
+                    </p>
+                    <span class="current-badge" *ngIf="leadership.is_current">Current</span>
+                  </div>
+                  <button class="btn-remove" (click)="removeLeader(leadership.id)">
+                    <i class="ri-close-line"></i>
+                  </button>
+                </div>
+
+                <div *ngIf="leaders.length === 0" class="empty-state">
+                  <i class="ri-star-line"></i>
+                  <h3>No Leaders Yet</h3>
+                  <p>Add leaders to this ministry</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

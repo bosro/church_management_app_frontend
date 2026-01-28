@@ -1,0 +1,149 @@
+<!-- src/app/features/finance/components/pledges-list/pledges-list.component.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+
+  <div class="dashboard-content">
+    <app-header></app-header>
+
+    <div class="dashboard-body">
+      <div class="pledges-container">
+        <!-- Page Header -->
+        <div class="page-header">
+          <div class="header-left">
+            <h1>Pledges</h1>
+            <p class="subtitle">Track member pledges and commitments</p>
+          </div>
+          <div class="header-actions">
+            <button class="btn-secondary" (click)="exportPledges()">
+              <i class="ri-download-line"></i>
+              <span>Export</span>
+            </button>
+            <button class="btn-primary" (click)="createPledge()">
+              <i class="ri-add-line"></i>
+              <span>Create Pledge</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Loading State -->
+        <div *ngIf="loading" class="loading-container">
+          <app-loading-spinner message="Loading pledges..."></app-loading-spinner>
+        </div>
+
+        <!-- Pledges Grid -->
+        <div *ngIf="!loading" class="pledges-grid">
+          <div *ngFor="let pledge of pledges" class="pledge-card">
+            <div class="pledge-header">
+              <div class="member-info">
+                <div class="member-avatar-small">
+                  <img
+                    *ngIf="pledge.member?.photo_url"
+                    [src]="pledge.member.photo_url"
+                    [alt]="getMemberName(pledge)"
+                  />
+                  <div *ngIf="!pledge.member?.photo_url" class="avatar-placeholder-small">
+                    {{ getMemberInitials(pledge) }}
+                  </div>
+                </div>
+                <div>
+                  <p class="member-name">{{ getMemberName(pledge) }}</p>
+                  <p class="pledge-category">{{ pledge.category?.name || 'General' }}</p>
+                </div>
+              </div>
+              <button class="btn-delete" (click)="deletePledge(pledge.id, $event)">
+                <i class="ri-delete-bin-line"></i>
+              </button>
+            </div>
+
+            <div class="pledge-body">
+              <div class="amount-row">
+                <div class="amount-item">
+                  <p class="amount-label">Pledged</p>
+                  <p class="amount-value">{{ formatCurrency(pledge.pledge_amount, pledge.currency) }}</p>
+                </div>
+                <div class="amount-item">
+                  <p class="amount-label">Paid</p>
+                  <p class="amount-value paid">{{ formatCurrency(pledge.amount_paid, pledge.currency) }}</p>
+                </div>
+                <div class="amount-item">
+                  <p class="amount-label">Balance</p>
+                  <p class="amount-value balance">{{ formatCurrency(getBalance(pledge), pledge.currency) }}</p>
+                </div>
+              </div>
+
+              <div class="progress-section">
+                <div class="progress-header">
+                  <span>Progress</span>
+                  <span class="progress-percentage" [ngClass]="getProgressClass(getProgressPercentage(pledge))">
+                    {{ getProgressPercentage(pledge) }}%
+                  </span>
+                </div>
+                <div class="progress-bar">
+                  <div
+                    class="progress-fill"
+                    [ngClass]="getProgressClass(getProgressPercentage(pledge))"
+                    [style.width.%]="getProgressPercentage(pledge)"
+                  ></div>
+                </div>
+              </div>
+
+              <div class="pledge-meta">
+                <span *ngIf="pledge.pledge_date">
+                  <i class="ri-calendar-line"></i>
+                  Pledged: {{ pledge.pledge_date | date:'MMM d, y' }}
+                </span>
+                <span *ngIf="pledge.due_date">
+                  <i class="ri-time-line"></i>
+                  Due: {{ pledge.due_date | date:'MMM d, y' }}
+                </span>
+              </div>
+
+              <div *ngIf="pledge.is_fulfilled" class="fulfilled-badge">
+                <i class="ri-checkbox-circle-fill"></i>
+                Fulfilled
+              </div>
+            </div>
+          </div>
+
+          <!-- Empty State -->
+          <div *ngIf="pledges.length === 0" class="empty-state">
+            <i class="ri-hand-heart-line"></i>
+            <h3>No Pledges Found</h3>
+            <p>Create your first pledge to get started</p>
+            <button class="btn-primary" (click)="createPledge()">
+              <i class="ri-add-line"></i>
+              Create Pledge
+            </button>
+          </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination" *ngIf="totalPages > 1 && !loading">
+          <button
+            class="pagination-btn"
+            [disabled]="currentPage === 1"
+            (click)="previousPage()"
+          >
+            <i class="ri-arrow-left-s-line"></i>
+            Previous
+          </button>
+
+          <div class="pagination-pages">
+            <span class="page-info">
+              Page {{ currentPage }} of {{ totalPages }} ({{ totalPledges }} pledges)
+            </span>
+          </div>
+
+          <button
+            class="pagination-btn"
+            [disabled]="currentPage === totalPages"
+            (click)="nextPage()"
+          >
+            Next
+            <i class="ri-arrow-right-s-line"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

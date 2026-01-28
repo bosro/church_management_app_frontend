@@ -1,0 +1,79 @@
+// src/app/features/dashboard/components/stats-card/stats-card.component.scss
+.stats-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s;
+
+  &:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
+  }
+}
+
+.stats-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+
+  .stats-info {
+    flex: 1;
+
+    .stats-title {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #6B7280;
+      margin: 0 0 0.5rem 0;
+    }
+
+    .stats-value {
+      font-size: 2rem;
+      font-weight: 800;
+      color: #111827;
+      margin: 0;
+      line-height: 1;
+    }
+  }
+
+  .stats-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    i {
+      font-size: 1.75rem;
+    }
+  }
+}
+
+.stats-trend {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.8125rem;
+
+  i {
+    font-size: 1rem;
+  }
+
+  .trend-value {
+    font-weight: 700;
+  }
+
+  .trend-text {
+    color: #6B7280;
+  }
+
+  &.trend-up {
+    color: #10B981;
+  }
+
+  &.trend-down {
+    color: #EF4444;
+  }
+}

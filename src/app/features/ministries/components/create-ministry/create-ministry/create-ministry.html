@@ -1,0 +1,136 @@
+<!-- src/app/features/ministries/components/create-ministry/create-ministry.component.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+
+  <div class="dashboard-content">
+    <app-header></app-header>
+
+    <div class="dashboard-body">
+      <div class="create-ministry-container">
+        <!-- Page Header -->
+        <div class="page-header">
+          <div class="header-left">
+            <button class="back-btn" (click)="cancel()">
+              <i class="ri-arrow-left-line"></i>
+            </button>
+            <div>
+              <h1>Create Ministry</h1>
+              <p class="subtitle">Add a new ministry to your church</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Success Message -->
+        <div *ngIf="successMessage" class="success-alert">
+          <i class="ri-checkbox-circle-line"></i>
+          <span>{{ successMessage }}</span>
+        </div>
+
+        <!-- Error Message -->
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i>
+          <span>{{ errorMessage }}</span>
+        </div>
+
+        <!-- Form -->
+        <div class="form-card">
+          <form [formGroup]="ministryForm" (ngSubmit)="onSubmit()">
+            <div class="form-section">
+              <h3>Ministry Information</h3>
+
+              <div class="form-grid">
+                <!-- Ministry Name -->
+                <div class="form-group full-width">
+                  <label for="name">Ministry Name *</label>
+                  <input
+                    id="name"
+                    type="text"
+                    formControlName="name"
+                    placeholder="e.g., Youth Ministry, Choir, Ushering"
+                    [class.error]="ministryForm.get('name')?.invalid && ministryForm.get('name')?.touched"
+                  />
+                  <span
+                    *ngIf="ministryForm.get('name')?.invalid && ministryForm.get('name')?.touched"
+                    class="error-message"
+                  >
+                    {{ getErrorMessage('name') }}
+                  </span>
+                </div>
+
+                <!-- Description -->
+                <div class="form-group full-width">
+                  <label for="description">Description</label>
+                  <textarea
+                    id="description"
+                    formControlName="description"
+                    placeholder="Describe the purpose and activities of this ministry..."
+                    rows="4"
+                  ></textarea>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <h3>Meeting Schedule</h3>
+
+              <div class="form-grid">
+                <!-- Meeting Day -->
+                <div class="form-group">
+                  <label for="meeting_day">Meeting Day</label>
+                  <select id="meeting_day" formControlName="meeting_day">
+                    <option value="">Select Day</option>
+                    <option *ngFor="let day of daysOfWeek" [value]="day">{{ day }}</option>
+                  </select>
+                </div>
+
+                <!-- Meeting Time -->
+                <div class="form-group">
+                  <label for="meeting_time">Meeting Time</label>
+                  <input
+                    id="meeting_time"
+                    type="time"
+                    formControlName="meeting_time"
+                  />
+                </div>
+
+                <!-- Meeting Location -->
+                <div class="form-group full-width">
+                  <label for="meeting_location">Meeting Location</label>
+                  <input
+                    id="meeting_location"
+                    type="text"
+                    formControlName="meeting_location"
+                    placeholder="e.g., Main Sanctuary, Youth Hall"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="form-actions">
+              <button
+                type="button"
+                class="btn-secondary"
+                (click)="cancel()"
+                [disabled]="loading"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                class="btn-primary"
+                [disabled]="loading"
+              >
+                <span *ngIf="!loading">Create Ministry</span>
+                <span *ngIf="loading">
+                  <i class="ri-loader-4-line spin"></i>
+                  Creating...
+                </span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

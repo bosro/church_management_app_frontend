@@ -1,0 +1,113 @@
+// src/app/features/auth/components/auth-layout/auth-layout.component.scss
+.auth-layout {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+
+  .auth-left {
+    flex: 0 0 50%;
+    background: linear-gradient(135deg, #5B21B6 0%, #4C1D95 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
+      background-size: 50px 50px;
+      animation: grid-move 20s linear infinite;
+    }
+
+    .logo-container {
+      position: relative;
+      z-index: 1;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+
+      .logo-icon {
+        font-size: 3rem;
+        color: #EC4899;
+        animation: pulse 2s ease-in-out infinite;
+      }
+
+      .logo-text {
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: white;
+        letter-spacing: -0.02em;
+      }
+    }
+  }
+
+  .auth-right {
+    flex: 0 0 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem;
+    background: #F9FAFB;
+    overflow-y: auto;
+  }
+
+  @keyframes grid-move {
+    0% {
+      transform: translate(0, 0);
+    }
+    100% {
+      transform: translate(50px, 50px);
+    }
+  }
+
+  @keyframes pulse {
+    0%, 100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.1);
+    }
+  }
+
+  // Responsive
+  @media (max-width: 1024px) {
+    .auth-left {
+      flex: 0 0 40%;
+    }
+    .auth-right {
+      flex: 0 0 60%;
+    }
+  }
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+
+    .auth-left {
+      flex: 0 0 auto;
+      min-height: 200px;
+
+      .logo {
+        .logo-icon {
+          font-size: 2rem;
+        }
+        .logo-text {
+          font-size: 1.75rem;
+        }
+      }
+    }
+
+    .auth-right {
+      flex: 1;
+      padding: 2rem;
+    }
+  }
+}

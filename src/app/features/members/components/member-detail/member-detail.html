@@ -1,0 +1,327 @@
+<!-- src/app/features/members/components/member-detail/member-detail.component.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+
+  <div class="dashboard-content">
+    <app-header></app-header>
+
+    <div class="dashboard-body">
+      <!-- Loading State -->
+      <div *ngIf="loading" class="loading-container">
+        <app-loading-spinner size="large" message="Loading member details..."></app-loading-spinner>
+      </div>
+
+      <!-- Error Message -->
+      <div *ngIf="errorMessage && !loading" class="error-alert">
+        <i class="ri-error-warning-line"></i>
+        <span>{{ errorMessage }}</span>
+      </div>
+
+      <!-- Member Details -->
+      <div *ngIf="member && !loading" class="member-detail-container">
+        <!-- Header -->
+        <div class="detail-header">
+          <button class="back-btn" (click)="goBack()">
+            <i class="ri-arrow-left-line"></i>
+          </button>
+          <div class="header-actions">
+            <button class="btn-secondary" (click)="editMember()">
+              <i class="ri-edit-line"></i>
+              Edit
+            </button>
+            <button class="btn-danger" (click)="deleteMember()">
+              <i class="ri-delete-bin-line"></i>
+              Delete
+            </button>
+          </div>
+        </div>
+
+        <!-- Profile Card -->
+        <div class="profile-card">
+          <div class="profile-header">
+            <div class="profile-avatar">
+              <img *ngIf="member.photo_url" [src]="member.photo_url" [alt]="getMemberFullName()" />
+              <div *ngIf="!member.photo_url" class="avatar-placeholder">
+                {{ getMemberInitials() }}
+              </div>
+            </div>
+            <div class="profile-info">
+              <h1>{{ getMemberFullName() }}</h1>
+              <p class="member-number">{{ member.member_number }}</p>
+              <span class="status-badge" [ngClass]="getStatusClass()">
+                {{ member.membership_status }}
+              </span>
+            </div>
+          </div>
+
+          <div class="profile-stats">
+            <div class="stat-item">
+              <i class="ri-calendar-line"></i>
+              <div>
+                <p class="stat-label">Member Since</p>
+                <p class="stat-value">{{ member.join_date | date:'MMM d, y' }}</p>
+              </div>
+            </div>
+
+            <div class="stat-item">
+              <i class="ri-time-line"></i>
+              <div>
+                <p class="stat-label">Duration</p>
+                <p class="stat-value">{{ getMembershipDuration() }}</p>
+              </div>
+            </div>
+
+            <div class="stat-item" *ngIf="calculateAge() !== null">
+              <i class="ri-user-line"></i>
+              <div>
+                <p class="stat-label">Age</p>
+                <p class="stat-value">{{ calculateAge() }} years</p>
+              </div>
+            </div>
+
+            <div class="stat-item" *ngIf="member.gender">
+              <i class="ri-genderless-line"></i>
+              <div>
+                <p class="stat-label">Gender</p>
+                <p class="stat-value capitalize">{{ member.gender }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs-container">
+          <div class="tabs">
+            <button
+              class="tab"
+              [class.active]="activeTab === 'overview'"
+              (click)="setActiveTab('overview')"
+            >
+              Overview
+            </button>
+            <button
+              class="tab"
+              [class.active]="activeTab === 'attendance'"
+              (click)="setActiveTab('attendance')"
+            >
+              Attendance
+            </button>
+            <button
+              class="tab"
+              [class.active]="activeTab === 'giving'"
+              (click)="setActiveTab('giving')"
+            >
+              Giving
+            </button>
+            <button
+              class="tab"
+              [class.active]="activeTab === 'ministries'"
+              (click)="setActiveTab('ministries')"
+            >
+              Ministries
+            </button>
+          </div>
+        </div>
+
+        <!-- Tab Content -->
+        <div class="tab-content">
+          <!-- Overview Tab -->
+          <div *ngIf="activeTab === 'overview'" class="overview-tab">
+            <div class="info-grid">
+              <!-- Contact Information -->
+              <div class="info-card">
+                <h3>Contact Information</h3>
+                <div class="info-list">
+                  <div class="info-item" *ngIf="member.phone_primary">
+                    <i class="ri-phone-line"></i>
+                    <div>
+                      <p class="info-label">Primary Phone</p>
+                      <p class="info-value">{{ member.phone_primary }}</p>
+                    </div>
+                  </div>
+
+                  <div class="info-item" *ngIf="member.phone_secondary">
+                    <i class="ri-phone-line"></i>
+                    <div>
+                      <p class="info-label">Secondary Phone</p>
+                      <p class="info-value">{{ member.phone_secondary }}</p>
+                    </div>
+                  </div>
+
+                  <div class="info-item" *ngIf="member.email">
+                    <i class="ri-mail-line"></i>
+                    <div>
+                      <p class="info-label">Email</p>
+                      <p class="info-value">{{ member.email }}</p>
+                    </div>
+                  </div>
+
+                  <div class="info-item" *ngIf="member.address">
+                    <i class="ri-map-pin-line"></i>
+                    <div>
+                      <p class="info-label">Address</p>
+                      <p class="info-value">{{ member.address }}</p>
+                    </div>
+                  </div>
+
+                  <div class="info-item" *ngIf="member.city">
+                    <i class="ri-building-line"></i>
+                    <div>
+                      <p class="info-label">City</p>
+                      <p class="info-value">{{ member.city }}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Personal Information -->
+              <div class="info-card">
+                <h3>Personal Information</h3>
+                <div class="info-list">
+                  <div class="info-item" *ngIf="member.date_of_birth">
+                    <i class="ri-calendar-line"></i>
+                    <div>
+                      <p class="info-label">Date of Birth</p>
+                      <p class="info-value">{{ member.date_of_birth | date:'MMM d, y' }}</p>
+                    </div>
+                  </div>
+
+                  <div class="info-item" *ngIf="member.marital_status">
+                    <i class="ri-heart-line"></i>
+                    <div>
+                      <p class="info-label">Marital Status</p>
+                      <p class="info-value capitalize">{{ member.marital_status }}</p>
+                    </div>
+                  </div>
+
+                  <div class="info-item" *ngIf="member.occupation">
+                    <i class="ri-briefcase-line"></i>
+                    <div>
+                      <p class="info-label">Occupation</p>
+                      <p class="info-value">{{ member.occupation }}</p>
+                    </div>
+                  </div>
+
+                  <div class="info-item" *ngIf="member.employer">
+                    <i class="ri-building-2-line"></i>
+                    <div>
+                      <p class="info-label">Employer</p>
+                      <p class="info-value">{{ member.employer }}</p>
+                    </div>
+                  </div>
+
+                  <div class="info-item" *ngIf="member.education_level">
+                    <i class="ri-book-line"></i>
+                    <div>
+                      <p class="info-label">Education</p>
+                      <p class="info-value">{{ member.education_level }}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Emergency Contact -->
+              <div class="info-card" *ngIf="member.emergency_contact_name || member.emergency_contact_phone">
+                <h3>Emergency Contact</h3>
+                <div class="info-list">
+                  <div class="info-item" *ngIf="member.emergency_contact_name">
+                    <i class="ri-user-heart-line"></i>
+                    <div>
+                      <p class="info-label">Contact Name</p>
+                      <p class="info-value">{{ member.emergency_contact_name }}</p>
+                    </div>
+                  </div>
+
+                  <div class="info-item" *ngIf="member.emergency_contact_phone">
+                    <i class="ri-phone-line"></i>
+                    <div>
+                      <p class="info-label">Contact Phone</p>
+                      <p class="info-value">{{ member.emergency_contact_phone }}</p>
+                    </div>
+                  </div>
+
+                  <div class="info-item" *ngIf="member.emergency_contact_relationship">
+                    <i class="ri-links-line"></i>
+                    <div>
+                      <p class="info-label">Relationship</p>
+                      <p class="info-value capitalize">{{ member.emergency_contact_relationship }}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Church Information -->
+              <div class="info-card">
+                <h3>Church Information</h3>
+                <div class="info-list">
+                  <div class="info-item" *ngIf="member.baptism_date">
+                    <i class="ri-water-flash-line"></i>
+                    <div>
+                      <p class="info-label">Baptism Date</p>
+                      <p class="info-value">{{ member.baptism_date | date:'MMM d, y' }}</p>
+                    </div>
+                  </div>
+
+                  <div class="info-item" *ngIf="member.baptism_location">
+                    <i class="ri-map-pin-line"></i>
+                    <div>
+                      <p class="info-label">Baptism Location</p>
+                      <p class="info-value">{{ member.baptism_location }}</p>
+                    </div>
+                  </div>
+
+                  <div class="info-item">
+                    <i class="ri-user-star-line"></i>
+                    <div>
+                      <p class="info-label">Member Type</p>
+                      <p class="info-value">
+                        <span *ngIf="member.is_new_convert" class="badge badge-new">New Convert</span>
+                        <span *ngIf="member.is_visitor" class="badge badge-visitor">Visitor</span>
+                        <span *ngIf="!member.is_new_convert && !member.is_visitor">Regular Member</span>
+                      </p>
+                    </div>
+                  </div>
+
+                  <div class="info-item" *ngIf="member.notes">
+                    <i class="ri-file-text-line"></i>
+                    <div>
+                      <p class="info-label">Notes</p>
+                      <p class="info-value">{{ member.notes }}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Attendance Tab -->
+          <div *ngIf="activeTab === 'attendance'" class="attendance-tab">
+            <div class="empty-state">
+              <i class="ri-calendar-check-line"></i>
+              <h3>Attendance Records</h3>
+              <p>Attendance tracking coming soon...</p>
+            </div>
+          </div>
+
+          <!-- Giving Tab -->
+          <div *ngIf="activeTab === 'giving'" class="giving-tab">
+            <div class="empty-state">
+              <i class="ri-money-dollar-circle-line"></i>
+              <h3>Giving History</h3>
+              <p>Giving records coming soon...</p>
+            </div>
+          </div>
+
+          <!-- Ministries Tab -->
+          <div *ngIf="activeTab === 'ministries'" class="ministries-tab">
+            <div class="empty-state">
+              <i class="ri-team-line"></i>
+              <h3>Ministry Involvement</h3>
+              <p>Ministry assignments coming soon...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

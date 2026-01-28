@@ -1,0 +1,148 @@
+<!-- src/app/features/ministries/components/ministries-list/ministries-list.component.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+
+  <div class="dashboard-content">
+    <app-header></app-header>
+
+    <div class="dashboard-body">
+      <div class="ministries-container">
+        <!-- Page Header -->
+        <div class="page-header">
+          <div class="header-left">
+            <h1>Ministries</h1>
+            <p class="subtitle">Organize and manage church ministries</p>
+          </div>
+          <button class="btn-primary" (click)="createMinistry()">
+            <i class="ri-add-line"></i>
+            <span>Create Ministry</span>
+          </button>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="stats-grid" *ngIf="statistics">
+          <div class="stat-card">
+            <div class="stat-icon" style="background: #DDD6FE; color: #7C3AED;">
+              <i class="ri-community-line"></i>
+            </div>
+            <div class="stat-info">
+              <p class="stat-label">Total Ministries</p>
+              <h3 class="stat-value">{{ statistics.total_ministries }}</h3>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon" style="background: #D1FAE5; color: #10B981;">
+              <i class="ri-group-line"></i>
+            </div>
+            <div class="stat-info">
+              <p class="stat-label">Total Members</p>
+              <h3 class="stat-value">{{ statistics.total_members }}</h3>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon" style="background: #DBEAFE; color: #3B82F6;">
+              <i class="ri-star-line"></i>
+            </div>
+            <div class="stat-info">
+              <p class="stat-label">Largest Ministry</p>
+              <h3 class="stat-value">{{ statistics.largest_ministry?.name || 'N/A' }}</h3>
+              <p class="stat-meta" *ngIf="statistics.largest_ministry">
+                {{ statistics.largest_ministry.member_count }} members
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Loading State -->
+        <div *ngIf="loading" class="loading-container">
+          <app-loading-spinner message="Loading ministries..."></app-loading-spinner>
+        </div>
+
+        <!-- Ministries Grid -->
+        <div *ngIf="!loading" class="ministries-grid">
+          <div
+            *ngFor="let ministry of ministries"
+            class="ministry-card"
+            (click)="viewMinistry(ministry.id)"
+          >
+            <div class="ministry-header">
+              <div class="ministry-icon">
+                <i class="ri-community-line"></i>
+              </div>
+              <div class="ministry-actions">
+                <button class="btn-icon-small" (click)="editMinistry(ministry.id, $event)">
+                  <i class="ri-edit-line"></i>
+                </button>
+                <button class="btn-icon-small btn-danger" (click)="deleteMinistry(ministry.id, $event)">
+                  <i class="ri-delete-bin-line"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="ministry-body">
+              <h3 class="ministry-name">{{ ministry.name }}</h3>
+              <p class="ministry-description" *ngIf="ministry.description">
+                {{ ministry.description }}
+              </p>
+
+              <div class="ministry-stats">
+                <div class="stat-item">
+                  <i class="ri-group-line"></i>
+                  <span>{{ ministry.member_count || 0 }} Members</span>
+                </div>
+                <div class="stat-item" *ngIf="ministry.meeting_day">
+                  <i class="ri-calendar-line"></i>
+                  <span>{{ ministry.meeting_day }}s</span>
+                </div>
+                <div class="stat-item" *ngIf="ministry.meeting_time">
+                  <i class="ri-time-line"></i>
+                  <span>{{ ministry.meeting_time }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Empty State -->
+          <div *ngIf="ministries.length === 0" class="empty-state">
+            <i class="ri-community-line"></i>
+            <h3>No Ministries Found</h3>
+            <p>Create your first ministry to get started</p>
+            <button class="btn-primary" (click)="createMinistry()">
+              <i class="ri-add-line"></i>
+              Create Ministry
+            </button>
+          </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination" *ngIf="totalPages > 1 && !loading">
+          <button
+            class="pagination-btn"
+            [disabled]="currentPage === 1"
+            (click)="previousPage()"
+          >
+            <i class="ri-arrow-left-s-line"></i>
+            Previous
+          </button>
+
+          <div class="pagination-pages">
+            <span class="page-info">
+              Page {{ currentPage }} of {{ totalPages }} ({{ totalMinistries }} ministries)
+            </span>
+          </div>
+
+          <button
+            class="pagination-btn"
+            [disabled]="currentPage === totalPages"
+            (click)="nextPage()"
+          >
+            Next
+            <i class="ri-arrow-right-s-line"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,24 @@
+// src/app/features/attendance/components/create-event/create-event.component.scss
+// Reuse styles from add-member component
+@import '../../../members/components/add-member/add-member.component.scss';
+
+.create-event-container {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.25rem;
+
+  .form-group.full-width {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 768px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,280 @@
+<!-- src/app/features/auth/components/signup/signup.component.html -->
+<div class="signup-container">
+  <div class="signup-card">
+    <!-- Header -->
+    <div class="signup-header">
+      <h1>Welcome to Churchman.</h1>
+      <h2>Sign Up to get started.</h2>
+      <p class="subtitle">
+        {{ currentStep === 1 ? 'Enter your details to proceed further' :
+           currentStep === 2 ? 'Enter your details to proceed further' :
+           'Enter the OTP sent to your mail to complete the registration..' }}
+      </p>
+    </div>
+
+    <!-- Error Alert -->
+    <div *ngIf="errorMessage" class="error-alert">
+      <i class="ri-error-warning-line"></i>
+      <span>{{ errorMessage }}</span>
+    </div>
+
+    <!-- Step 1: Basic Information -->
+    <form *ngIf="currentStep === 1" [formGroup]="signupForm" class="signup-form">
+      <!-- Full Name -->
+      <div class="form-group">
+        <label for="full_name">Full name</label>
+        <div class="input-wrapper">
+          <i class="ri-user-line input-icon"></i>
+          <input
+            id="full_name"
+            type="text"
+            formControlName="full_name"
+            placeholder="Cephas Ntiamoah"
+            [class.error]="signupForm.get('full_name')?.invalid && signupForm.get('full_name')?.touched"
+          />
+        </div>
+        <span
+          *ngIf="signupForm.get('full_name')?.invalid && signupForm.get('full_name')?.touched"
+          class="error-message"
+        >
+          {{ getErrorMessage('full_name') }}
+        </span>
+      </div>
+
+      <!-- Church Name -->
+      <div class="form-group">
+        <label for="church_name">Church name</label>
+        <div class="input-wrapper">
+          <i class="ri-building-line input-icon"></i>
+          <input
+            id="church_name"
+            type="text"
+            formControlName="church_name"
+            placeholder="TEST CHURCH 1"
+            [class.error]="signupForm.get('church_name')?.invalid && signupForm.get('church_name')?.touched"
+          />
+        </div>
+        <span
+          *ngIf="signupForm.get('church_name')?.invalid && signupForm.get('church_name')?.touched"
+          class="error-message"
+        >
+          {{ getErrorMessage('church_name') }}
+        </span>
+      </div>
+
+      <!-- Location -->
+      <div class="form-group">
+        <label for="church_location">Location of Church</label>
+        <div class="input-wrapper">
+          <i class="ri-map-pin-line input-icon"></i>
+          <input
+            id="church_location"
+            type="text"
+            formControlName="church_location"
+            placeholder="Start typing..."
+            [class.error]="signupForm.get('church_location')?.invalid && signupForm.get('church_location')?.touched"
+          />
+        </div>
+        <span
+          *ngIf="signupForm.get('church_location')?.invalid && signupForm.get('church_location')?.touched"
+          class="error-message"
+        >
+          {{ getErrorMessage('church_location') }}
+        </span>
+      </div>
+
+      <!-- Position -->
+      <div class="form-group">
+        <label for="position">Position in Chuch</label>
+        <div class="input-wrapper select-wrapper">
+          <select
+            id="position"
+            formControlName="position"
+            [class.error]="signupForm.get('position')?.invalid && signupForm.get('position')?.touched"
+          >
+            <option value="" disabled selected>Select position from dropdown</option>
+            <option *ngFor="let option of positionOptions" [value]="option.value">
+              {{ option.label }}
+            </option>
+          </select>
+          <i class="ri-arrow-down-s-line select-icon"></i>
+        </div>
+        <span
+          *ngIf="signupForm.get('position')?.invalid && signupForm.get('position')?.touched"
+          class="error-message"
+        >
+          {{ getErrorMessage('position') }}
+        </span>
+      </div>
+
+      <!-- Email -->
+      <div class="form-group">
+        <label for="email">Email</label>
+        <div class="input-wrapper">
+          <i class="ri-mail-line input-icon"></i>
+          <input
+            id="email"
+            type="email"
+            formControlName="email"
+            placeholder="cephanstianmoah@gmail.com"
+            [class.error]="signupForm.get('email')?.invalid && signupForm.get('email')?.touched"
+          />
+        </div>
+        <span
+          *ngIf="signupForm.get('email')?.invalid && signupForm.get('email')?.touched"
+          class="error-message"
+        >
+          {{ getErrorMessage('email') }}
+        </span>
+      </div>
+
+      <!-- Phone -->
+      <div class="form-group">
+        <label for="phone">Phone</label>
+        <div class="input-wrapper">
+          <i class="ri-phone-line input-icon"></i>
+          <input
+            id="phone"
+            type="tel"
+            formControlName="phone"
+            placeholder="Start typing..."
+            [class.error]="signupForm.get('phone')?.invalid && signupForm.get('phone')?.touched"
+          />
+        </div>
+        <span
+          *ngIf="signupForm.get('phone')?.invalid && signupForm.get('phone')?.touched"
+          class="error-message"
+        >
+          {{ getErrorMessage('phone') }}
+        </span>
+      </div>
+
+      <!-- Buttons -->
+      <div class="button-group">
+        <button type="button" class="btn-secondary" routerLink="/auth/signin">
+          Cancel
+        </button>
+        <button type="button" class="btn-primary" (click)="nextStep()">
+          Next
+        </button>
+      </div>
+    </form>
+
+    <!-- Step 2: Additional Details -->
+    <form *ngIf="currentStep === 2" [formGroup]="signupForm" class="signup-form">
+      <!-- Church Size -->
+      <div class="form-group">
+        <label for="church_size">Church Size</label>
+        <div class="input-wrapper select-wrapper">
+          <select
+            id="church_size"
+            formControlName="church_size"
+            [class.error]="signupForm.get('church_size')?.invalid && signupForm.get('church_size')?.touched"
+          >
+            <option value="" disabled selected>Select church size from dropdown</option>
+            <option *ngFor="let option of churchSizeOptions" [value]="option.value">
+              {{ option.label }}
+            </option>
+          </select>
+          <i class="ri-arrow-down-s-line select-icon"></i>
+        </div>
+        <span
+          *ngIf="signupForm.get('church_size')?.invalid && signupForm.get('church_size')?.touched"
+          class="error-message"
+        >
+          {{ getErrorMessage('church_size') }}
+        </span>
+      </div>
+
+      <!-- Password -->
+      <div class="form-group">
+        <label for="password">Password</label>
+        <div class="input-wrapper">
+          <i class="ri-lock-line input-icon"></i>
+          <input
+            id="password"
+            type="password"
+            formControlName="password"
+            placeholder="Start typing..."
+            [class.error]="signupForm.get('password')?.invalid && signupForm.get('password')?.touched"
+          />
+        </div>
+        <span
+          *ngIf="signupForm.get('password')?.invalid && signupForm.get('password')?.touched"
+          class="error-message"
+        >
+          {{ getErrorMessage('password') }}
+        </span>
+      </div>
+
+      <!-- Confirm Password -->
+      <div class="form-group">
+        <label for="confirm_password">Confirm Password</label>
+        <div class="input-wrapper">
+          <i class="ri-lock-line input-icon"></i>
+          <input
+            id="confirm_password"
+            type="password"
+            formControlName="confirm_password"
+            placeholder="Start typing..."
+            [class.error]="signupForm.get('confirm_password')?.invalid && signupForm.get('confirm_password')?.touched"
+          />
+        </div>
+        <span
+          *ngIf="signupForm.get('confirm_password')?.invalid && signupForm.get('confirm_password')?.touched"
+          class="error-message"
+        >
+          {{ getErrorMessage('confirm_password') }}
+        </span>
+      </div>
+
+      <!-- How did you hear about us -->
+      <div class="form-group">
+        <label for="how_heard">How did you hear about us?</label>
+        <div class="input-wrapper select-wrapper">
+          <select
+            id="how_heard"
+            formControlName="how_heard"
+            [class.error]="signupForm.get('how_heard')?.invalid && signupForm.get('how_heard')?.touched"
+          >
+            <option value="" disabled selected>Select from dropdown</option>
+            <option *ngFor="let option of howHeardOptions" [value]="option.value">
+              {{ option.label }}
+            </option>
+          </select>
+          <i class="ri-arrow-down-s-line select-icon"></i>
+        </div>
+        <span
+          *ngIf="signupForm.get('how_heard')?.invalid && signupForm.get('how_heard')?.touched"
+          class="error-message"
+        >
+          {{ getErrorMessage('how_heard') }}
+        </span>
+      </div>
+
+      <!-- Buttons -->
+      <div class="button-group">
+        <button type="button" class="btn-secondary" (click)="previousStep()">
+          Back
+        </button>
+        <button
+          type="button"
+          class="btn-primary"
+          (click)="nextStep()"
+          [disabled]="loading"
+        >
+          <span *ngIf="!loading">Next</span>
+          <span *ngIf="loading">Creating Account...</span>
+        </button>
+      </div>
+    </form>
+
+    <!-- Step 3: OTP Verification -->
+    <div *ngIf="currentStep === 3" class="otp-step">
+      <app-otp-verification
+        [email]="signupForm.get('email')?.value"
+        (verified)="onOtpVerified()"
+      ></app-otp-verification>
+    </div>
+  </div>
+</div>

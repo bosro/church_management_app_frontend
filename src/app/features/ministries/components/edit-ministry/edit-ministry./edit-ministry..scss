@@ -1,0 +1,14 @@
+// src/app/features/ministries/components/edit-ministry/edit-ministry.component.scss
+// Reuse styles from create-ministry
+@import '../create-ministry/create-ministry.component.scss';
+
+.edit-ministry-container {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  padding: 4rem 0;
+}

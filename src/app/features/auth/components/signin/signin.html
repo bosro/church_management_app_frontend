@@ -1,0 +1,111 @@
+<!-- src/app/features/auth/components/signin/signin.component.html -->
+<div class="signin-container">
+  <div class="signin-card">
+    <div class="signin-header">
+      <h1>Welcome to Churchman.</h1>
+      <h2>Sign In to manage all your church activities.</h2>
+      <p class="subtitle">Enter your details to proceed further</p>
+    </div>
+
+    <!-- Error Alert -->
+    <div *ngIf="errorMessage" class="error-alert">
+      <i class="ri-error-warning-line"></i>
+      <span>{{ errorMessage }}</span>
+    </div>
+
+    <form [formGroup]="signinForm" (ngSubmit)="onSubmit()" class="signin-form">
+      <!-- Email -->
+      <div class="form-group">
+        <label for="email">Email</label>
+        <div class="input-wrapper">
+          <i class="ri-mail-line input-icon"></i>
+          <input
+            id="email"
+            type="email"
+            formControlName="email"
+            placeholder="cephanstianmoah@gmail.com"
+            [class.error]="signinForm.get('email')?.invalid && signinForm.get('email')?.touched"
+          />
+        </div>
+        <span
+          *ngIf="signinForm.get('email')?.invalid && signinForm.get('email')?.touched"
+          class="error-message"
+        >
+          {{ getErrorMessage('email') }}
+        </span>
+      </div>
+
+      <!-- Password -->
+      <div class="form-group">
+        <label for="password">Password</label>
+        <div class="input-wrapper">
+          <i class="ri-lock-line input-icon"></i>
+          <input
+            id="password"
+            type="password"
+            formControlName="password"
+            placeholder="Start typing..."
+            [class.error]="signinForm.get('password')?.invalid && signinForm.get('password')?.touched"
+          />
+        </div>
+        <span
+          *ngIf="signinForm.get('password')?.invalid && signinForm.get('password')?.touched"
+          class="error-message"
+        >
+          {{ getErrorMessage('password') }}
+        </span>
+      </div>
+
+      <!-- Remember Me & Forgot Password -->
+      <div class="form-actions">
+        <label class="remember-me">
+          <input
+            type="checkbox"
+            [checked]="rememberMe"
+            (change)="toggleRememberMe()"
+          />
+          <span>Remember me</span>
+        </label>
+        <a routerLink="/auth/forgot-password" class="forgot-link">Recover password</a>
+      </div>
+
+      <!-- Submit Buttons -->
+      <div class="button-group">
+        <button
+          type="submit"
+          class="btn-primary"
+          [disabled]="loading"
+        >
+          <span *ngIf="!loading">Sign In</span>
+          <span *ngIf="loading">Signing in...</span>
+        </button>
+
+        <button
+          type="button"
+          class="btn-secondary"
+          routerLink="/auth/signup"
+          [disabled]="loading"
+        >
+          Sign Up
+        </button>
+      </div>
+    </form>
+
+    <!-- Divider -->
+    <div class="divider">
+      <span>Or sign in with</span>
+    </div>
+
+    <!-- Social Sign In -->
+    <div class="social-signin">
+      <button
+        type="button"
+        class="btn-google"
+        (click)="signInWithGoogle()"
+        [disabled]="loading"
+      >
+        <i class="ri-google-fill"></i>
+      </button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,18 @@
+<!-- src/app/features/dashboard/components/stats-card/stats-card.component.html -->
+<div class="stats-card">
+  <div class="stats-header">
+    <div class="stats-info">
+      <p class="stats-title">{{ title }}</p>
+      <h2 class="stats-value">{{ value }}</h2>
+    </div>
+    <div class="stats-icon" [style.background]="iconBg">
+      <i [class]="icon" [style.color]="iconColor"></i>
+    </div>
+  </div>
+
+  <div class="stats-trend" [class]="trendClass">
+    <i [class]="trendIcon"></i>
+    <span class="trend-value">{{ trend }}%</span>
+    <span class="trend-text">{{ trendText }}</span>
+  </div>
+</div>

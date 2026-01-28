@@ -1,0 +1,8 @@
+// src/app/features/finance/components/create-pledge/create-pledge.component.scss
+// Reuse styles from record-giving component
+@import '../record-giving/record-giving.component.scss';
+
+.create-pledge-container {
+  max-width: 900px;
+  margin: 0 auto;
+}

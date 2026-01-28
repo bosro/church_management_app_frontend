@@ -1,0 +1,235 @@
+<!-- src/app/features/finance/components/record-giving/record-giving.component.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+
+  <div class="dashboard-content">
+    <app-header></app-header>
+
+    <div class="dashboard-body">
+      <div class="record-giving-container">
+        <!-- Page Header -->
+        <div class="page-header">
+          <div class="header-left">
+            <button class="back-btn" (click)="cancel()">
+              <i class="ri-arrow-left-line"></i>
+            </button>
+            <div>
+              <h1>Record Giving</h1>
+              <p class="subtitle">Record a new giving transaction</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Success Message -->
+        <div *ngIf="successMessage" class="success-alert">
+          <i class="ri-checkbox-circle-line"></i>
+          <span>{{ successMessage }}</span>
+        </div>
+
+        <!-- Error Message -->
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i>
+          <span>{{ errorMessage }}</span>
+        </div>
+
+        <!-- Form -->
+        <div class="form-card">
+          <form [formGroup]="givingForm" (ngSubmit)="onSubmit()">
+            <!-- Member Selection -->
+            <div class="form-section">
+              <h3>Member (Optional)</h3>
+              <p class="section-hint">Search and select a member or leave anonymous</p>
+
+              <div *ngIf="!selectedMember" class="member-search">
+                <div class="search-input-wrapper">
+                  <i class="ri-search-line search-icon"></i>
+                  <input
+                    type="text"
+                    [formControl]="searchControl"
+                    placeholder="Search member by name, email, or phone..."
+                    class="search-input"
+                  />
+                  <i *ngIf="searching" class="ri-loader-4-line spin"></i>
+                </div>
+
+                <!-- Search Results -->
+                <div class="search-results" *ngIf="searchResults.length > 0">
+                  <div
+                    *ngFor="let member of searchResults"
+                    class="search-result-item"
+                    (click)="selectMember(member)"
+                  >
+                    <div class="member-avatar-small">
+                      <img *ngIf="member.photo_url" [src]="member.photo_url" [alt]="getMemberFullName(member)" />
+                      <div *ngIf="!member.photo_url" class="avatar-placeholder-small">
+                        {{ getMemberInitials(member) }}
+                      </div>
+                    </div>
+                    <div class="member-info-small">
+                      <p class="member-name-small">{{ getMemberFullName(member) }}</p>
+                      <p class="member-meta-small">{{ member.member_number }}</p>
+                    </div>
+                    <i class="ri-arrow-right-circle-line"></i>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Selected Member -->
+              <div *ngIf="selectedMember" class="selected-member">
+                <div class="member-avatar-medium">
+                  <img *ngIf="selectedMember.photo_url" [src]="selectedMember.photo_url" [alt]="getMemberFullName(selectedMember)" />
+                  <div *ngIf="!selectedMember.photo_url" class="avatar-placeholder-medium">
+                    {{ getMemberInitials(selectedMember) }}
+                  </div>
+                </div>
+                <div class="member-info-medium">
+                  <p class="member-name-medium">{{ getMemberFullName(selectedMember) }}</p>
+                  <p class="member-number">{{ selectedMember.member_number }}</p>
+                </div>
+                <button type="button" class="btn-remove-member" (click)="removeMember()">
+                  <i class="ri-close-line"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Transaction Details -->
+            <div class="form-section">
+              <h3>Transaction Details</h3>
+
+              <div class="form-grid">
+                <!-- Transaction Date -->
+                <div class="form-group">
+                  <label for="transaction_date">Date *</label>
+                  <input
+                    id="transaction_date"
+                    type="date"
+                    formControlName="transaction_date"
+                    [class.error]="givingForm.get('transaction_date')?.invalid && givingForm.get('transaction_date')?.touched"
+                  />
+                  <span
+                    *ngIf="givingForm.get('transaction_date')?.invalid && givingForm.get('transaction_date')?.touched"
+                    class="error-message"
+                  >
+                    {{ getErrorMessage('transaction_date') }}
+                  </span>
+                </div>
+
+                <!-- Amount -->
+                <div class="form-group">
+                  <label for="amount">Amount *</label>
+                  <input
+                    id="amount"
+                    type="number"
+                    formControlName="amount"
+                    placeholder="0.00"
+                    step="0.01"
+                    min="0"
+                    [class.error]="givingForm.get('amount')?.invalid && givingForm.get('amount')?.touched"
+                  />
+                  <span
+                    *ngIf="givingForm.get('amount')?.invalid && givingForm.get('amount')?.touched"
+                    class="error-message"
+                  >
+                    {{ getErrorMessage('amount') }}
+                  </span>
+                </div>
+
+                <!-- Currency -->
+                <div class="form-group">
+                  <label for="currency">Currency *</label>
+                  <select
+                    id="currency"
+                    formControlName="currency"
+                    [class.error]="givingForm.get('currency')?.invalid && givingForm.get('currency')?.touched"
+                  >
+                    <option *ngFor="let curr of currencies" [value]="curr">{{ curr }}</option>
+                  </select>
+                </div>
+
+                <!-- Category -->
+                <div class="form-group">
+                  <label for="category_id">Category *</label>
+                  <select
+                    id="category_id"
+                    formControlName="category_id"
+                    [class.error]="givingForm.get('category_id')?.invalid && givingForm.get('category_id')?.touched"
+                  >
+                    <option value="">Select Category</option>
+                    <option *ngFor="let category of categories" [value]="category.id">
+                      {{ category.name }}
+                    </option>
+                  </select>
+                  <span
+                    *ngIf="givingForm.get('category_id')?.invalid && givingForm.get('category_id')?.touched"
+                    class="error-message"
+                  >
+                    {{ getErrorMessage('category_id') }}
+                  </span>
+                </div>
+
+                <!-- Payment Method -->
+                <div class="form-group">
+                  <label for="payment_method">Payment Method *</label>
+                  <select
+                    id="payment_method"
+                    formControlName="payment_method"
+                    [class.error]="givingForm.get('payment_method')?.invalid && givingForm.get('payment_method')?.touched"
+                  >
+                    <option *ngFor="let method of paymentMethods" [value]="method.value">
+                      {{ method.label }}
+                    </option>
+                  </select>
+                </div>
+
+                <!-- Transaction Reference -->
+                <div class="form-group">
+                  <label for="transaction_reference">Reference Number</label>
+                  <input
+                    id="transaction_reference"
+                    type="text"
+                    formControlName="transaction_reference"
+                    placeholder="Enter reference number (optional)"
+                  />
+                </div>
+
+                <!-- Notes -->
+                <div class="form-group full-width">
+                  <label for="notes">Notes</label>
+                  <textarea
+                    id="notes"
+                    formControlName="notes"
+                    placeholder="Add any additional notes..."
+                    rows="3"
+                  ></textarea>
+                </div>
+              </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="form-actions">
+              <button
+                type="button"
+                class="btn-secondary"
+                (click)="cancel()"
+                [disabled]="loading"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                class="btn-primary"
+                [disabled]="loading"
+              >
+                <span *ngIf="!loading">Record Giving</span>
+                <span *ngIf="loading">
+                  <i class="ri-loader-4-line spin"></i>
+                  Recording...
+                </span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

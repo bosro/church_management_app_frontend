@@ -1,0 +1,173 @@
+<!-- src/app/features/finance/components/finance-reports/finance-reports.component.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+
+  <div class="dashboard-content">
+    <app-header></app-header>
+
+    <div class="dashboard-body">
+      <div class="reports-container">
+        <!-- Page Header -->
+        <div class="page-header">
+          <div class="header-left">
+            <h1>Financial Reports</h1>
+            <p class="subtitle">View insights and export financial data</p>
+          </div>
+          <div class="year-selector">
+            <select [(ngModel)]="selectedYear" (change)="onYearChange()">
+              <option *ngFor="let year of years" [value]="year">{{ year }}</option>
+            </select>
+            <i class="ri-arrow-down-s-line"></i>
+          </div>
+        </div>
+
+        <!-- Loading State -->
+        <div *ngIf="loading" class="loading-container">
+          <app-loading-spinner message="Loading reports..."></app-loading-spinner>
+        </div>
+
+        <!-- Reports Content -->
+        <div *ngIf="!loading" class="reports-content">
+          <!-- Statistics Overview -->
+          <div class="stats-section">
+            <h2>Year Overview</h2>
+            <div class="stats-grid">
+              <div class="stat-card">
+                <div class="stat-icon" style="background: #D1FAE5; color: #059669;">
+                  <i class="ri-money-dollar-circle-line"></i>
+                </div>
+                <div class="stat-info">
+                  <p class="stat-label">Total Giving</p>
+                  <h3 class="stat-value">{{ formatCurrency(statistics?.total_giving || 0) }}</h3>
+                </div>
+              </div>
+
+              <div class="stat-card">
+                <div class="stat-icon" style="background: #DBEAFE; color: #2563EB;">
+                  <i class="ri-wallet-line"></i>
+                </div>
+                <div class="stat-info">
+                  <p class="stat-label">Total Tithes</p>
+                  <h3 class="stat-value">{{ formatCurrency(statistics?.total_tithes || 0) }}</h3>
+                </div>
+              </div>
+
+              <div class="stat-card">
+                <div class="stat-icon" style="background: #DDD6FE; color: #7C3AED;">
+                  <i class="ri-hand-heart-line"></i>
+                </div>
+                <div class="stat-info">
+                  <p class="stat-label">Total Offerings</p>
+                  <h3 class="stat-value">{{ formatCurrency(statistics?.total_offerings || 0) }}</h3>
+                </div>
+              </div>
+
+              <div class="stat-card">
+                <div class="stat-icon" style="background: #FED7AA; color: #EA580C;">
+                  <i class="ri-exchange-dollar-line"></i>
+                </div>
+                <div class="stat-info">
+                  <p class="stat-label">Transactions</p>
+                  <h3 class="stat-value">{{ statistics?.total_transactions || 0 }}</h3>
+                </div>
+              </div>
+
+              <div class="stat-card">
+                <div class="stat-icon" style="background: #FEF3C7; color: #F59E0B;">
+                  <i class="ri-bar-chart-line"></i>
+                </div>
+                <div class="stat-info">
+                  <p class="stat-label">Average Giving</p>
+                  <h3 class="stat-value">{{ formatCurrency(statistics?.avg_giving || 0) }}</h3>
+                </div>
+              </div>
+
+              <div class="stat-card">
+                <div class="stat-icon" style="background: #FCE7F3; color: #DB2777;">
+                  <i class="ri-arrow-up-line"></i>
+                </div>
+                <div class="stat-info">
+                  <p class="stat-label">Highest Transaction</p>
+                  <h3 class="stat-value">{{ formatCurrency(statistics?.highest_giving || 0) }}</h3>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Export Reports -->
+          <div class="export-section">
+            <h2>Export Reports</h2>
+            <div class="export-grid">
+              <!-- Giving Report -->
+              <div class="export-card">
+                <div class="export-icon">
+                  <i class="ri-file-chart-line"></i>
+                </div>
+                <h3>Giving Transactions</h3>
+                <p>Export all giving transactions with filters</p>
+
+                <div class="date-filters">
+                  <div class="filter-group">
+                    <label>Start Date</label>
+                    <input type="date" [formControl]="startDateControl" />
+                  </div>
+                  <div class="filter-group">
+                    <label>End Date</label>
+                    <input type="date" [formControl]="endDateControl" />
+                  </div>
+                </div>
+
+                <button class="btn-export" (click)="exportGivingReport()">
+                  <i class="ri-download-line"></i>
+                  Export CSV
+                </button>
+              </div>
+
+              <!-- Pledges Report -->
+              <div class="export-card">
+                <div class="export-icon">
+                  <i class="ri-hand-heart-line"></i>
+                </div>
+                <h3>Pledges Report</h3>
+                <p>Export all pledges with payment status</p>
+
+                <div class="spacer"></div>
+
+                <button class="btn-export" (click)="exportPledgesReport()">
+                  <i class="ri-download-line"></i>
+                  Export CSV
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Top Givers -->
+          <div class="top-givers-section">
+            <h2>Top Givers ({{ selectedYear }})</h2>
+            <div class="top-givers-card">
+              <div class="givers-list">
+                <div *ngFor="let giver of topGivers; let i = index" class="giver-row">
+                  <div class="giver-rank">
+                    <span class="rank-number" [class.top-three]="i < 3">{{ i + 1 }}</span>
+                  </div>
+                  <div class="giver-info">
+                    <p class="giver-name">{{ giver.member_name }}</p>
+                    <p class="giver-count">{{ giver.transaction_count }} transaction{{ giver.transaction_count > 1 ? 's' : '' }}</p>
+                  </div>
+                  <div class="giver-amount">
+                    <p class="amount">{{ formatCurrency(giver.total_amount) }}</p>
+                  </div>
+                </div>
+
+                <div *ngIf="topGivers.length === 0" class="empty-state">
+                  <i class="ri-user-star-line"></i>
+                  <p>No data available for this period</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

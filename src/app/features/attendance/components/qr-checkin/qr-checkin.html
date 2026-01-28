@@ -1,0 +1,127 @@
+<!-- src/app/features/attendance/components/qr-checkin/qr-checkin.component.html -->
+<div class="qr-checkin-page">
+  <div class="qr-container">
+    <!-- Header -->
+    <div class="qr-header">
+      <div class="logo">
+        <i class="ri-church-line"></i>
+        <span>Churchman</span>
+      </div>
+    </div>
+
+    <!-- Event Info -->
+    <div class="event-info" *ngIf="event">
+      <h1>{{ event.event_name }}</h1>
+      <div class="event-meta">
+        <span>
+          <i class="ri-calendar-line"></i>
+          {{ event.event_date | date:'EEEE, MMM d, y' }}
+        </span>
+        <span *ngIf="event.event_time">
+          <i class="ri-time-line"></i>
+          {{ event.event_time }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Check-in Status -->
+    <div class="checkin-status">
+      <!-- Success State -->
+      <div *ngIf="checkedIn && checkedInMember" class="success-state">
+        <div class="success-icon">
+          <i class="ri-checkbox-circle-fill"></i>
+        </div>
+        <h2>Welcome!</h2>
+        <div class="checked-in-member">
+          <div class="member-avatar-large">
+            <img
+              *ngIf="checkedInMember.photo_url"
+              [src]="checkedInMember.photo_url"
+              [alt]="getMemberFullName(checkedInMember)"
+            />
+            <div *ngIf="!checkedInMember.photo_url" class="avatar-placeholder-large">
+              {{ getMemberInitials(checkedInMember) }}
+            </div>
+          </div>
+          <p class="member-name-large">{{ getMemberFullName(checkedInMember) }}</p>
+          <p class="checkin-time">Checked in at {{ new Date() | date:'shortTime' }}</p>
+        </div>
+      </div>
+
+      <!-- Error State -->
+      <div *ngIf="errorMessage && !checkedIn" class="error-state">
+        <div class="error-icon">
+          <i class="ri-close-circle-fill"></i>
+        </div>
+        <h2>Check-in Failed</h2>
+        <p>{{ errorMessage }}</p>
+        <button class="btn-retry" (click)="resetCheckIn()">
+          <i class="ri-refresh-line"></i>
+          Try Again
+        </button>
+      </div>
+
+      <!-- Default State - Search -->
+      <div *ngIf="!checkedIn && !errorMessage" class="search-state">
+        <div class="search-icon-large">
+          <i class="ri-search-line"></i>
+        </div>
+        <h2>Check In</h2>
+        <p>Search for your name to check in</p>
+
+        <div class="search-box">
+          <i class="ri-search-line search-icon"></i>
+          <input
+            type="text"
+            [formControl]="searchControl"
+            placeholder="Enter your name..."
+            class="search-input-large"
+          />
+          <i *ngIf="searching" class="ri-loader-4-line spin"></i>
+        </div>
+
+        <!-- Search Results -->
+        <div class="search-results-large" *ngIf="searchResults.length > 0">
+          <div
+            *ngFor="let member of searchResults"
+            class="result-item-large"
+            (click)="checkIn(member.id)"
+          >
+            <div class="member-avatar-medium">
+              <img
+                *ngIf="member.photo_url"
+                [src]="member.photo_url"
+                [alt]="getMemberFullName(member)"
+              />
+              <div *ngIf="!member.photo_url" class="avatar-placeholder-medium">
+                {{ getMemberInitials(member) }}
+              </div>
+            </div>
+            <div class="member-info-large">
+              <p class="member-name">{{ getMemberFullName(member) }}</p>
+              <p class="member-number">{{ member.member_number }}</p>
+            </div>
+            <i class="ri-arrow-right-circle-fill"></i>
+          </div>
+        </div>
+
+        <!-- No Results -->
+        <div *ngIf="searchControl.value && searchResults.length === 0 && !searching" class="no-results">
+          <i class="ri-user-search-line"></i>
+          <p>No members found</p>
+        </div>
+      </div>
+
+      <!-- Loading State -->
+      <div *ngIf="loading" class="loading-state">
+        <div class="spinner-large"></div>
+        <p>Checking in...</p>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="qr-footer">
+      <p>Powered by Churchman</p>
+    </div>
+  </div>
+</div>

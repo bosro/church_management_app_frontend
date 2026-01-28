@@ -1,0 +1,158 @@
+<!-- src/app/features/members/components/import-members/import-members.component.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+
+  <div class="dashboard-content">
+    <app-header></app-header>
+
+    <div class="dashboard-body">
+      <div class="import-container">
+        <!-- Page Header -->
+        <div class="page-header">
+          <div class="header-left">
+            <button class="back-btn" (click)="cancel()">
+              <i class="ri-arrow-left-line"></i>
+            </button>
+            <div>
+              <h1>Import Members</h1>
+              <p class="subtitle">Upload a CSV file to import multiple members at once</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Success Message -->
+        <div *ngIf="successMessage" class="success-alert">
+          <i class="ri-checkbox-circle-line"></i>
+          <span>{{ successMessage }}</span>
+        </div>
+
+        <!-- Error Message -->
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i>
+          <span>{{ errorMessage }}</span>
+        </div>
+
+        <!-- Import Card -->
+        <div class="import-card">
+          <!-- Instructions -->
+          <div class="instructions-section">
+            <h3>Instructions</h3>
+            <ol>
+              <li>Download the CSV template below</li>
+              <li>Fill in your member data following the template format</li>
+              <li>Upload the completed CSV file</li>
+              <li>Review the import results and fix any errors</li>
+            </ol>
+
+            <button class="btn-template" (click)="downloadTemplate()">
+              <i class="ri-download-line"></i>
+              Download CSV Template
+            </button>
+          </div>
+
+          <!-- File Upload Area -->
+          <div class="upload-section">
+            <div
+              class="dropzone"
+              [class.dragover]="dragOver"
+              [class.has-file]="selectedFile"
+              (dragover)="onDragOver($event)"
+              (dragleave)="onDragLeave($event)"
+              (drop)="onDrop($event)"
+            >
+              <div *ngIf="!selectedFile" class="dropzone-content">
+                <i class="ri-upload-cloud-line"></i>
+                <h4>Drag & Drop your CSV file here</h4>
+                <p>or</p>
+                <label class="btn-browse">
+                  Browse Files
+                  <input type="file" accept=".csv" (change)="onFileSelected($event)" hidden />
+                </label>
+                <span class="file-hint">Maximum file size: 10MB</span>
+              </div>
+
+              <div *ngIf="selectedFile" class="file-selected">
+                <div class="file-info">
+                  <i class="ri-file-text-line"></i>
+                  <div class="file-details">
+                    <p class="file-name">{{ selectedFile.name }}</p>
+                    <p class="file-size">{{ (selectedFile.size / 1024).toFixed(2) }} KB</p>
+                  </div>
+                  <button
+                    class="btn-remove"
+                    (click)="removeFile()"
+                    *ngIf="!uploading"
+                  >
+                    <i class="ri-close-line"></i>
+                  </button>
+                </div>
+
+                <!-- Upload Progress -->
+                <div *ngIf="uploading" class="upload-progress">
+                  <div class="progress-bar">
+                    <div class="progress-fill" [style.width.%]="uploadProgress"></div>
+                  </div>
+                  <p class="progress-text">{{ uploadProgress }}% uploaded</p>
+                </div>
+
+                <!-- Upload Button -->
+                <button
+                  *ngIf="!uploading && !importResults"
+                  class="btn-upload"
+                  (click)="uploadFile()"
+                >
+                  <i class="ri-upload-2-line"></i>
+                  Start Import
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Import Results -->
+          <div *ngIf="importResults" class="results-section">
+            <h3>Import Results</h3>
+
+            <div class="results-summary">
+              <div class="result-item success">
+                <i class="ri-checkbox-circle-fill"></i>
+                <div>
+                  <p class="result-count">{{ importResults.success }}</p>
+                  <p class="result-label">Members Imported</p>
+                </div>
+              </div>
+
+              <div class="result-item error" *ngIf="importResults.errors.length > 0">
+                <i class="ri-error-warning-fill"></i>
+                <div>
+                  <p class="result-count">{{ importResults.errors.length }}</p>
+                  <p class="result-label">Errors</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Error Details -->
+            <div *ngIf="importResults.errors.length > 0" class="error-details">
+              <h4>Errors</h4>
+              <div class="error-list">
+                <div *ngFor="let error of importResults.errors" class="error-item">
+                  <i class="ri-alert-line"></i>
+                  <span>{{ error }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="results-actions">
+              <button class="btn-secondary" (click)="removeFile()">
+                Import Another File
+              </button>
+              <button class="btn-primary" (click)="goToMembers()">
+                View Members
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

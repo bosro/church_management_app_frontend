@@ -1,0 +1,173 @@
+<!-- src/app/features/attendance/components/create-event/create-event.component.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+
+  <div class="dashboard-content">
+    <app-header></app-header>
+
+    <div class="dashboard-body">
+      <div class="create-event-container">
+        <!-- Page Header -->
+        <div class="page-header">
+          <div class="header-left">
+            <button class="back-btn" (click)="cancel()">
+              <i class="ri-arrow-left-line"></i>
+            </button>
+            <div>
+              <h1>Create Attendance Event</h1>
+              <p class="subtitle">Set up a new event to track attendance</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Success Message -->
+        <div *ngIf="successMessage" class="success-alert">
+          <i class="ri-checkbox-circle-line"></i>
+          <span>{{ successMessage }}</span>
+        </div>
+
+        <!-- Error Message -->
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i>
+          <span>{{ errorMessage }}</span>
+        </div>
+
+        <!-- Form -->
+        <div class="form-card">
+          <form [formGroup]="eventForm" (ngSubmit)="onSubmit()">
+            <div class="form-grid">
+              <!-- Event Type -->
+              <div class="form-group">
+                <label for="event_type">Event Type *</label>
+                <select
+                  id="event_type"
+                  formControlName="event_type"
+                  [class.error]="eventForm.get('event_type')?.invalid && eventForm.get('event_type')?.touched"
+                >
+                  <option *ngFor="let type of eventTypes" [value]="type.value">
+                    {{ type.label }}
+                  </option>
+                </select>
+                <span
+                  *ngIf="eventForm.get('event_type')?.invalid && eventForm.get('event_type')?.touched"
+                  class="error-message"
+                >
+                  {{ getErrorMessage('event_type') }}
+                </span>
+              </div>
+
+              <!-- Event Name -->
+              <div class="form-group">
+                <label for="event_name">Event Name *</label>
+                <input
+                  id="event_name"
+                  type="text"
+                  formControlName="event_name"
+                  placeholder="e.g., Sunday Morning Service"
+                  [class.error]="eventForm.get('event_name')?.invalid && eventForm.get('event_name')?.touched"
+                />
+                <span
+                  *ngIf="eventForm.get('event_name')?.invalid && eventForm.get('event_name')?.touched"
+                  class="error-message"
+                >
+                  {{ getErrorMessage('event_name') }}
+                </span>
+              </div>
+
+              <!-- Event Date -->
+              <div class="form-group">
+                <label for="event_date">Event Date *</label>
+                <input
+                  id="event_date"
+                  type="date"
+                  formControlName="event_date"
+                  [class.error]="eventForm.get('event_date')?.invalid && eventForm.get('event_date')?.touched"
+                />
+                <span
+                  *ngIf="eventForm.get('event_date')?.invalid && eventForm.get('event_date')?.touched"
+                  class="error-message"
+                >
+                  {{ getErrorMessage('event_date') }}
+                </span>
+              </div>
+
+              <!-- Event Time -->
+              <div class="form-group">
+                <label for="event_time">Event Time</label>
+                <input
+                  id="event_time"
+                  type="time"
+                  formControlName="event_time"
+                />
+              </div>
+
+              <!-- Location -->
+              <div class="form-group full-width">
+                <label for="location">Location</label>
+                <input
+                  id="location"
+                  type="text"
+                  formControlName="location"
+                  placeholder="e.g., Main Sanctuary"
+                />
+              </div>
+
+              <!-- Expected Attendance -->
+              <div class="form-group">
+                <label for="expected_attendance">Expected Attendance</label>
+                <input
+                  id="expected_attendance"
+                  type="number"
+                  formControlName="expected_attendance"
+                  placeholder="Enter expected number"
+                  min="1"
+                  [class.error]="eventForm.get('expected_attendance')?.invalid && eventForm.get('expected_attendance')?.touched"
+                />
+                <span
+                  *ngIf="eventForm.get('expected_attendance')?.invalid && eventForm.get('expected_attendance')?.touched"
+                  class="error-message"
+                >
+                  {{ getErrorMessage('expected_attendance') }}
+                </span>
+              </div>
+
+              <!-- Notes -->
+              <div class="form-group full-width">
+                <label for="notes">Notes</label>
+                <textarea
+                  id="notes"
+                  formControlName="notes"
+                  placeholder="Add any additional notes about this event..."
+                  rows="4"
+                ></textarea>
+              </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="form-actions">
+              <button
+                type="button"
+                class="btn-secondary"
+                (click)="cancel()"
+                [disabled]="loading"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                class="btn-primary"
+                [disabled]="loading"
+              >
+                <span *ngIf="!loading">Create Event</span>
+                <span *ngIf="loading">
+                  <i class="ri-loader-4-line spin"></i>
+                  Creating...
+                </span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

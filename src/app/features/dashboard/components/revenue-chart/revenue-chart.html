@@ -1,0 +1,27 @@
+<!-- src/app/features/dashboard/components/revenue-chart/revenue-chart.component.html -->
+<div class="revenue-chart-card">
+  <div class="chart-header">
+    <h3>Revenue</h3>
+    <div class="year-selector">
+      <select [(ngModel)]="selectedYear" (change)="onYearChange($event)">
+        <option *ngFor="let year of years" [value]="year">{{ year }}</option>
+      </select>
+      <i class="ri-arrow-down-s-line"></i>
+    </div>
+  </div>
+
+  <div class="chart-container">
+    <canvas #chartCanvas></canvas>
+  </div>
+
+  <div class="chart-legend">
+    <div class="legend-item">
+      <span class="legend-dot tithe"></span>
+      <span class="legend-label">Tithe</span>
+    </div>
+    <div class="legend-item">
+      <span class="legend-dot offering"></span>
+      <span class="legend-label">Seed/Offerory</span>
+    </div>
+  </div>
+</div>

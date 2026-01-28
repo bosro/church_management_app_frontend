@@ -1,0 +1,57 @@
+<!-- src/app/shared/components/header/header.component.html -->
+<div class="header">
+  <!-- Hamburger Menu (Mobile) -->
+  <button class="hamburger-btn">
+    <i class="ri-menu-line"></i>
+  </button>
+
+  <!-- Search Bar -->
+  <div class="search-container">
+    <i class="ri-search-line search-icon"></i>
+    <input
+      type="text"
+      placeholder="Search"
+      [(ngModel)]="searchQuery"
+      (keyup.enter)="onSearch()"
+      class="search-input"
+    />
+  </div>
+
+  <!-- User Profile -->
+  <div class="user-section" *ngIf="currentUser">
+    <div class="user-info-header" (click)="toggleUserMenu()">
+      <div class="user-avatar">
+        <img
+          *ngIf="currentUser.avatar_url"
+          [src]="currentUser.avatar_url"
+          [alt]="currentUser.full_name"
+        />
+        <div *ngIf="!currentUser.avatar_url" class="avatar-placeholder">
+          {{ currentUser.full_name.charAt(0).toUpperCase() }}
+        </div>
+      </div>
+      <div class="user-details">
+        <p class="user-name">{{ currentUser.full_name }}</p>
+        <p class="user-role">{{ currentUser.role | titlecase }}</p>
+      </div>
+      <i class="ri-arrow-down-s-line dropdown-icon"></i>
+    </div>
+
+    <!-- Dropdown Menu -->
+    <div class="user-dropdown" *ngIf="showUserMenu">
+      <button class="dropdown-item" (click)="navigateToProfile()">
+        <i class="ri-user-line"></i>
+        <span>Profile</span>
+      </button>
+      <button class="dropdown-item" (click)="navigateToSettings()">
+        <i class="ri-settings-3-line"></i>
+        <span>Settings</span>
+      </button>
+      <div class="dropdown-divider"></div>
+      <button class="dropdown-item logout" (click)="logout()">
+        <i class="ri-logout-box-line"></i>
+        <span>Logout</span>
+      </button>
+    </div>
+  </div>
+</div>

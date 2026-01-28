@@ -1,0 +1,62 @@
+<!-- src/app/features/auth/components/otp-verification/otp-verification.component.html -->
+<div class="otp-verification">
+  <!-- Success Message -->
+  <div *ngIf="successMessage" class="success-alert">
+    <i class="ri-checkbox-circle-line"></i>
+    <span>{{ successMessage }}</span>
+  </div>
+
+  <!-- Error Message -->
+  <div *ngIf="errorMessage" class="error-alert">
+    <i class="ri-error-warning-line"></i>
+    <span>{{ errorMessage }}</span>
+  </div>
+
+  <form [formGroup]="otpForm" (ngSubmit)="verifyOtp()" class="otp-form">
+    <!-- OTP Input -->
+    <div class="form-group">
+      <label for="otp">Enter OTP</label>
+      <div class="input-wrapper">
+        <i class="ri-lock-line input-icon"></i>
+        <input
+          id="otp"
+          type="text"
+          formControlName="otp"
+          placeholder="Start typing..."
+          maxlength="6"
+          (input)="onOtpInput($event)"
+          [class.error]="otpForm.get('otp')?.invalid && otpForm.get('otp')?.touched"
+        />
+      </div>
+      <span
+        *ngIf="otpForm.get('otp')?.invalid && otpForm.get('otp')?.touched"
+        class="error-message"
+      >
+        Please enter a valid 6-digit OTP
+      </span>
+    </div>
+
+    <!-- Resend OTP -->
+    <div class="resend-section">
+      <span class="resend-text">Didn't receive the code?</span>
+      <button
+        type="button"
+        class="resend-btn"
+        [disabled]="resendCountdown > 0 || loading"
+        (click)="resendOtp()"
+      >
+        {{ resendCountdown > 0 ? 'Resend in ' + resendCountdown + 's' : 'Resend OTP' }}
+      </button>
+    </div>
+
+    <!-- Submit Button -->
+    <button
+      type="submit"
+      class="btn-primary btn-full"
+      [disabled]="loading || otpForm.invalid"
+    >
+      <span *ngIf="!loading">Finish</span>
+      <span *ngIf="loading">Verifying...</span>
+    </button>
+  </form>
+</div>

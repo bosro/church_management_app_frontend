@@ -1,0 +1,48 @@
+<!-- src/app/shared/components/sidebar/sidebar.component.html -->
+<div class="sidebar">
+  <!-- Logo -->
+  <div class="sidebar-logo">
+    <i class="ri-church-line logo-icon"></i>
+    <span class="logo-text">Churchman.</span>
+  </div>
+
+  <!-- Navigation Menu -->
+  <nav class="sidebar-nav">
+    <ul class="menu-list">
+      <li
+        *ngFor="let item of menuItems"
+        class="menu-item"
+        [class.active]="item.active"
+        (click)="navigate(item.route)"
+      >
+        <i [class]="item.icon"></i>
+        <span>{{ item.label }}</span>
+      </li>
+    </ul>
+  </nav>
+
+  <!-- User Profile -->
+  <div class="sidebar-footer">
+    <div class="user-profile" *ngIf="currentUser">
+      <div class="user-avatar">
+        <img
+          *ngIf="currentUser.avatar_url"
+          [src]="currentUser.avatar_url"
+          [alt]="currentUser.full_name"
+        />
+        <div *ngIf="!currentUser.avatar_url" class="avatar-placeholder">
+          {{ currentUser.full_name.charAt(0).toUpperCase() }}
+        </div>
+      </div>
+      <div class="user-info">
+        <p class="user-name">{{ currentUser.full_name }}</p>
+      </div>
+    </div>
+
+    <!-- Logout Button -->
+    <button class="logout-btn" (click)="logout()">
+      <i class="ri-logout-box-line"></i>
+      <span>Logout</span>
+    </button>
+  </div>
+</div>

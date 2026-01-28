@@ -1,0 +1,208 @@
+<!-- src/app/features/finance/components/finance-overview/finance-overview.component.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+
+  <div class="dashboard-content">
+    <app-header></app-header>
+
+    <div class="dashboard-body">
+      <div class="finance-container">
+        <!-- Page Header -->
+        <div class="page-header">
+          <div class="header-left">
+            <h1>Finance</h1>
+            <p class="subtitle">Manage giving, pledges, and financial records</p>
+          </div>
+          <div class="header-actions">
+            <div class="year-selector">
+              <select [(ngModel)]="selectedYear" (change)="onYearChange()">
+                <option *ngFor="let year of years" [value]="year">{{ year }}</option>
+              </select>
+              <i class="ri-arrow-down-s-line"></i>
+            </div>
+            <button class="btn-secondary" (click)="manageCategories()">
+              <i class="ri-settings-3-line"></i>
+              <span>Categories</span>
+            </button>
+            <button class="btn-secondary" (click)="viewReports()">
+              <i class="ri-file-chart-line"></i>
+              <span>Reports</span>
+            </button>
+            <button class="btn-primary" (click)="recordGiving()">
+              <i class="ri-add-line"></i>
+              <span>Record Giving</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Loading State -->
+        <div *ngIf="loading" class="loading-container">
+          <app-loading-spinner message="Loading financial data..."></app-loading-spinner>
+        </div>
+
+        <!-- Dashboard Content -->
+        <div *ngIf="!loading" class="finance-grid">
+          <!-- Statistics Cards -->
+          <div class="stats-section">
+            <div class="stat-card">
+              <div class="stat-icon" style="background: #D1FAE5; color: #059669;">
+                <i class="ri-money-dollar-circle-line"></i>
+              </div>
+              <div class="stat-info">
+                <p class="stat-label">Total Giving</p>
+                <h3 class="stat-value">{{ formatCurrency(statistics?.total_giving || 0) }}</h3>
+                <p class="stat-meta">{{ selectedYear }}</p>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon" style="background: #DBEAFE; color: #2563EB;">
+                <i class="ri-wallet-line"></i>
+              </div>
+              <div class="stat-info">
+                <p class="stat-label">Tithes</p>
+                <h3 class="stat-value">{{ formatCurrency(statistics?.total_tithes || 0) }}</h3>
+                <p class="stat-meta">{{ selectedYear }}</p>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon" style="background: #DDD6FE; color: #7C3AED;">
+                <i class="ri-hand-heart-line"></i>
+              </div>
+              <div class="stat-info">
+                <p class="stat-label">Offerings</p>
+                <h3 class="stat-value">{{ formatCurrency(statistics?.total_offerings || 0) }}</h3>
+                <p class="stat-meta">{{ selectedYear }}</p>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon" style="background: #FED7AA; color: #EA580C;">
+                <i class="ri-exchange-dollar-line"></i>
+              </div>
+              <div class="stat-info">
+                <p class="stat-label">Transactions</p>
+                <h3 class="stat-value">{{ statistics?.total_transactions || 0 }}</h3>
+                <p class="stat-meta">{{ selectedYear }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Main Content Grid -->
+          <div class="content-grid">
+            <!-- Left Column -->
+            <div class="left-column">
+              <!-- Recent Transactions -->
+              <div class="content-card">
+                <div class="card-header">
+                  <h3>Recent Transactions</h3>
+                  <button class="btn-text" (click)="viewAllGiving()">
+                    View All
+                    <i class="ri-arrow-right-line"></i>
+                  </button>
+                </div>
+
+                <div class="transactions-list">
+                  <div
+                    *ngFor="let transaction of recentTransactions"
+                    class="transaction-item"
+                  >
+                    <div class="transaction-info">
+                      <div class="member-avatar-small">
+                        <img
+                          *ngIf="transaction.member?.photo_url"
+                          [src]="transaction.member.photo_url"
+                          [alt]="getMemberName(transaction)"
+                        />
+                        <div *ngIf="!transaction.member?.photo_url" class="avatar-placeholder-small">
+                          {{ getMemberInitials(transaction) }}
+                        </div>
+                      </div>
+                      <div class="transaction-details">
+                        <p class="transaction-name">{{ getMemberName(transaction) }}</p>
+                        <p class="transaction-meta">
+                          <span>{{ transaction.category?.name || 'General' }}</span>
+                          <span class="dot">•</span>
+                          <span>{{ transaction.transaction_date | date:'MMM d' }}</span>
+                        </p>
+                      </div>
+                    </div>
+                    <div class="transaction-amount">
+                      <p class="amount">{{ formatCurrency(transaction.amount, transaction.currency) }}</p>
+                      <p class="payment-method">{{ transaction.payment_method }}</p>
+                    </div>
+                  </div>
+
+                  <div *ngIf="recentTransactions.length === 0" class="empty-state-small">
+                    <i class="ri-money-dollar-circle-line"></i>
+                    <p>No transactions recorded yet</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Giving Trends Chart Placeholder -->
+              <div class="content-card">
+                <div class="card-header">
+                  <h3>Giving Trends</h3>
+                </div>
+                <div class="chart-placeholder">
+                  <i class="ri-line-chart-line"></i>
+                  <p>Chart visualization coming soon</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Column -->
+            <div class="right-column">
+              <!-- Quick Actions -->
+              <div class="content-card">
+                <h3>Quick Actions</h3>
+                <div class="quick-actions-grid">
+                  <button class="action-btn action-green" (click)="recordGiving()">
+                    <i class="ri-money-dollar-circle-line"></i>
+                    <span>Record Giving</span>
+                  </button>
+
+                  <button class="action-btn action-blue" (click)="viewPledges()">
+                    <i class="ri-hand-heart-line"></i>
+                    <span>Pledges</span>
+                  </button>
+
+                  <button class="action-btn action-purple" (click)="viewReports()">
+                    <i class="ri-file-chart-line"></i>
+                    <span>Reports</span>
+                  </button>
+
+                  <button class="action-btn action-orange" (click)="manageCategories()">
+                    <i class="ri-settings-3-line"></i>
+                    <span>Categories</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Top Givers -->
+              <div class="content-card">
+                <h3>Top Givers</h3>
+                <div class="top-givers-list">
+                  <div *ngFor="let giver of topGivers; let i = index" class="giver-item">
+                    <div class="giver-rank">{{ i + 1 }}</div>
+                    <div class="giver-info">
+                      <p class="giver-name">{{ giver.member_name }}</p>
+                      <p class="giver-amount">{{ formatCurrency(giver.total_amount) }}</p>
+                    </div>
+                  </div>
+
+                  <div *ngIf="topGivers.length === 0" class="empty-state-small">
+                    <i class="ri-user-star-line"></i>
+                    <p>No data available</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

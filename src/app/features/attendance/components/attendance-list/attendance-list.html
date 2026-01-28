@@ -1,0 +1,227 @@
+<!-- src/app/features/attendance/components/attendance-list/attendance-list.component.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+
+  <div class="dashboard-content">
+    <app-header></app-header>
+
+    <div class="dashboard-body">
+      <div class="attendance-container">
+        <!-- Page Header -->
+        <div class="page-header">
+          <div class="header-left">
+            <h1>Attendance</h1>
+            <p class="subtitle">Manage and track church attendance</p>
+          </div>
+          <div class="header-actions">
+            <button class="btn-secondary" (click)="viewVisitors()">
+              <i class="ri-user-follow-line"></i>
+              <span>Visitors</span>
+            </button>
+            <button class="btn-secondary" (click)="viewReports()">
+              <i class="ri-file-chart-line"></i>
+              <span>Reports</span>
+            </button>
+            <button class="btn-primary" (click)="createEvent()">
+              <i class="ri-add-line"></i>
+              <span>Create Event</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="stats-grid" *ngIf="statistics">
+          <div class="stat-card">
+            <div class="stat-icon" style="background: #DDD6FE; color: #7C3AED;">
+              <i class="ri-calendar-check-line"></i>
+            </div>
+            <div class="stat-info">
+              <p class="stat-label">Total Events</p>
+              <h3 class="stat-value">{{ statistics.total_events || 0 }}</h3>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon" style="background: #D1FAE5; color: #10B981;">
+              <i class="ri-group-line"></i>
+            </div>
+            <div class="stat-info">
+              <p class="stat-label">Total Attendance</p>
+              <h3 class="stat-value">{{ statistics.total_attendance || 0 }}</h3>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon" style="background: #DBEAFE; color: #3B82F6;">
+              <i class="ri-bar-chart-line"></i>
+            </div>
+            <div class="stat-info">
+              <p class="stat-label">Average Attendance</p>
+              <h3 class="stat-value">{{ statistics.avg_attendance || 0 }}</h3>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon" style="background: #FEF3C7; color: #F59E0B;">
+              <i class="ri-arrow-up-line"></i>
+            </div>
+            <div class="stat-info">
+              <p class="stat-label">Highest Attendance</p>
+              <h3 class="stat-value">{{ statistics.highest_attendance || 0 }}</h3>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="filters-card">
+          <div class="filter-group">
+            <label for="eventType">Event Type</label>
+            <select
+              id="eventType"
+              [(ngModel)]="selectedEventType"
+              (change)="onEventTypeChange()"
+              class="filter-select"
+            >
+              <option *ngFor="let type of eventTypes" [value]="type.value">
+                {{ type.label }}
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Loading State -->
+        <div *ngIf="loading" class="loading-container">
+          <app-loading-spinner message="Loading events..."></app-loading-spinner>
+        </div>
+
+        <!-- Events List -->
+        <div *ngIf="!loading" class="events-grid">
+          <div
+            *ngFor="let event of events"
+            class="event-card"
+            (click)="viewEvent(event.id)"
+          >
+            <div class="event-header">
+              <div class="event-type-badge" [ngClass]="getEventTypeClass(event.event_type)">
+                {{ getEventTypeLabel(event.event_type) }}
+              </div>
+              <div class="event-actions">
+                <button
+                  class="btn-icon-small"
+                  (click)="markAttendance(event.id, $event)"
+                  title="Mark Attendance"
+                >
+                  <i class="ri-checkbox-line"></i>
+                </button>
+                <button
+                  class="btn-icon-small btn-danger"
+                  (click)="deleteEvent(event.id, $event)"
+                  title="Delete"
+                >
+                  <i class="ri-delete-bin-line"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="event-body">
+              <h3 class="event-name">{{ event.event_name }}</h3>
+
+              <div class="event-details">
+                <div class="detail-item">
+                  <i class="ri-calendar-line"></i>
+                  <span>{{ event.event_date | date:'MMM d, y' }}</span>
+                </div>
+
+                <div class="detail-item" *ngIf="event.event_time">
+                  <i class="ri-time-line"></i>
+                  <span>{{ event.event_time }}</span>
+                </div>
+
+                <div class="detail-item" *ngIf="event.location">
+                  <i class="ri-map-pin-line"></i>
+                  <span>{{ event.location }}</span>
+                </div>
+              </div>
+
+              <div class="event-stats">
+                <div class="stat-item">
+                  <div class="stat-icon-small">
+                    <i class="ri-group-line"></i>
+                  </div>
+                  <div>
+                    <p class="stat-number">{{ event.total_attendance }}</p>
+                    <p class="stat-text">Attended</p>
+                  </div>
+                </div>
+
+                <div class="stat-item" *ngIf="event.expected_attendance">
+                  <div class="stat-icon-small">
+                    <i class="ri-user-line"></i>
+                  </div>
+                  <div>
+                    <p class="stat-number">{{ event.expected_attendance }}</p>
+                    <p class="stat-text">Expected</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="attendance-rate" *ngIf="event.expected_attendance">
+                <div class="rate-label">
+                  <span>Attendance Rate</span>
+                  <span class="rate-percentage" [ngClass]="getAttendanceRateClass(calculateAttendanceRate(event))">
+                    {{ calculateAttendanceRate(event) }}%
+                  </span>
+                </div>
+                <div class="rate-bar">
+                  <div
+                    class="rate-fill"
+                    [ngClass]="getAttendanceRateClass(calculateAttendanceRate(event))"
+                    [style.width.%]="calculateAttendanceRate(event)"
+                  ></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Empty State -->
+          <div *ngIf="events.length === 0" class="empty-state">
+            <i class="ri-calendar-check-line"></i>
+            <h3>No Events Found</h3>
+            <p>Create your first attendance event to get started</p>
+            <button class="btn-primary" (click)="createEvent()">
+              <i class="ri-add-line"></i>
+              Create Event
+            </button>
+          </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination" *ngIf="totalPages > 1 && !loading">
+          <button
+            class="pagination-btn"
+            [disabled]="currentPage === 1"
+            (click)="previousPage()"
+          >
+            <i class="ri-arrow-left-s-line"></i>
+            Previous
+          </button>
+
+          <div class="pagination-pages">
+            <span class="page-info">
+              Page {{ currentPage }} of {{ totalPages }} ({{ totalEvents }} events)
+            </span>
+          </div>
+
+          <button
+            class="pagination-btn"
+            [disabled]="currentPage === totalPages"
+            (click)="nextPage()"
+          >
+            Next
+            <i class="ri-arrow-right-s-line"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

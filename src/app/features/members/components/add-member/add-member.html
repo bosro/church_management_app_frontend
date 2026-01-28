@@ -1,0 +1,385 @@
+<!-- src/app/features/members/components/add-member/add-member.component.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+
+  <div class="dashboard-content">
+    <app-header></app-header>
+
+    <div class="dashboard-body">
+      <div class="add-member-container">
+        <!-- Page Header -->
+        <div class="page-header">
+          <div class="header-left">
+            <button class="back-btn" (click)="cancel()">
+              <i class="ri-arrow-left-line"></i>
+            </button>
+            <div>
+              <h1>Add New Member</h1>
+              <p class="subtitle">Fill in the member's information below</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Success Message -->
+        <div *ngIf="successMessage" class="success-alert">
+          <i class="ri-checkbox-circle-line"></i>
+          <span>{{ successMessage }}</span>
+        </div>
+
+        <!-- Error Message -->
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i>
+          <span>{{ errorMessage }}</span>
+        </div>
+
+        <form [formGroup]="memberForm" (ngSubmit)="onSubmit()">
+          <div class="form-grid">
+            <!-- Photo Upload Section -->
+            <div class="form-card">
+              <h3>Photo</h3>
+              <div class="photo-upload-section">
+                <div class="photo-preview">
+                  <img *ngIf="photoPreview" [src]="photoPreview" alt="Member photo" />
+                  <div *ngIf="!photoPreview" class="photo-placeholder">
+                    <i class="ri-user-line"></i>
+                    <span>No photo</span>
+                  </div>
+                </div>
+                <div class="photo-actions">
+                  <label class="btn-upload">
+                    <i class="ri-upload-2-line"></i>
+                    <span>Upload Photo</span>
+                    <input type="file" accept="image/*" (change)="onPhotoSelected($event)" hidden />
+                  </label>
+                  <button
+                    *ngIf="photoPreview"
+                    type="button"
+                    class="btn-remove"
+                    (click)="removePhoto()"
+                  >
+                    <i class="ri-delete-bin-line"></i>
+                    Remove
+                  </button>
+                </div>
+                <p class="photo-hint">Max size: 5MB. Supported: JPG, PNG, GIF</p>
+              </div>
+            </div>
+
+            <!-- Basic Information -->
+            <div class="form-card">
+              <h3>Basic Information</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="first_name">First Name *</label>
+                  <input
+                    id="first_name"
+                    type="text"
+                    formControlName="first_name"
+                    placeholder="Enter first name"
+                    [class.error]="memberForm.get('first_name')?.invalid && memberForm.get('first_name')?.touched"
+                  />
+                  <span
+                    *ngIf="memberForm.get('first_name')?.invalid && memberForm.get('first_name')?.touched"
+                    class="error-message"
+                  >
+                    {{ getErrorMessage('first_name') }}
+                  </span>
+                </div>
+
+                <div class="form-group">
+                  <label for="middle_name">Middle Name</label>
+                  <input
+                    id="middle_name"
+                    type="text"
+                    formControlName="middle_name"
+                    placeholder="Enter middle name"
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label for="last_name">Last Name *</label>
+                  <input
+                    id="last_name"
+                    type="text"
+                    formControlName="last_name"
+                    placeholder="Enter last name"
+                    [class.error]="memberForm.get('last_name')?.invalid && memberForm.get('last_name')?.touched"
+                  />
+                  <span
+                    *ngIf="memberForm.get('last_name')?.invalid && memberForm.get('last_name')?.touched"
+                    class="error-message"
+                  >
+                    {{ getErrorMessage('last_name') }}
+                  </span>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="date_of_birth">Date of Birth</label>
+                  <input
+                    id="date_of_birth"
+                    type="date"
+                    formControlName="date_of_birth"
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label for="gender">Gender</label>
+                  <select id="gender" formControlName="gender">
+                    <option value="">Select gender</option>
+                    <option *ngFor="let option of genderOptions" [value]="option.value">
+                      {{ option.label }}
+                    </option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="marital_status">Marital Status</label>
+                  <select id="marital_status" formControlName="marital_status">
+                    <option value="">Select status</option>
+                    <option *ngFor="let option of maritalStatusOptions" [value]="option.value">
+                      {{ option.label }}
+                    </option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Contact Information -->
+            <div class="form-card">
+              <h3>Contact Information</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="phone_primary">Primary Phone</label>
+                  <input
+                    id="phone_primary"
+                    type="tel"
+                    formControlName="phone_primary"
+                    placeholder="0XXXXXXXXX"
+                    [class.error]="memberForm.get('phone_primary')?.invalid && memberForm.get('phone_primary')?.touched"
+                  />
+                  <span
+                    *ngIf="memberForm.get('phone_primary')?.invalid && memberForm.get('phone_primary')?.touched"
+                    class="error-message"
+                  >
+                    {{ getErrorMessage('phone_primary') }}
+                  </span>
+                </div>
+
+                <div class="form-group">
+                  <label for="phone_secondary">Secondary Phone</label>
+                  <input
+                    id="phone_secondary"
+                    type="tel"
+                    formControlName="phone_secondary"
+                    placeholder="0XXXXXXXXX"
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label for="email">Email</label>
+                  <input
+                    id="email"
+                    type="email"
+                    formControlName="email"
+                    placeholder="email@example.com"
+                    [class.error]="memberForm.get('email')?.invalid && memberForm.get('email')?.touched"
+                  />
+                  <span
+                    *ngIf="memberForm.get('email')?.invalid && memberForm.get('email')?.touched"
+                    class="error-message"
+                  >
+                    {{ getErrorMessage('email') }}
+                  </span>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group full-width">
+                  <label for="address">Address</label>
+                  <input
+                    id="address"
+                    type="text"
+                    formControlName="address"
+                    placeholder="Enter residential address"
+                  />
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="city">City</label>
+                  <input
+                    id="city"
+                    type="text"
+                    formControlName="city"
+                    placeholder="Enter city"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Occupation & Education -->
+            <div class="form-card">
+              <h3>Occupation & Education</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="occupation">Occupation</label>
+                  <input
+                    id="occupation"
+                    type="text"
+                    formControlName="occupation"
+                    placeholder="Enter occupation"
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label for="employer">Employer</label>
+                  <input
+                    id="employer"
+                    type="text"
+                    formControlName="employer"
+                    placeholder="Enter employer"
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label for="education_level">Education Level</label>
+                  <select id="education_level" formControlName="education_level">
+                    <option value="">Select level</option>
+                    <option *ngFor="let level of educationLevels" [value]="level">
+                      {{ level }}
+                    </option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Emergency Contact -->
+            <div class="form-card">
+              <h3>Emergency Contact</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="emergency_contact_name">Contact Name</label>
+                  <input
+                    id="emergency_contact_name"
+                    type="text"
+                    formControlName="emergency_contact_name"
+                    placeholder="Enter contact name"
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label for="emergency_contact_phone">Contact Phone</label>
+                  <input
+                    id="emergency_contact_phone"
+                    type="tel"
+                    formControlName="emergency_contact_phone"
+                    placeholder="0XXXXXXXXX"
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label for="emergency_contact_relationship">Relationship</label>
+                  <input
+                    id="emergency_contact_relationship"
+                    type="text"
+                    formControlName="emergency_contact_relationship"
+                    placeholder="e.g., Spouse, Parent, Sibling"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Church Information -->
+            <div class="form-card">
+              <h3>Church Information</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="baptism_date">Baptism Date</label>
+                  <input
+                    id="baptism_date"
+                    type="date"
+                    formControlName="baptism_date"
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label for="baptism_location">Baptism Location</label>
+                  <input
+                    id="baptism_location"
+                    type="text"
+                    formControlName="baptism_location"
+                    placeholder="Enter location"
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label for="join_date">Join Date *</label>
+                  <input
+                    id="join_date"
+                    type="date"
+                    formControlName="join_date"
+                    [class.error]="memberForm.get('join_date')?.invalid && memberForm.get('join_date')?.touched"
+                  />
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group checkbox-group">
+                  <label class="checkbox-label">
+                    <input type="checkbox" formControlName="is_new_convert" />
+                    <span>New Convert</span>
+                  </label>
+                </div>
+
+                <div class="form-group checkbox-group">
+                  <label class="checkbox-label">
+                    <input type="checkbox" formControlName="is_visitor" />
+                    <span>Visitor</span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group full-width">
+                  <label for="notes">Notes</label>
+                  <textarea
+                    id="notes"
+                    formControlName="notes"
+                    placeholder="Additional notes about the member..."
+                    rows="4"
+                  ></textarea>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Form Actions -->
+          <div class="form-actions">
+            <button
+              type="button"
+              class="btn-secondary"
+              (click)="cancel()"
+              [disabled]="loading"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="btn-primary"
+              [disabled]="loading || uploadingPhoto"
+            >
+              <span *ngIf="!loading && !uploadingPhoto">Add Member</span>
+              <span *ngIf="loading || uploadingPhoto">
+                <i class="ri-loader-4-line spin"></i>
+                {{ uploadingPhoto ? 'Uploading photo...' : 'Creating member...' }}
+              </span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

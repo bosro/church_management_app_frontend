@@ -1,0 +1,181 @@
+<!-- src/app/features/finance/components/giving-list/giving-list.component.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+
+  <div class="dashboard-content">
+    <app-header></app-header>
+
+    <div class="dashboard-body">
+      <div class="giving-list-container">
+        <!-- Page Header -->
+        <div class="page-header">
+          <div class="header-left">
+            <h1>Giving Transactions</h1>
+            <p class="subtitle">View and manage all giving records</p>
+          </div>
+          <div class="header-actions">
+            <button class="btn-secondary" (click)="exportReport()">
+              <i class="ri-download-line"></i>
+              <span>Export</span>
+            </button>
+            <button class="btn-primary" (click)="recordGiving()">
+              <i class="ri-add-line"></i>
+              <span>Record Giving</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="filters-card">
+          <div class="filters-grid">
+            <div class="filter-group">
+              <label>Start Date</label>
+              <input type="date" [formControl]="startDateControl" class="filter-input" />
+            </div>
+
+            <div class="filter-group">
+              <label>End Date</label>
+              <input type="date" [formControl]="endDateControl" class="filter-input" />
+            </div>
+
+            <div class="filter-group">
+              <label>Category</label>
+              <select [formControl]="categoryControl" class="filter-select">
+                <option value="">All Categories</option>
+                <option *ngFor="let category of categories" [value]="category.id">
+                  {{ category.name }}
+                </option>
+              </select>
+            </div>
+
+            <div class="filter-group">
+              <label>Payment Method</label>
+              <select [formControl]="paymentMethodControl" class="filter-select">
+                <option *ngFor="let method of paymentMethods" [value]="method.value">
+                  {{ method.label }}
+                </option>
+              </select>
+            </div>
+          </div>
+
+          <button class="btn-clear-filters" (click)="clearFilters()">
+            <i class="ri-close-circle-line"></i>
+            Clear Filters
+          </button>
+        </div>
+
+        <!-- Loading State -->
+        <div *ngIf="loading" class="loading-container">
+          <app-loading-spinner message="Loading transactions..."></app-loading-spinner>
+        </div>
+
+        <!-- Transactions Table -->
+        <div *ngIf="!loading" class="transactions-card">
+          <div class="table-wrapper">
+            <table class="transactions-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Member</th>
+                  <th>Category</th>
+                  <th>Amount</th>
+                  <th>Payment Method</th>
+                  <th>Reference</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let transaction of transactions">
+                  <td>{{ transaction.transaction_date | date:'MMM d, y' }}</td>
+                  <td>
+                    <div class="member-cell">
+                      <div class="member-avatar-small">
+                        <img
+                          *ngIf="transaction.member?.photo_url"
+                          [src]="transaction.member.photo_url"
+                          [alt]="getMemberName(transaction)"
+                        />
+                        <div *ngIf="!transaction.member?.photo_url" class="avatar-placeholder-small">
+                          {{ getMemberInitials(transaction) }}
+                        </div>
+                      </div>
+                      <div class="member-info">
+                        <span class="member-name">{{ getMemberName(transaction) }}</span>
+                        <span class="member-number" *ngIf="transaction.member">
+                          {{ transaction.member.member_number }}
+                        </span>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="category-badge">
+                      {{ transaction.category?.name || 'General' }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="amount">
+                      {{ formatCurrency(transaction.amount, transaction.currency) }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="payment-method">
+                      {{ transaction.payment_method }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="reference">
+                      {{ transaction.transaction_reference || '-' }}
+                    </span>
+                  </td>
+                  <td>
+                    <button
+                      class="btn-delete"
+                      (click)="deleteTransaction(transaction.id, $event)"
+                      title="Delete"
+                    >
+                      <i class="ri-delete-bin-line"></i>
+                    </button>
+                  </td>
+                </tr>
+
+                <tr *ngIf="transactions.length === 0">
+                  <td colspan="7" class="empty-state">
+                    <i class="ri-money-dollar-circle-line"></i>
+                    <p>No transactions found</p>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination" *ngIf="totalPages > 1 && !loading">
+          <button
+            class="pagination-btn"
+            [disabled]="currentPage === 1"
+            (click)="previousPage()"
+          >
+            <i class="ri-arrow-left-s-line"></i>
+            Previous
+          </button>
+
+          <div class="pagination-pages">
+            <span class="page-info">
+              Page {{ currentPage }} of {{ totalPages }} ({{ totalTransactions }} transactions)
+            </span>
+          </div>
+
+          <button
+            class="pagination-btn"
+            [disabled]="currentPage === totalPages"
+            (click)="nextPage()"
+          >
+            Next
+            <i class="ri-arrow-right-s-line"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
