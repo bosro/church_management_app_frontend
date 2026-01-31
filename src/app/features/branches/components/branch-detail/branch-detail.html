@@ -1,0 +1,220 @@
+<!-- src/app/features/branches/components/branch-detail/branch-detail.component.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+
+  <div class="dashboard-content">
+    <app-header></app-header>
+
+    <div class="dashboard-body">
+      <div class="branch-detail-container">
+        <!-- Loading State -->
+        <div *ngIf="loadingBranch" class="loading-container">
+          <app-loading-spinner size="large" message="Loading branch..."></app-loading-spinner>
+        </div>
+
+        <!-- Branch Content -->
+        <div *ngIf="!loadingBranch && branch">
+          <!-- Page Header -->
+          <div class="page-header">
+            <div class="header-left">
+              <button class="back-btn" (click)="goBack()">
+                <i class="ri-arrow-left-line"></i>
+              </button>
+              <div>
+                <h1>{{ branch.name }}</h1>
+                <p class="subtitle" *ngIf="branch.pastor_name">Led by {{ branch.pastor_name }}</p>
+              </div>
+            </div>
+            <button class="btn-primary" (click)="editBranch()">
+              <i class="ri-edit-line"></i>
+              Edit Branch
+            </button>
+          </div>
+
+          <!-- Success/Error Messages -->
+          <div *ngIf="successMessage" class="success-alert">
+            <i class="ri-checkbox-circle-line"></i>
+            <span>{{ successMessage }}</span>
+          </div>
+
+          <div *ngIf="errorMessage" class="error-alert">
+            <i class="ri-error-warning-line"></i>
+            <span>{{ errorMessage }}</span>
+          </div>
+
+          <!-- Branch Information Card -->
+          <div class="info-card">
+            <h3>Branch Information</h3>
+
+            <div class="info-grid">
+              <div class="info-item" *ngIf="branch.address">
+                <span class="info-label">Address</span>
+                <span class="info-value">{{ branch.address }}</span>
+              </div>
+
+              <div class="info-item" *ngIf="branch.city">
+                <span class="info-label">City</span>
+                <span class="info-value">{{ branch.city }}</span>
+              </div>
+
+              <div class="info-item" *ngIf="branch.state">
+                <span class="info-label">State/Region</span>
+                <span class="info-value">{{ branch.state }}</span>
+              </div>
+
+              <div class="info-item" *ngIf="branch.country">
+                <span class="info-label">Country</span>
+                <span class="info-value">{{ branch.country }}</span>
+              </div>
+
+              <div class="info-item" *ngIf="branch.phone">
+                <span class="info-label">Phone</span>
+                <span class="info-value">{{ branch.phone }}</span>
+              </div>
+
+              <div class="info-item" *ngIf="branch.email">
+                <span class="info-label">Email</span>
+                <span class="info-value">{{ branch.email }}</span>
+              </div>
+
+              <div class="info-item">
+                <span class="info-label">Members</span>
+                <span class="info-value">{{ branch.member_count }}</span>
+              </div>
+
+              <div class="info-item" *ngIf="branch.established_date">
+                <span class="info-label">Established</span>
+                <span class="info-value">{{ branch.established_date | date:'MMM d, y' }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Members Section -->
+          <div class="members-section">
+            <div class="section-header">
+              <h3>Branch Members ({{ totalMembers }})</h3>
+              <button class="btn-secondary" (click)="openAssignModal()">
+                <i class="ri-user-add-line"></i>
+                Assign Member
+              </button>
+            </div>
+
+            <!-- Loading State -->
+            <div *ngIf="loading" class="loading-container">
+              <app-loading-spinner message="Loading members..."></app-loading-spinner>
+            </div>
+
+            <!-- Members Grid -->
+            <div *ngIf="!loading" class="members-grid">
+              <div *ngFor="let branchMember of branchMembers" class="member-card">
+                <div class="member-photo">
+                  <img [src]="getMemberPhoto(branchMember)" [alt]="getMemberName(branchMember)" />
+                </div>
+                <div class="member-info">
+                  <h4>{{ getMemberName(branchMember) }}</h4>
+                  <p *ngIf="branchMember.member?.email">{{ branchMember.member.email }}</p>
+                  <p *ngIf="branchMember.member?.phone_primary">{{ branchMember.member.phone_primary }}</p>
+                  <span class="assigned-date">
+                    Assigned {{ branchMember.assigned_date | date:'MMM d, y' }}
+                  </span>
+                </div>
+                <button
+                  class="remove-btn"
+                  (click)="removeMember(branchMember.id, $event)"
+                >
+                  <i class="ri-close-line"></i>
+                </button>
+              </div>
+
+              <!-- Empty State -->
+              <div *ngIf="branchMembers.length === 0" class="empty-state">
+                <i class="ri-group-line"></i>
+                <h3>No Members Assigned</h3>
+                <p>Assign members to this branch to get started</p>
+                <button class="btn-primary" (click)="openAssignModal()">
+                  <i class="ri-user-add-line"></i>
+                  Assign Member
+                </button>
+              </div>
+            </div>
+
+            <!-- Pagination -->
+            <div class="pagination" *ngIf="totalPages > 1 && !loading">
+              <button
+                class="pagination-btn"
+                [disabled]="currentPage === 1"
+                (click)="previousPage()"
+              >
+                <i class="ri-arrow-left-s-line"></i>
+                Previous
+              </button>
+
+              <div class="pagination-pages">
+                <span class="page-info">
+                  Page {{ currentPage }} of {{ totalPages }}
+                </span>
+              </div>
+
+              <button
+                class="pagination-btn"
+                [disabled]="currentPage === totalPages"
+                (click)="nextPage()"
+              >
+                Next
+                <i class="ri-arrow-right-s-line"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Assign Member Modal -->
+<div class="modal-overlay" *ngIf="showAssignModal" (click)="closeAssignModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>Assign Member</h2>
+      <button class="close-btn" (click)="closeAssignModal()">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <!-- Search -->
+      <div class="search-box">
+        <i class="ri-search-line"></i>
+        <input
+          type="text"
+          [(ngModel)]="searchTerm"
+          (ngModelChange)="filterMembers()"
+          placeholder="Search members..."
+        />
+      </div>
+
+      <!-- Members List -->
+      <div class="modal-members-list">
+        <div
+          *ngFor="let member of filteredMembers"
+          class="modal-member-item"
+          (click)="assignMember(member.id)"
+        >
+          <div class="member-photo-small">
+            <img [src]="member.photo_url || 'assets/images/default-avatar.png'" [alt]="member.first_name" />
+          </div>
+          <div class="member-details">
+            <h4>{{ member.first_name }} {{ member.last_name }}</h4>
+            <p>{{ member.email }}</p>
+          </div>
+          <i class="ri-add-circle-line"></i>
+        </div>
+
+        <div *ngIf="filteredMembers.length === 0" class="no-results">
+          <i class="ri-user-search-line"></i>
+          <p>No members found</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,1 +1,218 @@
-<p>add-ministry works!</p>
+<!-- src/app/features/ministries/components/add-ministry/add-ministry.component.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+
+  <div class="dashboard-content">
+    <app-header></app-header>
+
+    <div class="dashboard-body">
+      <div class="add-ministry-container">
+        <!-- Page Header -->
+        <div class="page-header">
+          <div class="header-left">
+            <button class="back-btn" (click)="cancel()">
+              <i class="ri-arrow-left-line"></i>
+            </button>
+            <div>
+              <h1>Add Ministry</h1>
+              <p class="subtitle">Create a new ministry or department</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Success/Error Messages -->
+        <div *ngIf="successMessage" class="success-alert">
+          <i class="ri-checkbox-circle-line"></i>
+          <span>{{ successMessage }}</span>
+        </div>
+
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i>
+          <span>{{ errorMessage }}</span>
+        </div>
+
+        <!-- Form Card -->
+        <div class="form-card">
+          <form [formGroup]="ministryForm" (ngSubmit)="onSubmit()">
+            <!-- Basic Information -->
+            <div class="form-section">
+              <h3>Ministry Information</h3>
+
+              <div class="form-group">
+                <label for="name">Ministry Name *</label>
+                <input
+                  id="name"
+                  type="text"
+                  formControlName="name"
+                  placeholder="e.g., Youth Ministry, Worship Team"
+                  [class.error]="ministryForm.get('name')?.invalid && ministryForm.get('name')?.touched"
+                />
+                <span
+                  *ngIf="ministryForm.get('name')?.invalid && ministryForm.get('name')?.touched"
+                  class="error-message"
+                >
+                  {{ getErrorMessage('name') }}
+                </span>
+              </div>
+
+              <div class="form-group">
+                <label for="category">Category *</label>
+                <select
+                  id="category"
+                  formControlName="category"
+                  [class.error]="ministryForm.get('category')?.invalid && ministryForm.get('category')?.touched"
+                >
+                  <option value="">Select a category</option>
+                  <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
+                </select>
+                <span
+                  *ngIf="ministryForm.get('category')?.invalid && ministryForm.get('category')?.touched"
+                  class="error-message"
+                >
+                  {{ getErrorMessage('category') }}
+                </span>
+              </div>
+
+              <div class="form-group">
+                <label for="description">Description</label>
+                <textarea
+                  id="description"
+                  formControlName="description"
+                  placeholder="Brief description of the ministry's purpose and activities..."
+                  rows="5"
+                ></textarea>
+              </div>
+
+              <div class="form-group">
+                <label class="checkbox-label">
+                  <input type="checkbox" formControlName="is_active" />
+                  <span class="checkbox-text">
+                    <strong>Active Ministry</strong>
+                    <small>Ministry is currently accepting new members</small>
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Leadership Information -->
+            <div class="form-section">
+              <h3>Leadership Information</h3>
+
+              <div class="form-group">
+                <label for="leader_name">Leader Name *</label>
+                <input
+                  id="leader_name"
+                  type="text"
+                  formControlName="leader_name"
+                  placeholder="Full name of ministry leader"
+                  [class.error]="ministryForm.get('leader_name')?.invalid && ministryForm.get('leader_name')?.touched"
+                />
+                <span
+                  *ngIf="ministryForm.get('leader_name')?.invalid && ministryForm.get('leader_name')?.touched"
+                  class="error-message"
+                >
+                  {{ getErrorMessage('leader_name') }}
+                </span>
+              </div>
+
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="leader_email">Leader Email</label>
+                  <input
+                    id="leader_email"
+                    type="email"
+                    formControlName="leader_email"
+                    placeholder="leader@example.com"
+                    [class.error]="ministryForm.get('leader_email')?.invalid && ministryForm.get('leader_email')?.touched"
+                  />
+                  <span
+                    *ngIf="ministryForm.get('leader_email')?.invalid && ministryForm.get('leader_email')?.touched"
+                    class="error-message"
+                  >
+                    {{ getErrorMessage('leader_email') }}
+                  </span>
+                </div>
+
+                <div class="form-group">
+                  <label for="leader_phone">Leader Phone</label>
+                  <input
+                    id="leader_phone"
+                    type="tel"
+                    formControlName="leader_phone"
+                    placeholder="+233 XX XXX XXXX"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Meeting Details -->
+            <div class="form-section">
+              <h3>Meeting Details</h3>
+
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="meeting_schedule">Meeting Schedule</label>
+                  <input
+                    id="meeting_schedule"
+                    type="text"
+                    formControlName="meeting_schedule"
+                    placeholder="e.g., Every Sunday 3:00 PM"
+                  />
+                  <p class="help-text">When does this ministry meet?</p>
+                </div>
+
+                <div class="form-group">
+                  <label for="meeting_location">Meeting Location</label>
+                  <input
+                    id="meeting_location"
+                    type="text"
+                    formControlName="meeting_location"
+                    placeholder="e.g., Main Sanctuary, Room 101"
+                  />
+                  <p class="help-text">Where does this ministry meet?</p>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="requirements">Requirements</label>
+                <textarea
+                  id="requirements"
+                  formControlName="requirements"
+                  placeholder="Any requirements or qualifications for joining this ministry..."
+                  rows="4"
+                ></textarea>
+                <p class="help-text">Optional: Specify any prerequisites for members</p>
+              </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="form-actions">
+              <button
+                type="button"
+                class="btn-secondary"
+                (click)="cancel()"
+                [disabled]="loading"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                class="btn-primary"
+                [disabled]="loading"
+              >
+                <span *ngIf="!loading">
+                  <i class="ri-add-circle-line"></i>
+                  Create Ministry
+                </span>
+                <span *ngIf="loading">
+                  <i class="ri-loader-4-line spin"></i>
+                  Creating...
+                </span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

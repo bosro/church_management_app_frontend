@@ -1,0 +1,8 @@
+// src/app/features/cms/components/edit-page/edit-page.component.scss
+@import '../create-page/create-page.component.scss';
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  padding: 4rem 0;
+}

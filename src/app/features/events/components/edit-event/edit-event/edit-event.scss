@@ -1,0 +1,14 @@
+// src/app/features/events/components/edit-event/edit-event.component.scss
+// Reuse styles from create-event
+@import '../create-event/create-event.component.scss';
+
+.edit-event-container {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  padding: 4rem 0;
+}

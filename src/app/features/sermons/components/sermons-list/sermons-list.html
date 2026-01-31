@@ -1,0 +1,219 @@
+<!-- src/app/features/sermons/components/sermons-list/sermons-list.component.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+
+  <div class="dashboard-content">
+    <app-header></app-header>
+
+    <div class="dashboard-body">
+      <div class="sermons-container">
+        <!-- Page Header -->
+        <div class="page-header">
+          <div class="header-left">
+            <h1>Sermons</h1>
+            <p class="subtitle">Manage your sermon library</p>
+          </div>
+          <div class="header-actions">
+            <button class="btn-secondary" (click)="manageSeries()">
+              <i class="ri-folder-line"></i>
+              Manage Series
+            </button>
+            <button class="btn-primary" (click)="createSermon()">
+              <i class="ri-add-line"></i>
+              Upload Sermon
+            </button>
+          </div>
+        </div>
+
+        <!-- Success/Error Messages -->
+        <div *ngIf="successMessage" class="success-alert">
+          <i class="ri-checkbox-circle-line"></i>
+          <span>{{ successMessage }}</span>
+        </div>
+
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i>
+          <span>{{ errorMessage }}</span>
+        </div>
+
+        <!-- Statistics -->
+        <div class="stats-grid" *ngIf="statistics">
+          <div class="stat-card">
+            <div class="stat-icon" style="background: #DDD6FE; color: #7C3AED;">
+              <i class="ri-volume-up-line"></i>
+            </div>
+            <div class="stat-info">
+              <p class="stat-label">Total Sermons</p>
+              <h3 class="stat-value">{{ statistics.total_sermons }}</h3>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon" style="background: #D1FAE5; color: #10B981;">
+              <i class="ri-folder-line"></i>
+            </div>
+            <div class="stat-info">
+              <p class="stat-label">Sermon Series</p>
+              <h3 class="stat-value">{{ statistics.total_series }}</h3>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon" style="background: #DBEAFE; color: #3B82F6;">
+              <i class="ri-eye-line"></i>
+            </div>
+            <div class="stat-info">
+              <p class="stat-label">Total Views</p>
+              <h3 class="stat-value">{{ statistics.total_views }}</h3>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon" style="background: #FED7AA; color: #EA580C;">
+              <i class="ri-download-line"></i>
+            </div>
+            <div class="stat-info">
+              <p class="stat-label">Downloads</p>
+              <h3 class="stat-value">{{ statistics.total_downloads }}</h3>
+            </div>
+          </div>
+        </div>
+
+        <!-- Series Filter -->
+        <div class="filter-bar" *ngIf="sermonSeries.length > 0">
+          <button
+            class="filter-btn"
+            [class.active]="!selectedSeries"
+            (click)="clearFilter()"
+          >
+            All Sermons
+          </button>
+          <button
+            *ngFor="let series of sermonSeries"
+            class="filter-btn"
+            [class.active]="selectedSeries === series.name"
+            (click)="filterBySeries(series.name)"
+          >
+            {{ series.name }}
+          </button>
+        </div>
+
+        <!-- Loading State -->
+        <div *ngIf="loading" class="loading-container">
+          <app-loading-spinner message="Loading sermons..."></app-loading-spinner>
+        </div>
+
+        <!-- Sermons Grid -->
+        <div *ngIf="!loading" class="sermons-grid">
+          <div
+            *ngFor="let sermon of sermons"
+            class="sermon-card"
+            (click)="viewSermon(sermon.id)"
+          >
+            <div class="card-thumbnail">
+              <img
+                [src]="sermon.thumbnail_url || 'assets/images/sermon-default.jpg'"
+                [alt]="sermon.title"
+              />
+              <div class="thumbnail-overlay">
+                <i class="ri-play-circle-fill play-icon"></i>
+                <span class="featured-badge" *ngIf="sermon.is_featured">
+                  <i class="ri-star-fill"></i>
+                  Featured
+                </span>
+              </div>
+            </div>
+
+            <div class="card-content">
+              <div class="sermon-meta">
+                <span class="sermon-date">{{ sermon.sermon_date | date:'MMM d, y' }}</span>
+                <span class="sermon-duration" *ngIf="sermon.duration">{{ formatDuration(sermon.duration) }}</span>
+              </div>
+
+              <h3>{{ sermon.title }}</h3>
+              <p class="preacher-name">{{ sermon.preacher_name }}</p>
+
+              <div class="sermon-info">
+                <span class="info-item" *ngIf="sermon.series_name">
+                  <i class="ri-folder-line"></i>
+                  {{ sermon.series_name }}
+                </span>
+                <span class="info-item" *ngIf="sermon.scripture_reference">
+                  <i class="ri-book-open-line"></i>
+                  {{ sermon.scripture_reference }}
+                </span>
+              </div>
+
+              <div class="sermon-stats">
+                <span class="stat-item">
+                  <i class="ri-eye-line"></i>
+                  {{ sermon.view_count }}
+                </span>
+                <span class="stat-item">
+                  <i class="ri-download-line"></i>
+                  {{ sermon.download_count }}
+                </span>
+              </div>
+
+              <div class="card-actions">
+                <button
+                  class="btn-icon"
+                  [class.featured]="sermon.is_featured"
+                  (click)="toggleFeatured(sermon, $event)"
+                  [title]="sermon.is_featured ? 'Remove from featured' : 'Add to featured'"
+                >
+                  <i [class]="sermon.is_featured ? 'ri-star-fill' : 'ri-star-line'"></i>
+                </button>
+                <button class="btn-icon" (click)="editSermon(sermon.id, $event)" title="Edit">
+                  <i class="ri-edit-line"></i>
+                </button>
+                <button class="btn-icon btn-danger" (click)="deleteSermon(sermon.id, $event)" title="Delete">
+                  <i class="ri-delete-bin-line"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Empty State -->
+          <div *ngIf="sermons.length === 0" class="empty-state">
+            <i class="ri-volume-up-line"></i>
+            <h3>No Sermons</h3>
+            <p *ngIf="selectedSeries">No sermons found in this series</p>
+            <p *ngIf="!selectedSeries">Upload your first sermon to get started</p>
+            <button class="btn-primary" (click)="createSermon()" *ngIf="!selectedSeries">
+              <i class="ri-add-line"></i>
+              Upload Sermon
+            </button>
+          </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination" *ngIf="totalPages > 1 && !loading">
+          <button
+            class="pagination-btn"
+            [disabled]="currentPage === 1"
+            (click)="previousPage()"
+          >
+            <i class="ri-arrow-left-s-line"></i>
+            Previous
+          </button>
+
+          <div class="pagination-pages">
+            <span class="page-info">
+              Page {{ currentPage }} of {{ totalPages }} ({{ totalSermons }} sermons)
+            </span>
+          </div>
+
+          <button
+            class="pagination-btn"
+            [disabled]="currentPage === totalPages"
+            (click)="nextPage()"
+          >
+            Next
+            <i class="ri-arrow-right-s-line"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,238 @@
+<!-- src/app/features/events/components/edit-event/edit-event.component.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+
+  <div class="dashboard-content">
+    <app-header></app-header>
+
+    <div class="dashboard-body">
+      <div class="edit-event-container">
+        <!-- Loading State -->
+        <div *ngIf="loadingEvent" class="loading-container">
+          <app-loading-spinner size="large" message="Loading event..."></app-loading-spinner>
+        </div>
+
+        <!-- Form Content (Reuse Create Event HTML structure) -->
+        <div *ngIf="!loadingEvent">
+          <!-- Page Header -->
+          <div class="page-header">
+            <div class="header-left">
+              <button class="back-btn" (click)="cancel()">
+                <i class="ri-arrow-left-line"></i>
+              </button>
+              <div>
+                <h1>Edit Event</h1>
+                <p class="subtitle" *ngIf="event">{{ event.title }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Success Message -->
+          <div *ngIf="successMessage" class="success-alert">
+            <i class="ri-checkbox-circle-line"></i>
+            <span>{{ successMessage }}</span>
+          </div>
+
+          <!-- Error Message -->
+          <div *ngIf="errorMessage" class="error-alert">
+            <i class="ri-error-warning-line"></i>
+            <span>{{ errorMessage }}</span>
+          </div>
+
+          <!-- Form (Same structure as create-event) -->
+          <div class="form-card">
+            <form [formGroup]="eventForm" (ngSubmit)="onSubmit()">
+              <!-- Basic Information -->
+              <div class="form-section">
+                <h3>Event Information</h3>
+
+                <div class="form-grid">
+                  <!-- Event Title -->
+                  <div class="form-group full-width">
+                    <label for="title">Event Title *</label>
+                    <input
+                      id="title"
+                      type="text"
+                      formControlName="title"
+                      placeholder="e.g., Sunday Worship Service, Youth Conference"
+                      [class.error]="eventForm.get('title')?.invalid && eventForm.get('title')?.touched"
+                    />
+                    <span
+                      *ngIf="eventForm.get('title')?.invalid && eventForm.get('title')?.touched"
+                      class="error-message"
+                    >
+                      {{ getErrorMessage('title') }}
+                    </span>
+                  </div>
+
+                  <!-- Event Type -->
+                  <div class="form-group">
+                    <label for="event_type">Event Type *</label>
+                    <select
+                      id="event_type"
+                      formControlName="event_type"
+                      [class.error]="eventForm.get('event_type')?.invalid && eventForm.get('event_type')?.touched"
+                    >
+                      <option *ngFor="let type of eventTypes" [value]="type.value">
+                        {{ type.label }}
+                      </option>
+                    </select>
+                  </div>
+
+                  <!-- Location -->
+                  <div class="form-group">
+                    <label for="location">Location</label>
+                    <input
+                      id="location"
+                      type="text"
+                      formControlName="location"
+                      placeholder="e.g., Main Sanctuary, Fellowship Hall"
+                    />
+                  </div>
+
+                  <!-- Description -->
+                  <div class="form-group full-width">
+                    <label for="description">Description</label>
+                    <textarea
+                      id="description"
+                      formControlName="description"
+                      placeholder="Describe the event details, agenda, or special instructions..."
+                      rows="4"
+                    ></textarea>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Date & Time -->
+              <div class="form-section">
+                <h3>Schedule</h3>
+
+                <div class="form-grid">
+                  <!-- Start Date -->
+                  <div class="form-group">
+                    <label for="start_date">Start Date *</label>
+                    <input
+                      id="start_date"
+                      type="date"
+                      formControlName="start_date"
+                      [class.error]="eventForm.get('start_date')?.invalid && eventForm.get('start_date')?.touched"
+                    />
+                  </div>
+
+                  <!-- End Date -->
+                  <div class="form-group">
+                    <label for="end_date">End Date *</label>
+                    <input
+                      id="end_date"
+                      type="date"
+                      formControlName="end_date"
+                      [class.error]="eventForm.get('end_date')?.invalid && eventForm.get('end_date')?.touched"
+                    />
+                  </div>
+
+                  <!-- Start Time -->
+                  <div class="form-group">
+                    <label for="start_time">Start Time</label>
+                    <input
+                      id="start_time"
+                      type="time"
+                      formControlName="start_time"
+                    />
+                  </div>
+
+                  <!-- End Time -->
+                  <div class="form-group">
+                    <label for="end_time">End Time</label>
+                    <input
+                      id="end_time"
+                      type="time"
+                      formControlName="end_time"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Registration Settings -->
+              <div class="form-section">
+                <h3>Registration Settings</h3>
+
+                <div class="form-grid">
+                  <!-- Max Attendees -->
+                  <div class="form-group">
+                    <label for="max_attendees">Max Attendees</label>
+                    <input
+                      id="max_attendees"
+                      type="number"
+                      formControlName="max_attendees"
+                      placeholder="Leave empty for unlimited"
+                      min="1"
+                    />
+                  </div>
+
+                  <!-- Registration Deadline -->
+                  <div class="form-group">
+                    <label for="registration_deadline">Registration Deadline</label>
+                    <input
+                      id="registration_deadline"
+                      type="date"
+                      formControlName="registration_deadline"
+                    />
+                  </div>
+
+                  <!-- Requires Registration -->
+                  <div class="form-group checkbox-group">
+                    <label class="checkbox-label">
+                      <input
+                        type="checkbox"
+                        formControlName="requires_registration"
+                        class="checkbox-input"
+                      />
+                      <span class="checkbox-text">Requires Registration</span>
+                    </label>
+                    <p class="help-text">Members must register to attend this event</p>
+                  </div>
+
+                  <!-- Is Public -->
+                  <div class="form-group checkbox-group">
+                    <label class="checkbox-label">
+                      <input
+                        type="checkbox"
+                        formControlName="is_public"
+                        class="checkbox-input"
+                      />
+                      <span class="checkbox-text">Public Event</span>
+                    </label>
+                    <p class="help-text">Event is visible to non-members</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Form Actions -->
+              <div class="form-actions">
+                <button
+                  type="button"
+                  class="btn-secondary"
+                  (click)="cancel()"
+                  [disabled]="loading"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  class="btn-primary"
+                  [disabled]="loading"
+                >
+                  <span *ngIf="!loading">Update Event</span>
+                  <span *ngIf="loading">
+                    <i class="ri-loader-4-line spin"></i>
+                    Updating...
+                  </span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

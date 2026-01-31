@@ -1,0 +1,50 @@
+<!-- src/app/features/forms/components/edit-form/edit-form.component.html -->
+<!-- Reuse the same HTML structure as create-form.component.html -->
+<!-- Just change the title and button text -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+
+  <div class="dashboard-content">
+    <app-header></app-header>
+
+    <div class="dashboard-body">
+      <div class="create-form-container">
+        <!-- Loading State -->
+        <div *ngIf="loadingForm" class="loading-container">
+          <app-loading-spinner size="large" message="Loading form..."></app-loading-spinner>
+        </div>
+
+        <!-- Form Content (same as create-form but with updated header) -->
+        <div *ngIf="!loadingForm">
+          <div class="page-header">
+            <div class="header-left">
+              <button class="back-btn" (click)="cancel()">
+                <i class="ri-arrow-left-line"></i>
+              </button>
+              <div>
+                <h1>Edit Form</h1>
+                <p class="subtitle" *ngIf="formTemplate">{{ formTemplate.title }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Rest of the form (identical to create-form.component.html) -->
+          <!-- Success/Error Messages -->
+          <div *ngIf="successMessage" class="success-alert">
+            <i class="ri-checkbox-circle-line"></i>
+            <span>{{ successMessage }}</span>
+          </div>
+
+          <div *ngIf="errorMessage" class="error-alert">
+            <i class="ri-error-warning-line"></i>
+            <span>{{ errorMessage }}</span>
+          </div>
+
+          <!-- Builder Layout (same as create-form) -->
+          <!-- Copy the entire builder-layout div from create-form.component.html -->
+          <!-- Just change the submit button text from "Create Form" to "Update Form" -->
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

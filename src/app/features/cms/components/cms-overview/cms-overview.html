@@ -1,0 +1,119 @@
+<!-- src/app/features/cms/components/cms-overview/cms-overview.component.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+
+  <div class="dashboard-content">
+    <app-header></app-header>
+
+    <div class="dashboard-body">
+      <div class="cms-overview-container">
+        <!-- Page Header -->
+        <div class="page-header">
+          <div class="header-left">
+            <h1>Content Management</h1>
+            <p class="subtitle">Manage your website pages and blog posts</p>
+          </div>
+        </div>
+
+        <!-- Loading State -->
+        <div *ngIf="loading" class="loading-container">
+          <app-loading-spinner message="Loading CMS overview..."></app-loading-spinner>
+        </div>
+
+        <!-- Statistics -->
+        <div *ngIf="!loading && statistics" class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon" style="background: #DDD6FE; color: #7C3AED;">
+              <i class="ri-pages-line"></i>
+            </div>
+            <div class="stat-info">
+              <p class="stat-label">Total Pages</p>
+              <h3 class="stat-value">{{ statistics.total_pages }}</h3>
+              <p class="stat-detail">{{ statistics.published_pages }} published</p>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon" style="background: #D1FAE5; color: #10B981;">
+              <i class="ri-article-line"></i>
+            </div>
+            <div class="stat-info">
+              <p class="stat-label">Blog Posts</p>
+              <h3 class="stat-value">{{ statistics.total_posts }}</h3>
+              <p class="stat-detail">{{ statistics.published_posts }} published</p>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon" style="background: #DBEAFE; color: #3B82F6;">
+              <i class="ri-draft-line"></i>
+            </div>
+            <div class="stat-info">
+              <p class="stat-label">Drafts</p>
+              <h3 class="stat-value">{{ statistics.draft_pages + statistics.draft_posts }}</h3>
+              <p class="stat-detail">{{ statistics.draft_pages }} pages, {{ statistics.draft_posts }} posts</p>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon" style="background: #FED7AA; color: #EA580C;">
+              <i class="ri-eye-line"></i>
+            </div>
+            <div class="stat-info">
+              <p class="stat-label">Total Views</p>
+              <h3 class="stat-value">{{ statistics.total_views }}</h3>
+              <p class="stat-detail">Blog post views</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="quick-actions-grid">
+          <div class="action-card" (click)="navigateToPages()">
+            <div class="action-icon">
+              <i class="ri-pages-line"></i>
+            </div>
+            <div class="action-content">
+              <h3>Manage Pages</h3>
+              <p>Create and edit website pages</p>
+            </div>
+            <i class="ri-arrow-right-line action-arrow"></i>
+          </div>
+
+          <div class="action-card" (click)="navigateToBlog()">
+            <div class="action-icon">
+              <i class="ri-article-line"></i>
+            </div>
+            <div class="action-content">
+              <h3>Manage Blog</h3>
+              <p>Write and publish blog posts</p>
+            </div>
+            <i class="ri-arrow-right-line action-arrow"></i>
+          </div>
+
+          <div class="action-card" (click)="createPage()">
+            <div class="action-icon">
+              <i class="ri-add-circle-line"></i>
+            </div>
+            <div class="action-content">
+              <h3>New Page</h3>
+              <p>Create a new website page</p>
+            </div>
+            <i class="ri-arrow-right-line action-arrow"></i>
+          </div>
+
+          <div class="action-card" (click)="createBlogPost()">
+            <div class="action-icon">
+              <i class="ri-quill-pen-line"></i>
+            </div>
+            <div class="action-content">
+              <h3>New Blog Post</h3>
+              <p>Write a new blog article</p>
+            </div>
+            <i class="ri-arrow-right-line action-arrow"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

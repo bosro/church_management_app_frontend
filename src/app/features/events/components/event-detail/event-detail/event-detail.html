@@ -1,0 +1,384 @@
+<!-- src/app/features/events/components/event-detail/event-detail.component.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+
+  <div class="dashboard-content">
+    <app-header></app-header>
+
+    <div class="dashboard-body">
+      <div class="event-detail-container">
+        <!-- Loading State -->
+        <div *ngIf="loading" class="loading-container">
+          <app-loading-spinner size="large" message="Loading event details..."></app-loading-spinner>
+        </div>
+
+        <!-- Event Details -->
+        <div *ngIf="!loading && event">
+          <!-- Header -->
+          <div class="detail-header">
+            <button class="back-btn" (click)="goBack()">
+              <i class="ri-arrow-left-line"></i>
+            </button>
+            <div class="header-actions">
+              <button class="btn-secondary" (click)="exportRegistrations()">
+                <i class="ri-download-line"></i>
+                Export
+              </button>
+              <button class="btn-secondary" (click)="editEvent()">
+                <i class="ri-edit-line"></i>
+                Edit
+              </button>
+              <button class="btn-danger" (click)="deleteEvent()">
+                <i class="ri-delete-bin-line"></i>
+                Delete
+              </button>
+            </div>
+          </div>
+
+          <!-- Success Message -->
+          <div *ngIf="successMessage" class="success-alert">
+            <i class="ri-checkbox-circle-line"></i>
+            <span>{{ successMessage }}</span>
+          </div>
+
+          <!-- Error Message -->
+          <div *ngIf="errorMessage" class="error-alert">
+            <i class="ri-error-warning-line"></i>
+            <span>{{ errorMessage }}</span>
+          </div>
+
+          <!-- Event Info Card -->
+          <div class="event-info-card">
+            <div class="info-header">
+              <div class="event-date-badge-large">
+                <span class="date-day">{{ event.start_date | date:'d' }}</span>
+                <span class="date-month">{{ event.start_date | date:'MMM' }}</span>
+                <span class="date-year">{{ event.start_date | date:'yyyy' }}</span>
+              </div>
+              <div class="event-header-info">
+                <div class="event-type-badge" [ngClass]="getEventTypeClass(event.event_type)">
+                  {{ getEventTypeLabel(event.event_type) }}
+                </div>
+                <h1>{{ event.title }}</h1>
+                <p class="event-date-range">{{ formatDateRange(event) }}</p>
+              </div>
+            </div>
+
+            <div class="event-description" *ngIf="event.description">
+              <h3>About This Event</h3>
+              <p>{{ event.description }}</p>
+            </div>
+
+            <div class="event-details-grid">
+              <div class="detail-item" *ngIf="event.start_time">
+                <i class="ri-time-line"></i>
+                <div>
+                  <p class="detail-label">Time</p>
+                  <p class="detail-value">
+                    {{ event.start_time }}
+                    <span *ngIf="event.end_time"> - {{ event.end_time }}</span>
+                  </p>
+                </div>
+              </div>
+
+              <div class="detail-item" *ngIf="event.location">
+                <i class="ri-map-pin-line"></i>
+                <div>
+                  <p class="detail-label">Location</p>
+                  <p class="detail-value">{{ event.location }}</p>
+                </div>
+              </div>
+
+              <div class="detail-item" *ngIf="event.max_attendees">
+                <i class="ri-group-line"></i>
+                <div>
+                  <p class="detail-label">Capacity</p>
+                  <p class="detail-value">{{ event.max_attendees }} attendees</p>
+                </div>
+              </div>
+
+              <div class="detail-item" *ngIf="event.registration_deadline">
+                <i class="ri-calendar-check-line"></i>
+                <div>
+                  <p class="detail-label">Registration Deadline</p>
+                  <p class="detail-value">{{ event.registration_deadline | date:'MMM d, y' }}</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="event-badges">
+              <span class="badge badge-registration" *ngIf="event.requires_registration">
+                <i class="ri-checkbox-circle-line"></i>
+                Registration Required
+              </span>
+              <span class="badge badge-public" *ngIf="event.is_public">
+                <i class="ri-earth-line"></i>
+                Public Event
+              </span>
+            </div>
+          </div>
+
+          <!-- Statistics Cards -->
+          <div class="statistics-grid" *ngIf="statistics">
+            <div class="stat-card">
+              <div class="stat-icon" style="background: #DBEAFE; color: #2563EB;">
+                <i class="ri-group-line"></i>
+              </div>
+              <div class="stat-info">
+                <p class="stat-label">Total Registrations</p>
+                <h3 class="stat-value">{{ statistics.total_registrations }}</h3>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon" style="background: #D1FAE5; color: #10B981;">
+                <i class="ri-checkbox-circle-line"></i>
+              </div>
+              <div class="stat-info">
+                <p class="stat-label">Checked In</p>
+                <h3 class="stat-value">{{ statistics.checked_in }}</h3>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon" style="background: #DDD6FE; color: #7C3AED;">
+                <i class="ri-user-follow-line"></i>
+              </div>
+              <div class="stat-info">
+                <p class="stat-label">Confirmed</p>
+                <h3 class="stat-value">{{ statistics.confirmed }}</h3>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon" style="background: #FED7AA; color: #EA580C;">
+                <i class="ri-time-line"></i>
+              </div>
+              <div class="stat-info">
+                <p class="stat-label">Pending</p>
+                <h3 class="stat-value">{{ statistics.pending }}</h3>
+              </div>
+            </div>
+          </div>
+
+          <!-- Registrations Section -->
+          <div class="registrations-section">
+            <div class="section-header">
+              <h2>Registrations</h2>
+              <button class="btn-primary" (click)="toggleRegistrationForm()">
+                <i [class]="showRegistrationForm ? 'ri-close-line' : 'ri-add-line'"></i>
+                <span>{{ showRegistrationForm ? 'Cancel' : 'Add Registration' }}</span>
+              </button>
+            </div>
+
+            <!-- Registration Form -->
+            <div *ngIf="showRegistrationForm" class="registration-form-card">
+              <h3>Register Attendee</h3>
+
+              <!-- Member Search -->
+              <div class="form-section">
+                <h4>Select Member or Add Guest</h4>
+
+                <div *ngIf="!selectedMember" class="member-search">
+                  <div class="search-input-wrapper">
+                    <i class="ri-search-line search-icon"></i>
+                    <input
+                      type="text"
+                      [formControl]="searchControl"
+                      placeholder="Search member by name, email, or phone..."
+                      class="search-input"
+                    />
+                    <i *ngIf="searching" class="ri-loader-4-line spin"></i>
+                  </div>
+
+                  <!-- Search Results -->
+                  <div class="search-results" *ngIf="searchResults.length > 0">
+                    <div
+                      *ngFor="let member of searchResults"
+                      class="search-result-item"
+                      (click)="selectMember(member)"
+                    >
+                      <div class="member-avatar-small">
+                        <img *ngIf="member.photo_url" [src]="member.photo_url" [alt]="getMemberName(member)" />
+                        <div *ngIf="!member.photo_url" class="avatar-placeholder-small">
+                          {{ getMemberInitials(member) }}
+                        </div>
+                      </div>
+                      <div class="member-info-small">
+                        <p class="member-name-small">{{ getMemberName(member) }}</p>
+                        <p class="member-meta-small">{{ member.member_number }}</p>
+                      </div>
+                      <i class="ri-add-circle-line"></i>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Selected Member -->
+                <div *ngIf="selectedMember" class="selected-member">
+                  <div class="member-avatar-medium">
+                    <img *ngIf="selectedMember.photo_url" [src]="selectedMember.photo_url" [alt]="getMemberName(selectedMember)" />
+                    <div *ngIf="!selectedMember.photo_url" class="avatar-placeholder-medium">
+                      {{ getMemberInitials(selectedMember) }}
+                    </div>
+                  </div>
+                  <div class="member-info-medium">
+                    <p class="member-name-medium">{{ getMemberName(selectedMember) }}</p>
+                    <p class="member-number">{{ selectedMember.member_number }}</p>
+                  </div>
+                  <button class="btn-remove-small" (click)="removeSelectedMember()">
+                    <i class="ri-close-line"></i>
+                  </button>
+                </div>
+
+                <!-- Guest Information -->
+                <div *ngIf="!selectedMember" class="guest-form">
+                  <p class="or-divider">OR</p>
+                  <h4>Guest Information</h4>
+
+                  <div class="form-grid">
+                    <div class="form-group">
+                      <label>Name *</label>
+                      <input
+                        type="text"
+                        [(ngModel)]="guestName"
+                        placeholder="Guest name"
+                        class="form-input"
+                      />
+                    </div>
+
+                    <div class="form-group">
+                      <label>Email *</label>
+                      <input
+                        type="email"
+                        [(ngModel)]="guestEmail"
+                        placeholder="guest@example.com"
+                        class="form-input"
+                      />
+                    </div>
+
+                    <div class="form-group">
+                      <label>Phone</label>
+                      <input
+                        type="tel"
+                        [(ngModel)]="guestPhone"
+                        placeholder="+233 XX XXX XXXX"
+                        class="form-input"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Notes -->
+                <div class="form-group">
+                  <label>Notes (Optional)</label>
+                  <textarea
+                    [(ngModel)]="registrationNotes"
+                    placeholder="Add any special notes or requirements..."
+                    rows="3"
+                    class="form-input"
+                  ></textarea>
+                </div>
+
+                <button
+                  class="btn-submit"
+                  (click)="registerAttendee()"
+                  [disabled]="registering"
+                >
+                  <span *ngIf="!registering">Register Attendee</span>
+                  <span *ngIf="registering">
+                    <i class="ri-loader-4-line spin"></i>
+                    Registering...
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Registrations List -->
+            <div class="registrations-grid">
+              <div *ngFor="let registration of registrations" class="registration-card">
+                <div class="registration-header">
+                  <div class="attendee-avatar">
+                    <img
+                      *ngIf="registration.member?.photo_url"
+                      [src]="registration.member.photo_url"
+                      [alt]="getAttendeeName(registration)"
+                    />
+                    <div *ngIf="!registration.member?.photo_url" class="avatar-placeholder">
+                      {{ getAttendeeInitials(registration) }}
+                    </div>
+                  </div>
+                  <div class="attendee-info">
+                    <h4>{{ getAttendeeName(registration) }}</h4>
+                    <p class="attendee-meta">
+                      {{ registration.member?.member_number || registration.email }}
+                    </p>
+                  </div>
+                  <div class="registration-status">
+                    <span
+                      class="status-badge"
+                      [class.status-checked-in]="registration.checked_in"
+                      [class.status-confirmed]="!registration.checked_in && registration.status === 'confirmed'"
+                    >
+                      <i [class]="registration.checked_in ? 'ri-checkbox-circle-fill' : 'ri-time-line'"></i>
+                      {{ registration.checked_in ? 'Checked In' : 'Registered' }}
+                    </span>
+                  </div>
+                </div>
+
+                <div class="registration-body">
+                  <div class="registration-details">
+                    <p *ngIf="registration.email">
+                      <i class="ri-mail-line"></i>
+                      {{ registration.email }}
+                    </p>
+                    <p *ngIf="registration.phone">
+                      <i class="ri-phone-line"></i>
+                      {{ registration.phone }}
+                    </p>
+                    <p class="registration-date">
+                      <i class="ri-calendar-line"></i>
+                      Registered: {{ registration.registered_at | date:'MMM d, y h:mm a' }}
+                    </p>
+                    <p *ngIf="registration.checked_in_at" class="checkin-date">
+                      <i class="ri-check-double-line"></i>
+                      Checked in: {{ registration.checked_in_at | date:'MMM d, y h:mm a' }}
+                    </p>
+                    <p *ngIf="registration.notes" class="registration-notes">
+                      <i class="ri-message-3-line"></i>
+                      {{ registration.notes }}
+                    </p>
+                  </div>
+
+                  <div class="registration-actions">
+                    <button
+                      *ngIf="!registration.checked_in"
+                      class="btn-action btn-checkin"
+                      (click)="checkInRegistration(registration.id)"
+                    >
+                      <i class="ri-checkbox-circle-line"></i>
+                      Check In
+                    </button>
+                    <button
+                      class="btn-action btn-cancel"
+                      (click)="cancelRegistration(registration.id)"
+                    >
+                      <i class="ri-close-circle-line"></i>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Empty State -->
+              <div *ngIf="registrations.length === 0" class="empty-state">
+                <i class="ri-user-add-line"></i>
+                <h3>No Registrations Yet</h3>
+                <p>Start adding registrations for this event</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

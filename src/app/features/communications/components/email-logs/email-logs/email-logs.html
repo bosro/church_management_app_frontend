@@ -1,0 +1,94 @@
+<!-- src/app/features/communications/components/sms-logs/sms-logs.component.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+
+  <div class="dashboard-content">
+    <app-header></app-header>
+
+    <div class="dashboard-body">
+      <div class="logs-container">
+        <!-- Page Header -->
+        <div class="page-header">
+          <div class="header-left">
+            <button class="back-btn" (click)="goBack()">
+              <i class="ri-arrow-left-line"></i>
+            </button>
+            <div>
+              <h1>SMS Logs</h1>
+              <p class="subtitle">View all sent SMS messages</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Loading State -->
+        <div *ngIf="loading" class="loading-container">
+          <app-loading-spinner message="Loading SMS logs..."></app-loading-spinner>
+        </div>
+
+        <!-- Logs Table -->
+        <div *ngIf="!loading" class="logs-card">
+          <div class="table-wrapper">
+            <table class="logs-table">
+              <thead>
+                <tr>
+                  <th>Date/Time</th>
+                  <th>Recipient</th>
+                  <th>Phone Number</th>
+                  <th>Message</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let log of smsLogs">
+                  <td>{{ log.sent_at | date:'MMM d, y h:mm a' }}</td>
+                  <td>{{ getMemberName(log) }}</td>
+                  <td>{{ log.phone_number }}</td>
+                  <td class="message-cell">{{ log.message }}</td>
+                  <td>
+                    <span class="status-badge" [ngClass]="getStatusClass(log.status)">
+                      {{ log.status | titlecase }}
+                    </span>
+                  </td>
+                </tr>
+
+                <tr *ngIf="smsLogs.length === 0">
+                  <td colspan="5" class="empty-state">
+                    <i class="ri-message-3-line"></i>
+                    <p>No SMS logs found</p>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination" *ngIf="totalPages > 1 && !loading">
+          <button
+            class="pagination-btn"
+            [disabled]="currentPage === 1"
+            (click)="previousPage()"
+          >
+            <i class="ri-arrow-left-s-line"></i>
+            Previous
+          </button>
+
+          <div class="pagination-pages">
+            <span class="page-info">
+              Page {{ currentPage }} of {{ totalPages }} ({{ totalLogs }} logs)
+            </span>
+          </div>
+
+          <button
+            class="pagination-btn"
+            [disabled]="currentPage === totalPages"
+            (click)="nextPage()"
+          >
+            Next
+            <i class="ri-arrow-right-s-line"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

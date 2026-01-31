@@ -1,0 +1,236 @@
+<!-- src/app/features/sermons/components/create-sermon/create-sermon.component.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+
+  <div class="dashboard-content">
+    <app-header></app-header>
+
+    <div class="dashboard-body">
+      <div class="create-sermon-container">
+        <!-- Page Header -->
+        <div class="page-header">
+          <div class="header-left">
+            <button class="back-btn" (click)="cancel()">
+              <i class="ri-arrow-left-line"></i>
+            </button>
+            <div>
+              <h1>Upload Sermon</h1>
+              <p class="subtitle">Add a new sermon to your library</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Success/Error Messages -->
+        <div *ngIf="successMessage" class="success-alert">
+          <i class="ri-checkbox-circle-line"></i>
+          <span>{{ successMessage }}</span>
+        </div>
+
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i>
+          <span>{{ errorMessage }}</span>
+        </div>
+
+        <!-- Form Card -->
+        <div class="form-card">
+          <form [formGroup]="sermonForm" (ngSubmit)="onSubmit()">
+            <!-- Basic Information -->
+            <div class="form-section">
+              <h3>Sermon Information</h3>
+
+              <div class="form-group">
+                <label for="title">Sermon Title *</label>
+                <input
+                  id="title"
+                  type="text"
+                  formControlName="title"
+                  placeholder="e.g., Walking in Faith, The Power of Prayer"
+                  [class.error]="sermonForm.get('title')?.invalid && sermonForm.get('title')?.touched"
+                />
+                <span
+                  *ngIf="sermonForm.get('title')?.invalid && sermonForm.get('title')?.touched"
+                  class="error-message"
+                >
+                  {{ getErrorMessage('title') }}
+                </span>
+              </div>
+
+              <div class="form-group">
+                <label for="description">Description</label>
+                <textarea
+                  id="description"
+                  formControlName="description"
+                  placeholder="Brief description of the sermon..."
+                  rows="4"
+                ></textarea>
+              </div>
+
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="preacher_name">Preacher Name *</label>
+                  <input
+                    id="preacher_name"
+                    type="text"
+                    formControlName="preacher_name"
+                    placeholder="e.g., Pastor John Doe"
+                    [class.error]="sermonForm.get('preacher_name')?.invalid && sermonForm.get('preacher_name')?.touched"
+                  />
+                  <span
+                    *ngIf="sermonForm.get('preacher_name')?.invalid && sermonForm.get('preacher_name')?.touched"
+                    class="error-message"
+                  >
+                    {{ getErrorMessage('preacher_name') }}
+                  </span>
+                </div>
+
+                <div class="form-group">
+                  <label for="sermon_date">Sermon Date *</label>
+                  <input
+                    id="sermon_date"
+                    type="date"
+                    formControlName="sermon_date"
+                    [class.error]="sermonForm.get('sermon_date')?.invalid && sermonForm.get('sermon_date')?.touched"
+                  />
+                  <span
+                    *ngIf="sermonForm.get('sermon_date')?.invalid && sermonForm.get('sermon_date')?.touched"
+                    class="error-message"
+                  >
+                    {{ getErrorMessage('sermon_date') }}
+                  </span>
+                </div>
+              </div>
+
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="series_name">Series Name</label>
+                  <select id="series_name" formControlName="series_name">
+                    <option value="">Select a series (optional)</option>
+                    <option *ngFor="let series of sermonSeries" [value]="series.name">
+                      {{ series.name }}
+                    </option>
+                  </select>
+                  <p class="help-text">Group this sermon into a series</p>
+                </div>
+
+                <div class="form-group">
+                  <label for="scripture_reference">Scripture Reference</label>
+                  <input
+                    id="scripture_reference"
+                    type="text"
+                    formControlName="scripture_reference"
+                    placeholder="e.g., John 3:16, Matthew 5:1-12"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Media Files -->
+            <div class="form-section">
+              <h3>Media Files</h3>
+
+              <div class="form-group">
+                <label for="audio_url">Audio URL</label>
+                <input
+                  id="audio_url"
+                  type="url"
+                  formControlName="audio_url"
+                  placeholder="https://example.com/sermon-audio.mp3"
+                />
+                <p class="help-text">URL to the sermon audio file (MP3)</p>
+              </div>
+
+              <div class="form-group">
+                <label for="video_url">Video URL</label>
+                <input
+                  id="video_url"
+                  type="url"
+                  formControlName="video_url"
+                  placeholder="https://youtube.com/watch?v=... or https://vimeo.com/..."
+                />
+                <p class="help-text">YouTube, Vimeo, or direct video link</p>
+              </div>
+
+              <div class="form-group">
+                <label for="notes_url">Sermon Notes URL</label>
+                <input
+                  id="notes_url"
+                  type="url"
+                  formControlName="notes_url"
+                  placeholder="https://example.com/sermon-notes.pdf"
+                />
+                <p class="help-text">PDF or document link for sermon notes</p>
+              </div>
+
+              <div class="form-group">
+                <label for="thumbnail_url">Thumbnail Image URL</label>
+                <input
+                  id="thumbnail_url"
+                  type="url"
+                  formControlName="thumbnail_url"
+                  placeholder="https://example.com/thumbnail.jpg"
+                />
+                <p class="help-text">Image to display for this sermon</p>
+              </div>
+            </div>
+
+            <!-- Additional Details -->
+            <div class="form-section">
+              <h3>Additional Details</h3>
+
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="duration">Duration (minutes)</label>
+                  <input
+                    id="duration"
+                    type="number"
+                    formControlName="duration"
+                    placeholder="e.g., 45"
+                    min="0"
+                  />
+                  <p class="help-text">Length of sermon in minutes</p>
+                </div>
+
+                <div class="form-group">
+                  <label for="tags">Tags</label>
+                  <input
+                    id="tags"
+                    type="text"
+                    formControlName="tags"
+                    placeholder="faith, prayer, hope"
+                  />
+                  <p class="help-text">Comma-separated tags</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="form-actions">
+              <button
+                type="button"
+                class="btn-secondary"
+                (click)="cancel()"
+                [disabled]="loading"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                class="btn-primary"
+                [disabled]="loading"
+              >
+                <span *ngIf="!loading">
+                  <i class="ri-upload-line"></i>
+                  Upload Sermon
+                </span>
+                <span *ngIf="loading">
+                  <i class="ri-loader-4-line spin"></i>
+                  Uploading...
+                </span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,124 @@
+<!-- src/app/features/cms/components/pages-list/pages-list.component.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+
+  <div class="dashboard-content">
+    <app-header></app-header>
+
+    <div class="dashboard-body">
+      <div class="pages-container">
+        <!-- Page Header -->
+        <div class="page-header">
+          <div class="header-left">
+            <button class="back-btn" (click)="goBack()">
+              <i class="ri-arrow-left-line"></i>
+            </button>
+            <div>
+              <h1>Pages</h1>
+              <p class="subtitle">Manage your website pages</p>
+            </div>
+          </div>
+          <button class="btn-primary" (click)="createPage()">
+            <i class="ri-add-line"></i>
+            Create Page
+          </button>
+        </div>
+
+        <!-- Success/Error Messages -->
+        <div *ngIf="successMessage" class="success-alert">
+          <i class="ri-checkbox-circle-line"></i>
+          <span>{{ successMessage }}</span>
+        </div>
+
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i>
+          <span>{{ errorMessage }}</span>
+        </div>
+
+        <!-- Loading State -->
+        <div *ngIf="loading" class="loading-container">
+          <app-loading-spinner message="Loading pages..."></app-loading-spinner>
+        </div>
+
+        <!-- Pages List -->
+        <div *ngIf="!loading" class="pages-list">
+          <div *ngFor="let page of pages" class="page-card">
+            <div class="card-content">
+              <div class="page-info">
+                <h3>{{ page.title }}</h3>
+                <p class="page-slug">/{{ page.slug }}</p>
+                <p class="page-meta">
+                  By {{ page.author?.full_name || 'Unknown' }} •
+                  {{ page.updated_at | date:'MMM d, y' }}
+                  <span *ngIf="page.is_published"> • Published</span>
+                </p>
+              </div>
+
+              <div class="page-actions">
+                <button
+                  class="btn-action btn-publish"
+                  (click)="togglePublish(page, $event)"
+                >
+                  <i [class]="page.is_published ? 'ri-eye-off-line' : 'ri-eye-line'"></i>
+                  {{ page.is_published ? 'Unpublish' : 'Publish' }}
+                </button>
+                <button class="btn-action btn-edit" (click)="editPage(page.id, $event)">
+                  <i class="ri-edit-line"></i>
+                  Edit
+                </button>
+                <button class="btn-action btn-delete" (click)="deletePage(page.id, $event)">
+                  <i class="ri-delete-bin-line"></i>
+                  Delete
+                </button>
+              </div>
+            </div>
+
+            <div class="card-status">
+              <span class="status-badge" [class.published]="page.is_published">
+                {{ page.is_published ? 'Published' : 'Draft' }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Empty State -->
+          <div *ngIf="pages.length === 0" class="empty-state">
+            <i class="ri-pages-line"></i>
+            <h3>No Pages Yet</h3>
+            <p>Create your first page to get started</p>
+            <button class="btn-primary" (click)="createPage()">
+              <i class="ri-add-line"></i>
+              Create Page
+            </button>
+          </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination" *ngIf="totalPages > 1 && !loading">
+          <button
+            class="pagination-btn"
+            [disabled]="currentPage === 1"
+            (click)="previousPage()"
+          >
+            <i class="ri-arrow-left-s-line"></i>
+            Previous
+          </button>
+
+          <div class="pagination-pages">
+            <span class="page-info">
+              Page {{ currentPage }} of {{ totalPages }} ({{ totalPagesCount }} pages)
+            </span>
+          </div>
+
+          <button
+            class="pagination-btn"
+            [disabled]="currentPage === totalPages"
+            (click)="nextPage()"
+          >
+            Next
+            <i class="ri-arrow-right-s-line"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

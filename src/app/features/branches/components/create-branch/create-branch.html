@@ -1,0 +1,200 @@
+<!-- src/app/features/branches/components/create-branch/create-branch.component.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+
+  <div class="dashboard-content">
+    <app-header></app-header>
+
+    <div class="dashboard-body">
+      <div class="create-branch-container">
+        <!-- Page Header -->
+        <div class="page-header">
+          <div class="header-left">
+            <button class="back-btn" (click)="cancel()">
+              <i class="ri-arrow-left-line"></i>
+            </button>
+            <div>
+              <h1>Add Branch</h1>
+              <p class="subtitle">Create a new church branch or location</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Success/Error Messages -->
+        <div *ngIf="successMessage" class="success-alert">
+          <i class="ri-checkbox-circle-line"></i>
+          <span>{{ successMessage }}</span>
+        </div>
+
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i>
+          <span>{{ errorMessage }}</span>
+        </div>
+
+        <!-- Form Card -->
+        <div class="form-card">
+          <form [formGroup]="branchForm" (ngSubmit)="onSubmit()">
+            <!-- Basic Information -->
+            <div class="form-section">
+              <h3>Basic Information</h3>
+
+              <div class="form-grid">
+                <!-- Branch Name -->
+                <div class="form-group full-width">
+                  <label for="name">Branch Name *</label>
+                  <input
+                    id="name"
+                    type="text"
+                    formControlName="name"
+                    placeholder="e.g., Main Campus, Downtown Branch"
+                    [class.error]="branchForm.get('name')?.invalid && branchForm.get('name')?.touched"
+                  />
+                  <span
+                    *ngIf="branchForm.get('name')?.invalid && branchForm.get('name')?.touched"
+                    class="error-message"
+                  >
+                    {{ getErrorMessage('name') }}
+                  </span>
+                </div>
+
+                <!-- Pastor Name -->
+                <div class="form-group full-width">
+                  <label for="pastor_name">Pastor/Leader Name</label>
+                  <input
+                    id="pastor_name"
+                    type="text"
+                    formControlName="pastor_name"
+                    placeholder="e.g., Rev. John Doe"
+                  />
+                </div>
+
+                <!-- Established Date -->
+                <div class="form-group">
+                  <label for="established_date">Established Date</label>
+                  <input
+                    id="established_date"
+                    type="date"
+                    formControlName="established_date"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Contact Information -->
+            <div class="form-section">
+              <h3>Contact Information</h3>
+
+              <div class="form-grid">
+                <!-- Phone -->
+                <div class="form-group">
+                  <label for="phone">Phone Number</label>
+                  <input
+                    id="phone"
+                    type="tel"
+                    formControlName="phone"
+                    placeholder="e.g., +233 24 123 4567"
+                  />
+                </div>
+
+                <!-- Email -->
+                <div class="form-group">
+                  <label for="email">Email Address</label>
+                  <input
+                    id="email"
+                    type="email"
+                    formControlName="email"
+                    placeholder="e.g., branch@church.com"
+                    [class.error]="branchForm.get('email')?.invalid && branchForm.get('email')?.touched"
+                  />
+                  <span
+                    *ngIf="branchForm.get('email')?.invalid && branchForm.get('email')?.touched"
+                    class="error-message"
+                  >
+                    {{ getErrorMessage('email') }}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Location Information -->
+            <div class="form-section">
+              <h3>Location Information</h3>
+
+              <div class="form-grid">
+                <!-- Address -->
+                <div class="form-group full-width">
+                  <label for="address">Street Address</label>
+                  <input
+                    id="address"
+                    type="text"
+                    formControlName="address"
+                    placeholder="e.g., 123 Main Street"
+                  />
+                </div>
+
+                <!-- City -->
+                <div class="form-group">
+                  <label for="city">City</label>
+                  <input
+                    id="city"
+                    type="text"
+                    formControlName="city"
+                    placeholder="e.g., Accra"
+                  />
+                </div>
+
+                <!-- State -->
+                <div class="form-group">
+                  <label for="state">State/Region</label>
+                  <input
+                    id="state"
+                    type="text"
+                    formControlName="state"
+                    placeholder="e.g., Greater Accra"
+                  />
+                </div>
+
+                <!-- Country -->
+                <div class="form-group">
+                  <label for="country">Country</label>
+                  <input
+                    id="country"
+                    type="text"
+                    formControlName="country"
+                    placeholder="e.g., Ghana"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="form-actions">
+              <button
+                type="button"
+                class="btn-secondary"
+                (click)="cancel()"
+                [disabled]="loading"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                class="btn-primary"
+                [disabled]="loading"
+              >
+                <span *ngIf="!loading">
+                  <i class="ri-save-line"></i>
+                  Create Branch
+                </span>
+                <span *ngIf="loading">
+                  <i class="ri-loader-4-line spin"></i>
+                  Creating...
+                </span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

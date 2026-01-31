@@ -1,0 +1,513 @@
+<!-- src/app/features/settings/components/settings/settings.component.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+
+  <div class="dashboard-content">
+    <app-header></app-header>
+
+    <div class="dashboard-body">
+      <div class="settings-container">
+        <!-- Page Header -->
+        <div class="page-header">
+          <div class="header-left">
+            <h1>Settings</h1>
+            <p class="subtitle">Manage your church configuration</p>
+          </div>
+        </div>
+
+        <!-- Success/Error Messages -->
+        <div *ngIf="successMessage" class="success-alert">
+          <i class="ri-checkbox-circle-line"></i>
+          <span>{{ successMessage }}</span>
+        </div>
+
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i>
+          <span>{{ errorMessage }}</span>
+        </div>
+
+        <!-- Loading State -->
+        <div *ngIf="loadingProfile" class="loading-container">
+          <app-loading-spinner size="large" message="Loading settings..."></app-loading-spinner>
+        </div>
+
+        <!-- Settings Content -->
+        <div *ngIf="!loadingProfile" class="settings-content">
+          <!-- Tabs Navigation -->
+          <div class="settings-tabs">
+            <button
+              class="tab-btn"
+              [class.active]="activeTab === 'general'"
+              (click)="switchTab('general')"
+            >
+              <i class="ri-settings-3-line"></i>
+              General
+            </button>
+            <button
+              class="tab-btn"
+              [class.active]="activeTab === 'notifications'"
+              (click)="switchTab('notifications')"
+            >
+              <i class="ri-notification-3-line"></i>
+              Notifications
+            </button>
+            <button
+              class="tab-btn"
+              [class.active]="activeTab === 'finance'"
+              (click)="switchTab('finance')"
+            >
+              <i class="ri-money-dollar-circle-line"></i>
+              Finance
+            </button>
+            <button
+              class="tab-btn"
+              [class.active]="activeTab === 'communications'"
+              (click)="switchTab('communications')"
+            >
+              <i class="ri-mail-line"></i>
+              Communications
+            </button>
+            <button
+              class="tab-btn"
+              [class.active]="activeTab === 'security'"
+              (click)="switchTab('security')"
+            >
+              <i class="ri-shield-check-line"></i>
+              Security
+            </button>
+          </div>
+
+          <!-- Tab Content -->
+          <div class="tab-content">
+            <!-- General Settings -->
+            <div *ngIf="activeTab === 'general'" class="settings-panel">
+              <div class="panel-header">
+                <h2>General Settings</h2>
+                <p>Configure your church basic information</p>
+              </div>
+
+              <form [formGroup]="churchForm" (ngSubmit)="onSubmit()">
+                <!-- Church Information -->
+                <div class="form-section">
+                  <h3>Church Information</h3>
+
+                  <div class="form-grid">
+                    <div class="form-group">
+                      <label for="name">Church Name *</label>
+                      <input
+                        id="name"
+                        type="text"
+                        formControlName="name"
+                        placeholder="e.g., Grace Fellowship Church"
+                        [class.error]="churchForm.get('name')?.invalid && churchForm.get('name')?.touched"
+                      />
+                      <span
+                        *ngIf="churchForm.get('name')?.invalid && churchForm.get('name')?.touched"
+                        class="error-message"
+                      >
+                        {{ getErrorMessage('name') }}
+                      </span>
+                    </div>
+
+                    <div class="form-group">
+                      <label for="email">Email Address *</label>
+                      <input
+                        id="email"
+                        type="email"
+                        formControlName="email"
+                        placeholder="info@church.com"
+                        [class.error]="churchForm.get('email')?.invalid && churchForm.get('email')?.touched"
+                      />
+                      <span
+                        *ngIf="churchForm.get('email')?.invalid && churchForm.get('email')?.touched"
+                        class="error-message"
+                      >
+                        {{ getErrorMessage('email') }}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div class="form-grid">
+                    <div class="form-group">
+                      <label for="phone">Phone Number</label>
+                      <input
+                        id="phone"
+                        type="tel"
+                        formControlName="phone"
+                        placeholder="+233 XX XXX XXXX"
+                      />
+                    </div>
+
+                    <div class="form-group">
+                      <label for="website">Website</label>
+                      <input
+                        id="website"
+                        type="url"
+                        formControlName="website"
+                        placeholder="https://www.church.com"
+                      />
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="description">Description</label>
+                    <textarea
+                      id="description"
+                      formControlName="description"
+                      placeholder="Brief description of your church..."
+                      rows="4"
+                    ></textarea>
+                  </div>
+                </div>
+
+                <!-- Location Information -->
+                <div class="form-section">
+                  <h3>Location Information</h3>
+
+                  <div class="form-group">
+                    <label for="address">Address</label>
+                    <input
+                      id="address"
+                      type="text"
+                      formControlName="address"
+                      placeholder="Street address"
+                    />
+                  </div>
+
+                  <div class="form-grid">
+                    <div class="form-group">
+                      <label for="city">City</label>
+                      <input
+                        id="city"
+                        type="text"
+                        formControlName="city"
+                        placeholder="e.g., Accra"
+                      />
+                    </div>
+
+                    <div class="form-group">
+                      <label for="state">State/Region</label>
+                      <input
+                        id="state"
+                        type="text"
+                        formControlName="state"
+                        placeholder="e.g., Greater Accra"
+                      />
+                    </div>
+                  </div>
+
+                  <div class="form-grid">
+                    <div class="form-group">
+                      <label for="country">Country</label>
+                      <input
+                        id="country"
+                        type="text"
+                        formControlName="country"
+                        placeholder="e.g., Ghana"
+                      />
+                    </div>
+
+                    <div class="form-group">
+                      <label for="zip_code">Postal Code</label>
+                      <input
+                        id="zip_code"
+                        type="text"
+                        formControlName="zip_code"
+                        placeholder="Postal/Zip code"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <!-- System Configuration -->
+                <div class="form-section">
+                  <h3>System Configuration</h3>
+
+                  <div class="form-grid">
+                    <div class="form-group">
+                      <label for="timezone">Timezone</label>
+                      <select id="timezone" formControlName="timezone">
+                        <option value="">Select timezone</option>
+                        <option value="Africa/Accra">Africa/Accra (GMT)</option>
+                        <option value="America/New_York">America/New York (EST)</option>
+                        <option value="Europe/London">Europe/London (GMT)</option>
+                        <option value="Asia/Dubai">Asia/Dubai (GST)</option>
+                      </select>
+                    </div>
+
+                    <div class="form-group">
+                      <label for="currency">Currency</label>
+                      <select id="currency" formControlName="currency">
+                        <option value="GHS">GHS - Ghanaian Cedi</option>
+                        <option value="USD">USD - US Dollar</option>
+                        <option value="EUR">EUR - Euro</option>
+                        <option value="GBP">GBP - British Pound</option>
+                        <option value="NGN">NGN - Nigerian Naira</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="logo_url">Logo URL</label>
+                    <input
+                      id="logo_url"
+                      type="url"
+                      formControlName="logo_url"
+                      placeholder="https://example.com/logo.png"
+                    />
+                    <p class="help-text">URL to your church logo image</p>
+                  </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="form-actions">
+                  <button
+                    type="submit"
+                    class="btn-primary"
+                    [disabled]="loading"
+                  >
+                    <span *ngIf="!loading">
+                      <i class="ri-save-line"></i>
+                      Save Changes
+                    </span>
+                    <span *ngIf="loading">
+                      <i class="ri-loader-4-line spin"></i>
+                      Saving...
+                    </span>
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <!-- Notifications Settings -->
+            <div *ngIf="activeTab === 'notifications'" class="settings-panel">
+              <div class="panel-header">
+                <h2>Notification Settings</h2>
+                <p>Configure how you receive notifications</p>
+              </div>
+
+              <div class="settings-list">
+                <div class="setting-item">
+                  <div class="setting-info">
+                    <h4>Email Notifications</h4>
+                    <p>Receive notifications via email</p>
+                  </div>
+                  <label class="toggle-switch">
+                    <input type="checkbox" checked />
+                    <span class="slider"></span>
+                  </label>
+                </div>
+
+                <div class="setting-item">
+                  <div class="setting-info">
+                    <h4>SMS Notifications</h4>
+                    <p>Receive notifications via SMS</p>
+                  </div>
+                  <label class="toggle-switch">
+                    <input type="checkbox" />
+                    <span class="slider"></span>
+                  </label>
+                </div>
+
+                <div class="setting-item">
+                  <div class="setting-info">
+                    <h4>Event Reminders</h4>
+                    <p>Get reminders for upcoming events</p>
+                  </div>
+                  <label class="toggle-switch">
+                    <input type="checkbox" checked />
+                    <span class="slider"></span>
+                  </label>
+                </div>
+
+                <div class="setting-item">
+                  <div class="setting-info">
+                    <h4>New Member Alerts</h4>
+                    <p>Notify when new members join</p>
+                  </div>
+                  <label class="toggle-switch">
+                    <input type="checkbox" checked />
+                    <span class="slider"></span>
+                  </label>
+                </div>
+
+                <div class="setting-item">
+                  <div class="setting-info">
+                    <h4>Donation Receipts</h4>
+                    <p>Send automated donation receipts</p>
+                  </div>
+                  <label class="toggle-switch">
+                    <input type="checkbox" checked />
+                    <span class="slider"></span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- Finance Settings -->
+            <div *ngIf="activeTab === 'finance'" class="settings-panel">
+              <div class="panel-header">
+                <h2>Finance Settings</h2>
+                <p>Configure financial and payment settings</p>
+              </div>
+
+              <div class="settings-list">
+                <div class="setting-item">
+                  <div class="setting-info">
+                    <h4>Online Giving</h4>
+                    <p>Enable online donation capabilities</p>
+                  </div>
+                  <label class="toggle-switch">
+                    <input type="checkbox" checked />
+                    <span class="slider"></span>
+                  </label>
+                </div>
+
+                <div class="setting-item">
+                  <div class="setting-info">
+                    <h4>Recurring Donations</h4>
+                    <p>Allow members to set up recurring gifts</p>
+                  </div>
+                  <label class="toggle-switch">
+                    <input type="checkbox" checked />
+                    <span class="slider"></span>
+                  </label>
+                </div>
+
+                <div class="setting-item">
+                  <div class="setting-info">
+                    <h4>Auto-Generate Receipts</h4>
+                    <p>Automatically create donation receipts</p>
+                  </div>
+                  <label class="toggle-switch">
+                    <input type="checkbox" checked />
+                    <span class="slider"></span>
+                  </label>
+                </div>
+
+                <div class="setting-item">
+                  <div class="setting-info">
+                    <h4>Tax Deductible Receipts</h4>
+                    <p>Mark receipts as tax-deductible</p>
+                  </div>
+                  <label class="toggle-switch">
+                    <input type="checkbox" />
+                    <span class="slider"></span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- Communications Settings -->
+            <div *ngIf="activeTab === 'communications'" class="settings-panel">
+              <div class="panel-header">
+                <h2>Communication Settings</h2>
+                <p>Configure email and messaging preferences</p>
+              </div>
+
+              <div class="settings-list">
+                <div class="setting-item">
+                  <div class="setting-info">
+                    <h4>Email Campaigns</h4>
+                    <p>Enable bulk email campaigns</p>
+                  </div>
+                  <label class="toggle-switch">
+                    <input type="checkbox" checked />
+                    <span class="slider"></span>
+                  </label>
+                </div>
+
+                <div class="setting-item">
+                  <div class="setting-info">
+                    <h4>SMS Campaigns</h4>
+                    <p>Enable bulk SMS campaigns</p>
+                  </div>
+                  <label class="toggle-switch">
+                    <input type="checkbox" checked />
+                    <span class="slider"></span>
+                  </label>
+                </div>
+
+                <div class="setting-item">
+                  <div class="setting-info">
+                    <h4>Automated Welcome Emails</h4>
+                    <p>Send welcome emails to new members</p>
+                  </div>
+                  <label class="toggle-switch">
+                    <input type="checkbox" checked />
+                    <span class="slider"></span>
+                  </label>
+                </div>
+
+                <div class="setting-item">
+                  <div class="setting-info">
+                    <h4>Birthday Greetings</h4>
+                    <p>Send automated birthday messages</p>
+                  </div>
+                  <label class="toggle-switch">
+                    <input type="checkbox" checked />
+                    <span class="slider"></span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- Security Settings -->
+            <div *ngIf="activeTab === 'security'" class="settings-panel">
+              <div class="panel-header">
+                <h2>Security Settings</h2>
+                <p>Manage security and privacy settings</p>
+              </div>
+
+              <div class="settings-list">
+                <div class="setting-item">
+                  <div class="setting-info">
+                    <h4>Two-Factor Authentication</h4>
+                    <p>Require 2FA for admin accounts</p>
+                  </div>
+                  <label class="toggle-switch">
+                    <input type="checkbox" />
+                    <span class="slider"></span>
+                  </label>
+                </div>
+
+                <div class="setting-item">
+                  <div class="setting-info">
+                    <h4>Session Timeout</h4>
+                    <p>Auto logout after 30 minutes of inactivity</p>
+                  </div>
+                  <label class="toggle-switch">
+                    <input type="checkbox" checked />
+                    <span class="slider"></span>
+                  </label>
+                </div>
+
+                <div class="setting-item">
+                  <div class="setting-info">
+                    <h4>Login Notifications</h4>
+                    <p>Get notified of new login attempts</p>
+                  </div>
+                  <label class="toggle-switch">
+                    <input type="checkbox" checked />
+                    <span class="slider"></span>
+                  </label>
+                </div>
+
+                <div class="setting-item">
+                  <div class="setting-info">
+                    <h4>Data Export</h4>
+                    <p>Allow members to export their data</p>
+                  </div>
+                  <label class="toggle-switch">
+                    <input type="checkbox" checked />
+                    <span class="slider"></span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

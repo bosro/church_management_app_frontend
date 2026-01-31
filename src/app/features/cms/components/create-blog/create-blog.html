@@ -1,0 +1,154 @@
+<!-- src/app/features/cms/components/create-blog/create-blog.component.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+
+  <div class="dashboard-content">
+    <app-header></app-header>
+
+    <div class="dashboard-body">
+      <div class="create-blog-container">
+        <!-- Page Header -->
+        <div class="page-header">
+          <div class="header-left">
+            <button class="back-btn" (click)="cancel()">
+              <i class="ri-arrow-left-line"></i>
+            </button>
+            <div>
+              <h1>Create Blog Post</h1>
+              <p class="subtitle">Write a new article for your blog</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Success/Error Messages -->
+        <div *ngIf="successMessage" class="success-alert">
+          <i class="ri-checkbox-circle-line"></i>
+          <span>{{ successMessage }}</span>
+        </div>
+
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i>
+          <span>{{ errorMessage }}</span>
+        </div>
+
+        <!-- Form Card -->
+        <div class="form-card">
+          <form [formGroup]="blogForm" (ngSubmit)="onSubmit()">
+            <!-- Content Section -->
+            <div class="form-section">
+              <h3>Post Content</h3>
+
+              <div class="form-group">
+                <label for="title">Post Title *</label>
+                <input
+                  id="title"
+                  type="text"
+                  formControlName="title"
+                  placeholder="e.g., The Power of Prayer, Sunday Reflection"
+                  [class.error]="blogForm.get('title')?.invalid && blogForm.get('title')?.touched"
+                />
+                <span
+                  *ngIf="blogForm.get('title')?.invalid && blogForm.get('title')?.touched"
+                  class="error-message"
+                >
+                  {{ getErrorMessage('title') }}
+                </span>
+              </div>
+
+              <div class="form-group">
+                <label for="excerpt">Excerpt</label>
+                <textarea
+                  id="excerpt"
+                  formControlName="excerpt"
+                  placeholder="Brief summary of your post..."
+                  rows="3"
+                ></textarea>
+                <p class="help-text">Short description shown in post previews</p>
+              </div>
+
+              <div class="form-group">
+                <label for="content">Post Content *</label>
+                <textarea
+                  id="content"
+                  formControlName="content"
+                  placeholder="Write your blog post here..."
+                  rows="15"
+                  [class.error]="blogForm.get('content')?.invalid && blogForm.get('content')?.touched"
+                ></textarea>
+                <span
+                  *ngIf="blogForm.get('content')?.invalid && blogForm.get('content')?.touched"
+                  class="error-message"
+                >
+                  {{ getErrorMessage('content') }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Metadata Section -->
+            <div class="form-section">
+              <h3>Post Settings</h3>
+
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="category">Category</label>
+                  <select id="category" formControlName="category">
+                    <option value="">Select a category</option>
+                    <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="tags">Tags</label>
+                  <input
+                    id="tags"
+                    type="text"
+                    formControlName="tags"
+                    placeholder="tag1, tag2, tag3"
+                  />
+                  <p class="help-text">Comma-separated tags</p>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="featured_image_url">Featured Image URL</label>
+                <input
+                  id="featured_image_url"
+                  type="url"
+                  formControlName="featured_image_url"
+                  placeholder="https://example.com/image.jpg"
+                />
+                <p class="help-text">URL of the featured image for this post</p>
+              </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="form-actions">
+              <button
+                type="button"
+                class="btn-secondary"
+                (click)="cancel()"
+                [disabled]="loading"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                class="btn-primary"
+                [disabled]="loading"
+              >
+                <span *ngIf="!loading">
+                  <i class="ri-save-line"></i>
+                  Create Post
+                </span>
+                <span *ngIf="loading">
+                  <i class="ri-loader-4-line spin"></i>
+                  Creating...
+                </span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

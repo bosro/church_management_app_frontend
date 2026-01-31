@@ -1,0 +1,197 @@
+<!-- src/app/features/forms/components/fill-form/fill-form.component.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+
+  <div class="dashboard-content">
+    <app-header></app-header>
+
+    <div class="dashboard-body">
+      <div class="fill-form-container">
+        <!-- Loading State -->
+        <div *ngIf="loadingForm" class="loading-container">
+          <app-loading-spinner size="large" message="Loading form..."></app-loading-spinner>
+        </div>
+
+        <!-- Form Content -->
+        <div *ngIf="!loadingForm && formTemplate" class="form-wrapper">
+          <div class="form-header">
+            <button class="back-btn" (click)="cancel()">
+              <i class="ri-arrow-left-line"></i>
+            </button>
+            <div>
+              <h1>{{ formTemplate.title }}</h1>
+              <p class="form-description" *ngIf="formTemplate.description">
+                {{ formTemplate.description }}
+              </p>
+            </div>
+          </div>
+
+          <!-- Success Message -->
+          <div *ngIf="successMessage" class="success-alert">
+            <i class="ri-checkbox-circle-line"></i>
+            <span>{{ successMessage }}</span>
+          </div>
+
+          <!-- Error Message -->
+          <div *ngIf="errorMessage" class="error-alert">
+            <i class="ri-error-warning-line"></i>
+            <span>{{ errorMessage }}</span>
+          </div>
+
+          <!-- Form -->
+          <div class="form-card">
+            <form [formGroup]="submissionForm" (ngSubmit)="onSubmit()">
+              <div class="form-fields">
+                <div *ngFor="let field of formTemplate.form_fields" class="form-field">
+                  <label [for]="field.id">
+                    {{ field.label }}
+                    <span class="required-mark" *ngIf="field.required">*</span>
+                  </label>
+
+                  <!-- Text Input -->
+                  <input
+                    *ngIf="field.field_type === 'text'"
+                    [id]="field.id"
+                    type="text"
+                    [formControlName]="field.id"
+                    [placeholder]="field.placeholder || ''"
+                    [class.error]="submissionForm.get(field.id)?.invalid && submissionForm.get(field.id)?.touched"
+                  />
+
+                  <!-- Email Input -->
+                  <input
+                    *ngIf="field.field_type === 'email'"
+                    [id]="field.id"
+                    type="email"
+                    [formControlName]="field.id"
+                    [placeholder]="field.placeholder || ''"
+                    [class.error]="submissionForm.get(field.id)?.invalid && submissionForm.get(field.id)?.touched"
+                  />
+
+                  <!-- Phone Input -->
+                  <input
+                    *ngIf="field.field_type === 'phone'"
+                    [id]="field.id"
+                    type="tel"
+                    [formControlName]="field.id"
+                    [placeholder]="field.placeholder || ''"
+                    [class.error]="submissionForm.get(field.id)?.invalid && submissionForm.get(field.id)?.touched"
+                  />
+
+                  <!-- Number Input -->
+                  <input
+                    *ngIf="field.field_type === 'number'"
+                    [id]="field.id"
+                    type="number"
+                    [formControlName]="field.id"
+                    [placeholder]="field.placeholder || ''"
+                    [class.error]="submissionForm.get(field.id)?.invalid && submissionForm.get(field.id)?.touched"
+                  />
+
+                  <!-- Date Input -->
+                  <input
+                    *ngIf="field.field_type === 'date'"
+                    [id]="field.id"
+                    type="date"
+                    [formControlName]="field.id"
+                    [class.error]="submissionForm.get(field.id)?.invalid && submissionForm.get(field.id)?.touched"
+                  />
+
+                  <!-- Textarea -->
+                  <textarea
+                    *ngIf="field.field_type === 'textarea'"
+                    [id]="field.id"
+                    [formControlName]="field.id"
+                    [placeholder]="field.placeholder || ''"
+                    rows="4"
+                    [class.error]="submissionForm.get(field.id)?.invalid && submissionForm.get(field.id)?.touched"
+                  ></textarea>
+
+                  <!-- Select -->
+                  <select
+                    *ngIf="field.field_type === 'select'"
+                    [id]="field.id"
+                    [formControlName]="field.id"
+                    [class.error]="submissionForm.get(field.id)?.invalid && submissionForm.get(field.id)?.touched"
+                  >
+                    <option value="">Select an option</option>
+                    <option *ngFor="let option of field.options" [value]="option">
+                      {{ option }}
+                    </option>
+                  </select>
+
+                  <!-- Radio Buttons -->
+                  <div *ngIf="field.field_type === 'radio'" class="radio-group">
+                    <label *ngFor="let option of field.options" class="radio-label">
+                      <input
+                        type="radio"
+                        [formControlName]="field.id"
+                        [value]="option"
+                      />
+                      <span>{{ option }}</span>
+                    </label>
+                  </div>
+
+                  <!-- Checkboxes -->
+                  <div *ngIf="field.field_type === 'checkbox'" class="checkbox-group">
+                    <label *ngFor="let option of field.options" class="checkbox-label">
+                      <input
+                        type="checkbox"
+                        [checked]="isCheckboxChecked(field.id, option)"
+                        (change)="onCheckboxChange(field.id, option, $event)"
+                      />
+                      <span>{{ option }}</span>
+                    </label>
+                  </div>
+
+                  <!-- File Upload -->
+                  <div *ngIf="field.field_type === 'file'" class="file-upload-wrapper">
+                    <input
+                      type="file"
+                      [id]="field.id"
+                      [formControlName]="field.id"
+                    />
+                  </div>
+
+                  <!-- Error Message -->
+                  <span
+                    *ngIf="submissionForm.get(field.id)?.invalid && submissionForm.get(field.id)?.touched"
+                    class="error-message"
+                  >
+                    {{ getErrorMessage(field) }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Submit Button -->
+              <div class="form-actions">
+                <button
+                  type="button"
+                  class="btn-secondary"
+                  (click)="cancel()"
+                  [disabled]="loading"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  class="btn-primary"
+                  [disabled]="loading"
+                >
+                  <span *ngIf="!loading">
+                    <i class="ri-send-plane-line"></i>
+                    Submit Form
+                  </span>
+                  <span *ngIf="loading">
+                    <i class="ri-loader-4-line spin"></i>
+                    Submitting...
+                  </span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

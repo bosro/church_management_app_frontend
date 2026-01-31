@@ -1,0 +1,192 @@
+<!-- src/app/features/branches/components/branches-list/branches-list.component.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+
+  <div class="dashboard-content">
+    <app-header></app-header>
+
+    <div class="dashboard-body">
+      <div class="branches-container">
+        <!-- Page Header -->
+        <div class="page-header">
+          <div class="header-left">
+            <h1>Branches</h1>
+            <p class="subtitle">Manage church branches and locations</p>
+          </div>
+          <div class="header-actions">
+            <button class="btn-secondary" (click)="exportBranches()" [disabled]="branches.length === 0">
+              <i class="ri-download-line"></i>
+              Export CSV
+            </button>
+            <button class="btn-primary" (click)="createBranch()">
+              <i class="ri-add-line"></i>
+              Add Branch
+            </button>
+          </div>
+        </div>
+
+        <!-- Success/Error Messages -->
+        <div *ngIf="successMessage" class="success-alert">
+          <i class="ri-checkbox-circle-line"></i>
+          <span>{{ successMessage }}</span>
+        </div>
+
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i>
+          <span>{{ errorMessage }}</span>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="stats-grid" *ngIf="statistics">
+          <div class="stat-card">
+            <div class="stat-icon" style="background: #DDD6FE; color: #7C3AED;">
+              <i class="ri-building-line"></i>
+            </div>
+            <div class="stat-info">
+              <p class="stat-label">Total Branches</p>
+              <h3 class="stat-value">{{ statistics.total_branches }}</h3>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon" style="background: #D1FAE5; color: #10B981;">
+              <i class="ri-check-double-line"></i>
+            </div>
+            <div class="stat-info">
+              <p class="stat-label">Active Branches</p>
+              <h3 class="stat-value">{{ statistics.active_branches }}</h3>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon" style="background: #DBEAFE; color: #3B82F6;">
+              <i class="ri-group-line"></i>
+            </div>
+            <div class="stat-info">
+              <p class="stat-label">Total Members</p>
+              <h3 class="stat-value">{{ statistics.total_members }}</h3>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon" style="background: #FED7AA; color: #EA580C;">
+              <i class="ri-bar-chart-line"></i>
+            </div>
+            <div class="stat-info">
+              <p class="stat-label">Avg Members/Branch</p>
+              <h3 class="stat-value">{{ statistics.average_members }}</h3>
+            </div>
+          </div>
+        </div>
+
+        <!-- Loading State -->
+        <div *ngIf="loading" class="loading-container">
+          <app-loading-spinner message="Loading branches..."></app-loading-spinner>
+        </div>
+
+        <!-- Branches Grid -->
+        <div *ngIf="!loading" class="branches-grid">
+          <div
+            *ngFor="let branch of branches"
+            class="branch-card"
+            (click)="viewBranch(branch.id)"
+          >
+            <div class="card-header">
+              <div class="branch-icon">
+                <i class="ri-building-line"></i>
+              </div>
+              <div class="card-actions">
+                <button class="btn-icon-small" (click)="editBranch(branch.id, $event)">
+                  <i class="ri-edit-line"></i>
+                </button>
+                <button class="btn-icon-small btn-danger" (click)="deleteBranch(branch.id, $event)">
+                  <i class="ri-delete-bin-line"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="card-body">
+              <h3>{{ branch.name }}</h3>
+              <p class="pastor-name" *ngIf="branch.pastor_name">
+                <i class="ri-user-line"></i>
+                {{ branch.pastor_name }}
+              </p>
+
+              <div class="branch-info">
+                <div class="info-item" *ngIf="branch.city">
+                  <i class="ri-map-pin-line"></i>
+                  <span>{{ branch.city }}{{ branch.state ? ', ' + branch.state : '' }}</span>
+                </div>
+
+                <div class="info-item" *ngIf="branch.phone">
+                  <i class="ri-phone-line"></i>
+                  <span>{{ branch.phone }}</span>
+                </div>
+
+                <div class="info-item" *ngIf="branch.email">
+                  <i class="ri-mail-line"></i>
+                  <span>{{ branch.email }}</span>
+                </div>
+              </div>
+
+              <div class="branch-stats">
+                <div class="stat-item">
+                  <i class="ri-group-line"></i>
+                  <span>{{ branch.member_count }} member{{ branch.member_count !== 1 ? 's' : '' }}</span>
+                </div>
+                <div class="stat-item" *ngIf="branch.established_date">
+                  <i class="ri-calendar-line"></i>
+                  <span>Est. {{ branch.established_date | date:'yyyy' }}</span>
+                </div>
+              </div>
+
+              <div class="branch-status">
+                <span class="status-badge" [class.active]="branch.is_active">
+                  {{ branch.is_active ? 'Active' : 'Inactive' }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Empty State -->
+          <div *ngIf="branches.length === 0" class="empty-state">
+            <i class="ri-building-line"></i>
+            <h3>No Branches Yet</h3>
+            <p>Create your first branch to manage multiple locations</p>
+            <button class="btn-primary" (click)="createBranch()">
+              <i class="ri-add-line"></i>
+              Add Branch
+            </button>
+          </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination" *ngIf="totalPages > 1 && !loading">
+          <button
+            class="pagination-btn"
+            [disabled]="currentPage === 1"
+            (click)="previousPage()"
+          >
+            <i class="ri-arrow-left-s-line"></i>
+            Previous
+          </button>
+
+          <div class="pagination-pages">
+            <span class="page-info">
+              Page {{ currentPage }} of {{ totalPages }} ({{ totalBranches }} branches)
+            </span>
+          </div>
+
+          <button
+            class="pagination-btn"
+            [disabled]="currentPage === totalPages"
+            (click)="nextPage()"
+          >
+            Next
+            <i class="ri-arrow-right-s-line"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

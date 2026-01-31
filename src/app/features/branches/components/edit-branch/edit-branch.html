@@ -1,0 +1,49 @@
+<!-- src/app/features/branches/components/edit-branch/edit-branch.component.html -->
+<!-- Use same HTML as create-branch, just change title and button text -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+
+  <div class="dashboard-content">
+    <app-header></app-header>
+
+    <div class="dashboard-body">
+      <div class="create-branch-container">
+        <!-- Loading State -->
+        <div *ngIf="loadingBranch" class="loading-container">
+          <app-loading-spinner size="large" message="Loading branch..."></app-loading-spinner>
+        </div>
+
+        <!-- Form Content -->
+        <div *ngIf="!loadingBranch">
+          <!-- Page Header -->
+          <div class="page-header">
+            <div class="header-left">
+              <button class="back-btn" (click)="cancel()">
+                <i class="ri-arrow-left-line"></i>
+              </button>
+              <div>
+                <h1>Edit Branch</h1>
+                <p class="subtitle" *ngIf="branch">{{ branch.name }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Success/Error Messages -->
+          <div *ngIf="successMessage" class="success-alert">
+            <i class="ri-checkbox-circle-line"></i>
+            <span>{{ successMessage }}</span>
+          </div>
+
+          <div *ngIf="errorMessage" class="error-alert">
+            <i class="ri-error-warning-line"></i>
+            <span>{{ errorMessage }}</span>
+          </div>
+
+          <!-- Reuse the same form structure from create-branch -->
+          <!-- Just change the submit button text from "Create Branch" to "Update Branch" -->
+          <!-- Copy entire form-card div from create-branch.component.html -->
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

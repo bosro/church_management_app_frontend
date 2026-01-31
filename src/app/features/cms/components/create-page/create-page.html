@@ -1,0 +1,133 @@
+<!-- src/app/features/cms/components/create-page/create-page.component.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+
+  <div class="dashboard-content">
+    <app-header></app-header>
+
+    <div class="dashboard-body">
+      <div class="create-page-container">
+        <!-- Page Header -->
+        <div class="page-header">
+          <div class="header-left">
+            <button class="back-btn" (click)="cancel()">
+              <i class="ri-arrow-left-line"></i>
+            </button>
+            <div>
+              <h1>Create Page</h1>
+              <p class="subtitle">Add a new page to your website</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Success/Error Messages -->
+        <div *ngIf="successMessage" class="success-alert">
+          <i class="ri-checkbox-circle-line"></i>
+          <span>{{ successMessage }}</span>
+        </div>
+
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i>
+          <span>{{ errorMessage }}</span>
+        </div>
+
+        <!-- Form Card -->
+        <div class="form-card">
+          <form [formGroup]="pageForm" (ngSubmit)="onSubmit()">
+            <!-- Content Section -->
+            <div class="form-section">
+              <h3>Page Content</h3>
+
+              <div class="form-group">
+                <label for="title">Page Title *</label>
+                <input
+                  id="title"
+                  type="text"
+                  formControlName="title"
+                  placeholder="e.g., About Us, Contact"
+                  [class.error]="pageForm.get('title')?.invalid && pageForm.get('title')?.touched"
+                />
+                <span
+                  *ngIf="pageForm.get('title')?.invalid && pageForm.get('title')?.touched"
+                  class="error-message"
+                >
+                  {{ getErrorMessage('title') }}
+                </span>
+              </div>
+
+              <div class="form-group">
+                <label for="content">Page Content *</label>
+                <textarea
+                  id="content"
+                  formControlName="content"
+                  placeholder="Write your page content here..."
+                  rows="15"
+                  [class.error]="pageForm.get('content')?.invalid && pageForm.get('content')?.touched"
+                ></textarea>
+                <span
+                  *ngIf="pageForm.get('content')?.invalid && pageForm.get('content')?.touched"
+                  class="error-message"
+                >
+                  {{ getErrorMessage('content') }}
+                </span>
+              </div>
+            </div>
+
+            <!-- SEO Section -->
+            <div class="form-section">
+              <h3>SEO Settings</h3>
+
+              <div class="form-group">
+                <label for="meta_description">Meta Description</label>
+                <textarea
+                  id="meta_description"
+                  formControlName="meta_description"
+                  placeholder="Brief description for search engines..."
+                  rows="3"
+                ></textarea>
+                <p class="help-text">Recommended: 150-160 characters</p>
+              </div>
+
+              <div class="form-group">
+                <label for="meta_keywords">Meta Keywords</label>
+                <input
+                  id="meta_keywords"
+                  type="text"
+                  formControlName="meta_keywords"
+                  placeholder="keyword1, keyword2, keyword3"
+                />
+                <p class="help-text">Comma-separated keywords</p>
+              </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="form-actions">
+              <button
+                type="button"
+                class="btn-secondary"
+                (click)="cancel()"
+                [disabled]="loading"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                class="btn-primary"
+                [disabled]="loading"
+              >
+                <span *ngIf="!loading">
+                  <i class="ri-save-line"></i>
+                  Create Page
+                </span>
+                <span *ngIf="loading">
+                  <i class="ri-loader-4-line spin"></i>
+                  Creating...
+                </span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

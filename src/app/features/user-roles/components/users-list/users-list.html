@@ -1,0 +1,108 @@
+<!-- src/app/features/user-roles/components/users-list/users-list.component.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+
+  <div class="dashboard-content">
+    <app-header></app-header>
+
+    <div class="dashboard-body">
+      <div class="users-container">
+        <!-- Page Header -->
+        <div class="page-header">
+          <div class="header-left">
+            <h1>User Roles & Permissions</h1>
+            <p class="subtitle">Manage user access and permissions</p>
+          </div>
+          <button class="btn-primary" (click)="viewRoleTemplates()">
+            <i class="ri-shield-user-line"></i>
+            Role Templates
+          </button>
+        </div>
+
+        <!-- Success/Error Messages -->
+        <div *ngIf="successMessage" class="success-alert">
+          <i class="ri-checkbox-circle-line"></i>
+          <span>{{ successMessage }}</span>
+        </div>
+
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i>
+          <span>{{ errorMessage }}</span>
+        </div>
+
+        <!-- Loading State -->
+        <div *ngIf="loading" class="loading-container">
+          <app-loading-spinner message="Loading users..."></app-loading-spinner>
+        </div>
+
+        <!-- Users List -->
+        <div *ngIf="!loading" class="users-list">
+          <div
+            *ngFor="let user of users"
+            class="user-card"
+            (click)="managePermissions(user.id)"
+          >
+            <div class="card-header">
+              <div class="user-avatar">
+                <img
+                  [src]="user.avatar_url || 'assets/images/default-avatar.png'"
+                  [alt]="user.full_name"
+                />
+              </div>
+              <div class="user-info">
+                <h3>{{ user.full_name }}</h3>
+                <p class="user-email">{{ user.email }}</p>
+              </div>
+              <div class="user-role">
+                <span class="role-badge" [ngClass]="getRoleBadgeClass(user.role)">
+                  {{ getRoleLabel(user.role) }}
+                </span>
+              </div>
+            </div>
+
+            <div class="card-footer">
+              <button class="btn-manage">
+                <i class="ri-settings-3-line"></i>
+                Manage Permissions
+              </button>
+            </div>
+          </div>
+
+          <!-- Empty State -->
+          <div *ngIf="users.length === 0" class="empty-state">
+            <i class="ri-user-settings-line"></i>
+            <h3>No Users Found</h3>
+            <p>No users available to manage</p>
+          </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination" *ngIf="totalPages > 1 && !loading">
+          <button
+            class="pagination-btn"
+            [disabled]="currentPage === 1"
+            (click)="previousPage()"
+          >
+            <i class="ri-arrow-left-s-line"></i>
+            Previous
+          </button>
+
+          <div class="pagination-pages">
+            <span class="page-info">
+              Page {{ currentPage }} of {{ totalPages }} ({{ totalUsers }} users)
+            </span>
+          </div>
+
+          <button
+            class="pagination-btn"
+            [disabled]="currentPage === totalPages"
+            (click)="nextPage()"
+          >
+            Next
+            <i class="ri-arrow-right-s-line"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

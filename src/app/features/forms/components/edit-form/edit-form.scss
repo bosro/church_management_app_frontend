@@ -1,0 +1,9 @@
+// src/app/features/forms/components/edit-form/edit-form.component.scss
+// Reuse styles from create-form
+@import '../create-form/create-form.component.scss';
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  padding: 4rem 0;
+}

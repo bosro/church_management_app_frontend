@@ -16,6 +16,6 @@ import { EditMinistry } from './components/edit-ministry/edit-ministry./edit-min
     CreateMinistry,
     EditMinistry,
   ],
-  imports: [CommonModule, ReactiveFormsModule, SharedModule],
+  imports: [CommonModule, ReactiveFormsModule, SharedModule,MinistriesRoutingModule],
 })
 export class MinistriesModule {}

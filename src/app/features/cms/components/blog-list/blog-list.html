@@ -1,0 +1,161 @@
+<!-- src/app/features/cms/components/blog-list/blog-list.component.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+
+  <div class="dashboard-content">
+    <app-header></app-header>
+
+    <div class="dashboard-body">
+      <div class="blog-container">
+        <!-- Page Header -->
+        <div class="page-header">
+          <div class="header-left">
+            <button class="back-btn" (click)="goBack()">
+              <i class="ri-arrow-left-line"></i>
+            </button>
+            <div>
+              <h1>Blog Posts</h1>
+              <p class="subtitle">Manage your blog content</p>
+            </div>
+          </div>
+          <button class="btn-primary" (click)="createBlogPost()">
+            <i class="ri-add-line"></i>
+            Create Post
+          </button>
+        </div>
+
+        <!-- Success/Error Messages -->
+        <div *ngIf="successMessage" class="success-alert">
+          <i class="ri-checkbox-circle-line"></i>
+          <span>{{ successMessage }}</span>
+        </div>
+
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i>
+          <span>{{ errorMessage }}</span>
+        </div>
+
+        <!-- Category Filter -->
+        <div class="filter-bar">
+          <button
+            class="filter-btn"
+            [class.active]="!selectedCategory"
+            (click)="clearFilter()"
+          >
+            All Posts
+          </button>
+          <button
+            *ngFor="let category of categories"
+            class="filter-btn"
+            [class.active]="selectedCategory === category"
+            (click)="filterByCategory(category)"
+          >
+            {{ category }}
+          </button>
+        </div>
+
+        <!-- Loading State -->
+        <div *ngIf="loading" class="loading-container">
+          <app-loading-spinner message="Loading blog posts..."></app-loading-spinner>
+        </div>
+
+        <!-- Blog Posts Grid -->
+        <div *ngIf="!loading" class="blog-grid">
+          <div *ngFor="let post of blogPosts" class="blog-card">
+            <div class="card-image" *ngIf="post.featured_image_url">
+              <img [src]="post.featured_image_url" [alt]="post.title" />
+              <div class="image-overlay">
+                <span class="view-count">
+                  <i class="ri-eye-line"></i>
+                  {{ post.view_count }}
+                </span>
+              </div>
+            </div>
+
+            <div class="card-content">
+              <div class="card-meta">
+                <span class="category-badge" *ngIf="post.category">{{ post.category }}</span>
+                <span class="status-badge" [class.published]="post.is_published">
+                  {{ post.is_published ? 'Published' : 'Draft' }}
+                </span>
+              </div>
+
+              <h3>{{ post.title }}</h3>
+              <p class="excerpt" *ngIf="post.excerpt">{{ post.excerpt }}</p>
+
+              <div class="card-footer">
+                <div class="author-info">
+                  <img
+                    [src]="post.author?.avatar_url || 'assets/images/default-avatar.png'"
+                    [alt]="post.author?.full_name"
+                    class="author-avatar"
+                  />
+                  <div>
+                    <p class="author-name">{{ post.author?.full_name || 'Unknown' }}</p>
+                    <p class="post-date">{{ post.updated_at | date:'MMM d, y' }}</p>
+                  </div>
+                </div>
+
+                <div class="card-actions">
+                  <button
+                    class="btn-icon"
+                    [class.published]="post.is_published"
+                    (click)="togglePublish(post, $event)"
+                    [title]="post.is_published ? 'Unpublish' : 'Publish'"
+                  >
+                    <i [class]="post.is_published ? 'ri-eye-off-line' : 'ri-eye-line'"></i>
+                  </button>
+                  <button class="btn-icon" (click)="editBlogPost(post.id, $event)" title="Edit">
+                    <i class="ri-edit-line"></i>
+                  </button>
+                  <button class="btn-icon btn-danger" (click)="deleteBlogPost(post.id, $event)" title="Delete">
+                    <i class="ri-delete-bin-line"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Empty State -->
+          <div *ngIf="blogPosts.length === 0" class="empty-state">
+            <i class="ri-article-line"></i>
+            <h3>No Blog Posts</h3>
+            <p *ngIf="selectedCategory">No posts found in this category</p>
+            <p *ngIf="!selectedCategory">Create your first blog post to get started</p>
+            <button class="btn-primary" (click)="createBlogPost()" *ngIf="!selectedCategory">
+              <i class="ri-add-line"></i>
+              Create Post
+            </button>
+          </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination" *ngIf="totalPages > 1 && !loading">
+          <button
+            class="pagination-btn"
+            [disabled]="currentPage === 1"
+            (click)="previousPage()"
+          >
+            <i class="ri-arrow-left-s-line"></i>
+            Previous
+          </button>
+
+          <div class="pagination-pages">
+            <span class="page-info">
+              Page {{ currentPage }} of {{ totalPages }} ({{ totalPosts }} posts)
+            </span>
+          </div>
+
+          <button
+            class="pagination-btn"
+            [disabled]="currentPage === totalPages"
+            (click)="nextPage()"
+          >
+            Next
+            <i class="ri-arrow-right-s-line"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

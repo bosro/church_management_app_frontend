@@ -1,1 +1,193 @@
-<p>attendance-reports works!</p>
+<!-- src/app/features/attendance/components/attendance-report/attendance-report.component.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+
+  <div class="dashboard-content">
+    <app-header></app-header>
+
+    <div class="dashboard-body">
+      <div class="report-container">
+        <!-- Page Header -->
+        <div class="page-header">
+          <div class="header-left">
+            <button class="back-btn" (click)="goBack()">
+              <i class="ri-arrow-left-line"></i>
+            </button>
+            <div>
+              <h1>Attendance Reports</h1>
+              <p class="subtitle">View and analyze attendance trends</p>
+            </div>
+          </div>
+          <button class="btn-primary" (click)="exportReport()">
+            <i class="ri-download-line"></i>
+            Export Report
+          </button>
+        </div>
+
+        <!-- Error Message -->
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i>
+          <span>{{ errorMessage }}</span>
+        </div>
+
+        <!-- Filter Card -->
+        <div class="filter-card">
+          <h3>Filter Reports</h3>
+          <form [formGroup]="filterForm" (ngSubmit)="applyFilter()">
+            <div class="filter-grid">
+              <div class="form-group">
+                <label for="start_date">Start Date</label>
+                <input
+                  id="start_date"
+                  type="date"
+                  formControlName="start_date"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="end_date">End Date</label>
+                <input
+                  id="end_date"
+                  type="date"
+                  formControlName="end_date"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="service_type">Service Type</label>
+                <select id="service_type" formControlName="service_type">
+                  <option value="">All Services</option>
+                  <option *ngFor="let type of serviceTypes" [value]="type">{{ type }}</option>
+                </select>
+              </div>
+
+              <div class="form-actions">
+                <button type="submit" class="btn-primary">
+                  <i class="ri-search-line"></i>
+                  Apply Filter
+                </button>
+                <button type="button" class="btn-secondary" (click)="resetFilter()">
+                  <i class="ri-refresh-line"></i>
+                  Reset
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <!-- Summary Statistics -->
+        <div class="stats-grid" *ngIf="!loading && reports.length > 0">
+          <div class="stat-card">
+            <div class="stat-icon" style="background: #DDD6FE; color: #7C3AED;">
+              <i class="ri-calendar-check-line"></i>
+            </div>
+            <div class="stat-info">
+              <p class="stat-label">Total Services</p>
+              <h3 class="stat-value">{{ summary.total_services }}</h3>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon" style="background: #D1FAE5; color: #10B981;">
+              <i class="ri-group-line"></i>
+            </div>
+            <div class="stat-info">
+              <p class="stat-label">Avg. Attendance</p>
+              <h3 class="stat-value">{{ summary.average_attendance }}</h3>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon" style="background: #DBEAFE; color: #3B82F6;">
+              <i class="ri-arrow-up-line"></i>
+            </div>
+            <div class="stat-info">
+              <p class="stat-label">Highest</p>
+              <h3 class="stat-value">{{ summary.highest_attendance }}</h3>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon" style="background: #FED7AA; color: #EA580C;">
+              <i class="ri-percent-line"></i>
+            </div>
+            <div class="stat-info">
+              <p class="stat-label">Overall Rate</p>
+              <h3 class="stat-value">{{ summary.overall_rate }}%</h3>
+            </div>
+          </div>
+        </div>
+
+        <!-- Loading State -->
+        <div *ngIf="loading" class="loading-container">
+          <app-loading-spinner message="Loading reports..."></app-loading-spinner>
+        </div>
+
+        <!-- Reports Table -->
+        <div *ngIf="!loading" class="reports-table-container">
+          <div class="table-header">
+            <h3>Attendance Records</h3>
+            <p class="record-count">{{ reports.length }} records found</p>
+          </div>
+
+          <div class="table-wrapper" *ngIf="reports.length > 0">
+            <table class="reports-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Service Type</th>
+                  <th>Present</th>
+                  <th>Absent</th>
+                  <th>Total Members</th>
+                  <th>Attendance Rate</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let report of reports">
+                  <td>
+                    <span class="date-cell">{{ report.date | date:'MMM d, y' }}</span>
+                  </td>
+                  <td>
+                    <span class="service-badge">{{ report.service_type }}</span>
+                  </td>
+                  <td>
+                    <span class="number-cell present">{{ report.total_present }}</span>
+                  </td>
+                  <td>
+                    <span class="number-cell absent">{{ report.total_absent }}</span>
+                  </td>
+                  <td>
+                    <span class="number-cell">{{ report.total_members }}</span>
+                  </td>
+                  <td>
+                    <div class="attendance-rate">
+                      <div class="rate-bar">
+                        <div
+                          class="rate-fill"
+                          [style.width.%]="report.attendance_rate"
+                          [style.background]="getAttendanceColor(report.attendance_rate)"
+                        ></div>
+                      </div>
+                      <span class="rate-text">{{ report.attendance_rate }}%</span>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Empty State -->
+          <div *ngIf="reports.length === 0" class="empty-state">
+            <i class="ri-file-list-3-line"></i>
+            <h3>No Reports Found</h3>
+            <p>No attendance records found for the selected period</p>
+            <button class="btn-primary" (click)="resetFilter()">
+              <i class="ri-refresh-line"></i>
+              Reset Filters
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

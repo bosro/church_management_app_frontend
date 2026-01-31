@@ -1,0 +1,37 @@
+<!-- src/app/features/cms/components/edit-page/edit-page.component.html -->
+<!-- Same HTML as create-page but with loading state and "Update Page" instead of "Create Page" -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+
+  <div class="dashboard-content">
+    <app-header></app-header>
+
+    <div class="dashboard-body">
+      <div class="create-page-container">
+        <!-- Loading State -->
+        <div *ngIf="loadingPage" class="loading-container">
+          <app-loading-spinner size="large" message="Loading page..."></app-loading-spinner>
+        </div>
+
+        <!-- Form Content -->
+        <div *ngIf="!loadingPage">
+          <!-- Page Header -->
+          <div class="page-header">
+            <div class="header-left">
+              <button class="back-btn" (click)="cancel()">
+                <i class="ri-arrow-left-line"></i>
+              </button>
+              <div>
+                <h1>Edit Page</h1>
+                <p class="subtitle" *ngIf="page">{{ page.title }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Copy the rest from create-page.component.html -->
+          <!-- Change button text from "Create Page" to "Update Page" -->
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

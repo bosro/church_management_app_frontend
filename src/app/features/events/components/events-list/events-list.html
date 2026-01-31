@@ -1,0 +1,227 @@
+<!-- src/app/features/events/components/events-list/events-list.component.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+
+  <div class="dashboard-content">
+    <app-header></app-header>
+
+    <div class="dashboard-body">
+      <div class="events-container">
+        <!-- Page Header -->
+        <div class="page-header">
+          <div class="header-left">
+            <h1>Events</h1>
+            <p class="subtitle">Manage church events and registrations</p>
+          </div>
+          <button class="btn-primary" (click)="createEvent()">
+            <i class="ri-add-line"></i>
+            <span>Create Event</span>
+          </button>
+        </div>
+
+        <!-- Upcoming Events Banner -->
+        <div class="upcoming-banner" *ngIf="upcomingEvents.length > 0">
+          <div class="banner-header">
+            <i class="ri-calendar-event-line"></i>
+            <h3>Upcoming Events</h3>
+          </div>
+          <div class="upcoming-events-list">
+            <div
+              *ngFor="let event of upcomingEvents"
+              class="upcoming-event-item"
+              (click)="viewEvent(event.id)"
+            >
+              <div class="event-date-badge">
+                <span class="date-day">{{ event.start_date | date:'d' }}</span>
+                <span class="date-month">{{ event.start_date | date:'MMM' }}</span>
+              </div>
+              <div class="event-info">
+                <h4>{{ event.title }}</h4>
+                <p>{{ event.location || 'No location' }}</p>
+              </div>
+              <div class="event-type-badge" [ngClass]="getEventTypeClass(event.event_type)">
+                {{ getEventTypeLabel(event.event_type) }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- View Toggle & Filters -->
+        <div class="controls-section">
+          <div class="view-toggle">
+            <button
+              class="toggle-btn"
+              [class.active]="viewMode === 'list'"
+              (click)="switchView('list')"
+            >
+              <i class="ri-list-check"></i>
+              List
+            </button>
+            <button
+              class="toggle-btn"
+              [class.active]="viewMode === 'calendar'"
+              (click)="switchView('calendar')"
+            >
+              <i class="ri-calendar-line"></i>
+              Calendar
+            </button>
+          </div>
+
+          <div class="filters-group">
+            <div class="filter-item">
+              <label>Start Date</label>
+              <input type="date" [formControl]="startDateControl" class="filter-input" />
+            </div>
+
+            <div class="filter-item">
+              <label>End Date</label>
+              <input type="date" [formControl]="endDateControl" class="filter-input" />
+            </div>
+
+            <div class="filter-item">
+              <label>Event Type</label>
+              <select [formControl]="eventTypeControl" class="filter-select">
+                <option *ngFor="let type of eventTypes" [value]="type.value">
+                  {{ type.label }}
+                </option>
+              </select>
+            </div>
+
+            <button class="btn-clear" (click)="clearFilters()">
+              <i class="ri-close-circle-line"></i>
+              Clear
+            </button>
+          </div>
+        </div>
+
+        <!-- Loading State -->
+        <div *ngIf="loading" class="loading-container">
+          <app-loading-spinner message="Loading events..."></app-loading-spinner>
+        </div>
+
+        <!-- Events List View -->
+        <div *ngIf="!loading && viewMode === 'list'" class="events-list-view">
+          <div class="events-grid">
+            <div
+              *ngFor="let event of events"
+              class="event-card"
+              [class.past-event]="isEventPast(event)"
+              (click)="viewEvent(event.id)"
+            >
+              <div class="event-header">
+                <div class="event-date-large">
+                  <span class="date-day">{{ event.start_date | date:'d' }}</span>
+                  <span class="date-month">{{ event.start_date | date:'MMM' }}</span>
+                  <span class="date-year">{{ event.start_date | date:'yyyy' }}</span>
+                </div>
+                <div class="event-actions">
+                  <button class="btn-icon-small" (click)="editEvent(event.id, $event)">
+                    <i class="ri-edit-line"></i>
+                  </button>
+                  <button class="btn-icon-small btn-danger" (click)="deleteEvent(event.id, $event)">
+                    <i class="ri-delete-bin-line"></i>
+                  </button>
+                </div>
+              </div>
+
+              <div class="event-body">
+                <div class="event-type-badge" [ngClass]="getEventTypeClass(event.event_type)">
+                  {{ getEventTypeLabel(event.event_type) }}
+                </div>
+                <h3 class="event-title">{{ event.title }}</h3>
+                <p class="event-description" *ngIf="event.description">
+                  {{ event.description }}
+                </p>
+
+                <div class="event-meta">
+                  <div class="meta-item" *ngIf="event.start_time">
+                    <i class="ri-time-line"></i>
+                    <span>{{ event.start_time }}</span>
+                  </div>
+                  <div class="meta-item" *ngIf="event.location">
+                    <i class="ri-map-pin-line"></i>
+                    <span>{{ event.location }}</span>
+                  </div>
+                  <div class="meta-item" *ngIf="event.max_attendees">
+                    <i class="ri-group-line"></i>
+                    <span>Max: {{ event.max_attendees }} attendees</span>
+                  </div>
+                </div>
+
+                <div class="event-badges">
+                  <span class="badge badge-today" *ngIf="isEventToday(event)">
+                    <i class="ri-flashlight-line"></i>
+                    Today
+                  </span>
+                  <span class="badge badge-upcoming" *ngIf="isEventUpcoming(event) && !isEventToday(event)">
+                    <i class="ri-calendar-check-line"></i>
+                    Upcoming
+                  </span>
+                  <span class="badge badge-past" *ngIf="isEventPast(event)">
+                    <i class="ri-history-line"></i>
+                    Past
+                  </span>
+                  <span class="badge badge-public" *ngIf="event.is_public">
+                    <i class="ri-earth-line"></i>
+                    Public
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Empty State -->
+            <div *ngIf="events.length === 0" class="empty-state">
+              <i class="ri-calendar-line"></i>
+              <h3>No Events Found</h3>
+              <p>Create your first event to get started</p>
+              <button class="btn-primary" (click)="createEvent()">
+                <i class="ri-add-line"></i>
+                Create Event
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Calendar View (Placeholder) -->
+        <div *ngIf="!loading && viewMode === 'calendar'" class="calendar-view">
+          <div class="calendar-placeholder">
+            <i class="ri-calendar-2-line"></i>
+            <h3>Calendar View</h3>
+            <p>Calendar view coming soon. Use list view to manage events.</p>
+            <button class="btn-secondary" (click)="switchView('list')">
+              <i class="ri-list-check"></i>
+              Switch to List View
+            </button>
+          </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination" *ngIf="totalPages > 1 && !loading && viewMode === 'list'">
+          <button
+            class="pagination-btn"
+            [disabled]="currentPage === 1"
+            (click)="previousPage()"
+          >
+            <i class="ri-arrow-left-s-line"></i>
+            Previous
+          </button>
+
+          <div class="pagination-pages">
+            <span class="page-info">
+              Page {{ currentPage }} of {{ totalPages }} ({{ totalEvents }} events)
+            </span>
+          </div>
+
+          <button
+            class="pagination-btn"
+            [disabled]="currentPage === totalPages"
+            (click)="nextPage()"
+          >
+            Next
+            <i class="ri-arrow-right-s-line"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

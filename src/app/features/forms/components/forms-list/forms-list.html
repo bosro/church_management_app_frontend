@@ -1,0 +1,128 @@
+<!-- src/app/features/forms/components/forms-list/forms-list.component.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+
+  <div class="dashboard-content">
+    <app-header></app-header>
+
+    <div class="dashboard-body">
+      <div class="forms-container">
+        <!-- Page Header -->
+        <div class="page-header">
+          <div class="header-left">
+            <h1>Forms</h1>
+            <p class="subtitle">Create and manage custom forms</p>
+          </div>
+          <button class="btn-primary" (click)="createForm()">
+            <i class="ri-add-line"></i>
+            <span>Create Form</span>
+          </button>
+        </div>
+
+        <!-- Success/Error Messages -->
+        <div *ngIf="successMessage" class="success-alert">
+          <i class="ri-checkbox-circle-line"></i>
+          <span>{{ successMessage }}</span>
+        </div>
+
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i>
+          <span>{{ errorMessage }}</span>
+        </div>
+
+        <!-- Loading State -->
+        <div *ngIf="loading" class="loading-container">
+          <app-loading-spinner message="Loading forms..."></app-loading-spinner>
+        </div>
+
+        <!-- Forms Grid -->
+        <div *ngIf="!loading" class="forms-grid">
+          <div
+            *ngFor="let form of formTemplates"
+            class="form-card"
+            (click)="viewSubmissions(form.id)"
+          >
+            <div class="card-header">
+              <div class="form-icon">
+                <i class="ri-file-list-3-line"></i>
+              </div>
+              <div class="card-actions">
+                <button class="btn-icon-small" (click)="fillForm(form.id, $event)">
+                  <i class="ri-edit-box-line"></i>
+                </button>
+                <button class="btn-icon-small" (click)="editForm(form.id, $event)">
+                  <i class="ri-settings-3-line"></i>
+                </button>
+                <button class="btn-icon-small btn-danger" (click)="deleteForm(form.id, $event)">
+                  <i class="ri-delete-bin-line"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="card-body">
+              <h3>{{ form.title }}</h3>
+              <p class="form-description" *ngIf="form.description">
+                {{ form.description }}
+              </p>
+
+              <div class="form-meta">
+                <span class="meta-item">
+                  <i class="ri-list-check"></i>
+                  {{ form.form_fields.length }} field{{ form.form_fields.length !== 1 ? 's' : '' }}
+                </span>
+                <span class="meta-item">
+                  <i class="ri-file-text-line"></i>
+                  {{ form.submission_count || 0 }} submission{{ (form.submission_count || 0) !== 1 ? 's' : '' }}
+                </span>
+              </div>
+
+              <div class="form-status">
+                <span class="status-badge" [class.active]="form.is_active">
+                  {{ form.is_active ? 'Active' : 'Inactive' }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Empty State -->
+          <div *ngIf="formTemplates.length === 0" class="empty-state">
+            <i class="ri-file-list-3-line"></i>
+            <h3>No Forms Yet</h3>
+            <p>Create your first form to collect information from members</p>
+            <button class="btn-primary" (click)="createForm()">
+              <i class="ri-add-line"></i>
+              Create Form
+            </button>
+          </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination" *ngIf="totalPages > 1 && !loading">
+          <button
+            class="pagination-btn"
+            [disabled]="currentPage === 1"
+            (click)="previousPage()"
+          >
+            <i class="ri-arrow-left-s-line"></i>
+            Previous
+          </button>
+
+          <div class="pagination-pages">
+            <span class="page-info">
+              Page {{ currentPage }} of {{ totalPages }} ({{ totalForms }} forms)
+            </span>
+          </div>
+
+          <button
+            class="pagination-btn"
+            [disabled]="currentPage === totalPages"
+            (click)="nextPage()"
+          >
+            Next
+            <i class="ri-arrow-right-s-line"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,101 @@
+<!-- src/app/features/user-roles/components/manage-permissions/manage-permissions.component.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+
+  <div class="dashboard-content">
+    <app-header></app-header>
+
+    <div class="dashboard-body">
+      <div class="permissions-container">
+        <!-- Loading State -->
+        <div *ngIf="loadingUser" class="loading-container">
+          <app-loading-spinner size="large" message="Loading user..."></app-loading-spinner>
+        </div>
+
+        <!-- Permissions Content -->
+        <div *ngIf="!loadingUser && user">
+          <!-- Page Header -->
+          <div class="page-header">
+            <div class="header-left">
+              <button class="back-btn" (click)="goBack()">
+                <i class="ri-arrow-left-line"></i>
+              </button>
+              <div>
+                <h1>Manage Permissions</h1>
+                <p class="subtitle">{{ user.full_name }} ({{ user.email }})</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Success/Error Messages -->
+          <div *ngIf="successMessage" class="success-alert">
+            <i class="ri-checkbox-circle-line"></i>
+            <span>{{ successMessage }}</span>
+          </div>
+
+          <div *ngIf="errorMessage" class="error-alert">
+            <i class="ri-error-warning-line"></i>
+            <span>{{ errorMessage }}</span>
+          </div>
+
+          <!-- User Info Card -->
+          <div class="user-info-card">
+            <div class="user-avatar">
+              <img [src]="user.avatar_url || 'assets/images/default-avatar.png'" [alt]="user.full_name" />
+            </div>
+            <div class="user-details">
+              <h3>{{ user.full_name }}</h3>
+              <p>{{ user.email }}</p>
+              <span class="role-badge">{{ user.role | titlecase }}</span>
+            </div>
+            <div class="permission-count">
+              <div class="count-item">
+                <span class="count-value">{{ userPermissions.length }}</span>
+                <span class="count-label">Active Permissions</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Permissions by Category -->
+          <div class="permissions-sections">
+            <div *ngFor="let category of permissionsByCategory | keyvalue" class="permission-category">
+              <div class="category-header">
+                <div class="category-info">
+                  <i [class]="getCategoryIcon(category.key)"></i>
+                  <h3>{{ getCategoryLabel(category.key) }}</h3>
+                  <span class="category-count">
+                    {{ getCategoryGrantedCount(category.key) }} / {{ getCategoryTotalCount(category.key) }}
+                  </span>
+                </div>
+                <button
+                  class="btn-toggle-all"
+                  (click)="toggleCategoryPermissions(category.key)"
+                >
+                  <i [class]="isCategoryFullyGranted(category.key) ? 'ri-checkbox-line' : 'ri-checkbox-blank-line'"></i>
+                  {{ isCategoryFullyGranted(category.key) ? 'Revoke All' : 'Grant All' }}
+                </button>
+              </div>
+
+              <div class="permissions-grid">
+                <div
+                  *ngFor="let permission of category.value"
+                  class="permission-item"
+                  [class.granted]="hasPermission(permission.name)"
+                  (click)="togglePermission(permission.name)"
+                >
+                  <div class="permission-checkbox">
+                    <i [class]="hasPermission(permission.name) ? 'ri-checkbox-circle-fill' : 'ri-checkbox-blank-circle-line'"></i>
+                  </div>
+                  <div class="permission-details">
+                    <h4>{{ permission.label }}</h4>
+                    <p>{{ permission.description }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

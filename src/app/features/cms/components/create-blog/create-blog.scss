@@ -1,0 +1,17 @@
+// src/app/features/cms/components/create-blog/create-blog.component.scss
+@import '../create-page/create-page.component.scss';
+
+.create-blog-container {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.25rem;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+}

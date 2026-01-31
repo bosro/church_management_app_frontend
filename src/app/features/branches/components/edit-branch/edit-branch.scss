@@ -1,0 +1,9 @@
+// src/app/features/branches/components/edit-branch/edit-branch.component.scss
+// Reuse styles from create-branch
+@import '../create-branch/create-branch.component.scss';
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  padding: 4rem 0;
+}
