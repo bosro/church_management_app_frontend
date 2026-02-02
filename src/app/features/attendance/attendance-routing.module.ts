@@ -1,22 +1,22 @@
 // src/app/features/attendance/attendance-routing.module.ts
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
-import { AttendanceListComponent } from './components/attendance-list/attendance-list.component';
-import { AttendanceDetailComponent } from './components/attendance-detail/attendance-detail.component';
-import { CreateEventComponent } from './components/create-event/create-event.component';
-import { MarkAttendanceComponent } from './components/mark-attendance/mark-attendance.component';
-import { QrCheckinComponent } from './components/qr-checkin/qr-checkin.component';
-import { AttendanceReportsComponent } from './components/attendance-reports/attendance-reports.component';
-import { VisitorListComponent } from './components/visitor-list/visitor-list.component';
+import { QrCheckin } from './components/qr-checkin/qr-checkin';
+import { AttendanceDetail } from './components/attendance-detail/attendance-detail/attendance-detail';
+import { MarkAttendance } from './components/mark-attendance/mark-attendance';
+import { AttendanceReports } from './components/attendance-reports/attendance-reports';
+import { CreateEvent } from './components/create-event/create-event/create-event';
+import { AttendanceList } from './components/attendance-list/attendance-list';
+
 
 const routes: Routes = [
-  { path: '', component: AttendanceListComponent },
-  { path: 'create', component: CreateEventComponent },
-  { path: 'reports', component: AttendanceReportsComponent },
-  { path: 'visitors', component: VisitorListComponent },
-  { path: 'qr-checkin/:eventId', component: QrCheckinComponent },
-  { path: ':id', component: AttendanceDetailComponent },
-  { path: ':id/mark', component: MarkAttendanceComponent }
+  { path: '', component: AttendanceList },
+  { path: 'create', component: CreateEvent },
+  { path: 'reports', component: AttendanceReports },
+  // { path: 'visitors', component: VisitorList },
+  { path: 'qr-checkin/:eventId', component: QrCheckin },
+  { path: ':id', component: AttendanceDetail },
+  { path: ':id/mark', component: MarkAttendance }
 ];
 
 @NgModule({

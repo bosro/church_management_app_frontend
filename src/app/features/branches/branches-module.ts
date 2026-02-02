@@ -8,21 +8,14 @@ import { CreateBranch } from './components/create-branch/create-branch';
 import { EditBranch } from './components/edit-branch/edit-branch';
 import { BranchDetail } from './components/branch-detail/branch-detail';
 
-
-
 @NgModule({
-  declarations: [
-    BranchesList,
-    CreateBranch,
-    EditBranch,
-    BranchDetail
-  ],
+  declarations: [BranchesList, CreateBranch, EditBranch, BranchDetail],
   imports: [
     CommonModule,
-      FormsModule,
-         ReactiveFormsModule,
+    FormsModule,
+    ReactiveFormsModule,
     SharedModule,
-    BranchesRoutingModule
-  ]
+    BranchesRoutingModule,
+  ],
 })
-export class BranchesModule { }
+export class BranchesModule {}

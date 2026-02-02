@@ -17,7 +17,7 @@ import { Features } from '../features/features/features';
 
 @NgModule({
   declarations: [
-    Features
+
   ],
   imports: [CommonModule],
   providers: [
