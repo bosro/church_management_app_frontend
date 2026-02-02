@@ -1,4 +1,11 @@
-import { Component } from '@angular/core';
+// src/app/features/events/components/events-list/events-list.component.ts
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Router } from '@angular/router';
+import { FormControl } from '@angular/forms';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
+import { EventsService } from '../../services/events';
+import { EventCategory, Event } from '../../../../models/event.model';
 
 @Component({
   selector: 'app-events-list',
@@ -6,24 +13,7 @@ import { Component } from '@angular/core';
   templateUrl: './events-list.html',
   styleUrl: './events-list.scss',
 })
-export class EventsList {
-
-}
-// src/app/features/events/components/events-list/events-list.component.ts
-import { Component, OnInit, OnDestroy } from '@angular/core';
-import { Router } from '@angular/router';
-import { FormControl } from '@angular/forms';
-import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
-import { EventsService } from '../../services/events.service';
-import { Event, EventType } from '../../../../models/event.model';
-
-@Component({
-  selector: 'app-events-list',
-  templateUrl: './events-list.component.html',
-  styleUrls: ['./events-list.component.scss']
-})
-export class EventsListComponent implements OnInit, OnDestroy {
+export class EventsList implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   events: Event[] = [];
@@ -42,22 +32,26 @@ export class EventsListComponent implements OnInit, OnDestroy {
   // Filters
   startDateControl = new FormControl('');
   endDateControl = new FormControl('');
-  eventTypeControl = new FormControl('');
+  EventCategoryControl = new FormControl('');
 
-  eventTypes: { value: EventType | '', label: string }[] = [
+  EventCategorys: { value: EventCategory | ''; label: string }[] = [
     { value: '', label: 'All Types' },
     { value: 'service', label: 'Service' },
     { value: 'meeting', label: 'Meeting' },
     { value: 'conference', label: 'Conference' },
+    { value: 'seminar', label: 'Seminar' },
     { value: 'retreat', label: 'Retreat' },
     { value: 'workshop', label: 'Workshop' },
+    { value: 'outreach', label: 'Outreach' },
     { value: 'social', label: 'Social' },
-    { value: 'other', label: 'Other' }
+    { value: 'youth', label: 'Youth' },
+    { value: 'children', label: 'Children' },
+    { value: 'other', label: 'Other' },
   ];
 
   constructor(
     private eventsService: EventsService,
-    private router: Router
+    private router: Router,
   ) {}
 
   ngOnInit(): void {
@@ -82,11 +76,12 @@ export class EventsListComponent implements OnInit, OnDestroy {
     if (this.endDateControl.value) {
       filters.endDate = this.endDateControl.value;
     }
-    if (this.eventTypeControl.value) {
-      filters.eventType = this.eventTypeControl.value;
+    if (this.EventCategoryControl.value) {
+      filters.EventCategory = this.EventCategoryControl.value;
     }
 
-    this.eventsService.getEvents(this.currentPage, this.pageSize, filters)
+    this.eventsService
+      .getEvents(this.currentPage, this.pageSize, filters)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: ({ data, count }) => {
@@ -98,12 +93,13 @@ export class EventsListComponent implements OnInit, OnDestroy {
         error: (error) => {
           console.error('Error loading events:', error);
           this.loading = false;
-        }
+        },
       });
   }
 
   private loadUpcomingEvents(): void {
-    this.eventsService.getUpcomingEvents(5)
+    this.eventsService
+      .getUpcomingEvents(5)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (events) => {
@@ -111,7 +107,7 @@ export class EventsListComponent implements OnInit, OnDestroy {
         },
         error: (error) => {
           console.error('Error loading upcoming events:', error);
-        }
+        },
       });
   }
 
@@ -130,7 +126,7 @@ export class EventsListComponent implements OnInit, OnDestroy {
         this.loadEvents();
       });
 
-    this.eventTypeControl.valueChanges
+    this.EventCategoryControl.valueChanges
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => {
         this.currentPage = 1;
@@ -141,7 +137,7 @@ export class EventsListComponent implements OnInit, OnDestroy {
   clearFilters(): void {
     this.startDateControl.setValue('');
     this.endDateControl.setValue('');
-    this.eventTypeControl.setValue('');
+    this.EventCategoryControl.setValue('');
   }
 
   switchView(mode: 'list' | 'calendar'): void {
@@ -166,7 +162,8 @@ export class EventsListComponent implements OnInit, OnDestroy {
     event.stopPropagation();
 
     if (confirm('Are you sure you want to delete this event?')) {
-      this.eventsService.deleteEvent(eventId)
+      this.eventsService
+        .deleteEvent(eventId)
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: () => {
@@ -175,7 +172,7 @@ export class EventsListComponent implements OnInit, OnDestroy {
           },
           error: (error) => {
             console.error('Error deleting event:', error);
-          }
+          },
         });
     }
   }
@@ -196,21 +193,22 @@ export class EventsListComponent implements OnInit, OnDestroy {
   }
 
   // Helper methods
-  getEventTypeLabel(type: EventType): string {
-    const typeObj = this.eventTypes.find(t => t.value === type);
+  getEventCategoryLabel(type: EventCategory): string {
+    const typeObj = this.EventCategorys.find((t) => t.value === type);
     return typeObj?.label || type;
   }
 
-  getEventTypeClass(type: EventType): string {
-    const classes: Record<EventType, string> = {
+  getEventCategoryClass(type: EventCategory): string {
+    const classes: Partial<Record<EventCategory, string>>  = {
       service: 'type-service',
       meeting: 'type-meeting',
       conference: 'type-conference',
       retreat: 'type-retreat',
       workshop: 'type-workshop',
       social: 'type-social',
-      other: 'type-other'
+      other: 'type-other',
     };
+
     return classes[type] || 'type-other';
   }
 
@@ -231,13 +229,13 @@ export class EventsListComponent implements OnInit, OnDestroy {
 
   formatDateRange(event: Event): string {
     const start = new Date(event.start_date);
-    const end = new Date(event.end_date);
+    const end = event.end_date ? new Date(event.end_date) : new Date(event.start_date);
 
     if (event.start_date === event.end_date) {
       return start.toLocaleDateString('en-US', {
         month: 'short',
         day: 'numeric',
-        year: 'numeric'
+        year: 'numeric',
       });
     }
 

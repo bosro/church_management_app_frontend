@@ -1,4 +1,17 @@
-import { Component } from '@angular/core';
+// src/app/features/events/components/event-detail/event-detail.component.ts
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
+import { FormControl } from '@angular/forms';
+import { of, Subject } from 'rxjs';
+import {
+  takeUntil,
+  debounceTime,
+  distinctUntilChanged,
+  switchMap,
+} from 'rxjs/operators';
+import { EventsService } from '../../../services/events';
+import { MemberService } from '../../../../members/services/member.service';
+import { EventCategory, Event } from '../../../../../models/event.model';
 
 @Component({
   selector: 'app-event-detail',
@@ -6,25 +19,7 @@ import { Component } from '@angular/core';
   templateUrl: './event-detail.html',
   styleUrl: './event-detail.scss',
 })
-export class EventDetail {
-
-}
-// src/app/features/events/components/event-detail/event-detail.component.ts
-import { Component, OnInit, OnDestroy } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
-import { FormControl } from '@angular/forms';
-import { Subject } from 'rxjs';
-import { takeUntil, debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
-import { EventsService } from '../../services/events.service';
-import { MemberService } from '../../../members/services/member.service';
-import { Event, EventType } from '../../../../models/event.model';
-
-@Component({
-  selector: 'app-event-detail',
-  templateUrl: './event-detail.component.html',
-  styleUrls: ['./event-detail.component.scss']
-})
-export class EventDetailComponent implements OnInit, OnDestroy {
+export class EventDetail implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   eventId: string = '';
@@ -51,7 +46,7 @@ export class EventDetailComponent implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private router: Router,
     private eventsService: EventsService,
-    private memberService: MemberService
+    private memberService: MemberService,
   ) {}
 
   ngOnInit(): void {
@@ -71,7 +66,8 @@ export class EventDetailComponent implements OnInit, OnDestroy {
     this.loading = true;
 
     // Load event
-    this.eventsService.getEventById(this.eventId)
+    this.eventsService
+      .getEventById(this.eventId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (event) => {
@@ -80,7 +76,7 @@ export class EventDetailComponent implements OnInit, OnDestroy {
         error: (error) => {
           this.errorMessage = error.message || 'Failed to load event';
           this.loading = false;
-        }
+        },
       });
 
     // Load registrations
@@ -91,7 +87,8 @@ export class EventDetailComponent implements OnInit, OnDestroy {
   }
 
   private loadRegistrations(): void {
-    this.eventsService.getEventRegistrations(this.eventId)
+    this.eventsService
+      .getEventRegistrations(this.eventId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (registrations) => {
@@ -101,12 +98,13 @@ export class EventDetailComponent implements OnInit, OnDestroy {
         error: (error) => {
           console.error('Error loading registrations:', error);
           this.loading = false;
-        }
+        },
       });
   }
 
   private loadStatistics(): void {
-    this.eventsService.getEventStatistics(this.eventId)
+    this.eventsService
+      .getEventStatistics(this.eventId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (stats) => {
@@ -114,7 +112,7 @@ export class EventDetailComponent implements OnInit, OnDestroy {
         },
         error: (error) => {
           console.error('Error loading statistics:', error);
-        }
+        },
       });
   }
 
@@ -123,15 +121,15 @@ export class EventDetailComponent implements OnInit, OnDestroy {
       .pipe(
         debounceTime(300),
         distinctUntilChanged(),
-        switchMap(query => {
+        switchMap((query) => {
           if (!query || query.length < 2) {
             this.searchResults = [];
-            return [];
+            return of([]); // <-- wrap in observable
           }
           this.searching = true;
           return this.eventsService.searchMembersForEvent(this.eventId, query);
         }),
-        takeUntil(this.destroy$)
+        takeUntil(this.destroy$),
       )
       .subscribe({
         next: (members) => {
@@ -141,7 +139,7 @@ export class EventDetailComponent implements OnInit, OnDestroy {
         error: (error) => {
           console.error('Search error:', error);
           this.searching = false;
-        }
+        },
       });
   }
 
@@ -187,7 +185,8 @@ export class EventDetailComponent implements OnInit, OnDestroy {
       registrationData.notes = this.registrationNotes;
     }
 
-    this.eventsService.registerForEvent(this.eventId, registrationData)
+    this.eventsService
+      .registerForEvent(this.eventId, registrationData)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
@@ -204,12 +203,13 @@ export class EventDetailComponent implements OnInit, OnDestroy {
         error: (error) => {
           this.errorMessage = error.message || 'Failed to register';
           this.registering = false;
-        }
+        },
       });
   }
 
   checkInRegistration(registrationId: string): void {
-    this.eventsService.checkInRegistration(registrationId)
+    this.eventsService
+      .checkInRegistration(registrationId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
@@ -223,13 +223,14 @@ export class EventDetailComponent implements OnInit, OnDestroy {
         },
         error: (error) => {
           this.errorMessage = error.message || 'Failed to check in';
-        }
+        },
       });
   }
 
   cancelRegistration(registrationId: string): void {
     if (confirm('Are you sure you want to cancel this registration?')) {
-      this.eventsService.cancelRegistration(registrationId)
+      this.eventsService
+        .cancelRegistration(registrationId)
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: () => {
@@ -242,8 +243,9 @@ export class EventDetailComponent implements OnInit, OnDestroy {
             }, 3000);
           },
           error: (error) => {
-            this.errorMessage = error.message || 'Failed to cancel registration';
-          }
+            this.errorMessage =
+              error.message || 'Failed to cancel registration';
+          },
         });
     }
   }
@@ -260,7 +262,8 @@ export class EventDetailComponent implements OnInit, OnDestroy {
 
   // Export
   exportRegistrations(): void {
-    this.eventsService.exportEventRegistrations(this.eventId)
+    this.eventsService
+      .exportEventRegistrations(this.eventId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (blob) => {
@@ -273,7 +276,7 @@ export class EventDetailComponent implements OnInit, OnDestroy {
         },
         error: (error) => {
           console.error('Export error:', error);
-        }
+        },
       });
   }
 
@@ -288,7 +291,8 @@ export class EventDetailComponent implements OnInit, OnDestroy {
 
   deleteEvent(): void {
     if (confirm('Are you sure you want to delete this event?')) {
-      this.eventsService.deleteEvent(this.eventId)
+      this.eventsService
+        .deleteEvent(this.eventId)
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: () => {
@@ -296,47 +300,49 @@ export class EventDetailComponent implements OnInit, OnDestroy {
           },
           error: (error) => {
             this.errorMessage = error.message || 'Failed to delete event';
-          }
+          },
         });
     }
   }
 
   // Helper methods
-  getEventTypeLabel(type: EventType): string {
-    const types: Record<EventType, string> = {
+  getEventCategoryLabel(type?: EventCategory): string {
+    const classes: Partial<Record<EventCategory, string>> = {
       service: 'Service',
       meeting: 'Meeting',
       conference: 'Conference',
       retreat: 'Retreat',
       workshop: 'Workshop',
       social: 'Social',
-      other: 'Other'
+      other: 'Other',
     };
-    return types[type] || type;
+    return type ? (classes[type] ?? 'type-other') : 'type-other';
   }
 
-  getEventTypeClass(type: EventType): string {
-    const classes: Record<EventType, string> = {
+  getEventCategoryClass(type?: EventCategory): string {
+    const classes: Partial<Record<EventCategory, string>> = {
       service: 'type-service',
       meeting: 'type-meeting',
       conference: 'type-conference',
       retreat: 'type-retreat',
       workshop: 'type-workshop',
       social: 'type-social',
-      other: 'type-other'
+      other: 'type-other',
     };
-    return classes[type] || 'type-other';
+    return type ? (classes[type] ?? 'type-other') : 'type-other';
   }
 
   formatDateRange(event: Event): string {
-    const start = new Date(event.start_date);
-    const end = new Date(event.end_date);
+    const start = new Date(event.start_date ?? '');
+    const end = new Date(event.end_date ?? event.start_date ?? '');
+
+    if (!event.start_date) return 'Date not available';
 
     if (event.start_date === event.end_date) {
       return start.toLocaleDateString('en-US', {
         month: 'long',
         day: 'numeric',
-        year: 'numeric'
+        year: 'numeric',
       });
     }
 

@@ -1,4 +1,11 @@
-import { Component } from '@angular/core';
+// src/app/features/events/components/create-event/create-event.component.ts
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
+import { EventsService } from '../../../services/events';
+import { EventCategory } from '../../../../../models/event.model';
 
 @Component({
   selector: 'app-create-event',
@@ -6,24 +13,7 @@ import { Component } from '@angular/core';
   templateUrl: './create-event.html',
   styleUrl: './create-event.scss',
 })
-export class CreateEvent {
-
-}
-// src/app/features/events/components/create-event/create-event.component.ts
-import { Component, OnInit, OnDestroy } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
-import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
-import { EventsService } from '../../services/events.service';
-import { EventType } from '../../../../models/event.model';
-
-@Component({
-  selector: 'app-create-event',
-  templateUrl: './create-event.component.html',
-  styleUrls: ['./create-event.component.scss']
-})
-export class CreateEventComponent implements OnInit, OnDestroy {
+export class CreateEvent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   eventForm!: FormGroup;
@@ -31,20 +21,22 @@ export class CreateEventComponent implements OnInit, OnDestroy {
   errorMessage = '';
   successMessage = '';
 
-  eventTypes: { value: EventType, label: string }[] = [
+  eventTypes: { value: EventCategory; label: string }[] = [
     { value: 'service', label: 'Service' },
-    { value: 'meeting', label: 'Meeting' },
     { value: 'conference', label: 'Conference' },
+    { value: 'seminar', label: 'Seminar' },
     { value: 'retreat', label: 'Retreat' },
-    { value: 'workshop', label: 'Workshop' },
+    { value: 'outreach', label: 'Outreach' },
     { value: 'social', label: 'Social' },
-    { value: 'other', label: 'Other' }
+    { value: 'youth', label: 'Youth' },
+    { value: 'children', label: 'Children' },
+    { value: 'other', label: 'Other' },
   ];
 
   constructor(
     private fb: FormBuilder,
     private eventsService: EventsService,
-    private router: Router
+    private router: Router,
   ) {}
 
   ngOnInit(): void {
@@ -62,7 +54,7 @@ export class CreateEventComponent implements OnInit, OnDestroy {
     this.eventForm = this.fb.group({
       title: ['', [Validators.required, Validators.minLength(3)]],
       description: [''],
-      event_type: ['service', [Validators.required]],
+      category: ['service' as EventCategory, [Validators.required]], // <-- use EventCategory
       start_date: [today, [Validators.required]],
       end_date: [today, [Validators.required]],
       start_time: [''],
@@ -70,8 +62,8 @@ export class CreateEventComponent implements OnInit, OnDestroy {
       location: [''],
       max_attendees: [''],
       registration_deadline: [''],
-      requires_registration: [false],
-      is_public: [true]
+      registration_required: [false],
+      is_public: [true],
     });
   }
 
@@ -96,14 +88,17 @@ export class CreateEventComponent implements OnInit, OnDestroy {
 
     const eventData = {
       ...this.eventForm.value,
-      max_attendees: this.eventForm.value.max_attendees ? parseInt(this.eventForm.value.max_attendees) : null,
+      max_attendees: this.eventForm.value.max_attendees
+        ? parseInt(this.eventForm.value.max_attendees)
+        : null,
       start_time: this.eventForm.value.start_time || null,
       end_time: this.eventForm.value.end_time || null,
       location: this.eventForm.value.location || null,
-      registration_deadline: this.eventForm.value.registration_deadline || null
+      registration_deadline: this.eventForm.value.registration_deadline || null,
     };
 
-    this.eventsService.createEvent(eventData)
+    this.eventsService
+      .createEvent(eventData)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (event) => {
@@ -114,8 +109,9 @@ export class CreateEventComponent implements OnInit, OnDestroy {
         },
         error: (error) => {
           this.loading = false;
-          this.errorMessage = error.message || 'Failed to create event. Please try again.';
-        }
+          this.errorMessage =
+            error.message || 'Failed to create event. Please try again.';
+        },
       });
   }
 
@@ -124,7 +120,7 @@ export class CreateEventComponent implements OnInit, OnDestroy {
   }
 
   private markFormGroupTouched(formGroup: FormGroup): void {
-    Object.keys(formGroup.controls).forEach(key => {
+    Object.keys(formGroup.controls).forEach((key) => {
       const control = formGroup.get(key);
       control?.markAsTouched();
     });

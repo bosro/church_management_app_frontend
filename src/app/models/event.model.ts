@@ -1,9 +1,11 @@
 // src/app/models/event.model.ts
 export type EventCategory =
   | 'service'
+  | 'meeting'
   | 'conference'
   | 'seminar'
   | 'retreat'
+  | 'workshop'
   | 'outreach'
   | 'social'
   | 'youth'
@@ -28,6 +30,8 @@ export interface Event {
   created_by?: string;
   created_at: string;
   updated_at: string;
+  requires_registration?: boolean;
+  event_type?: EventCategory;
 }
 
 export interface EventAttendee {
@@ -39,5 +43,19 @@ export interface EventAttendee {
   guest_phone?: string;
   rsvp_status: string;
   attended: boolean;
+  registered_at: string;
+}
+
+export interface EventRegistration {
+  id: string;
+  event_id: string;
+  member_id?: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+  notes?: string;
+  status: 'pending' | 'confirmed' | 'cancelled';
+  checked_in: boolean;
+  checked_in_at?: string;
   registered_at: string;
 }

@@ -1,29 +1,20 @@
-import { Component } from '@angular/core';
 
-@Component({
-  selector: 'app-create-blog',
-  standalone: false,
-  templateUrl: './create-blog.html',
-  styleUrl: './create-blog.scss',
-})
-export class CreateBlog {
-
-}
 // src/app/features/cms/components/create-blog/create-blog.component.ts
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { CmsService } from '../../services/cms.service';
 import { BLOG_CATEGORIES } from '../../../../models/cms.model';
+import { CmsService } from '../../services/cms';
 
 @Component({
-  selector: 'app-create-blog',
-  templateUrl: './create-blog.component.html',
-  styleUrls: ['./create-blog.component.scss']
+    selector: 'app-create-blog',
+  standalone: false,
+  templateUrl: './create-blog.html',
+  styleUrl: './create-blog.scss',
 })
-export class CreateBlogComponent implements OnInit, OnDestroy {
+export class CreateBlog implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   blogForm!: FormGroup;

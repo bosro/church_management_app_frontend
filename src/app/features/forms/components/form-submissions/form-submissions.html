@@ -59,7 +59,8 @@
             </div>
             <div class="stat-info">
               <p class="stat-label">Pending Review</p>
-              <h3 class="stat-value">{{ submissions.filter(s => s.status === 'submitted').length }}</h3>
+              <h3 class="stat-value">{{ pendingSubmissionsCount }}</h3>
+
             </div>
           </div>
 
@@ -67,9 +68,11 @@
             <div class="stat-icon" style="background: #D1FAE5; color: #10B981;">
               <i class="ri-checkbox-circle-line"></i>
             </div>
+
             <div class="stat-info">
               <p class="stat-label">Approved</p>
-              <h3 class="stat-value">{{ submissions.filter(s => s.status === 'approved').length }}</h3>
+              <h3 class="stat-value">{{ approvedSubmissionsCount }}</h3>
+
             </div>
           </div>
         </div>
@@ -81,11 +84,7 @@
 
         <!-- Submissions List -->
         <div *ngIf="!loading" class="submissions-list">
-          <div
-            *ngFor="let submission of submissions"
-            class="submission-card"
-            (click)="viewSubmission(submission)"
-          >
+          <div *ngFor="let submission of submissions" class="submission-card" (click)="viewSubmission(submission)">
             <div class="card-header">
               <div class="submission-info">
                 <h3>{{ getMemberName(submission) }}</h3>
@@ -95,21 +94,16 @@
               </div>
               <div class="card-actions">
                 <div class="status-dropdown">
-                  <select
-                    [value]="submission.status"
+                  <select [value]="submission.status"
                     (change)="updateStatus(submission.id, $any($event.target).value, $event)"
-                    (click)="$event.stopPropagation()"
-                  >
+                    (click)="$event.stopPropagation()">
                     <option value="submitted">Submitted</option>
                     <option value="reviewed">Reviewed</option>
                     <option value="approved">Approved</option>
                     <option value="rejected">Rejected</option>
                   </select>
                 </div>
-                <button
-                  class="btn-icon-small btn-danger"
-                  (click)="deleteSubmission(submission.id, $event)"
-                >
+                <button class="btn-icon-small btn-danger" (click)="deleteSubmission(submission.id, $event)">
                   <i class="ri-delete-bin-line"></i>
                 </button>
               </div>
@@ -140,11 +134,7 @@
 
         <!-- Pagination -->
         <div class="pagination" *ngIf="totalPages > 1 && !loading">
-          <button
-            class="pagination-btn"
-            [disabled]="currentPage === 1"
-            (click)="previousPage()"
-          >
+          <button class="pagination-btn" [disabled]="currentPage === 1" (click)="previousPage()">
             <i class="ri-arrow-left-s-line"></i>
             Previous
           </button>
@@ -155,11 +145,7 @@
             </span>
           </div>
 
-          <button
-            class="pagination-btn"
-            [disabled]="currentPage === totalPages"
-            (click)="nextPage()"
-          >
+          <button class="pagination-btn" [disabled]="currentPage === totalPages" (click)="nextPage()">
             Next
             <i class="ri-arrow-right-s-line"></i>
           </button>
@@ -203,8 +189,9 @@
           <div *ngFor="let item of selectedSubmission.submission_data | keyvalue" class="data-item">
             <span class="data-label">{{ item.key }}</span>
             <span class="data-value">
-              {{ Array.isArray(item.value) ? item.value.join(', ') : item.value }}
+              {{ isArray(item.value) ? item.value.join(', ') : item.value }}
             </span>
+
           </div>
         </div>
       </div>

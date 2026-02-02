@@ -1,4 +1,10 @@
-import { Component } from '@angular/core';
+
+// src/app/features/settings/components/settings/settings.component.ts
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
+import { SettingsService } from '../../services';
 
 @Component({
   selector: 'app-settings',
@@ -6,22 +12,7 @@ import { Component } from '@angular/core';
   templateUrl: './settings.html',
   styleUrl: './settings.scss',
 })
-export class Settings {
-
-}
-// src/app/features/settings/components/settings/settings.component.ts
-import { Component, OnInit, OnDestroy } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
-import { SettingsService } from '../../services/settings.service';
-
-@Component({
-  selector: 'app-settings',
-  templateUrl: './settings.component.html',
-  styleUrls: ['./settings.component.scss']
-})
-export class SettingsComponent implements OnInit, OnDestroy {
+export class Settings implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   activeTab: string = 'general';

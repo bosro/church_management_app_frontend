@@ -1,29 +1,20 @@
-import { Component } from '@angular/core';
 
-@Component({
-  selector: 'app-edit-branch',
-  standalone: false,
-  templateUrl: './edit-branch.html',
-  styleUrl: './edit-branch.scss',
-})
-export class EditBranch {
-
-}
 // src/app/features/branches/components/edit-branch/edit-branch.component.ts
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { BranchesService } from '../../services/branches.service';
 import { Branch } from '../../../../models/branch.model';
+import { BranchesService } from '../../services/branches';
 
 @Component({
   selector: 'app-edit-branch',
-  templateUrl: './edit-branch.component.html',
-  styleUrls: ['./edit-branch.component.scss']
+  standalone: false,
+  templateUrl: './edit-branch.html',
+  styleUrl: './edit-branch.scss'
 })
-export class EditBranchComponent implements OnInit, OnDestroy {
+export class EditBranch implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   branchId: string = '';

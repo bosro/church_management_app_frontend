@@ -1,28 +1,18 @@
-import { Component } from '@angular/core';
-
-@Component({
-  selector: 'app-pages-list',
-  standalone: false,
-  templateUrl: './pages-list.html',
-  styleUrl: './pages-list.scss',
-})
-export class PagesList {
-
-}
 // src/app/features/cms/components/pages-list/pages-list.component.ts
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { CmsService } from '../../services/cms.service';
 import { CmsPage } from '../../../../models/cms.model';
+import { CmsService } from '../../services/cms';
 
 @Component({
-  selector: 'app-pages-list',
-  templateUrl: './pages-list.component.html',
-  styleUrls: ['./pages-list.component.scss']
+ selector: 'app-pages-list',
+  standalone: false,
+  templateUrl: './pages-list.html',
+  styleUrl: './pages-list.scss',
 })
-export class PagesListComponent implements OnInit, OnDestroy {
+export class PagesList implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   pages: CmsPage[] = [];

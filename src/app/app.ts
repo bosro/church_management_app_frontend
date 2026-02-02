@@ -1,4 +1,9 @@
-import { Component } from '@angular/core';
+
+// src/app/app.component.ts
+import { Component, OnInit } from '@angular/core';
+import { Router, NavigationEnd } from '@angular/router';
+import { filter } from 'rxjs/operators';
+import { AuthService } from './core/services/auth';
 
 @Component({
   selector: 'app-root',
@@ -6,23 +11,7 @@ import { Component } from '@angular/core';
   standalone: false,
   styleUrl: './app.scss'
 })
-export class App {
-  protected title = 'church-management-frontend';
-}
-
-
-// src/app/app.component.ts
-import { Component, OnInit } from '@angular/core';
-import { Router, NavigationEnd } from '@angular/router';
-import { filter } from 'rxjs/operators';
-import { AuthService } from './core/services/auth.service';
-
-@Component({
-  selector: 'app-root',
-  templateUrl: './app.component.html',
-  styleUrls: ['./app.component.scss']
-})
-export class AppComponent implements OnInit {
+export class App implements OnInit {
   title = 'Churchman';
   showLayout = true;
 

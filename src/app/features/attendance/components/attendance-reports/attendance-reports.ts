@@ -1,14 +1,4 @@
-import { Component } from '@angular/core';
 
-@Component({
-  selector: 'app-attendance-reports',
-  standalone: false,
-  templateUrl: './attendance-reports.html',
-  styleUrl: './attendance-reports.scss',
-})
-export class AttendanceReports {
-
-}
 // src/app/features/attendance/components/attendance-report/attendance-report.component.ts
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup } from '@angular/forms';
@@ -27,11 +17,12 @@ interface AttendanceReport {
 }
 
 @Component({
-  selector: 'app-attendance-report',
-  templateUrl: './attendance-report.component.html',
-  styleUrls: ['./attendance-report.component.scss']
+  selector: 'app-attendance-reports',
+  standalone: false,
+  templateUrl: './attendance-reports.html',
+  styleUrl: './attendance-reports.scss',
 })
-export class AttendanceReportComponent implements OnInit, OnDestroy {
+export class AttendanceReports implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   filterForm!: FormGroup;

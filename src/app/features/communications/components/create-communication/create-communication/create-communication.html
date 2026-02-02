@@ -44,17 +44,11 @@
                   <!-- Title -->
                   <div class="form-group full-width">
                     <label for="title">Message Title *</label>
-                    <input
-                      id="title"
-                      type="text"
-                      formControlName="title"
+                    <input id="title" type="text" formControlName="title"
                       placeholder="e.g., Sunday Service Reminder, Event Announcement"
-                      [class.error]="communicationForm.get('title')?.invalid && communicationForm.get('title')?.touched"
-                    />
-                    <span
-                      *ngIf="communicationForm.get('title')?.invalid && communicationForm.get('title')?.touched"
-                      class="error-message"
-                    >
+                      [class.error]="communicationForm.get('title')?.invalid && communicationForm.get('title')?.touched" />
+                    <span *ngIf="communicationForm.get('title')?.invalid && communicationForm.get('title')?.touched"
+                      class="error-message">
                       {{ getErrorMessage('title') }}
                     </span>
                   </div>
@@ -62,11 +56,8 @@
                   <!-- Communication Type -->
                   <div class="form-group">
                     <label for="communication_type">Send Via *</label>
-                    <select
-                      id="communication_type"
-                      formControlName="communication_type"
-                      [class.error]="communicationForm.get('communication_type')?.invalid && communicationForm.get('communication_type')?.touched"
-                    >
+                    <select id="communication_type" formControlName="communication_type"
+                      [class.error]="communicationForm.get('communication_type')?.invalid && communicationForm.get('communication_type')?.touched">
                       <option *ngFor="let type of communicationTypes" [value]="type.value">
                         {{ type.label }}
                       </option>
@@ -76,11 +67,8 @@
                   <!-- Target Audience -->
                   <div class="form-group">
                     <label for="target_audience">Send To *</label>
-                    <select
-                      id="target_audience"
-                      formControlName="target_audience"
-                      [class.error]="communicationForm.get('target_audience')?.invalid && communicationForm.get('target_audience')?.touched"
-                    >
+                    <select id="target_audience" formControlName="target_audience"
+                      [class.error]="communicationForm.get('target_audience')?.invalid && communicationForm.get('target_audience')?.touched">
                       <option *ngFor="let audience of targetAudiences" [value]="audience.value">
                         {{ audience.label }}
                       </option>
@@ -90,23 +78,17 @@
                   <!-- Message -->
                   <div class="form-group full-width">
                     <label for="message">Message *</label>
-                    <textarea
-                      id="message"
-                      formControlName="message"
-                      placeholder="Type your message here..."
-                      rows="6"
-                      [class.error]="communicationForm.get('message')?.invalid && communicationForm.get('message')?.touched"
-                    ></textarea>
+                    <textarea id="message" formControlName="message" placeholder="Type your message here..." rows="6"
+                      [class.error]="communicationForm.get('message')?.invalid && communicationForm.get('message')?.touched"></textarea>
                     <div class="character-count">
                       {{ getCharacterCount() }} characters
                       <span *ngIf="communicationForm.get('communication_type')?.value === 'sms'" class="sms-note">
-                        (SMS: ~{{ Math.ceil(getCharacterCount() / 160) }} message{{ Math.ceil(getCharacterCount() / 160) > 1 ? 's' : '' }})
+                        (SMS: ~{{ Math.ceil(getCharacterCount() / 160) }} message{{ Math.ceil(getCharacterCount() / 160)
+                        > 1 ? 's' : '' }})
                       </span>
                     </div>
-                    <span
-                      *ngIf="communicationForm.get('message')?.invalid && communicationForm.get('message')?.touched"
-                      class="error-message"
-                    >
+                    <span *ngIf="communicationForm.get('message')?.invalid && communicationForm.get('message')?.touched"
+                      class="error-message">
                       {{ getErrorMessage('message') }}
                     </span>
                   </div>
@@ -114,11 +96,7 @@
                   <!-- Scheduled At -->
                   <div class="form-group full-width">
                     <label for="scheduled_at">Schedule (Optional)</label>
-                    <input
-                      id="scheduled_at"
-                      type="datetime-local"
-                      formControlName="scheduled_at"
-                    />
+                    <input id="scheduled_at" type="datetime-local" formControlName="scheduled_at" />
                     <p class="help-text">Leave empty to send immediately</p>
                   </div>
                 </div>
@@ -126,19 +104,10 @@
 
               <!-- Form Actions -->
               <div class="form-actions">
-                <button
-                  type="button"
-                  class="btn-secondary"
-                  (click)="cancel()"
-                  [disabled]="loading"
-                >
+                <button type="button" class="btn-secondary" (click)="cancel()" [disabled]="loading">
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  class="btn-primary"
-                  [disabled]="loading"
-                >
+                <button type="submit" class="btn-primary" [disabled]="loading">
                   <span *ngIf="!loading">
                     <i class="ri-send-plane-line"></i>
                     {{ communicationForm.get('scheduled_at')?.value ? 'Schedule Message' : 'Send Now' }}
@@ -158,11 +127,7 @@
             <p class="sidebar-hint">Click to use a template</p>
 
             <div class="templates-list">
-              <div
-                *ngFor="let template of messageTemplates"
-                class="template-card"
-                (click)="applyTemplate(template)"
-              >
+              <div *ngFor="let template of messageTemplates" class="template-card" (click)="applyTemplate(template)">
                 <h4>{{ template.name }}</h4>
                 <p>{{ template.message }}</p>
                 <span class="use-template">
@@ -174,7 +139,13 @@
 
             <div class="template-info">
               <i class="ri-information-line"></i>
-              <p>You can use variables like {name}, {date}, {time}, {event_name}, {amount} in your messages.</p>
+              <p>
+                You can use variables like
+                {{ '{name}' }}, {{ '{date}' }}, {{ '{time}' }},
+                {{ '{event_name}' }}, {{ '{amount}' }}
+                in your messages.
+              </p>
+
             </div>
           </div>
         </div>

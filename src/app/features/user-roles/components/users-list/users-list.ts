@@ -1,4 +1,10 @@
-import { Component } from '@angular/core';
+
+// src/app/features/user-roles/components/users-list/users-list.component.ts
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Router } from '@angular/router';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
+import { UserRolesService } from '../../services/user-roles';
 
 @Component({
   selector: 'app-users-list',
@@ -6,22 +12,7 @@ import { Component } from '@angular/core';
   templateUrl: './users-list.html',
   styleUrl: './users-list.scss',
 })
-export class UsersList {
-
-}
-// src/app/features/user-roles/components/users-list/users-list.component.ts
-import { Component, OnInit, OnDestroy } from '@angular/core';
-import { Router } from '@angular/router';
-import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
-import { UserRolesService } from '../../services/user-roles.service';
-
-@Component({
-  selector: 'app-users-list',
-  templateUrl: './users-list.component.html',
-  styleUrls: ['./users-list.component.scss']
-})
-export class UsersListComponent implements OnInit, OnDestroy {
+export class UsersList implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   users: any[] = [];

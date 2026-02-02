@@ -1,29 +1,20 @@
-import { Component } from '@angular/core';
 
-@Component({
-  selector: 'app-edit-form',
-  standalone: false,
-  templateUrl: './edit-form.html',
-  styleUrl: './edit-form.scss',
-})
-export class EditForm {
-
-}
 // src/app/features/forms/components/edit-form/edit-form.component.ts
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { FormsService } from '../../services/forms.service';
 import { FormTemplate, FormField, FieldType } from '../../../../models/form.model';
+import { FormsService } from '../../services/forms';
 
 @Component({
-  selector: 'app-edit-form',
-  templateUrl: './edit-form.component.html',
-  styleUrls: ['./edit-form.component.scss']
+ selector: 'app-edit-form',
+  standalone: false,
+  templateUrl: './edit-form.html',
+  styleUrl: './edit-form.scss',
 })
-export class EditFormComponent implements OnInit, OnDestroy {
+export class EditForm implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   formId: string = '';

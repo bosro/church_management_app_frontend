@@ -1,4 +1,11 @@
-import { Component } from '@angular/core';
+
+// src/app/features/communications/components/create-communication/create-communication.component.ts
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
+import { CommunicationsService } from '../../../services/communications';
 
 @Component({
   selector: 'app-create-communication',
@@ -6,24 +13,9 @@ import { Component } from '@angular/core';
   templateUrl: './create-communication.html',
   styleUrl: './create-communication.scss',
 })
-export class CreateCommunication {
-
-}
-// src/app/features/communications/components/create-communication/create-communication.component.ts
-import { Component, OnInit, OnDestroy } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
-import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
-import { CommunicationsService } from '../../services/communications.service';
-
-@Component({
-  selector: 'app-create-communication',
-  templateUrl: './create-communication.component.html',
-  styleUrls: ['./create-communication.component.scss']
-})
-export class CreateCommunicationComponent implements OnInit, OnDestroy {
+export class CreateCommunication implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
+  Math!:Math
 
   communicationForm!: FormGroup;
   loading = false;

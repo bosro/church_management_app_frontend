@@ -1,4 +1,11 @@
-import { Component } from '@angular/core';
+
+// src/app/features/auth/components/forgot-password/forgot-password.component.ts
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
+import { AuthService } from '../../../core/services/auth';
 
 @Component({
   selector: 'app-forgot-password',
@@ -6,23 +13,7 @@ import { Component } from '@angular/core';
   templateUrl: './forgot-password.html',
   styleUrl: './forgot-password.scss',
 })
-export class ForgotPassword {
-
-}
-// src/app/features/auth/components/forgot-password/forgot-password.component.ts
-import { Component, OnInit, OnDestroy } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
-import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
-import { AuthService } from '../../services/auth.service';
-
-@Component({
-  selector: 'app-forgot-password',
-  templateUrl: './forgot-password.component.html',
-  styleUrls: ['./forgot-password.component.scss']
-})
-export class ForgotPasswordComponent implements OnInit, OnDestroy {
+export class ForgotPassword implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   forgotPasswordForm!: FormGroup;

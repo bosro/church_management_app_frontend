@@ -1,18 +1,12 @@
-import { Injectable } from '@angular/core';
 
-@Injectable({
-  providedIn: 'root',
-})
-export class Branches {
-
-}
 // src/app/features/branches/services/branches.service.ts
 import { Injectable } from '@angular/core';
 import { Observable, from } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { SupabaseService } from '../../../core/services/supabase.service';
-import { AuthService } from '../../../core/services/auth.service';
+
 import { Branch, BranchMember } from '../../../models/branch.model';
+import { SupabaseService } from '../../../core/services/supabase';
+import { AuthService } from '../../../core/services/auth';
 
 @Injectable({
   providedIn: 'root'

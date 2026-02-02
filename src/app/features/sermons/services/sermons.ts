@@ -1,17 +1,10 @@
-import { Injectable } from '@angular/core';
 
-@Injectable({
-  providedIn: 'root',
-})
-export class Sermons {
-
-}
 // src/app/features/sermons/services/sermons.service.ts
 import { Injectable } from '@angular/core';
-import { Observable, from } from 'rxjs';
-import { map } from 'rxjs/operators';
-import { SupabaseService } from '../../../core/services/supabase.service';
-import { AuthService } from '../../../core/services/auth.service';
+import { Observable, from, map } from 'rxjs';
+import { SupabaseService } from '../../../core/services/supabase';
+import { AuthService } from '../../../core/services/auth';
+
 
 export interface Sermon {
   id: string;

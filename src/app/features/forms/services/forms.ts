@@ -2,9 +2,10 @@
 import { Injectable } from '@angular/core';
 import { Observable, from } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { SupabaseService } from '../../../core/services/supabase.service';
-import { AuthService } from '../../../core/services/auth.service';
-import { FormTemplate, FormSubmission } from '../../../models/form.model';
+
+import { FormTemplate, FormSubmission, SubmissionStatus } from '../../../models/form.model';
+import { SupabaseService } from '../../../core/services/supabase';
+import { AuthService } from '../../../core/services/auth';
 
 @Injectable({
   providedIn: 'root'
@@ -133,7 +134,7 @@ export class FormsService {
     return from(
       this.supabase.insert<FormSubmission>('form_submissions', {
         form_template_id: templateId,
-        member_id: memberId || null,
+       member_id: memberId ?? undefined,
         submission_data: submissionData,
         status: 'submitted'
       })
@@ -145,10 +146,10 @@ export class FormsService {
     );
   }
 
-  updateSubmissionStatus(
-    submissionId: string,
-    status: string
-  ): Observable<FormSubmission> {
+updateSubmissionStatus(
+  submissionId: string,
+  status: SubmissionStatus
+): Observable<FormSubmission> {
     return from(
       this.supabase.update<FormSubmission>('form_submissions', submissionId, { status })
     ).pipe(

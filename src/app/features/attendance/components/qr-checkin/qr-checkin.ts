@@ -145,4 +145,8 @@ export class QrCheckin implements OnInit, OnDestroy {
   getMemberInitials(member: Member): string {
     return `${member.first_name[0]}${member.last_name[0]}`.toUpperCase();
   }
+
+  get currentTime(): Date {
+  return new Date();
+}
 }

@@ -1,4 +1,10 @@
-import { Component } from '@angular/core';
+
+// src/app/features/communications/components/communications-list/communications-list.component.ts
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Router } from '@angular/router';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
+import { Communication, CommunicationsService } from '../../../services/communications';
 
 @Component({
   selector: 'app-communications-list',
@@ -6,22 +12,7 @@ import { Component } from '@angular/core';
   templateUrl: './communications-list.html',
   styleUrl: './communications-list.scss',
 })
-export class CommunicationsList {
-
-}
-// src/app/features/communications/components/communications-list/communications-list.component.ts
-import { Component, OnInit, OnDestroy } from '@angular/core';
-import { Router } from '@angular/router';
-import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
-import { CommunicationsService, Communication } from '../../services/communications.service';
-
-@Component({
-  selector: 'app-communications-list',
-  templateUrl: './communications-list.component.html',
-  styleUrls: ['./communications-list.component.scss']
-})
-export class CommunicationsListComponent implements OnInit, OnDestroy {
+export class CommunicationsList implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   communications: Communication[] = [];

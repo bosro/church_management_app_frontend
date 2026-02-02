@@ -1,28 +1,19 @@
-import { Component } from '@angular/core';
 
-@Component({
-  selector: 'app-create-branch',
-  standalone: false,
-  templateUrl: './create-branch.html',
-  styleUrl: './create-branch.scss',
-})
-export class CreateBranch {
-
-}
 // src/app/features/branches/components/create-branch/create-branch.component.ts
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { BranchesService } from '../../services/branches.service';
+import { BranchesService } from '../../services/branches';
 
 @Component({
-  selector: 'app-create-branch',
-  templateUrl: './create-branch.component.html',
-  styleUrls: ['./create-branch.component.scss']
+   selector: 'app-create-branch',
+  standalone: false,
+  templateUrl: './create-branch.html',
+  styleUrl: './create-branch.scss',
 })
-export class CreateBranchComponent implements OnInit, OnDestroy {
+export class CreateBranch implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   branchForm!: FormGroup;

@@ -1,27 +1,18 @@
-import { Component } from '@angular/core';
 
-@Component({
-  selector: 'app-sermons-list',
-  standalone: false,
-  templateUrl: './sermons-list.html',
-  styleUrl: './sermons-list.scss',
-})
-export class SermonsList {
-
-}
 // src/app/features/sermons/components/sermons-list/sermons-list.component.ts
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { SermonsService, Sermon, SermonSeries } from '../../services/sermons.service';
+import { Sermon, SermonSeries, SermonsService } from '../../services/sermons';
 
 @Component({
-  selector: 'app-sermons-list',
-  templateUrl: './sermons-list.component.html',
-  styleUrls: ['./sermons-list.component.scss']
+    selector: 'app-sermons-list',
+  standalone: false,
+  templateUrl: './sermons-list.html',
+  styleUrl: './sermons-list.scss',
 })
-export class SermonsListComponent implements OnInit, OnDestroy {
+export class SermonsList implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   sermons: Sermon[] = [];

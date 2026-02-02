@@ -1,4 +1,10 @@
-import { Component } from '@angular/core';
+
+// src/app/features/cms/components/cms-overview/cms-overview.component.ts
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Router } from '@angular/router';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
+import { CmsService } from '../../services/cms';
 
 @Component({
   selector: 'app-cms-overview',
@@ -6,22 +12,7 @@ import { Component } from '@angular/core';
   templateUrl: './cms-overview.html',
   styleUrl: './cms-overview.scss',
 })
-export class CmsOverview {
-
-}
-// src/app/features/cms/components/cms-overview/cms-overview.component.ts
-import { Component, OnInit, OnDestroy } from '@angular/core';
-import { Router } from '@angular/router';
-import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
-import { CmsService } from '../../services/cms.service';
-
-@Component({
-  selector: 'app-cms-overview',
-  templateUrl: './cms-overview.component.html',
-  styleUrls: ['./cms-overview.component.scss']
-})
-export class CmsOverviewComponent implements OnInit, OnDestroy {
+export class CmsOverview implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   statistics: any = null;

@@ -1,4 +1,11 @@
-import { Component } from '@angular/core';
+
+// src/app/features/branches/components/branches-list/branches-list.component.ts
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Router } from '@angular/router';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
+import { Branch } from '../../../../../models/branch.model';
+import { BranchesService } from '../../../services/branches';
 
 @Component({
   selector: 'app-branches-list',
@@ -6,23 +13,7 @@ import { Component } from '@angular/core';
   templateUrl: './branches-list.html',
   styleUrl: './branches-list.scss',
 })
-export class BranchesList {
-
-}
-// src/app/features/branches/components/branches-list/branches-list.component.ts
-import { Component, OnInit, OnDestroy } from '@angular/core';
-import { Router } from '@angular/router';
-import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
-import { BranchesService } from '../../services/branches.service';
-import { Branch } from '../../../../models/branch.model';
-
-@Component({
-  selector: 'app-branches-list',
-  templateUrl: './branches-list.component.html',
-  styleUrls: ['./branches-list.component.scss']
-})
-export class BranchesListComponent implements OnInit, OnDestroy {
+export class BranchesList implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   branches: Branch[] = [];

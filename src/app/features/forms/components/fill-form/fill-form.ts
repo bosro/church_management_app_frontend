@@ -1,29 +1,20 @@
-import { Component } from '@angular/core';
 
-@Component({
-  selector: 'app-fill-form',
-  standalone: false,
-  templateUrl: './fill-form.html',
-  styleUrl: './fill-form.scss',
-})
-export class FillForm {
-
-}
 // src/app/features/forms/components/fill-form/fill-form.component.ts
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { FormsService } from '../../services/forms.service';
 import { FormTemplate, FormField } from '../../../../models/form.model';
+import { FormsService } from '../../services/forms';
 
 @Component({
-  selector: 'app-fill-form',
-  templateUrl: './fill-form.component.html',
-  styleUrls: ['./fill-form.component.scss']
+ selector: 'app-fill-form',
+  standalone: false,
+  templateUrl: './fill-form.html',
+  styleUrl: './fill-form.scss',
 })
-export class FillFormComponent implements OnInit, OnDestroy {
+export class FillForm implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   formId: string = '';

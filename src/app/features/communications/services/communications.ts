@@ -2,8 +2,8 @@
 import { Injectable } from '@angular/core';
 import { Observable, from } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { SupabaseService } from '../../../core/services/supabase.service';
-import { AuthService } from '../../../core/services/auth.service';
+import { SupabaseService } from '../../../core/services/supabase';
+import { AuthService } from '../../../core/services/auth';
 
 export interface Communication {
   id: string;

@@ -1,4 +1,11 @@
-import { Component } from '@angular/core';
+
+// src/app/features/forms/components/forms-list/forms-list.component.ts
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Router } from '@angular/router';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
+import { FormTemplate } from '../../../../models/form.model';
+import { FormsService } from '../../services/forms';
 
 @Component({
   selector: 'app-forms-list',
@@ -6,23 +13,7 @@ import { Component } from '@angular/core';
   templateUrl: './forms-list.html',
   styleUrl: './forms-list.scss',
 })
-export class FormsList {
-
-}
-// src/app/features/forms/components/forms-list/forms-list.component.ts
-import { Component, OnInit, OnDestroy } from '@angular/core';
-import { Router } from '@angular/router';
-import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
-import { FormsService } from '../../services/forms.service';
-import { FormTemplate } from '../../../../models/form.model';
-
-@Component({
-  selector: 'app-forms-list',
-  templateUrl: './forms-list.component.html',
-  styleUrls: ['./forms-list.component.scss']
-})
-export class FormsListComponent implements OnInit, OnDestroy {
+export class FormsList implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   formTemplates: FormTemplate[] = [];

@@ -1,38 +1,18 @@
-import { Component } from '@angular/core';
 
-@Component({
-  selector: 'app-email-logs',
-  standalone: false,
-  templateUrl: './email-logs.html',
-  styleUrl: './email-logs.scss',
-})
-export class EmailLogs {
-
-}
-import { Component } from '@angular/core';
-
-@Component({
-  selector: 'app-sms-logs',
-  standalone: false,
-  templateUrl: './sms-logs.html',
-  styleUrl: './sms-logs.scss',
-})
-export class SmsLogs {
-
-}
 // src/app/features/communications/components/sms-logs/sms-logs.component.ts
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { CommunicationsService } from '../../services/communications.service';
+import { CommunicationsService } from '../../../services/communications';
 
 @Component({
-  selector: 'app-sms-logs',
-  templateUrl: './sms-logs.component.html',
-  styleUrls: ['./sms-logs.component.scss']
+ selector: 'app-email-logs',
+  standalone: false,
+  templateUrl: './email-logs.html',
+  styleUrl: './email-logs.scss',
 })
-export class SmsLogsComponent implements OnInit, OnDestroy {
+export class EmailLogs implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   smsLogs: any[] = [];

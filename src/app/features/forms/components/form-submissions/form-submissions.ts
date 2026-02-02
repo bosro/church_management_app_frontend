@@ -1,4 +1,10 @@
-import { Component } from '@angular/core';
+// src/app/features/forms/components/form-submissions/form-submissions.component.ts
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Router, ActivatedRoute } from '@angular/router';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
+import { FormTemplate, FormSubmission, SubmissionStatus } from '../../../../models/form.model';
+import { FormsService } from '../../services/forms';
 
 @Component({
   selector: 'app-form-submissions',
@@ -6,23 +12,7 @@ import { Component } from '@angular/core';
   templateUrl: './form-submissions.html',
   styleUrl: './form-submissions.scss',
 })
-export class FormSubmissions {
-
-}
-// src/app/features/forms/components/form-submissions/form-submissions.component.ts
-import { Component, OnInit, OnDestroy } from '@angular/core';
-import { Router, ActivatedRoute } from '@angular/router';
-import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
-import { FormsService } from '../../services/forms.service';
-import { FormTemplate, FormSubmission } from '../../../../models/form.model';
-
-@Component({
-  selector: 'app-form-submissions',
-  templateUrl: './form-submissions.component.html',
-  styleUrls: ['./form-submissions.component.scss']
-})
-export class FormSubmissionsComponent implements OnInit, OnDestroy {
+export class FormSubmissions implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   formId: string = '';
@@ -46,7 +36,7 @@ export class FormSubmissionsComponent implements OnInit, OnDestroy {
   constructor(
     private formsService: FormsService,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
   ) {}
 
   ngOnInit(): void {
@@ -65,7 +55,8 @@ export class FormSubmissionsComponent implements OnInit, OnDestroy {
   private loadFormTemplate(): void {
     this.loadingForm = true;
 
-    this.formsService.getFormTemplateById(this.formId)
+    this.formsService
+      .getFormTemplateById(this.formId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (template) => {
@@ -75,14 +66,15 @@ export class FormSubmissionsComponent implements OnInit, OnDestroy {
         error: (error) => {
           this.errorMessage = error.message || 'Failed to load form template';
           this.loadingForm = false;
-        }
+        },
       });
   }
 
   loadSubmissions(): void {
     this.loading = true;
 
-    this.formsService.getFormSubmissions(this.formId, this.currentPage, this.pageSize)
+    this.formsService
+      .getFormSubmissions(this.formId, this.currentPage, this.pageSize)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: ({ data, count }) => {
@@ -94,7 +86,7 @@ export class FormSubmissionsComponent implements OnInit, OnDestroy {
         error: (error) => {
           console.error('Error loading submissions:', error);
           this.loading = false;
-        }
+        },
       });
   }
 
@@ -119,10 +111,11 @@ export class FormSubmissionsComponent implements OnInit, OnDestroy {
   }
 
   // Update Status
-  updateStatus(submissionId: string, status: string, event: Event): void {
+  updateStatus(submissionId: string, status: SubmissionStatus, event: Event): void {
     event.stopPropagation();
 
-    this.formsService.updateSubmissionStatus(submissionId, status)
+    this.formsService
+      .updateSubmissionStatus(submissionId, status)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
@@ -135,8 +128,16 @@ export class FormSubmissionsComponent implements OnInit, OnDestroy {
         },
         error: (error) => {
           this.errorMessage = error.message || 'Failed to update status';
-        }
+        },
       });
+  }
+
+  get pendingSubmissionsCount(): number {
+    return this.submissions.filter((s) => s.status === 'submitted').length;
+  }
+
+  get approvedSubmissionsCount(): number {
+    return this.submissions.filter((s) => s.status === 'approved').length;
   }
 
   // Delete Submission
@@ -144,7 +145,8 @@ export class FormSubmissionsComponent implements OnInit, OnDestroy {
     event.stopPropagation();
 
     if (confirm('Are you sure you want to delete this submission?')) {
-      this.formsService.deleteSubmission(submissionId)
+      this.formsService
+        .deleteSubmission(submissionId)
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: () => {
@@ -157,14 +159,15 @@ export class FormSubmissionsComponent implements OnInit, OnDestroy {
           },
           error: (error) => {
             this.errorMessage = error.message || 'Failed to delete submission';
-          }
+          },
         });
     }
   }
 
   // Export
   exportToCSV(): void {
-    this.formsService.exportSubmissions(this.formId)
+    this.formsService
+      .exportSubmissions(this.formId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (blob) => {
@@ -184,7 +187,7 @@ export class FormSubmissionsComponent implements OnInit, OnDestroy {
         },
         error: (error) => {
           this.errorMessage = error.message || 'Failed to export submissions';
-        }
+        },
       });
   }
 
@@ -204,12 +207,12 @@ export class FormSubmissionsComponent implements OnInit, OnDestroy {
   }
 
   // Helper Methods
-  getStatusClass(status: string): string {
+  getStatusClass(status: SubmissionStatus): string {
     const classes: Record<string, string> = {
       submitted: 'status-submitted',
       reviewed: 'status-reviewed',
       approved: 'status-approved',
-      rejected: 'status-rejected'
+      rejected: 'status-rejected',
     };
     return classes[status] || 'status-submitted';
   }
@@ -224,5 +227,9 @@ export class FormSubmissionsComponent implements OnInit, OnDestroy {
   getSubmissionPreview(submission: FormSubmission): string {
     const values = Object.values(submission.submission_data);
     return values.slice(0, 2).join(', ') + (values.length > 2 ? '...' : '');
+  }
+
+  isArray(value: any): value is any[] {
+    return Array.isArray(value);
   }
 }

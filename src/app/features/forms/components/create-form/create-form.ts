@@ -1,29 +1,19 @@
-import { Component } from '@angular/core';
-
-@Component({
-  selector: 'app-create-form',
-  standalone: false,
-  templateUrl: './create-form.html',
-  styleUrl: './create-form.scss',
-})
-export class CreateForm {
-
-}
 // src/app/features/forms/components/create-form/create-form.component.ts
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { FormsService } from '../../services/forms.service';
 import { FormField, FieldType } from '../../../../models/form.model';
+import { FormsService } from '../../services/forms';
 
 @Component({
-  selector: 'app-create-form',
-  templateUrl: './create-form.component.html',
-  styleUrls: ['./create-form.component.scss']
+   selector: 'app-create-form',
+  standalone: false,
+  templateUrl: './create-form.html',
+  styleUrl: './create-form.scss',
 })
-export class CreateFormComponent implements OnInit, OnDestroy {
+export class CreateForm implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   formDetailsForm!: FormGroup;

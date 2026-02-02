@@ -1,29 +1,20 @@
-import { Component } from '@angular/core';
 
-@Component({
-  selector: 'app-edit-blog',
-  standalone: false,
-  templateUrl: './edit-blog.html',
-  styleUrl: './edit-blog.scss',
-})
-export class EditBlog {
-
-}
 // src/app/features/cms/components/edit-blog/edit-blog.component.ts
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { CmsService } from '../../services/cms.service';
 import { BlogPost, BLOG_CATEGORIES } from '../../../../models/cms.model';
+import { CmsService } from '../../services/cms';
 
 @Component({
-  selector: 'app-edit-blog',
-  templateUrl: './edit-blog.component.html',
-  styleUrls: ['./edit-blog.component.scss']
+ selector: 'app-edit-blog',
+  standalone: false,
+  templateUrl: './edit-blog.html',
+  styleUrl: './edit-blog.scss',
 })
-export class EditBlogComponent implements OnInit, OnDestroy {
+export class EditBlog implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   postId: string = '';

@@ -1,0 +1,13 @@
+// src/app/features/sermons/components/edit-sermon/edit-sermon.component.scss
+@import '../create-sermon/create-sermon.component.scss';
+
+.edit-sermon-container {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  padding: 4rem 0;
+}

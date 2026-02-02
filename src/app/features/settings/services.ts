@@ -1,17 +1,9 @@
-import { Injectable } from '@angular/core';
-
-@Injectable({
-  providedIn: 'root',
-})
-export class Services {
-
-}
 // src/app/features/settings/services/settings.service.ts
 import { Injectable } from '@angular/core';
 import { Observable, from } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { SupabaseService } from '../../../core/services/supabase.service';
-import { AuthService } from '../../../core/services/auth.service';
+import { SupabaseService } from '../../core/services/supabase';
+import { AuthService } from '../../core/services/auth';
 
 export interface ChurchSetting {
   id: string;
@@ -25,12 +17,12 @@ export interface ChurchSetting {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class SettingsService {
   constructor(
     private supabase: SupabaseService,
-    private authService: AuthService
+    private authService: AuthService,
   ) {}
 
   getSettings(category?: string): Observable<ChurchSetting[]> {
@@ -53,7 +45,7 @@ export class SettingsService {
         if (error) throw error;
 
         return data as ChurchSetting[];
-      })()
+      })(),
     );
   }
 
@@ -72,11 +64,15 @@ export class SettingsService {
         if (error && error.code !== 'PGRST116') throw error;
 
         return data as ChurchSetting | null;
-      })()
+      })(),
     );
   }
 
-  updateSetting(key: string, value: any, category: string): Observable<ChurchSetting> {
+  updateSetting(
+    key: string,
+    value: any,
+    category: string,
+  ): Observable<ChurchSetting> {
     const churchId = this.authService.getChurchId();
     const userId = this.authService.getUserId();
 
@@ -89,7 +85,7 @@ export class SettingsService {
             setting_key: key,
             setting_value: value,
             category: category,
-            updated_by: userId
+            updated_by: userId,
           })
           .select()
           .single();
@@ -97,7 +93,7 @@ export class SettingsService {
         if (error) throw error;
 
         return data as ChurchSetting;
-      })()
+      })(),
     );
   }
 
@@ -105,13 +101,15 @@ export class SettingsService {
   updateChurchProfile(profileData: any): Observable<any> {
     const churchId = this.authService.getChurchId();
 
-    return from(
-      this.supabase.update('churches', churchId, profileData)
-    ).pipe(
+    if (!churchId) {
+      throw new Error('Church ID not found');
+    }
+
+    return from(this.supabase.update('churches', churchId, profileData)).pipe(
       map(({ data, error }) => {
         if (error) throw error;
         return data![0];
-      })
+      }),
     );
   }
 
@@ -121,13 +119,13 @@ export class SettingsService {
     return from(
       this.supabase.query('churches', {
         filters: { id: churchId },
-        limit: 1
-      })
+        limit: 1,
+      }),
     ).pipe(
       map(({ data, error }) => {
         if (error) throw error;
-        return data[0];
-      })
+        return data?.[0];
+      }),
     );
   }
 }

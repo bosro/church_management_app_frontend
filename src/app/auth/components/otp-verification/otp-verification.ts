@@ -2,7 +2,7 @@
 // src/app/features/auth/components/otp-verification/otp-verification.component.ts
 import { Component, OnInit, Input, Output, EventEmitter } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { AuthService } from '../../../../core/services/auth';
+import { AuthService } from '../../../core/services/auth';
 
 @Component({
  selector: 'app-otp-verification',

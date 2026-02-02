@@ -1,7 +1,7 @@
 // src/app/core/services/auth.service.ts
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
-import { BehaviorSubject, Observable, from, of } from 'rxjs';
+import { BehaviorSubject, Observable, from, of, throwError } from 'rxjs';
 import { map, catchError, tap, switchMap } from 'rxjs/operators';
 import { User, AuthResponse, SignUpData } from '../../models/user.model';
 import { SupabaseService } from './supabase';
@@ -219,5 +219,48 @@ export class AuthService {
   // Get user's church ID
   getChurchId(): string | undefined {
     return this.currentProfile?.church_id;
+  }
+
+  getCurrentUser() {
+    return this.supabase.currentUser;
+  }
+
+  /**
+   * Get current user ID
+   * Add this method to your existing AuthService
+   */
+  getUserId(): string {
+    const user = this.getCurrentUser();
+    if (!user || !user.id) {
+      throw new Error('No authenticated user');
+    }
+    return user.id;
+  }
+
+  /**
+   * Reset password - send password reset email
+   * Add this method to your existing AuthService
+   */
+  resetPassword(email: string): Observable<void> {
+    return from(
+      (async () => {
+        const { error } = await this.supabase.client.auth.resetPasswordForEmail(
+          email,
+          {
+            redirectTo: `${window.location.origin}/auth/reset-password`,
+          },
+        );
+
+        if (error) throw error;
+      })(),
+    ).pipe(
+      catchError((error) => {
+        console.error('Password reset error:', error);
+        return throwError(
+          () =>
+            new Error(error.message || 'Failed to send password reset email'),
+        );
+      }),
+    );
   }
 }

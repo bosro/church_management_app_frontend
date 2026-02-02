@@ -73,15 +73,15 @@ const routes: Routes = [
       {
         path: 'communications',
         loadChildren: () =>
-          import('./communication/communication-module').then(
-            (m) => m.CommunicationModule,
+          import('./communications/communications-module').then(
+            (m) => m.CommunicationsModule,
           ),
         canActivate: [AuthGuard],
       },
       {
         path: 'user-roles',
         loadChildren: () =>
-          import('./user-roles/user-roles.module').then(
+          import('./user-roles/user-roles-module').then(
             (m) => m.UserRolesModule,
           ),
         canActivate: [AuthGuard, RoleGuard],

@@ -26,11 +26,7 @@
             <h3>Upcoming Events</h3>
           </div>
           <div class="upcoming-events-list">
-            <div
-              *ngFor="let event of upcomingEvents"
-              class="upcoming-event-item"
-              (click)="viewEvent(event.id)"
-            >
+            <div *ngFor="let event of upcomingEvents" class="upcoming-event-item" (click)="viewEvent(event.id)">
               <div class="event-date-badge">
                 <span class="date-day">{{ event.start_date | date:'d' }}</span>
                 <span class="date-month">{{ event.start_date | date:'MMM' }}</span>
@@ -39,9 +35,10 @@
                 <h4>{{ event.title }}</h4>
                 <p>{{ event.location || 'No location' }}</p>
               </div>
-              <div class="event-type-badge" [ngClass]="getEventTypeClass(event.event_type)">
-                {{ getEventTypeLabel(event.event_type) }}
+              <div class="event-type-badge" [ngClass]="getEventCategoryClass(event.category || 'other')">
+                {{ getEventCategoryLabel(event.category || 'other') }}
               </div>
+
             </div>
           </div>
         </div>
@@ -49,19 +46,11 @@
         <!-- View Toggle & Filters -->
         <div class="controls-section">
           <div class="view-toggle">
-            <button
-              class="toggle-btn"
-              [class.active]="viewMode === 'list'"
-              (click)="switchView('list')"
-            >
+            <button class="toggle-btn" [class.active]="viewMode === 'list'" (click)="switchView('list')">
               <i class="ri-list-check"></i>
               List
             </button>
-            <button
-              class="toggle-btn"
-              [class.active]="viewMode === 'calendar'"
-              (click)="switchView('calendar')"
-            >
+            <button class="toggle-btn" [class.active]="viewMode === 'calendar'" (click)="switchView('calendar')">
               <i class="ri-calendar-line"></i>
               Calendar
             </button>
@@ -80,11 +69,12 @@
 
             <div class="filter-item">
               <label>Event Type</label>
-              <select [formControl]="eventTypeControl" class="filter-select">
-                <option *ngFor="let type of eventTypes" [value]="type.value">
+              <select [formControl]="EventCategoryControl" class="filter-select">
+                <option *ngFor="let type of EventCategorys" [value]="type.value">
                   {{ type.label }}
                 </option>
               </select>
+
             </div>
 
             <button class="btn-clear" (click)="clearFilters()">
@@ -102,12 +92,8 @@
         <!-- Events List View -->
         <div *ngIf="!loading && viewMode === 'list'" class="events-list-view">
           <div class="events-grid">
-            <div
-              *ngFor="let event of events"
-              class="event-card"
-              [class.past-event]="isEventPast(event)"
-              (click)="viewEvent(event.id)"
-            >
+            <div *ngFor="let event of events" class="event-card" [class.past-event]="isEventPast(event)"
+              (click)="viewEvent(event.id)">
               <div class="event-header">
                 <div class="event-date-large">
                   <span class="date-day">{{ event.start_date | date:'d' }}</span>
@@ -125,19 +111,22 @@
               </div>
 
               <div class="event-body">
-                <div class="event-type-badge" [ngClass]="getEventTypeClass(event.event_type)">
-                  {{ getEventTypeLabel(event.event_type) }}
+                <div class="event-type-badge" [ngClass]="getEventCategoryClass(event.category || 'other')">
+                  {{ getEventCategoryLabel(event.category || 'other') }}
                 </div>
+
+
                 <h3 class="event-title">{{ event.title }}</h3>
                 <p class="event-description" *ngIf="event.description">
                   {{ event.description }}
                 </p>
 
                 <div class="event-meta">
-                  <div class="meta-item" *ngIf="event.start_time">
+                  <div class="meta-item">
                     <i class="ri-time-line"></i>
-                    <span>{{ event.start_time }}</span>
+                    <span>{{ event.start_date | date:'shortTime' }}</span>
                   </div>
+
                   <div class="meta-item" *ngIf="event.location">
                     <i class="ri-map-pin-line"></i>
                     <span>{{ event.location }}</span>
@@ -197,11 +186,7 @@
 
         <!-- Pagination -->
         <div class="pagination" *ngIf="totalPages > 1 && !loading && viewMode === 'list'">
-          <button
-            class="pagination-btn"
-            [disabled]="currentPage === 1"
-            (click)="previousPage()"
-          >
+          <button class="pagination-btn" [disabled]="currentPage === 1" (click)="previousPage()">
             <i class="ri-arrow-left-s-line"></i>
             Previous
           </button>
@@ -212,11 +197,7 @@
             </span>
           </div>
 
-          <button
-            class="pagination-btn"
-            [disabled]="currentPage === totalPages"
-            (click)="nextPage()"
-          >
+          <button class="pagination-btn" [disabled]="currentPage === totalPages" (click)="nextPage()">
             Next
             <i class="ri-arrow-right-s-line"></i>
           </button>

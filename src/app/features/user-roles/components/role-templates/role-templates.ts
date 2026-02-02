@@ -1,4 +1,12 @@
-import { Component } from '@angular/core';
+
+// src/app/features/user-roles/components/role-templates/role-templates.component.ts
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
+import { RoleTemplate, Permission } from '../../../../models/user-role.model';
+import { UserRolesService } from '../../services/user-roles';
 
 @Component({
   selector: 'app-role-templates',
@@ -6,24 +14,7 @@ import { Component } from '@angular/core';
   templateUrl: './role-templates.html',
   styleUrl: './role-templates.scss',
 })
-export class RoleTemplates {
-
-}
-// src/app/features/user-roles/components/role-templates/role-templates.component.ts
-import { Component, OnInit, OnDestroy } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
-import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
-import { UserRolesService } from '../../services/user-roles.service';
-import { RoleTemplate, Permission } from '../../../../models/user-role.model';
-
-@Component({
-  selector: 'app-role-templates',
-  templateUrl: './role-templates.component.html',
-  styleUrls: ['./role-templates.component.scss']
-})
-export class RoleTemplatesComponent implements OnInit, OnDestroy {
+export class RoleTemplates implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   roleTemplates: RoleTemplate[] = [];

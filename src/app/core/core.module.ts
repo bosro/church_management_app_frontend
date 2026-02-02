@@ -10,7 +10,7 @@ import { AuthGuard } from './guards/auth-guard';
 import { RoleGuard } from './guards/role-guard';
 import { AuthInterceptor } from './interceptors/auth';
 import { ErrorInterceptor } from './interceptors/error';
-import { Features } from './features/features/features';
+import { Features } from '../features/features/features';
 
 // Services
 

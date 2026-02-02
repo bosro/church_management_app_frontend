@@ -1,4 +1,10 @@
-import { Component } from '@angular/core';
+// src/app/features/user-roles/components/manage-permissions/manage-permissions.component.ts
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Router, ActivatedRoute } from '@angular/router';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
+import { UserPermission, Permission } from '../../../../models/user-role.model';
+import { UserRolesService } from '../../services/user-roles';
 
 @Component({
   selector: 'app-manage-permissions',
@@ -6,23 +12,7 @@ import { Component } from '@angular/core';
   templateUrl: './manage-permissions.html',
   styleUrl: './manage-permissions.scss',
 })
-export class ManagePermissions {
-
-}
-// src/app/features/user-roles/components/manage-permissions/manage-permissions.component.ts
-import { Component, OnInit, OnDestroy } from '@angular/core';
-import { Router, ActivatedRoute } from '@angular/router';
-import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
-import { UserRolesService } from '../../services/user-roles.service';
-import { UserPermission, Permission } from '../../../../models/user-role.model';
-
-@Component({
-  selector: 'app-manage-permissions',
-  templateUrl: './manage-permissions.component.html',
-  styleUrls: ['./manage-permissions.component.scss']
-})
-export class ManagePermissionsComponent implements OnInit, OnDestroy {
+export class ManagePermissions implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   userId: string = '';

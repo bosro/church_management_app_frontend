@@ -2,9 +2,10 @@
 import { Injectable } from '@angular/core';
 import { Observable, from } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { SupabaseService } from '../../../core/services/supabase.service';
-import { AuthService } from '../../../core/services/auth.service';
-import { Event, EventRegistration, EventType, RegistrationStatus } from '../../../models/event.model';
+import { SupabaseService } from '../../../core/services/supabase';
+import { AuthService } from '../../../core/services/auth';
+import { Event, EventCategory, EventRegistration } from '../../../models/event.model';
+
 
 @Injectable({
   providedIn: 'root'
@@ -22,7 +23,7 @@ export class EventsService {
     filters?: {
       startDate?: string;
       endDate?: string;
-      eventType?: EventType;
+      EventCategory?: EventCategory;
     }
   ): Observable<{ data: Event[], count: number }> {
     const churchId = this.authService.getChurchId();
@@ -42,8 +43,8 @@ export class EventsService {
         if (filters?.endDate) {
           query = query.lte('start_date', filters.endDate);
         }
-        if (filters?.eventType) {
-          query = query.eq('event_type', filters.eventType);
+        if (filters?.EventCategory) {
+          query = query.eq('event_type', filters.EventCategory);
         }
 
         const { data, error, count } = await query
@@ -195,11 +196,11 @@ export class EventsService {
           'event_registrations',
           {
             event_id: eventId,
-            member_id: registrationData.memberId || null,
-            name: registrationData.name || null,
-            email: registrationData.email || null,
-            phone: registrationData.phone || null,
-            notes: registrationData.notes || null,
+            member_id: registrationData.memberId ?? undefined,
+            name: registrationData.name ?? undefined,
+            email: registrationData.email ?? undefined,
+            phone: registrationData.phone ?? undefined,
+            notes: registrationData.notes ?? undefined,
             status: 'confirmed',
             checked_in: false
           }

@@ -1,4 +1,11 @@
-import { Component } from '@angular/core';
+
+// src/app/features/cms/components/blog-list/blog-list.component.ts
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Router } from '@angular/router';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
+import { BlogPost, BLOG_CATEGORIES } from '../../../../models/cms.model';
+import { CmsService } from '../../services/cms';
 
 @Component({
   selector: 'app-blog-list',
@@ -6,23 +13,7 @@ import { Component } from '@angular/core';
   templateUrl: './blog-list.html',
   styleUrl: './blog-list.scss',
 })
-export class BlogList {
-
-}
-// src/app/features/cms/components/blog-list/blog-list.component.ts
-import { Component, OnInit, OnDestroy } from '@angular/core';
-import { Router } from '@angular/router';
-import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
-import { CmsService } from '../../services/cms.service';
-import { BlogPost, BLOG_CATEGORIES } from '../../../../models/cms.model';
-
-@Component({
-  selector: 'app-blog-list',
-  templateUrl: './blog-list.component.html',
-  styleUrls: ['./blog-list.component.scss']
-})
-export class BlogListComponent implements OnInit, OnDestroy {
+export class BlogList implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   blogPosts: BlogPost[] = [];

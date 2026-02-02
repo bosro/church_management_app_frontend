@@ -1,4 +1,10 @@
-import { Component } from '@angular/core';
+// src/app/features/cms/components/create-page/create-page.component.ts
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
+import { CmsService } from '../../services/cms';
 
 @Component({
   selector: 'app-create-page',
@@ -6,23 +12,7 @@ import { Component } from '@angular/core';
   templateUrl: './create-page.html',
   styleUrl: './create-page.scss',
 })
-export class CreatePage {
-
-}
-// src/app/features/cms/components/create-page/create-page.component.ts
-import { Component, OnInit, OnDestroy } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
-import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
-import { CmsService } from '../../services/cms.service';
-
-@Component({
-  selector: 'app-create-page',
-  templateUrl: './create-page.component.html',
-  styleUrls: ['./create-page.component.scss']
-})
-export class CreatePageComponent implements OnInit, OnDestroy {
+export class CreatePage implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   pageForm!: FormGroup;

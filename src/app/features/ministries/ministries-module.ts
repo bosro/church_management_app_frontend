@@ -7,6 +7,7 @@ import { ReactiveFormsModule } from '@angular/forms';
 import { SharedModule } from '../../shared/shared-module';
 import { CreateMinistry } from './components/create-ministry/create-ministry/create-ministry';
 import { EditMinistry } from './components/edit-ministry/edit-ministry./edit-ministry.';
+import { MinistriesRoutingModule } from './ministries-routing.module';
 
 @NgModule({
   declarations: [

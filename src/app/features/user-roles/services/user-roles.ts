@@ -2,9 +2,9 @@
 import { Injectable } from '@angular/core';
 import { Observable, from } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { SupabaseService } from '../../../core/services/supabase.service';
-import { AuthService } from '../../../core/services/auth.service';
-import { UserPermission, RoleTemplate, AVAILABLE_PERMISSIONS } from '../../../models/user-role.model';
+import { UserPermission, RoleTemplate, AVAILABLE_PERMISSIONS, Permission } from '../../../models/user-role.model';
+import { SupabaseService } from '../../../core/services/supabase';
+import { AuthService } from '../../../core/services/auth';
 
 @Injectable({
   providedIn: 'root'

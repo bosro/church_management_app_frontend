@@ -1,4 +1,11 @@
-import { Component } from '@angular/core';
+
+// src/app/features/ministries/components/add-ministry/add-ministry.component.ts
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
+import { MinistryService } from '../../services/ministry.service';
 
 @Component({
   selector: 'app-add-ministry',
@@ -6,23 +13,7 @@ import { Component } from '@angular/core';
   templateUrl: './add-ministry.html',
   styleUrl: './add-ministry.scss',
 })
-export class AddMinistry {
-
-}
-// src/app/features/ministries/components/add-ministry/add-ministry.component.ts
-import { Component, OnInit, OnDestroy } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
-import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
-import { MinistriesService } from '../../services/ministries.service';
-
-@Component({
-  selector: 'app-add-ministry',
-  templateUrl: './add-ministry.component.html',
-  styleUrls: ['./add-ministry.component.scss']
-})
-export class AddMinistryComponent implements OnInit, OnDestroy {
+export class AddMinistry implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   ministryForm!: FormGroup;
@@ -49,7 +40,7 @@ export class AddMinistryComponent implements OnInit, OnDestroy {
 
   constructor(
     private fb: FormBuilder,
-    private ministriesService: MinistriesService,
+    private ministriesService: MinistryService,
     private router: Router
   ) {}
 

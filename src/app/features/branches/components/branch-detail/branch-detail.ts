@@ -1,4 +1,11 @@
-import { Component } from '@angular/core';
+// src/app/features/branches/components/branch-detail/branch-detail.component.ts
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Router, ActivatedRoute } from '@angular/router';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
+import { MemberService } from '../../../members/services/member.service';
+import { Branch, BranchMember } from '../../../../models/branch.model';
+import { BranchesService } from '../../services/branches';
 
 @Component({
   selector: 'app-branch-detail',
@@ -6,24 +13,7 @@ import { Component } from '@angular/core';
   templateUrl: './branch-detail.html',
   styleUrl: './branch-detail.scss',
 })
-export class BranchDetail {
-
-}
-// src/app/features/branches/components/branch-detail/branch-detail.component.ts
-import { Component, OnInit, OnDestroy } from '@angular/core';
-import { Router, ActivatedRoute } from '@angular/router';
-import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
-import { BranchesService } from '../../services/branches.service';
-import { MemberService } from '../../../members/services/member.service';
-import { Branch, BranchMember } from '../../../../models/branch.model';
-
-@Component({
-  selector: 'app-branch-detail',
-  templateUrl: './branch-detail.component.html',
-  styleUrls: ['./branch-detail.component.scss']
-})
-export class BranchDetailComponent implements OnInit, OnDestroy {
+export class BranchDetail implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   branchId: string = '';
@@ -50,7 +40,7 @@ export class BranchDetailComponent implements OnInit, OnDestroy {
     private branchesService: BranchesService,
     private memberService: MemberService,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
   ) {}
 
   ngOnInit(): void {
@@ -70,7 +60,8 @@ export class BranchDetailComponent implements OnInit, OnDestroy {
   private loadBranch(): void {
     this.loadingBranch = true;
 
-    this.branchesService.getBranchById(this.branchId)
+    this.branchesService
+      .getBranchById(this.branchId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (branch) => {
@@ -80,14 +71,15 @@ export class BranchDetailComponent implements OnInit, OnDestroy {
         error: (error) => {
           this.errorMessage = error.message || 'Failed to load branch';
           this.loadingBranch = false;
-        }
+        },
       });
   }
 
   loadBranchMembers(): void {
     this.loading = true;
 
-    this.branchesService.getBranchMembers(this.branchId, this.currentPage, this.pageSize)
+    this.branchesService
+      .getBranchMembers(this.branchId, this.currentPage, this.pageSize)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: ({ data, count }) => {
@@ -99,12 +91,13 @@ export class BranchDetailComponent implements OnInit, OnDestroy {
         error: (error) => {
           console.error('Error loading members:', error);
           this.loading = false;
-        }
+        },
       });
   }
 
   private loadAllMembers(): void {
-    this.memberService.getMembers(1, 1000)
+    this.memberService
+      .getMembers({}, 1, 1000) // Pass empty filters object
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: ({ data }) => {
@@ -113,7 +106,7 @@ export class BranchDetailComponent implements OnInit, OnDestroy {
         },
         error: (error) => {
           console.error('Error loading all members:', error);
-        }
+        },
       });
   }
 
@@ -139,11 +132,13 @@ export class BranchDetailComponent implements OnInit, OnDestroy {
   }
 
   filterMembers(): void {
-    const assignedMemberIds = this.branchMembers.map(bm => bm.member_id);
+    const assignedMemberIds = this.branchMembers.map((bm) => bm.member_id);
 
-    this.filteredMembers = this.allMembers.filter(member => {
+    this.filteredMembers = this.allMembers.filter((member) => {
       const matchesSearch = this.searchTerm
-        ? `${member.first_name} ${member.last_name}`.toLowerCase().includes(this.searchTerm.toLowerCase())
+        ? `${member.first_name} ${member.last_name}`
+            .toLowerCase()
+            .includes(this.searchTerm.toLowerCase())
         : true;
       const notAssigned = !assignedMemberIds.includes(member.id);
       return matchesSearch && notAssigned;
@@ -151,7 +146,8 @@ export class BranchDetailComponent implements OnInit, OnDestroy {
   }
 
   assignMember(memberId: string): void {
-    this.branchesService.assignMemberToBranch(this.branchId, memberId)
+    this.branchesService
+      .assignMemberToBranch(this.branchId, memberId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
@@ -165,15 +161,18 @@ export class BranchDetailComponent implements OnInit, OnDestroy {
         },
         error: (error) => {
           this.errorMessage = error.message || 'Failed to assign member';
-        }
+        },
       });
   }
 
   removeMember(branchMemberId: string, event: Event): void {
     event.stopPropagation();
 
-    if (confirm('Are you sure you want to remove this member from the branch?')) {
-      this.branchesService.removeMemberFromBranch(branchMemberId, this.branchId)
+    if (
+      confirm('Are you sure you want to remove this member from the branch?')
+    ) {
+      this.branchesService
+        .removeMemberFromBranch(branchMemberId, this.branchId)
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: () => {
@@ -186,7 +185,7 @@ export class BranchDetailComponent implements OnInit, OnDestroy {
           },
           error: (error) => {
             this.errorMessage = error.message || 'Failed to remove member';
-          }
+          },
         });
     }
   }

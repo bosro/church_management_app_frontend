@@ -56,9 +56,10 @@
                 <span class="date-year">{{ event.start_date | date:'yyyy' }}</span>
               </div>
               <div class="event-header-info">
-                <div class="event-type-badge" [ngClass]="getEventTypeClass(event.event_type)">
-                  {{ getEventTypeLabel(event.event_type) }}
+                <div class="event-type-badge" [ngClass]="getEventCategoryClass(event.event_type)">
+                  {{ getEventCategoryLabel(event.event_type) }}
                 </div>
+
                 <h1>{{ event.title }}</h1>
                 <p class="event-date-range">{{ formatDateRange(event) }}</p>
               </div>
@@ -70,14 +71,15 @@
             </div>
 
             <div class="event-details-grid">
-              <div class="detail-item" *ngIf="event.start_time">
+              <div class="detail-item" *ngIf="event.start_date">
                 <i class="ri-time-line"></i>
                 <div>
                   <p class="detail-label">Time</p>
                   <p class="detail-value">
-                    {{ event.start_time }}
-                    <span *ngIf="event.end_time"> - {{ event.end_time }}</span>
+                    {{ event.start_date | date:'shortTime' }}
+                    <span *ngIf="event.end_date"> - {{ event.end_date | date:'shortTime' }}</span>
                   </p>
+
                 </div>
               </div>
 
@@ -182,22 +184,14 @@
                 <div *ngIf="!selectedMember" class="member-search">
                   <div class="search-input-wrapper">
                     <i class="ri-search-line search-icon"></i>
-                    <input
-                      type="text"
-                      [formControl]="searchControl"
-                      placeholder="Search member by name, email, or phone..."
-                      class="search-input"
-                    />
+                    <input type="text" [formControl]="searchControl"
+                      placeholder="Search member by name, email, or phone..." class="search-input" />
                     <i *ngIf="searching" class="ri-loader-4-line spin"></i>
                   </div>
 
                   <!-- Search Results -->
                   <div class="search-results" *ngIf="searchResults.length > 0">
-                    <div
-                      *ngFor="let member of searchResults"
-                      class="search-result-item"
-                      (click)="selectMember(member)"
-                    >
+                    <div *ngFor="let member of searchResults" class="search-result-item" (click)="selectMember(member)">
                       <div class="member-avatar-small">
                         <img *ngIf="member.photo_url" [src]="member.photo_url" [alt]="getMemberName(member)" />
                         <div *ngIf="!member.photo_url" class="avatar-placeholder-small">
@@ -216,7 +210,8 @@
                 <!-- Selected Member -->
                 <div *ngIf="selectedMember" class="selected-member">
                   <div class="member-avatar-medium">
-                    <img *ngIf="selectedMember.photo_url" [src]="selectedMember.photo_url" [alt]="getMemberName(selectedMember)" />
+                    <img *ngIf="selectedMember.photo_url" [src]="selectedMember.photo_url"
+                      [alt]="getMemberName(selectedMember)" />
                     <div *ngIf="!selectedMember.photo_url" class="avatar-placeholder-medium">
                       {{ getMemberInitials(selectedMember) }}
                     </div>
@@ -238,32 +233,17 @@
                   <div class="form-grid">
                     <div class="form-group">
                       <label>Name *</label>
-                      <input
-                        type="text"
-                        [(ngModel)]="guestName"
-                        placeholder="Guest name"
-                        class="form-input"
-                      />
+                      <input type="text" [(ngModel)]="guestName" placeholder="Guest name" class="form-input" />
                     </div>
 
                     <div class="form-group">
                       <label>Email *</label>
-                      <input
-                        type="email"
-                        [(ngModel)]="guestEmail"
-                        placeholder="guest@example.com"
-                        class="form-input"
-                      />
+                      <input type="email" [(ngModel)]="guestEmail" placeholder="guest@example.com" class="form-input" />
                     </div>
 
                     <div class="form-group">
                       <label>Phone</label>
-                      <input
-                        type="tel"
-                        [(ngModel)]="guestPhone"
-                        placeholder="+233 XX XXX XXXX"
-                        class="form-input"
-                      />
+                      <input type="tel" [(ngModel)]="guestPhone" placeholder="+233 XX XXX XXXX" class="form-input" />
                     </div>
                   </div>
                 </div>
@@ -271,19 +251,11 @@
                 <!-- Notes -->
                 <div class="form-group">
                   <label>Notes (Optional)</label>
-                  <textarea
-                    [(ngModel)]="registrationNotes"
-                    placeholder="Add any special notes or requirements..."
-                    rows="3"
-                    class="form-input"
-                  ></textarea>
+                  <textarea [(ngModel)]="registrationNotes" placeholder="Add any special notes or requirements..."
+                    rows="3" class="form-input"></textarea>
                 </div>
 
-                <button
-                  class="btn-submit"
-                  (click)="registerAttendee()"
-                  [disabled]="registering"
-                >
+                <button class="btn-submit" (click)="registerAttendee()" [disabled]="registering">
                   <span *ngIf="!registering">Register Attendee</span>
                   <span *ngIf="registering">
                     <i class="ri-loader-4-line spin"></i>
@@ -298,11 +270,8 @@
               <div *ngFor="let registration of registrations" class="registration-card">
                 <div class="registration-header">
                   <div class="attendee-avatar">
-                    <img
-                      *ngIf="registration.member?.photo_url"
-                      [src]="registration.member.photo_url"
-                      [alt]="getAttendeeName(registration)"
-                    />
+                    <img *ngIf="registration.member?.photo_url" [src]="registration.member.photo_url"
+                      [alt]="getAttendeeName(registration)" />
                     <div *ngIf="!registration.member?.photo_url" class="avatar-placeholder">
                       {{ getAttendeeInitials(registration) }}
                     </div>
@@ -314,11 +283,8 @@
                     </p>
                   </div>
                   <div class="registration-status">
-                    <span
-                      class="status-badge"
-                      [class.status-checked-in]="registration.checked_in"
-                      [class.status-confirmed]="!registration.checked_in && registration.status === 'confirmed'"
-                    >
+                    <span class="status-badge" [class.status-checked-in]="registration.checked_in"
+                      [class.status-confirmed]="!registration.checked_in && registration.status === 'confirmed'">
                       <i [class]="registration.checked_in ? 'ri-checkbox-circle-fill' : 'ri-time-line'"></i>
                       {{ registration.checked_in ? 'Checked In' : 'Registered' }}
                     </span>
@@ -350,18 +316,12 @@
                   </div>
 
                   <div class="registration-actions">
-                    <button
-                      *ngIf="!registration.checked_in"
-                      class="btn-action btn-checkin"
-                      (click)="checkInRegistration(registration.id)"
-                    >
+                    <button *ngIf="!registration.checked_in" class="btn-action btn-checkin"
+                      (click)="checkInRegistration(registration.id)">
                       <i class="ri-checkbox-circle-line"></i>
                       Check In
                     </button>
-                    <button
-                      class="btn-action btn-cancel"
-                      (click)="cancelRegistration(registration.id)"
-                    >
+                    <button class="btn-action btn-cancel" (click)="cancelRegistration(registration.id)">
                       <i class="ri-close-circle-line"></i>
                       Cancel
                     </button>

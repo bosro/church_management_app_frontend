@@ -1,36 +1,44 @@
 
-// src/app/features/sermons/components/create-sermon/create-sermon.component.ts
+// src/app/features/sermons/components/edit-sermon/edit-sermon.component.ts
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { SermonSeries, SermonsService } from '../../services/sermons';
+import { Sermon, SermonSeries, SermonsService } from '../../services/sermons';
 
 @Component({
-  selector: 'app-create-sermon',
+  selector: 'app-edit-sermon',
   standalone: false,
-  templateUrl: './create-sermon.html',
-  styleUrl: './create-sermon.scss',
+  templateUrl: './edit-sermon.html',
+  styleUrl: './edit-sermon.scss',
 })
-export class CreateSermon implements OnInit, OnDestroy {
+export class EditSermon implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
+  sermonId: string = '';
+  sermon: Sermon | null = null;
   sermonForm!: FormGroup;
   sermonSeries: SermonSeries[] = [];
   loading = false;
+  loadingSermon = true;
   errorMessage = '';
   successMessage = '';
 
   constructor(
     private fb: FormBuilder,
     private sermonsService: SermonsService,
-    private router: Router
+    private router: Router,
+    private route: ActivatedRoute
   ) {}
 
   ngOnInit(): void {
+    this.sermonId = this.route.snapshot.paramMap.get('id') || '';
     this.initForm();
     this.loadSermonSeries();
+    if (this.sermonId) {
+      this.loadSermon();
+    }
   }
 
   ngOnDestroy(): void {
@@ -68,6 +76,41 @@ export class CreateSermon implements OnInit, OnDestroy {
       });
   }
 
+  private loadSermon(): void {
+    this.loadingSermon = true;
+
+    this.sermonsService.getSermonById(this.sermonId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (sermon) => {
+          this.sermon = sermon;
+          this.populateForm(sermon);
+          this.loadingSermon = false;
+        },
+        error: (error) => {
+          this.errorMessage = error.message || 'Failed to load sermon';
+          this.loadingSermon = false;
+        }
+      });
+  }
+
+  private populateForm(sermon: Sermon): void {
+    this.sermonForm.patchValue({
+      title: sermon.title,
+      description: sermon.description,
+      preacher_name: sermon.preacher_name,
+      sermon_date: sermon.sermon_date,
+      series_name: sermon.series_name,
+      scripture_reference: sermon.scripture_reference,
+      audio_url: sermon.audio_url,
+      video_url: sermon.video_url,
+      notes_url: sermon.notes_url,
+      thumbnail_url: sermon.thumbnail_url,
+      duration: sermon.duration,
+      tags: sermon.tags ? sermon.tags.join(', ') : ''
+    });
+  }
+
   onSubmit(): void {
     if (this.sermonForm.invalid) {
       this.markFormGroupTouched(this.sermonForm);
@@ -85,18 +128,18 @@ export class CreateSermon implements OnInit, OnDestroy {
         : []
     };
 
-    this.sermonsService.createSermon(formData)
+    this.sermonsService.updateSermon(this.sermonId, formData)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
-          this.successMessage = 'Sermon uploaded successfully!';
+          this.successMessage = 'Sermon updated successfully!';
           setTimeout(() => {
             this.router.navigate(['/sermon']);
           }, 1500);
         },
         error: (error) => {
           this.loading = false;
-          this.errorMessage = error.message || 'Failed to upload sermon. Please try again.';
+          this.errorMessage = error.message || 'Failed to update sermon. Please try again.';
         }
       });
   }

@@ -1,0 +1,138 @@
+<!-- src/app/features/sermons/components/sermon-detail/sermon-detail.component.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+
+  <div class="dashboard-content">
+    <app-header></app-header>
+
+    <div class="dashboard-body">
+      <div class="sermon-detail-container">
+        <!-- Loading State -->
+        <div *ngIf="loading" class="loading-container">
+          <app-loading-spinner size="large" message="Loading sermon..."></app-loading-spinner>
+        </div>
+
+        <!-- Error State -->
+        <div *ngIf="errorMessage && !loading" class="error-state">
+          <i class="ri-error-warning-line"></i>
+          <h3>Failed to Load Sermon</h3>
+          <p>{{ errorMessage }}</p>
+          <button class="btn-primary" (click)="goBack()">
+            <i class="ri-arrow-left-line"></i>
+            Go Back
+          </button>
+        </div>
+
+        <!-- Sermon Content -->
+        <div *ngIf="sermon && !loading">
+          <!-- Header -->
+          <div class="sermon-header">
+            <button class="back-btn" (click)="goBack()">
+              <i class="ri-arrow-left-line"></i>
+              Back to Sermons
+            </button>
+            <button class="edit-btn" (click)="editSermon()">
+              <i class="ri-edit-line"></i>
+              Edit Sermon
+            </button>
+          </div>
+
+          <!-- Sermon Info Card -->
+          <div class="sermon-info-card">
+            <div class="sermon-meta">
+              <span class="sermon-date">
+                <i class="ri-calendar-line"></i>
+                {{ sermon.sermon_date | date:'MMMM d, y' }}
+              </span>
+              <span class="sermon-duration" *ngIf="sermon.duration">
+                <i class="ri-time-line"></i>
+                {{ formatDuration(sermon.duration) }}
+              </span>
+              <span class="sermon-views">
+                <i class="ri-eye-line"></i>
+                {{ sermon.view_count }} views
+              </span>
+              <span class="featured-badge" *ngIf="sermon.is_featured">
+                <i class="ri-star-fill"></i>
+                Featured
+              </span>
+            </div>
+
+            <h1>{{ sermon.title }}</h1>
+
+            <div class="preacher-info">
+              <div class="preacher-avatar">
+                <i class="ri-user-line"></i>
+              </div>
+              <div>
+                <p class="preacher-label">Preached by</p>
+                <p class="preacher-name">{{ sermon.preacher_name }}</p>
+              </div>
+            </div>
+
+            <div class="sermon-details-grid" *ngIf="sermon.series_name || sermon.scripture_reference">
+              <div class="detail-item" *ngIf="sermon.series_name">
+                <i class="ri-folder-line"></i>
+                <div>
+                  <p class="detail-label">Series</p>
+                  <p class="detail-value">{{ sermon.series_name }}</p>
+                </div>
+              </div>
+
+              <div class="detail-item" *ngIf="sermon.scripture_reference">
+                <i class="ri-book-open-line"></i>
+                <div>
+                  <p class="detail-label">Scripture</p>
+                  <p class="detail-value">{{ sermon.scripture_reference }}</p>
+                </div>
+              </div>
+            </div>
+
+            <p class="sermon-description" *ngIf="sermon.description">
+              {{ sermon.description }}
+            </p>
+
+            <!-- Tags -->
+            <div class="sermon-tags" *ngIf="sermon.tags && sermon.tags.length > 0">
+              <span class="tag" *ngFor="let tag of sermon.tags">{{ tag }}</span>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+              <button class="action-btn primary" *ngIf="sermon.audio_url" (click)="downloadAudio()">
+                <i class="ri-download-line"></i>
+                Download Audio
+              </button>
+              <button class="action-btn secondary" *ngIf="sermon.notes_url" (click)="downloadNotes()">
+                <i class="ri-file-text-line"></i>
+                View Notes
+              </button>
+            </div>
+          </div>
+
+          <!-- Video Player -->
+          <div class="video-container" *ngIf="safeVideoUrl">
+            <h3>Watch Sermon</h3>
+            <div class="video-wrapper">
+              <iframe
+                [src]="safeVideoUrl"
+                frameborder="0"
+                allowfullscreen
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              ></iframe>
+            </div>
+          </div>
+
+          <!-- Audio Player -->
+          <div class="audio-container" *ngIf="sermon.audio_url && !safeVideoUrl">
+            <h3>Listen to Sermon</h3>
+            <audio controls class="audio-player">
+              <source [src]="sermon.audio_url" type="audio/mpeg">
+              Your browser does not support the audio element.
+            </audio>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

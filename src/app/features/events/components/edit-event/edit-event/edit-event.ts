@@ -1,4 +1,11 @@
-import { Component } from '@angular/core';
+// src/app/features/events/components/edit-event/edit-event.component.ts
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { Router, ActivatedRoute } from '@angular/router';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
+import { EventsService } from '../../../services/events';
+import { EventCategory, Event } from '../../../../../models/event.model';
 
 @Component({
   selector: 'app-edit-event',
@@ -6,24 +13,7 @@ import { Component } from '@angular/core';
   templateUrl: './edit-event.html',
   styleUrl: './edit-event.scss',
 })
-export class EditEvent {
-
-}
-// src/app/features/events/components/edit-event/edit-event.component.ts
-import { Component, OnInit, OnDestroy } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Router, ActivatedRoute } from '@angular/router';
-import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
-import { EventsService } from '../../services/events.service';
-import { Event, EventType } from '../../../../models/event.model';
-
-@Component({
-  selector: 'app-edit-event',
-  templateUrl: './edit-event.component.html',
-  styleUrls: ['./edit-event.component.scss']
-})
-export class EditEventComponent implements OnInit, OnDestroy {
+export class EditEvent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   eventId: string = '';
@@ -34,21 +24,21 @@ export class EditEventComponent implements OnInit, OnDestroy {
   errorMessage = '';
   successMessage = '';
 
-  eventTypes: { value: EventType, label: string }[] = [
+ eventTypes: { value: EventCategory; label: string }[] = [
     { value: 'service', label: 'Service' },
     { value: 'meeting', label: 'Meeting' },
     { value: 'conference', label: 'Conference' },
     { value: 'retreat', label: 'Retreat' },
     { value: 'workshop', label: 'Workshop' },
     { value: 'social', label: 'Social' },
-    { value: 'other', label: 'Other' }
+    { value: 'other', label: 'Other' },
   ];
 
   constructor(
     private fb: FormBuilder,
     private eventsService: EventsService,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
   ) {}
 
   ngOnInit(): void {
@@ -77,14 +67,15 @@ export class EditEventComponent implements OnInit, OnDestroy {
       max_attendees: [''],
       registration_deadline: [''],
       requires_registration: [false],
-      is_public: [true]
+      is_public: [true],
     });
   }
 
   private loadEvent(): void {
     this.loadingEvent = true;
 
-    this.eventsService.getEventById(this.eventId)
+    this.eventsService
+      .getEventById(this.eventId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (event) => {
@@ -95,7 +86,7 @@ export class EditEventComponent implements OnInit, OnDestroy {
         error: (error) => {
           this.errorMessage = error.message || 'Failed to load event';
           this.loadingEvent = false;
-        }
+        },
       });
   }
 
@@ -106,13 +97,13 @@ export class EditEventComponent implements OnInit, OnDestroy {
       event_type: event.event_type,
       start_date: event.start_date,
       end_date: event.end_date,
-      start_time: event.start_time,
-      end_time: event.end_time,
+      start_time: event.start_date,
+      end_time: event.end_date,
       location: event.location,
       max_attendees: event.max_attendees,
       registration_deadline: event.registration_deadline,
       requires_registration: event.requires_registration,
-      is_public: event.is_public
+      is_public: event.is_public,
     });
   }
 
@@ -137,14 +128,17 @@ export class EditEventComponent implements OnInit, OnDestroy {
 
     const eventData = {
       ...this.eventForm.value,
-      max_attendees: this.eventForm.value.max_attendees ? parseInt(this.eventForm.value.max_attendees) : null,
+      max_attendees: this.eventForm.value.max_attendees
+        ? parseInt(this.eventForm.value.max_attendees)
+        : null,
       start_time: this.eventForm.value.start_time || null,
       end_time: this.eventForm.value.end_time || null,
       location: this.eventForm.value.location || null,
-      registration_deadline: this.eventForm.value.registration_deadline || null
+      registration_deadline: this.eventForm.value.registration_deadline || null,
     };
 
-    this.eventsService.updateEvent(this.eventId, eventData)
+    this.eventsService
+      .updateEvent(this.eventId, eventData)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
@@ -155,8 +149,9 @@ export class EditEventComponent implements OnInit, OnDestroy {
         },
         error: (error) => {
           this.loading = false;
-          this.errorMessage = error.message || 'Failed to update event. Please try again.';
-        }
+          this.errorMessage =
+            error.message || 'Failed to update event. Please try again.';
+        },
       });
   }
 
@@ -165,7 +160,7 @@ export class EditEventComponent implements OnInit, OnDestroy {
   }
 
   private markFormGroupTouched(formGroup: FormGroup): void {
-    Object.keys(formGroup.controls).forEach(key => {
+    Object.keys(formGroup.controls).forEach((key) => {
       const control = formGroup.get(key);
       control?.markAsTouched();
     });

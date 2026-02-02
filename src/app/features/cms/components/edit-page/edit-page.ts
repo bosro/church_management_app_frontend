@@ -1,4 +1,12 @@
-import { Component } from '@angular/core';
+
+// src/app/features/cms/components/edit-page/edit-page.component.ts
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { Router, ActivatedRoute } from '@angular/router';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
+import { CmsPage } from '../../../../models/cms.model';
+import { CmsService } from '../../services/cms';
 
 @Component({
   selector: 'app-edit-page',
@@ -6,24 +14,7 @@ import { Component } from '@angular/core';
   templateUrl: './edit-page.html',
   styleUrl: './edit-page.scss',
 })
-export class EditPage {
-
-}
-// src/app/features/cms/components/edit-page/edit-page.component.ts
-import { Component, OnInit, OnDestroy } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Router, ActivatedRoute } from '@angular/router';
-import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
-import { CmsService } from '../../services/cms.service';
-import { CmsPage } from '../../../../models/cms.model';
-
-@Component({
-  selector: 'app-edit-page',
-  templateUrl: './edit-page.component.html',
-  styleUrls: ['./edit-page.component.scss']
-})
-export class EditPageComponent implements OnInit, OnDestroy {
+export class EditPage implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   pageId: string = '';
