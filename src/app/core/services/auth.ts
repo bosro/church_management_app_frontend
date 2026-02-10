@@ -2,7 +2,7 @@
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { BehaviorSubject, Observable, from, of, throwError } from 'rxjs';
-import { map, catchError, tap, switchMap } from 'rxjs/operators';
+import { map, catchError, tap, switchMap, retry, delay } from 'rxjs/operators';
 import { User, AuthResponse, SignUpData } from '../../models/user.model';
 import { SupabaseService } from './supabase';
 import { Church } from '../../models/church.model';
@@ -35,13 +35,22 @@ export class AuthService {
   }
 
   private async loadUserProfile(userId: string) {
-    const { data, error } = await this.supabase.query<User>('profiles', {
-      filters: { id: userId },
-      select: '*',
-    });
+    try {
+      const { data, error } = await this.supabase.query<User>('profiles', {
+        filters: { id: userId },
+        select: '*',
+      });
 
-    if (data && data.length > 0) {
-      this.currentProfileSubject.next(data[0]);
+      if (error) {
+        console.error('Error loading user profile:', error);
+        return;
+      }
+
+      if (data && data.length > 0) {
+        this.currentProfileSubject.next(data[0]);
+      }
+    } catch (error) {
+      console.error('Failed to load user profile:', error);
     }
   }
 
@@ -77,7 +86,8 @@ export class AuthService {
       tap(() => this.loadingSubject.next(false)),
       catchError((error) => {
         this.loadingSubject.next(false);
-        throw error;
+        console.error('Sign in error:', error);
+        return throwError(() => new Error(error.message || 'Failed to sign in'));
       }),
     );
   }
@@ -142,7 +152,8 @@ export class AuthService {
       tap(() => this.loadingSubject.next(false)),
       catchError((error) => {
         this.loadingSubject.next(false);
-        throw error;
+        console.error('Sign up error:', error);
+        return throwError(() => new Error(error.message || 'Failed to sign up'));
       }),
     );
   }
@@ -156,14 +167,26 @@ export class AuthService {
           redirectTo: `${window.location.origin}/auth/callback`,
         },
       }),
+    ).pipe(
+      catchError((error) => {
+        console.error('Google sign in error:', error);
+        return throwError(() => new Error('Failed to sign in with Google'));
+      })
     );
   }
 
   // Sign Out
   async signOut(): Promise<void> {
-    await this.supabase.client.auth.signOut();
-    this.currentProfileSubject.next(null);
-    this.router.navigate(['/auth/signin']);
+    try {
+      await this.supabase.client.auth.signOut();
+      this.currentProfileSubject.next(null);
+      this.router.navigate(['/auth/signin']);
+    } catch (error) {
+      console.error('Sign out error:', error);
+      // Force navigation even if signOut fails
+      this.currentProfileSubject.next(null);
+      this.router.navigate(['/auth/signin']);
+    }
   }
 
   // Forgot Password
@@ -172,6 +195,11 @@ export class AuthService {
       this.supabase.client.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/auth/reset-password`,
       }),
+    ).pipe(
+      catchError((error) => {
+        console.error('Password reset error:', error);
+        return throwError(() => new Error('Failed to send password reset email'));
+      })
     );
   }
 
@@ -181,6 +209,11 @@ export class AuthService {
       this.supabase.client.auth.updateUser({
         password: newPassword,
       }),
+    ).pipe(
+      catchError((error) => {
+        console.error('Password update error:', error);
+        return throwError(() => new Error('Failed to update password'));
+      })
     );
   }
 
@@ -192,6 +225,11 @@ export class AuthService {
         token,
         type: 'signup',
       }),
+    ).pipe(
+      catchError((error) => {
+        console.error('OTP verification error:', error);
+        return throwError(() => new Error('Failed to verify OTP'));
+      })
     );
   }
 
@@ -202,6 +240,11 @@ export class AuthService {
         type: 'signup',
         email,
       }),
+    ).pipe(
+      catchError((error) => {
+        console.error('Resend OTP error:', error);
+        return throwError(() => new Error('Failed to resend OTP'));
+      })
     );
   }
 
@@ -227,7 +270,6 @@ export class AuthService {
 
   /**
    * Get current user ID
-   * Add this method to your existing AuthService
    */
   getUserId(): string {
     const user = this.getCurrentUser();
@@ -239,7 +281,6 @@ export class AuthService {
 
   /**
    * Reset password - send password reset email
-   * Add this method to your existing AuthService
    */
   resetPassword(email: string): Observable<void> {
     return from(
@@ -262,5 +303,18 @@ export class AuthService {
         );
       }),
     );
+  }
+
+  /**
+   * Clear auth lock and session issues
+   */
+  async clearAuthLock(): Promise<void> {
+    try {
+      await this.supabase.clearSession();
+      // Clear any stuck locks by reloading
+      window.location.reload();
+    } catch (error) {
+      console.error('Error clearing auth lock:', error);
+    }
   }
 }

@@ -8,23 +8,14 @@ import { EmailLogs } from './components/email-logs/email-logs/email-logs';
 import { SmsLogs } from './components/sms-logs/sms-logs/sms-logs';
 import { CommunicationsList } from './components/communications-list/communications-list/communications-list';
 
-
-
 @NgModule({
-  declarations: [
-    CommunicationsList,
-    CreateCommunication,
-    SmsLogs,
-    EmailLogs
-  ],
+  declarations: [CommunicationsList, CreateCommunication, SmsLogs, EmailLogs],
   imports: [
     CommonModule,
-      ReactiveFormsModule,
+    ReactiveFormsModule,
     FormsModule,
     SharedModule,
-    CommunicationsRoutingModule
-  ]
+    CommunicationsRoutingModule,
+  ],
 })
-
-
-export class CommunicationsModule { }
+export class CommunicationsModule {}

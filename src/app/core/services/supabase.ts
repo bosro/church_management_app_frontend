@@ -8,14 +8,38 @@ import { environment } from '../../environments/environment';
   providedIn: 'root',
 })
 export class SupabaseService {
-  private supabase: SupabaseClient;
+  // Custom lock function that bypasses Navigator Locks API
+  // This solves the Angular + Supabase lock conflict
+  private noOpLock = async (
+    name: string,
+    acquireTimeout: number,
+    fn: () => Promise<any>
+  ) => {
+    // Simply execute the function without acquiring any locks
+    return await fn();
+  };
+
+  private readonly supabase: SupabaseClient;
+
   private currentUserSubject: BehaviorSubject<User | null>;
   public currentUser$: Observable<User | null>;
+  private isInitialized = false;
 
   constructor() {
+    // Create client with custom lock bypass
     this.supabase = createClient(
       environment.supabaseUrl,
       environment.supabaseAnonKey,
+      {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true,
+          flowType: 'pkce',
+          // CRITICAL FIX: Use custom lock function that doesn't use Navigator Locks
+          lock: this.noOpLock,
+        }
+      }
     );
 
     this.currentUserSubject = new BehaviorSubject<User | null>(null);
@@ -25,16 +49,32 @@ export class SupabaseService {
     this.initializeAuthState();
   }
 
-  private async initializeAuthState() {
-    const {
-      data: { session },
-    } = await this.supabase.auth.getSession();
-    this.currentUserSubject.next(session?.user ?? null);
+  private async initializeAuthState(): Promise<void> {
+    if (this.isInitialized) return;
 
-    // Listen to auth changes
-    this.supabase.auth.onAuthStateChange((event, session) => {
+    // Small delay for good measure
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    try {
+      const { data: { session }, error } = await this.supabase.auth.getSession();
+
+      if (error) {
+        console.error('Error getting session:', error);
+      }
+
       this.currentUserSubject.next(session?.user ?? null);
-    });
+      this.isInitialized = true;
+
+      // Listen to auth changes
+      this.supabase.auth.onAuthStateChange((event, session) => {
+        console.log('Auth state changed:', event);
+        this.currentUserSubject.next(session?.user ?? null);
+      });
+    } catch (error) {
+      console.error('Failed to initialize auth state:', error);
+      this.currentUserSubject.next(null);
+      this.isInitialized = true;
+    }
   }
 
   get client(): SupabaseClient {
@@ -129,5 +169,27 @@ export class SupabaseService {
     return await this.supabase.functions.invoke(functionName, {
       body: body,
     });
+  }
+
+  async clearSession(): Promise<void> {
+    try {
+      await this.supabase.auth.signOut({ scope: 'local' });
+
+      // Clear storage
+      try {
+        const keys = Object.keys(localStorage);
+        keys.forEach(key => {
+          if (key.startsWith('sb-')) {
+            localStorage.removeItem(key);
+          }
+        });
+      } catch (error) {
+        console.warn('Could not clear storage:', error);
+      }
+
+      this.currentUserSubject.next(null);
+    } catch (error) {
+      console.error('Error clearing session:', error);
+    }
   }
 }
