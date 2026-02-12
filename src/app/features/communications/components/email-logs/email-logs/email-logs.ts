@@ -58,7 +58,7 @@ export class EmailLogs implements OnInit, OnDestroy {
   }
 
   goBack(): void {
-    this.router.navigate(['/communications']);
+    this.router.navigate(['main/communications']);
   }
 
   // Pagination

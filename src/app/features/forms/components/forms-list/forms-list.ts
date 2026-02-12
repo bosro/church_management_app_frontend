@@ -62,21 +62,21 @@ export class FormsList implements OnInit, OnDestroy {
 
   // Navigation
   createForm(): void {
-    this.router.navigate(['/forms/create']);
+    this.router.navigate(['main/forms/create']);
   }
 
   editForm(formId: string, event: Event): void {
     event.stopPropagation();
-    this.router.navigate(['/forms', formId, 'edit']);
+    this.router.navigate(['main/forms', formId, 'edit']);
   }
 
   viewSubmissions(formId: string): void {
-    this.router.navigate(['/forms', formId, 'submissions']);
+    this.router.navigate(['main/forms', formId, 'submissions']);
   }
 
   fillForm(formId: string, event: Event): void {
     event.stopPropagation();
-    this.router.navigate(['/forms', formId, 'fill']);
+    this.router.navigate(['main/forms', formId, 'fill']);
   }
 
   deleteForm(formId: string, event: Event): void {

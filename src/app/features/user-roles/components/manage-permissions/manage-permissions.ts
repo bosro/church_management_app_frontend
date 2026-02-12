@@ -200,7 +200,7 @@ export class ManagePermissions implements OnInit, OnDestroy {
 
   // Navigation
   goBack(): void {
-    this.router.navigate(['/user-roles']);
+    this.router.navigate(['main/user-roles']);
   }
 
   // Helper Methods

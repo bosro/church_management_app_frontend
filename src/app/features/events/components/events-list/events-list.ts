@@ -146,16 +146,16 @@ export class EventsList implements OnInit, OnDestroy {
 
   // Navigation
   viewEvent(eventId: string): void {
-    this.router.navigate(['/events', eventId]);
+    this.router.navigate(['main/events', eventId]);
   }
 
   createEvent(): void {
-    this.router.navigate(['/events/create']);
+    this.router.navigate(['main/events/create']);
   }
 
   editEvent(eventId: string, event: MouseEvent): void {
     event.stopPropagation();
-    this.router.navigate(['/events', eventId, 'edit']);
+    this.router.navigate(['main/events', eventId, 'edit']);
   }
 
   deleteEvent(eventId: string, event: MouseEvent): void {

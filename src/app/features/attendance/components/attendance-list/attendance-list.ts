@@ -95,24 +95,24 @@ export class AttendanceList implements OnInit, OnDestroy {
 
   // Navigation
   viewEvent(eventId: string): void {
-    this.router.navigate(['/attendance', eventId]);
+    this.router.navigate(['main/attendance', eventId]);
   }
 
   createEvent(): void {
-    this.router.navigate(['/attendance/create']);
+    this.router.navigate(['main/attendance/create']);
   }
 
   markAttendance(eventId: string, event: Event): void {
     event.stopPropagation();
-    this.router.navigate(['/attendance', eventId, 'mark']);
+    this.router.navigate(['main/attendance', eventId, 'mark']);
   }
 
   viewReports(): void {
-    this.router.navigate(['/attendance/reports']);
+    this.router.navigate(['main/attendance/reports']);
   }
 
   viewVisitors(): void {
-    this.router.navigate(['/attendance/visitors']);
+    this.router.navigate(['main/attendance/visitors']);
   }
 
   // Pagination

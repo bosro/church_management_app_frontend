@@ -144,7 +144,7 @@ export class EditEvent implements OnInit, OnDestroy {
         next: () => {
           this.successMessage = 'Event updated successfully!';
           setTimeout(() => {
-            this.router.navigate(['/events', this.eventId]);
+            this.router.navigate(['main/events', this.eventId]);
           }, 1500);
         },
         error: (error) => {
@@ -156,7 +156,7 @@ export class EditEvent implements OnInit, OnDestroy {
   }
 
   cancel(): void {
-    this.router.navigate(['/events', this.eventId]);
+    this.router.navigate(['main/events', this.eventId]);
   }
 
   private markFormGroupTouched(formGroup: FormGroup): void {

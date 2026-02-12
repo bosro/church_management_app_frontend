@@ -112,6 +112,41 @@
           background: #FEF2F2;
         }
       }
+
+      // Password wrapper with toggle button
+      &.password-wrapper {
+        input {
+          padding-right: 3rem; // Make room for toggle button
+        }
+
+        .toggle-password {
+          position: absolute;
+          right: 1rem;
+          background: transparent;
+          border: none;
+          cursor: pointer;
+          padding: 0.25rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #9CA3AF;
+          transition: color 0.2s;
+          z-index: 2;
+
+          i {
+            font-size: 1.125rem;
+          }
+
+          &:hover {
+            color: #5B21B6;
+          }
+
+          &:focus {
+            outline: none;
+            color: #5B21B6;
+          }
+        }
+      }
     }
 
     .error-message {

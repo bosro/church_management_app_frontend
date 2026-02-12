@@ -107,7 +107,7 @@ export class EditMinistry implements OnInit, OnDestroy {
         next: () => {
           this.successMessage = 'Ministry updated successfully!';
           setTimeout(() => {
-            this.router.navigate(['/ministries', this.ministryId]);
+            this.router.navigate(['main/ministries', this.ministryId]);
           }, 1500);
         },
         error: (error) => {
@@ -118,7 +118,7 @@ export class EditMinistry implements OnInit, OnDestroy {
   }
 
   cancel(): void {
-    this.router.navigate(['/ministries', this.ministryId]);
+    this.router.navigate(['main/ministries', this.ministryId]);
   }
 
   private markFormGroupTouched(formGroup: FormGroup): void {

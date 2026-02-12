@@ -1,0 +1,56 @@
+Admin123!
+
+
+DO $$
+DECLARE
+  admin_user_id UUID := 'f37f3a79-3f21-4e08-94bf-3a6128d0fe39'; -- ⚠️ PASTE USER ID HERE!
+  admin_church_id UUID;
+BEGIN
+  -- Get the existing church ID
+  SELECT id INTO admin_church_id
+  FROM churches
+  WHERE slug = 'main-church';
+
+  IF admin_church_id IS NULL THEN
+    RAISE EXCEPTION 'Church not found! Run Step 2 first.';
+  END IF;
+
+  RAISE NOTICE 'Found church ID: %', admin_church_id;
+
+  -- Update profile to super admin
+  UPDATE profiles SET
+    role = 'super_admin',
+    church_id = admin_church_id,
+    approval_status = 'approved',
+    is_active = true,
+    approved_at = NOW(),
+    approved_by = admin_user_id,
+    full_name = 'Super Admin'
+  WHERE id = admin_user_id;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'User profile not found! Did you create the user in Supabase Dashboard?';
+  END IF;
+
+  RAISE NOTICE 'Profile updated successfully!';
+
+  -- Create default giving categories
+  PERFORM create_default_giving_categories(admin_church_id);
+
+  RAISE NOTICE '';
+  RAISE NOTICE '================================================';
+  RAISE NOTICE '✅ ADMIN SETUP COMPLETE!';
+  RAISE NOTICE '================================================';
+  RAISE NOTICE '';
+  RAISE NOTICE 'Login Credentials:';
+  RAISE NOTICE '  Email: admin@yourchurch.com';
+  RAISE NOTICE '  Password: Admin123!';
+  RAISE NOTICE '';
+  RAISE NOTICE 'You can now:';
+  RAISE NOTICE '  1. Login at: http://localhost:4200/auth/signin';
+  RAISE NOTICE '  2. Approve signup requests';
+  RAISE NOTICE '  3. Manage your church';
+  RAISE NOTICE '';
+  RAISE NOTICE '================================================';
+
+END $$;

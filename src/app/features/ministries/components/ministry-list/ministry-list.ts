@@ -77,16 +77,16 @@ export class MinistryList implements OnInit, OnDestroy {
 
   // Navigation
   viewMinistry(ministryId: string): void {
-    this.router.navigate(['/ministries', ministryId]);
+    this.router.navigate(['main/ministries', ministryId]);
   }
 
   createMinistry(): void {
-    this.router.navigate(['/ministries/create']);
+    this.router.navigate(['main/ministries/create']);
   }
 
   editMinistry(ministryId: string, event: Event): void {
     event.stopPropagation();
-    this.router.navigate(['/ministries', ministryId, 'edit']);
+    this.router.navigate(['main/ministries', ministryId, 'edit']);
   }
 
   deleteMinistry(ministryId: string, event: Event): void {

@@ -150,7 +150,7 @@ export class CreatePledge implements OnInit, OnDestroy {
         next: () => {
           this.successMessage = 'Pledge created successfully!';
           setTimeout(() => {
-            this.router.navigate(['/finance/pledges']);
+            this.router.navigate(['main/finance/pledges']);
           }, 1500);
         },
         error: (error) => {
@@ -161,7 +161,7 @@ export class CreatePledge implements OnInit, OnDestroy {
   }
 
   cancel(): void {
-    this.router.navigate(['/finance/pledges']);
+    this.router.navigate(['main/finance/pledges']);
   }
 
   private markFormGroupTouched(formGroup: FormGroup): void {

@@ -92,20 +92,20 @@ export class SermonsList implements OnInit, OnDestroy {
 
   // Navigation
   createSermon(): void {
-    this.router.navigate(['/sermon/create']);
+    this.router.navigate(['main/sermon/create']);
   }
 
   viewSermon(sermonId: string): void {
-    this.router.navigate(['/sermon', sermonId]);
+    this.router.navigate(['main/sermon', sermonId]);
   }
 
   editSermon(sermonId: string, event: Event): void {
     event.stopPropagation();
-    this.router.navigate(['/sermon', sermonId, 'edit']);
+    this.router.navigate(['main/sermon', sermonId, 'edit']);
   }
 
   manageSeries(): void {
-    this.router.navigate(['/sermon/series']);
+    this.router.navigate(['main/sermon/series']);
   }
 
   // Filters

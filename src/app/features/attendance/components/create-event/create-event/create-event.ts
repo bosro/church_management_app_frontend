@@ -79,7 +79,7 @@ export class CreateEvent implements OnInit, OnDestroy {
         next: (event) => {
           this.successMessage = 'Event created successfully!';
           setTimeout(() => {
-            this.router.navigate(['/attendance', event.id]);
+            this.router.navigate(['main/attendance', event.id]);
           }, 1500);
         },
         error: (error) => {
@@ -90,7 +90,7 @@ export class CreateEvent implements OnInit, OnDestroy {
   }
 
   cancel(): void {
-    this.router.navigate(['/attendance']);
+    this.router.navigate(['main/attendance']);
   }
 
   private markFormGroupTouched(formGroup: FormGroup): void {

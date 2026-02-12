@@ -9,7 +9,7 @@ const routes: Routes = [
   // Default: redirect to auth
   {
     path: '',
-    redirectTo: 'auth',
+    redirectTo: 'main',
     pathMatch: 'full'
   },
   // Auth routes (login, signup, etc.)
@@ -27,7 +27,7 @@ const routes: Routes = [
   // Catch-all: redirect to auth instead of creating a loop
   {
     path: '**',
-    redirectTo: 'auth'
+    redirectTo: 'main'
   },
 ];
 

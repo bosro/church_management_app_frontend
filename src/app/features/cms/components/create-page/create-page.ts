@@ -60,7 +60,7 @@ export class CreatePage implements OnInit, OnDestroy {
         next: () => {
           this.successMessage = 'Page created successfully!';
           setTimeout(() => {
-            this.router.navigate(['/cms/pages']);
+            this.router.navigate(['main/cms/pages']);
           }, 1500);
         },
         error: (error) => {
@@ -71,7 +71,7 @@ export class CreatePage implements OnInit, OnDestroy {
   }
 
   cancel(): void {
-    this.router.navigate(['/cms/pages']);
+    this.router.navigate(['main/cms/pages']);
   }
 
   private markFormGroupTouched(formGroup: FormGroup): void {

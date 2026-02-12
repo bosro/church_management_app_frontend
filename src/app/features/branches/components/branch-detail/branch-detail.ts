@@ -112,11 +112,11 @@ export class BranchDetail implements OnInit, OnDestroy {
 
   // Navigation
   goBack(): void {
-    this.router.navigate(['/branches']);
+    this.router.navigate(['main/branches']);
   }
 
   editBranch(): void {
-    this.router.navigate(['/branches', this.branchId, 'edit']);
+    this.router.navigate(['main/branches', this.branchId, 'edit']);
   }
 
   // Member Assignment

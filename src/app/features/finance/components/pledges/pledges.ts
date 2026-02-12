@@ -59,7 +59,7 @@ export class Pledges implements OnInit, OnDestroy {
   }
 
   createPledge(): void {
-    this.router.navigate(['/finance/pledges/create']);
+    this.router.navigate(['main/finance/pledges/create']);
   }
 
   deletePledge(pledgeId: string, event: Event): void {

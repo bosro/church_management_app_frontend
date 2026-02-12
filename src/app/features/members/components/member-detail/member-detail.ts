@@ -59,12 +59,12 @@ export class MemberDetail implements OnInit, OnDestroy {
   }
 
   goBack(): void {
-    this.router.navigate(['/members']);
+    this.router.navigate(['main/members']);
   }
 
   editMember(): void {
     if (this.member) {
-      this.router.navigate(['/members', this.member.id, 'edit']);
+      this.router.navigate(['main/members', this.member.id, 'edit']);
     }
   }
 
@@ -76,7 +76,7 @@ export class MemberDetail implements OnInit, OnDestroy {
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: () => {
-            this.router.navigate(['/members']);
+            this.router.navigate(['main/members']);
           },
           error: (error) => {
             this.errorMessage = error.message || 'Failed to delete member';

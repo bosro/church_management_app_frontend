@@ -183,7 +183,7 @@ export class CreateForm implements OnInit, OnDestroy {
         next: () => {
           this.successMessage = 'Form created successfully!';
           setTimeout(() => {
-            this.router.navigate(['/forms']);
+            this.router.navigate(['main/forms']);
           }, 1500);
         },
         error: (error) => {
@@ -194,7 +194,7 @@ export class CreateForm implements OnInit, OnDestroy {
   }
 
   cancel(): void {
-    this.router.navigate(['/forms']);
+    this.router.navigate(['main/forms']);
   }
 
   // Helper Methods

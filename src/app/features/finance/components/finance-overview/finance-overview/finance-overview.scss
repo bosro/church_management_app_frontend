@@ -1,4 +1,23 @@
 // src/app/features/finance/components/finance-overview/finance-overview.component.scss
+.dashboard-layout {
+  display: flex;
+  min-height: 100vh;
+  background: #F9FAFB;
+}
+
+.dashboard-content {
+  flex: 1;
+  margin-left: 260px;
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-body {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+}
+
 .finance-container {
   max-width: 1600px;
   margin: 0 auto;

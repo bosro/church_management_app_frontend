@@ -38,15 +38,23 @@
       <!-- Password -->
       <div class="form-group">
         <label for="password">Password</label>
-        <div class="input-wrapper">
+        <div class="input-wrapper password-wrapper">
           <i class="ri-lock-line input-icon"></i>
           <input
             id="password"
-            type="password"
+            [type]="showPassword ? 'text' : 'password'"
             formControlName="password"
             placeholder="Start typing..."
             [class.error]="signinForm.get('password')?.invalid && signinForm.get('password')?.touched"
           />
+          <button
+            type="button"
+            class="toggle-password"
+            (click)="togglePasswordVisibility()"
+            tabindex="-1"
+          >
+            <i [class]="showPassword ? 'ri-eye-off-line' : 'ri-eye-line'"></i>
+          </button>
         </div>
         <span
           *ngIf="signinForm.get('password')?.invalid && signinForm.get('password')?.touched"

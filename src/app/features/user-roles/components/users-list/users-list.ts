@@ -61,11 +61,11 @@ export class UsersList implements OnInit, OnDestroy {
 
   // Navigation
   managePermissions(userId: string): void {
-    this.router.navigate(['/user-roles', userId, 'permissions']);
+    this.router.navigate(['main/user-roles', userId, 'permissions']);
   }
 
   viewRoleTemplates(): void {
-    this.router.navigate(['/user-roles/templates']);
+    this.router.navigate(['main/user-roles/templates']);
   }
 
   // Pagination

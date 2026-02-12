@@ -1,4 +1,23 @@
 // src/app/features/dashboard/components/revenue-chart/revenue-chart.component.scss
+.dashboard-layout {
+  display: flex;
+  min-height: 100vh;
+  background: #F9FAFB;
+}
+
+.dashboard-content {
+  flex: 1;
+  margin-left: 260px;
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-body {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+}
+
 .revenue-chart-card {
   background: white;
   border-radius: 12px;

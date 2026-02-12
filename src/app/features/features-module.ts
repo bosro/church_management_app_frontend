@@ -51,7 +51,7 @@ const routes: Routes = [
           ),
       },
 
-      {
+      { 
         path: 'branches',
         loadChildren: () =>
           import('./branches/branches-module').then((m) => m.BranchesModule),

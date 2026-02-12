@@ -107,7 +107,7 @@ export class EditBranch implements OnInit, OnDestroy {
         next: () => {
           this.successMessage = 'Branch updated successfully!';
           setTimeout(() => {
-            this.router.navigate(['/branches']);
+            this.router.navigate(['main/branches']);
           }, 1500);
         },
         error: (error) => {
@@ -118,7 +118,7 @@ export class EditBranch implements OnInit, OnDestroy {
   }
 
   cancel(): void {
-    this.router.navigate(['/branches']);
+    this.router.navigate(['main/branches']);
   }
 
   private markFormGroupTouched(formGroup: FormGroup): void {

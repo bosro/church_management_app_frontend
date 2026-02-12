@@ -112,7 +112,7 @@ export class CreateCommunication implements OnInit, OnDestroy {
             this.sendCommunication(communication.id);
           } else {
             setTimeout(() => {
-              this.router.navigate(['/communications']);
+              this.router.navigate(['main/communications']);
             }, 1500);
           }
         },
@@ -130,7 +130,7 @@ export class CreateCommunication implements OnInit, OnDestroy {
         next: () => {
           this.successMessage = 'Communication sent successfully!';
           setTimeout(() => {
-            this.router.navigate(['/communications']);
+            this.router.navigate(['main/communications']);
           }, 1500);
         },
         error: (error) => {
@@ -141,7 +141,7 @@ export class CreateCommunication implements OnInit, OnDestroy {
   }
 
   cancel(): void {
-    this.router.navigate(['/communications']);
+    this.router.navigate(['main/communications']);
   }
 
   private markFormGroupTouched(formGroup: FormGroup): void {

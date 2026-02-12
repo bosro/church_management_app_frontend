@@ -1,4 +1,23 @@
 // src/app/features/forms/components/fill-form/fill-form.component.scss
+.dashboard-layout {
+  display: flex;
+  min-height: 100vh;
+  background: #F9FAFB;
+}
+
+.dashboard-content {
+  flex: 1;
+  margin-left: 260px;
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-body {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+}
+
 .fill-form-container {
   max-width: 800px;
   margin: 0 auto;

@@ -293,11 +293,11 @@ export class MinistryDetail implements OnInit, OnDestroy {
 
   // Navigation
   goBack(): void {
-    this.router.navigate(['/ministries']);
+    this.router.navigate(['main/ministries']);
   }
 
   editMinistry(): void {
-    this.router.navigate(['/ministries', this.ministryId, 'edit']);
+    this.router.navigate(['main/ministries', this.ministryId, 'edit']);
   }
 
   deleteMinistry(): void {

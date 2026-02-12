@@ -109,7 +109,7 @@ export class EditBlog implements OnInit, OnDestroy {
         next: () => {
           this.successMessage = 'Blog post updated successfully!';
           setTimeout(() => {
-            this.router.navigate(['/cms/blog']);
+            this.router.navigate(['main/cms/blog']);
           }, 1500);
         },
         error: (error) => {
@@ -120,7 +120,7 @@ export class EditBlog implements OnInit, OnDestroy {
   }
 
   cancel(): void {
-    this.router.navigate(['/cms/blog']);
+    this.router.navigate(['main/cms/blog']);
   }
 
   private markFormGroupTouched(formGroup: FormGroup): void {

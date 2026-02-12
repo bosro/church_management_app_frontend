@@ -61,16 +61,16 @@ export class PagesList implements OnInit, OnDestroy {
 
   // Navigation
   createPage(): void {
-    this.router.navigate(['/cms/pages/create']);
+    this.router.navigate(['main/cms/pages/create']);
   }
 
   editPage(pageId: string, event: Event): void {
     event.stopPropagation();
-    this.router.navigate(['/cms/pages', pageId, 'edit']);
+    this.router.navigate(['main/cms/pages', pageId, 'edit']);
   }
 
   goBack(): void {
-    this.router.navigate(['/cms']);
+    this.router.navigate(['main/cms']);
   }
 
   // Actions

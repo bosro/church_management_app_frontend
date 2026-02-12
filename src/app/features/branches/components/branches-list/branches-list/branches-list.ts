@@ -77,16 +77,16 @@ export class BranchesList implements OnInit, OnDestroy {
 
   // Navigation
   createBranch(): void {
-    this.router.navigate(['/branches/create']);
+    this.router.navigate(['main/branches/create']);
   }
 
   viewBranch(branchId: string): void {
-    this.router.navigate(['/branches', branchId]);
+    this.router.navigate(['main/branches', branchId]);
   }
 
   editBranch(branchId: string, event: Event): void {
     event.stopPropagation();
-    this.router.navigate(['/branches', branchId, 'edit']);
+    this.router.navigate(['main/branches', branchId, 'edit']);
   }
 
   deleteBranch(branchId: string, event: Event): void {

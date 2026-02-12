@@ -39,12 +39,12 @@ export class Header implements OnInit {
   }
 
   navigateToProfile(): void {
-    this.router.navigate(['/settings/profile']);
+    this.router.navigate(['main/settings/profile']);
     this.showUserMenu = false;
   }
 
   navigateToSettings(): void {
-    this.router.navigate(['/settings']);
+    this.router.navigate(['main/settings']);
     this.showUserMenu = false;
   }
 

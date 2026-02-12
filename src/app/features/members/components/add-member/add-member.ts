@@ -195,12 +195,12 @@ export class AddMember implements OnInit, OnDestroy {
   private showSuccessAndRedirect(memberId: string): void {
     this.successMessage = 'Member added successfully!';
     setTimeout(() => {
-      this.router.navigate(['/members', memberId]);
+      this.router.navigate(['main/members', memberId]);
     }, 1500);
   }
 
   cancel(): void {
-    this.router.navigate(['/members']);
+    this.router.navigate(['main/members']);
   }
 
   private markFormGroupTouched(formGroup: FormGroup): void {

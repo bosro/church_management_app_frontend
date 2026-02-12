@@ -84,7 +84,7 @@ export class AddMinistry implements OnInit, OnDestroy {
         next: () => {
           this.successMessage = 'Ministry created successfully!';
           setTimeout(() => {
-            this.router.navigate(['/ministries']);
+            this.router.navigate(['main/ministries']);
           }, 1500);
         },
         error: (error) => {
@@ -95,7 +95,7 @@ export class AddMinistry implements OnInit, OnDestroy {
   }
 
   cancel(): void {
-    this.router.navigate(['/ministries']);
+    this.router.navigate(['main/ministries']);
   }
 
   private markFormGroupTouched(formGroup: FormGroup): void {

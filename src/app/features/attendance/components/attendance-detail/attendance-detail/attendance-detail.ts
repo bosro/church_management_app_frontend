@@ -73,11 +73,11 @@ export class AttendanceDetail implements OnInit, OnDestroy {
   }
 
   goBack(): void {
-    this.router.navigate(['/attendance']);
+    this.router.navigate(['main/attendance']);
   }
 
   markAttendance(): void {
-    this.router.navigate(['/attendance', this.eventId, 'mark']);
+    this.router.navigate(['main/attendance', this.eventId, 'mark']);
   }
 
   exportReport(): void {
@@ -107,7 +107,7 @@ export class AttendanceDetail implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
-          this.router.navigate(['/attendance']);
+          this.router.navigate(['main/attendance']);
         },
         error: (error) => {
           this.errorMessage = error.message || 'Failed to delete event';

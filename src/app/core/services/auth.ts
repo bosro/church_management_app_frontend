@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { BehaviorSubject, Observable, from, of, throwError } from 'rxjs';
 import { map, catchError, tap, switchMap, retry, delay } from 'rxjs/operators';
-import { User, AuthResponse, SignUpData } from '../../models/user.model';
+import { User, AuthResponse, SignUpData, SignupRequest } from '../../models/user.model';
 import { SupabaseService } from './supabase';
 import { Church } from '../../models/church.model';
 
@@ -78,8 +78,31 @@ export class AuthService {
           select: '*',
         });
 
+        if (!profile || profile.length === 0) {
+          throw new Error('Profile not found');
+        }
+
+        // Check approval status - with null/undefined safety
+        const approvalStatus = profile[0].approval_status || 'pending';
+
+        if (approvalStatus === 'pending') {
+          // Sign out the user
+          await this.supabase.client.auth.signOut();
+          throw new Error('Your account is pending admin approval. Please wait for approval email.');
+        }
+
+        if (approvalStatus === 'rejected') {
+          await this.supabase.client.auth.signOut();
+          throw new Error('Your signup request was not approved. Please contact support.');
+        }
+
+        if (!profile[0].is_active) {
+          await this.supabase.client.auth.signOut();
+          throw new Error('Your account is inactive. Please contact support.');
+        }
+
         return {
-          user: profile![0],
+          user: profile[0],
           session: data.session,
         };
       }),
@@ -92,7 +115,7 @@ export class AuthService {
     );
   }
 
-  // Sign Up
+  // Sign Up - With Approval System
   signUp(signUpData: SignUpData): Observable<any> {
     this.loadingSubject.next(true);
 
@@ -101,59 +124,111 @@ export class AuthService {
         email: signUpData.email,
         password: signUpData.password,
         options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
           data: {
             full_name: signUpData.full_name,
-            role: 'church_admin', // First user becomes admin
           },
         },
       }),
     ).pipe(
       switchMap(async ({ data, error }) => {
-        if (error) throw error;
-
-        // Create church
-        const churchSlug = signUpData.church_name
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, '-')
-          .replace(/^-|-$/g, '');
-
-        const { data: church, error: churchError } =
-          await this.supabase.insert<Church>('churches', {
-            name: signUpData.church_name,
-            slug: churchSlug,
-            city: signUpData.church_location,
-            country: 'Ghana',
-            primary_color: '#5B21B6',
-            secondary_color: '#DB2777',
-            timezone: 'Africa/Accra',
-            currency: 'GHS',
-            is_active: true,
-            subscription_tier: 'free',
-          });
-
-        if (churchError) throw churchError;
-
-        // Update profile with church_id
-        if (data.user) {
-          await this.supabase.update('profiles', data.user.id, {
-            church_id: church![0].id,
-            phone_number: signUpData.phone,
-            role: 'church_admin',
-          });
-
-          // Create default giving categories
-          await this.supabase.callFunction('create_default_giving_categories', {
-            church_uuid: church![0].id,
-          });
+        if (error) {
+          console.error('Auth signup error:', error);
+          throw error;
         }
 
-        return data;
+        if (!data.user) {
+          throw new Error('User creation failed');
+        }
+
+        console.log('User created successfully:', data.user.id);
+
+        // Wait for profile creation trigger
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        try {
+          // Create signup request record with proper typing
+          const { data: signupRequest, error: requestError } = await this.supabase.insert<SignupRequest>('signup_requests', {
+            user_id: data.user.id,
+            full_name: signUpData.full_name,
+            email: signUpData.email,
+            phone: signUpData.phone,
+            position: signUpData.position,
+            church_name: signUpData.church_name,
+            church_location: signUpData.church_location,
+            church_size: signUpData.church_size,
+            how_heard: signUpData.how_heard,
+            status: 'pending',
+          });
+
+          if (requestError) {
+            console.error('Signup request creation error:', requestError);
+            throw requestError;
+          }
+
+          if (!signupRequest || signupRequest.length === 0) {
+            throw new Error('Failed to create signup request');
+          }
+
+          console.log('Signup request created:', signupRequest[0]);
+
+          // Send notification to admins via edge function
+          try {
+            const { data: notifyData, error: notifyError } = await this.supabase.invokeEdgeFunction('notify-admin-signup', {
+              full_name: signUpData.full_name,
+              email: signUpData.email,
+              phone: signUpData.phone,
+              church_name: signUpData.church_name,
+              church_location: signUpData.church_location,
+              position: signUpData.position,
+              church_size: signUpData.church_size,
+              how_heard: signUpData.how_heard,
+              request_id: signupRequest[0].id,
+            });
+
+            if (notifyError) {
+              console.warn('Failed to send admin notification:', notifyError);
+            } else {
+              console.log('Admin notification sent:', notifyData);
+            }
+          } catch (notifyError) {
+            console.warn('Failed to send admin notification:', notifyError);
+            // Don't throw - signup still succeeded
+          }
+
+          return {
+            ...data,
+            pendingApproval: true,
+            message: 'Signup request submitted. An admin will review your request and you will receive an email notification.'
+          };
+
+        } catch (postSignupError) {
+          console.error('Post-signup process error:', postSignupError);
+          return {
+            ...data,
+            pendingApproval: true,
+            message: 'Account created. Awaiting admin approval.'
+          };
+        }
       }),
       tap(() => this.loadingSubject.next(false)),
       catchError((error) => {
         this.loadingSubject.next(false);
         console.error('Sign up error:', error);
-        return throwError(() => new Error(error.message || 'Failed to sign up'));
+
+        let errorMessage = 'Failed to sign up';
+
+        if (error.message?.includes('User already registered')) {
+          errorMessage = 'This email is already registered';
+        } else if (error.message?.includes('Database error')) {
+          errorMessage = 'Registration error. Please try again.';
+        } else if (error.message?.includes('Invalid email')) {
+          errorMessage = 'Please provide a valid email address';
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+
+        return throwError(() => new Error(errorMessage));
       }),
     );
   }
@@ -316,5 +391,63 @@ export class AuthService {
     } catch (error) {
       console.error('Error clearing auth lock:', error);
     }
+  }
+
+  /**
+   * Admin: Approve signup request
+   */
+  approveSignupRequest(requestId: string, churchId?: string): Observable<any> {
+    return from(
+      this.supabase.callFunction('approve_signup_request', {
+        request_id: requestId,
+        admin_id: this.getUserId(),
+        assign_church_id: churchId || null,
+      })
+    ).pipe(
+      catchError((error) => {
+        console.error('Approve request error:', error);
+        return throwError(() => new Error('Failed to approve signup request'));
+      })
+    );
+  }
+
+  /**
+   * Admin: Reject signup request
+   */
+  rejectSignupRequest(requestId: string, reason?: string): Observable<any> {
+    return from(
+      this.supabase.callFunction('reject_signup_request', {
+        request_id: requestId,
+        admin_id: this.getUserId(),
+        reason: reason || null,
+      })
+    ).pipe(
+      catchError((error) => {
+        console.error('Reject request error:', error);
+        return throwError(() => new Error('Failed to reject signup request'));
+      })
+    );
+  }
+
+  /**
+   * Admin: Get pending signup requests
+   */
+  getPendingSignupRequests(): Observable<SignupRequest[]> {
+    return from(
+      this.supabase.query<SignupRequest>('signup_requests', {
+        filters: { status: 'pending' },
+        select: '*',
+        order: { column: 'created_at', ascending: false },
+      })
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw error;
+        return data || [];
+      }),
+      catchError((error) => {
+        console.error('Get signup requests error:', error);
+        return throwError(() => new Error('Failed to load signup requests'));
+      })
+    );
   }
 }

@@ -22,16 +22,16 @@ interface MenuItem {
 export class Sidebar implements OnInit {
   currentUser: User | null = null;
   menuItems: MenuItem[] = [
-    { icon: 'ri-pie-chart-line', label: 'Overview', route: '/dashboard', active: true },
-    { icon: 'ri-group-line', label: 'Members', route: '/members', active: false },
-    { icon: 'ri-calendar-check-line', label: 'Attendance', route: '/attendance', active: false },
-    { icon: 'ri-money-dollar-circle-line', label: 'Finance', route: '/finance', active: false },
-    { icon: 'ri-team-line', label: 'Departments', route: '/ministries', active: false },
-    { icon: 'ri-building-line', label: 'Branches', route: '/branches', active: false },
-    { icon: 'ri-calendar-event-line', label: 'Events', route: '/events', active: false },
-    { icon: 'ri-chat-3-line', label: 'Communication', route: '/communication', active: false },
-    { icon: 'ri-admin-line', label: 'User Roles', route: '/user-roles', active: false },
-    { icon: 'ri-settings-3-line', label: 'Settings', route: '/settings', active: false }
+    { icon: 'ri-pie-chart-line', label: 'Overview', route: 'main/dashboard', active: true },
+    { icon: 'ri-group-line', label: 'Members', route: 'main/members', active: false },
+    { icon: 'ri-calendar-check-line', label: 'Attendance', route: 'main/attendance', active: false },
+    { icon: 'ri-money-dollar-circle-line', label: 'Finance', route: 'main/finance', active: false },
+    { icon: 'ri-team-line', label: 'Departments', route: 'main/ministries', active: false },
+    { icon: 'ri-building-line', label: 'Branches', route: 'main/branches', active: false },
+    { icon: 'ri-calendar-event-line', label: 'Events', route: 'main/events', active: false },
+    { icon: 'ri-chat-3-line', label: 'Communication', route: 'main/communications', active: false },
+    { icon: 'ri-admin-line', label: 'User Roles', route: 'main/user-roles', active: false },
+    { icon: 'ri-settings-3-line', label: 'Settings', route: 'main/settings', active: false }
   ];
 
   constructor(

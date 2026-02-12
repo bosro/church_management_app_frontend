@@ -97,7 +97,7 @@ export class EditPage implements OnInit, OnDestroy {
         next: () => {
           this.successMessage = 'Page updated successfully!';
           setTimeout(() => {
-            this.router.navigate(['/cms/pages']);
+            this.router.navigate(['main/cms/pages']);
           }, 1500);
         },
         error: (error) => {
@@ -108,7 +108,7 @@ export class EditPage implements OnInit, OnDestroy {
   }
 
   cancel(): void {
-    this.router.navigate(['/cms/pages']);
+    this.router.navigate(['main/cms/pages']);
   }
 
   private markFormGroupTouched(formGroup: FormGroup): void {

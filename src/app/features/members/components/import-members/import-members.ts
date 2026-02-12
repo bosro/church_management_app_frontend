@@ -154,10 +154,10 @@ export class ImportMembers implements OnDestroy {
   }
 
   cancel(): void {
-    this.router.navigate(['/members']);
+    this.router.navigate(['main/members']);
   }
 
   goToMembers(): void {
-    this.router.navigate(['/members']);
+    this.router.navigate(['main/members']);
   }
 }

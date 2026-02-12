@@ -118,20 +118,20 @@ export class MemberList implements OnInit, OnDestroy {
 
   // Navigation
   viewMember(memberId: string): void {
-    this.router.navigate(['/members', memberId]);
+    this.router.navigate(['main/members', memberId]);
   }
 
   addMember(): void {
-    this.router.navigate(['/members/add']);
+    this.router.navigate(['main/members/add']);
   }
 
   editMember(memberId: string, event: Event): void {
     event.stopPropagation();
-    this.router.navigate(['/members', memberId, 'edit']);
+    this.router.navigate(['main/members', memberId, 'edit']);
   }
 
   importMembers(): void {
-    this.router.navigate(['/members/import']);
+    this.router.navigate(['main/members/import']);
   }
 
   // Pagination

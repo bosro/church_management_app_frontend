@@ -91,7 +91,7 @@ export class CreateSermon implements OnInit, OnDestroy {
         next: () => {
           this.successMessage = 'Sermon uploaded successfully!';
           setTimeout(() => {
-            this.router.navigate(['/sermon']);
+            this.router.navigate(['main/sermon']);
           }, 1500);
         },
         error: (error) => {
@@ -102,7 +102,7 @@ export class CreateSermon implements OnInit, OnDestroy {
   }
 
   cancel(): void {
-    this.router.navigate(['/sermon']);
+    this.router.navigate(['main/sermon']);
   }
 
   private markFormGroupTouched(formGroup: FormGroup): void {

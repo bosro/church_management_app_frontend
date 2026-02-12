@@ -277,7 +277,7 @@ export class MarkAttendance implements OnInit, OnDestroy {
   }
 
   goBack(): void {
-    this.router.navigate(['/attendance', this.eventId]);
+    this.router.navigate(['main/attendance', this.eventId]);
   }
 
   getMemberFullName(member: any): string {

@@ -165,7 +165,7 @@ export class GivingList implements OnInit, OnDestroy {
   }
 
   recordGiving(): void {
-    this.router.navigate(['/finance/record-giving']);
+    this.router.navigate(['main/finance/record-giving']);
   }
 
   deleteTransaction(transactionId: string, event: Event): void {

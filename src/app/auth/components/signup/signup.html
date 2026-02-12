@@ -189,15 +189,23 @@
       <!-- Password -->
       <div class="form-group">
         <label for="password">Password</label>
-        <div class="input-wrapper">
+        <div class="input-wrapper password-wrapper">
           <i class="ri-lock-line input-icon"></i>
           <input
             id="password"
-            type="password"
+            [type]="showPassword ? 'text' : 'password'"
             formControlName="password"
             placeholder="Start typing..."
             [class.error]="signupForm.get('password')?.invalid && signupForm.get('password')?.touched"
           />
+          <button
+            type="button"
+            class="toggle-password"
+            (click)="togglePasswordVisibility()"
+            tabindex="-1"
+          >
+            <i [class]="showPassword ? 'ri-eye-off-line' : 'ri-eye-line'"></i>
+          </button>
         </div>
         <span
           *ngIf="signupForm.get('password')?.invalid && signupForm.get('password')?.touched"
@@ -210,15 +218,23 @@
       <!-- Confirm Password -->
       <div class="form-group">
         <label for="confirm_password">Confirm Password</label>
-        <div class="input-wrapper">
+        <div class="input-wrapper password-wrapper">
           <i class="ri-lock-line input-icon"></i>
           <input
             id="confirm_password"
-            type="password"
+            [type]="showConfirmPassword ? 'text' : 'password'"
             formControlName="confirm_password"
             placeholder="Start typing..."
             [class.error]="signupForm.get('confirm_password')?.invalid && signupForm.get('confirm_password')?.touched"
           />
+          <button
+            type="button"
+            class="toggle-password"
+            (click)="toggleConfirmPasswordVisibility()"
+            tabindex="-1"
+          >
+            <i [class]="showConfirmPassword ? 'ri-eye-off-line' : 'ri-eye-line'"></i>
+          </button>
         </div>
         <span
           *ngIf="signupForm.get('confirm_password')?.invalid && signupForm.get('confirm_password')?.touched"

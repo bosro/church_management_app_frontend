@@ -147,7 +147,7 @@ export class AttendanceReports implements OnInit, OnDestroy {
   }
 
   goBack(): void {
-    this.router.navigate(['/attendance']);
+    this.router.navigate(['main/attendance']);
   }
 
   getAttendanceColor(rate: number): string {

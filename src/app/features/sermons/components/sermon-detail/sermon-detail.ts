@@ -90,11 +90,11 @@ export class SermonDetail implements OnInit, OnDestroy {
   }
 
   goBack(): void {
-    this.router.navigate(['/sermon']);
+    this.router.navigate(['main/sermon']);
   }
 
   editSermon(): void {
-    this.router.navigate(['/sermon', this.sermonId, 'edit']);
+    this.router.navigate(['main/sermon', this.sermonId, 'edit']);
   }
 
   downloadAudio(): void {

@@ -1,6 +1,3 @@
-
-
-
 // src/app/features/auth/components/signin/signin.component.ts
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
@@ -19,6 +16,7 @@ export class Signin implements OnInit {
   errorMessage = '';
   returnUrl = '';
   rememberMe = false;
+  showPassword = false;
 
   constructor(
     private fb: FormBuilder,
@@ -29,7 +27,7 @@ export class Signin implements OnInit {
 
   ngOnInit(): void {
     this.initForm();
-    this.returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/dashboard';
+    this.returnUrl = this.route.snapshot.queryParams['returnUrl'] || 'main/dashboard';
 
     // Load saved email if remember me was checked
     const savedEmail = localStorage.getItem('rememberedEmail');
@@ -44,6 +42,10 @@ export class Signin implements OnInit {
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required, Validators.minLength(6)]]
     });
+  }
+
+  togglePasswordVisibility(): void {
+    this.showPassword = !this.showPassword;
   }
 
   onSubmit(): void {

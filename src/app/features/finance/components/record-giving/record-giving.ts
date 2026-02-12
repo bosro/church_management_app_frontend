@@ -154,7 +154,7 @@ export class RecordGiving implements OnInit, OnDestroy {
         next: () => {
           this.successMessage = 'Giving recorded successfully!';
           setTimeout(() => {
-            this.router.navigate(['/finance']);
+            this.router.navigate(['main/finance']);
           }, 1500);
         },
         error: (error) => {
@@ -165,7 +165,7 @@ export class RecordGiving implements OnInit, OnDestroy {
   }
 
   cancel(): void {
-    this.router.navigate(['/finance']);
+    this.router.navigate(['main/finance']);
   }
 
   private markFormGroupTouched(formGroup: FormGroup): void {

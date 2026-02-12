@@ -134,7 +134,7 @@ export class FillForm implements OnInit, OnDestroy {
   }
 
   cancel(): void {
-    this.router.navigate(['/forms']);
+    this.router.navigate(['main/forms']);
   }
 
   private markFormGroupTouched(formGroup: FormGroup): void {

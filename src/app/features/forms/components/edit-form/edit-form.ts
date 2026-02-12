@@ -211,7 +211,7 @@ export class EditForm implements OnInit, OnDestroy {
         next: () => {
           this.successMessage = 'Form updated successfully!';
           setTimeout(() => {
-            this.router.navigate(['/forms']);
+            this.router.navigate(['main/forms']);
           }, 1500);
         },
         error: (error) => {
@@ -222,7 +222,7 @@ export class EditForm implements OnInit, OnDestroy {
   }
 
   cancel(): void {
-    this.router.navigate(['/forms']);
+    this.router.navigate(['main/forms']);
   }
 
   private generateFieldId(): string {

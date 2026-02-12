@@ -76,15 +76,15 @@ export class CommunicationsList implements OnInit, OnDestroy {
 
   // Navigation
   createCommunication(): void {
-    this.router.navigate(['/communications/create']);
+    this.router.navigate(['main/communications/create']);
   }
 
   viewSmsLogs(): void {
-    this.router.navigate(['/communications/sms-logs']);
+    this.router.navigate(['main/communications/sms-logs']);
   }
 
   viewEmailLogs(): void {
-    this.router.navigate(['/communications/email-logs']);
+    this.router.navigate(['main/communications/email-logs']);
   }
 
   sendCommunication(communicationId: string, event: Event): void {

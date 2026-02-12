@@ -282,11 +282,11 @@ export class EventDetail implements OnInit, OnDestroy {
 
   // Navigation
   goBack(): void {
-    this.router.navigate(['/events']);
+    this.router.navigate(['main/events']);
   }
 
   editEvent(): void {
-    this.router.navigate(['/events', this.eventId, 'edit']);
+    this.router.navigate(['main/events', this.eventId, 'edit']);
   }
 
   deleteEvent(): void {
@@ -296,7 +296,7 @@ export class EventDetail implements OnInit, OnDestroy {
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: () => {
-            this.router.navigate(['/events']);
+            this.router.navigate(['main/events']);
           },
           error: (error) => {
             this.errorMessage = error.message || 'Failed to delete event';

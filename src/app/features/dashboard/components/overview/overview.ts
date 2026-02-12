@@ -211,30 +211,30 @@ export class Overview implements OnInit, OnDestroy {
 
   // Quick Actions
   navigateToAddMembers(): void {
-    this.router.navigate(['/members/add']);
+    this.router.navigate(['main/members/add']);
   }
 
   navigateToCheckIn(): void {
-    this.router.navigate(['/attendance/check-in']);
+    this.router.navigate(['main/attendance/check-in']);
   }
 
   navigateToCreateEvent(): void {
-    this.router.navigate(['/events/create']);
+    this.router.navigate(['main/events/create']);
   }
 
   navigateToRecordGiving(): void {
-    this.router.navigate(['/finance/record-giving']);
+    this.router.navigate(['main/finance/record-giving']);
   }
 
   // Navigation helpers
   viewAllBirthdays(): void {
-    this.router.navigate(['/members'], {
+    this.router.navigate(['main/members'], {
       queryParams: { filter: 'birthdays' },
     });
   }
 
   viewMember(memberId: string): void {
-    this.router.navigate(['/members', memberId]);
+    this.router.navigate(['main/members', memberId]);
   }
 
   getStatusClass(status: string): string {

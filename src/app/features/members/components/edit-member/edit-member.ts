@@ -237,12 +237,12 @@ export class EditMember implements OnInit, OnDestroy {
   private showSuccessAndRedirect(memberId: string): void {
     this.successMessage = 'Member updated successfully!';
     setTimeout(() => {
-      this.router.navigate(['/members', memberId]);
+      this.router.navigate(['main/members', memberId]);
     }, 1500);
   }
 
   cancel(): void {
-    this.router.navigate(['/members', this.memberId]);
+    this.router.navigate(['main/members', this.memberId]);
   }
 
   private markFormGroupTouched(formGroup: FormGroup): void {

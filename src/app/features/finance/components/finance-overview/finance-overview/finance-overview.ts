@@ -104,23 +104,23 @@ export class FinanceOverview implements OnInit, OnDestroy {
 
   // Navigation
   recordGiving(): void {
-    this.router.navigate(['/finance/record-giving']);
+    this.router.navigate(['main/finance/record-giving']);
   }
 
   viewAllGiving(): void {
-    this.router.navigate(['/finance/giving']);
+    this.router.navigate(['main/finance/giving']);
   }
 
   viewPledges(): void {
-    this.router.navigate(['/finance/pledges']);
+    this.router.navigate(['main/finance/pledges']);
   }
 
   viewReports(): void {
-    this.router.navigate(['/finance/reports']);
+    this.router.navigate(['main/finance/reports']);
   }
 
   manageCategories(): void {
-    this.router.navigate(['/finance/categories']);
+    this.router.navigate(['main/finance/categories']);
   }
 
   // Helper methods

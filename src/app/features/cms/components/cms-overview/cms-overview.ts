@@ -51,18 +51,18 @@ export class CmsOverview implements OnInit, OnDestroy {
 
   // Navigation
   navigateToPages(): void {
-    this.router.navigate(['/cms/pages']);
+    this.router.navigate(['main/cms/pages']);
   }
 
   navigateToBlog(): void {
-    this.router.navigate(['/cms/blog']);
+    this.router.navigate(['main/cms/blog']);
   }
 
   createPage(): void {
-    this.router.navigate(['/cms/pages/create']);
+    this.router.navigate(['main/cms/pages/create']);
   }
 
   createBlogPost(): void {
-    this.router.navigate(['/cms/blog/create']);
+    this.router.navigate(['main/cms/blog/create']);
   }
 }

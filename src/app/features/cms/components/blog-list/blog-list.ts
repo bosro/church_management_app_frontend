@@ -64,16 +64,16 @@ export class BlogList implements OnInit, OnDestroy {
 
   // Navigation
   createBlogPost(): void {
-    this.router.navigate(['/cms/blog/create']);
+    this.router.navigate(['main/cms/blog/create']);
   }
 
   editBlogPost(postId: string, event: Event): void {
     event.stopPropagation();
-    this.router.navigate(['/cms/blog', postId, 'edit']);
+    this.router.navigate(['main/cms/blog', postId, 'edit']);
   }
 
   goBack(): void {
-    this.router.navigate(['/cms']);
+    this.router.navigate(['main/cms']);
   }
 
   // Filters

@@ -92,11 +92,11 @@ export class FormSubmissions implements OnInit, OnDestroy {
 
   // Navigation
   goBack(): void {
-    this.router.navigate(['/forms']);
+    this.router.navigate(['main/forms']);
   }
 
   fillForm(): void {
-    this.router.navigate(['/forms', this.formId, 'fill']);
+    this.router.navigate(['main/forms', this.formId, 'fill']);
   }
 
   // View Submission
