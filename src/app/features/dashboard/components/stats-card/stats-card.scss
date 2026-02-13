@@ -1,33 +1,18 @@
 // src/app/features/dashboard/components/stats-card/stats-card.component.scss
-.dashboard-layout {
-  display: flex;
-  min-height: 100vh;
-  background: #F9FAFB;
-}
-
-.dashboard-content {
-  flex: 1;
-  margin-left: 260px;
-  display: flex;
-  flex-direction: column;
-}
-
-.dashboard-body {
-  flex: 1;
-  padding: 2rem;
-  overflow-y: auto;
-}
-
 .stats-card {
   background: white;
   border-radius: 12px;
-  padding: 1.5rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  transition: all 0.2s;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s;
 
   &:hover {
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-    transform: translateY(-2px);
+    transform: translateY(-4px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+
+  @media (max-width: 768px) {
+    padding: 16px;
   }
 }
 
@@ -35,37 +20,50 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 1rem;
+  margin-bottom: 16px;
+}
 
-  .stats-info {
-    flex: 1;
+.stats-info {
+  flex: 1;
 
-    .stats-title {
-      font-size: 0.875rem;
-      font-weight: 500;
-      color: #6B7280;
-      margin: 0 0 0.5rem 0;
-    }
-
-    .stats-value {
-      font-size: 2rem;
-      font-weight: 800;
-      color: #111827;
-      margin: 0;
-      line-height: 1;
-    }
+  .stats-title {
+    font-size: 14px;
+    color: #6B7280;
+    font-weight: 500;
+    margin: 0 0 8px 0;
   }
 
-  .stats-icon {
-    width: 56px;
-    height: 56px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  .stats-value {
+    font-size: 32px;
+    font-weight: 700;
+    color: #111827;
+    margin: 0;
+
+    @media (max-width: 768px) {
+      font-size: 28px;
+    }
+  }
+}
+
+.stats-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  i {
+    font-size: 24px;
+  }
+
+  @media (max-width: 768px) {
+    width: 40px;
+    height: 40px;
 
     i {
-      font-size: 1.75rem;
+      font-size: 20px;
     }
   }
 }
@@ -73,15 +71,15 @@
 .stats-trend {
   display: flex;
   align-items: center;
-  gap: 0.375rem;
-  font-size: 0.8125rem;
+  gap: 6px;
+  font-size: 13px;
 
   i {
-    font-size: 1rem;
+    font-size: 16px;
   }
 
   .trend-value {
-    font-weight: 700;
+    font-weight: 600;
   }
 
   .trend-text {

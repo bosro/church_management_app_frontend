@@ -3,15 +3,18 @@
   <div class="birthday-header">
     <h3>Upcoming Birthdays</h3>
     <div class="month-selector">
-      <select [(ngModel)]="selectedMonth" (change)="onMonthChange($event)">
-        <option *ngFor="let month of months" [value]="month">{{ month }}</option>
+      <select [value]="selectedMonth" (change)="onMonthChange($event)">
+        <option *ngFor="let month of months" [value]="month.value">
+          {{ month.label }}
+        </option>
       </select>
       <i class="ri-arrow-down-s-line"></i>
     </div>
   </div>
 
   <div class="birthday-table-wrapper">
-    <table class="birthday-table">
+    <!-- Desktop Table -->
+    <table class="birthday-table desktop-table">
       <thead>
         <tr>
           <th>Name</th>
@@ -23,7 +26,11 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let birthday of birthdays" (click)="onViewMember(birthday.id)" class="birthday-row">
+        <tr
+          *ngFor="let birthday of filteredBirthdays"
+          (click)="onViewMember(birthday.id)"
+          class="birthday-row"
+        >
           <td>
             <div class="name-cell">
               <div class="member-avatar">
@@ -36,7 +43,7 @@
             </div>
           </td>
           <td>{{ birthday.location }}</td>
-          <td>{{ birthday.date }}</td>
+          <td>{{ formatDate(birthday.date) }}</td>
           <td>{{ birthday.age }}</td>
           <td>{{ formatPhone(birthday.phone) }}</td>
           <td>
@@ -47,13 +54,63 @@
         </tr>
 
         <!-- Empty State -->
-        <tr *ngIf="birthdays.length === 0">
+        <tr *ngIf="filteredBirthdays.length === 0">
           <td colspan="6" class="empty-state">
             <i class="ri-cake-line"></i>
-            <p>No upcoming birthdays</p>
+            <p>No birthdays in this month</p>
           </td>
         </tr>
       </tbody>
     </table>
+
+    <!-- Mobile Cards -->
+    <div class="birthday-cards mobile-cards">
+      <div
+        *ngFor="let birthday of filteredBirthdays"
+        class="birthday-card"
+        (click)="onViewMember(birthday.id)"
+      >
+        <div class="card-header">
+          <div class="member-avatar">
+            <img *ngIf="birthday.avatar" [src]="birthday.avatar" [alt]="birthday.name" />
+            <div *ngIf="!birthday.avatar" class="avatar-placeholder">
+              {{ getInitials(birthday.name) }}
+            </div>
+          </div>
+          <div class="member-info">
+            <h4>{{ birthday.name }}</h4>
+            <p class="location">{{ birthday.location }}</p>
+          </div>
+          <span class="status-badge" [ngClass]="getStatusClass(birthday.status)">
+            {{ birthday.status }}
+          </span>
+        </div>
+        <div class="card-details">
+          <div class="detail-item">
+            <i class="ri-calendar-line"></i>
+            <span>{{ formatDate(birthday.date) }}</span>
+          </div>
+          <div class="detail-item">
+            <i class="ri-user-line"></i>
+            <span>{{ birthday.age }} years</span>
+          </div>
+          <div class="detail-item">
+            <i class="ri-phone-line"></i>
+            <span>{{ formatPhone(birthday.phone) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div *ngIf="filteredBirthdays.length === 0" class="empty-state-mobile">
+        <i class="ri-cake-line"></i>
+        <p>No birthdays in this month</p>
+      </div>
+    </div>
   </div>
+
+  <button class="view-all-btn" (click)="onViewAll()">
+    View All
+    <i class="ri-arrow-right-line"></i>
+  </button>
 </div>

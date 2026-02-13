@@ -1,217 +1,208 @@
 // src/app/shared/components/sidebar/sidebar.component.scss
+// Updated sidebar.component.scss with mobile close button
 .sidebar {
-  width: 260px;
-  height: 100vh;
-  background: white;
+  width: 280px;
+  background: #FFFFFF;
   border-right: 1px solid #E5E7EB;
   display: flex;
   flex-direction: column;
-  position: fixed;
-  left: 0;
-  top: 0;
-  z-index: 100;
+  transition: transform 0.3s ease;
+  position: relative;
+
+  @media (max-width: 768px) {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 1000;
+    transform: translateX(-100%);
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+
+    &.mobile-open {
+      transform: translateX(0);
+    }
+  }
+}
+
+.mobile-close-btn {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: #F3F4F6;
+  border-radius: 6px;
+  color: #374151;
+  font-size: 20px;
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+
+  @media (max-width: 768px) {
+    display: flex;
+  }
+
+  &:hover {
+    background: #E5E7EB;
+  }
 }
 
 .sidebar-logo {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 1.5rem 1.25rem;
+  gap: 12px;
+  padding: 24px 20px;
   border-bottom: 1px solid #E5E7EB;
 
   .logo-icon {
-    font-size: 2rem;
-    color: #EC4899;
+    font-size: 32px;
+    color: #7C3AED;
   }
 
   .logo-text {
-    font-size: 1.5rem;
-    font-weight: 800;
+    font-size: 24px;
+    font-weight: 700;
     color: #111827;
+  }
+
+  @media (max-width: 768px) {
+    padding: 20px;
   }
 }
 
 .sidebar-nav {
   flex: 1;
+  padding: 20px 0;
   overflow-y: auto;
-  padding: 1rem 0;
-
-  &::-webkit-scrollbar {
-    width: 4px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: #D1D5DB;
-    border-radius: 2px;
-  }
 
   .menu-list {
     list-style: none;
     padding: 0;
     margin: 0;
+  }
 
-    .menu-item {
-      display: flex;
-      align-items: center;
-      gap: 0.875rem;
-      padding: 0.875rem 1.25rem;
-      margin: 0.25rem 0.75rem;
-      font-size: 0.9375rem;
-      font-weight: 500;
-      color: #6B7280;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.2s;
+  .menu-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 20px;
+    margin: 4px 12px;
+    border-radius: 8px;
+    color: #6B7280;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
 
-      i {
-        font-size: 1.25rem;
-      }
+    i {
+      font-size: 20px;
+    }
 
-      &:hover {
-        background: #F3F4F6;
-        color: #374151;
-      }
+    &:hover {
+      background: #F3F4F6;
+      color: #111827;
+    }
 
-      &.active {
-        background: linear-gradient(135deg, #5B21B6 0%, #7C3AED 100%);
-        color: white;
-        box-shadow: 0 4px 12px rgba(91, 33, 182, 0.25);
-
-        i {
-          color: white;
-        }
-      }
+    &.active {
+      background: #EDE9FE;
+      color: #7C3AED;
     }
   }
 }
 
 .sidebar-footer {
+  padding: 20px;
   border-top: 1px solid #E5E7EB;
-  padding: 1rem 1.25rem;
-
-  .user-profile {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 0.75rem;
-
-    .user-avatar {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      overflow: hidden;
-      background: #E5E7EB;
-
-      img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-      }
-
-      .avatar-placeholder {
-        width: 100%;
-        height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.25rem;
-        font-weight: 700;
-        color: #5B21B6;
-        background: linear-gradient(135deg, #DDD6FE 0%, #C4B5FD 100%);
-      }
-    }
-
-    .user-info {
-      flex: 1;
-
-      .user-name {
-        font-size: 0.875rem;
-        font-weight: 600;
-        color: #111827;
-        margin: 0;
-        line-height: 1.4;
-      }
-    }
-  }
-
-  .logout-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    width: 100%;
-    padding: 0.625rem;
-    background: transparent;
-    border: 1px solid #E5E7EB;
-    border-radius: 6px;
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: #6B7280;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-family: 'Nunito Sans', sans-serif;
-
-    i {
-      font-size: 1.125rem;
-    }
-
-    &:hover {
-      background: #FEE2E2;
-      border-color: #FCA5A5;
-      color: #DC2626;
-    }
-  }
 }
 
-// Responsive
-@media (max-width: 1024px) {
-  .sidebar {
-    width: 80px;
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: #F9FAFB;
+  border-radius: 8px;
+  margin-bottom: 12px;
 
-    .sidebar-logo {
+  .user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .avatar-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
       justify-content: center;
-
-      .logo-text {
-        display: none;
-      }
+      background: #7C3AED;
+      color: white;
+      font-weight: 600;
     }
+  }
 
-    .sidebar-nav {
-      .menu-item {
-        justify-content: center;
-        padding: 0.875rem;
+  .user-info {
+    flex: 1;
+    min-width: 0;
 
-        span {
-          display: none;
-        }
-      }
-    }
-
-    .sidebar-footer {
-      .user-profile {
-        .user-info {
-          display: none;
-        }
-      }
-
-      .logout-btn span {
-        display: none;
-      }
+    .user-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: #111827;
+      margin: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
   }
 }
 
-@media (max-width: 768px) {
-  .sidebar {
-    transform: translateX(-100%);
-    transition: transform 0.3s;
+.logout-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  background: transparent;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  color: #6B7280;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
 
-    &.open {
-      transform: translateX(0);
-    }
+  &:hover {
+    background: #FEE2E2;
+    border-color: #FCA5A5;
+    color: #DC2626;
+  }
+}
+
+// Mobile overlay
+.mobile-overlay {
+  display: none;
+
+  @media (max-width: 768px) {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
   }
 }

@@ -23,11 +23,19 @@ const routes: Routes = [
       },
       {
         path: 'members',
+        canActivate: [RoleGuard],
+        data: {
+          roles: ['super_admin', 'church_admin', 'pastor', 'group_leader'],
+        },
         loadChildren: () =>
           import('./members/members-module').then((m) => m.MembersModule),
       },
       {
         path: 'attendance',
+        canActivate: [RoleGuard],
+        data: {
+          roles: ['super_admin', 'church_admin', 'pastor', 'group_leader'],
+        },
         loadChildren: () =>
           import('./attendance/attendance-module').then(
             (m) => m.AttendanceModule,
@@ -35,6 +43,8 @@ const routes: Routes = [
       },
       {
         path: 'finance',
+        canActivate: [RoleGuard],
+        data: { roles: ['super_admin', 'church_admin', 'finance_officer'] },
         loadChildren: () =>
           import('./finance/finance-module').then((m) => m.FinanceModule),
       },
@@ -45,27 +55,33 @@ const routes: Routes = [
       },
       {
         path: 'ministries',
+        canActivate: [RoleGuard],
+        data: { roles: ['super_admin', 'church_admin', 'pastor'] },
         loadChildren: () =>
           import('./ministries/ministries-module').then(
             (m) => m.MinistriesModule,
           ),
       },
 
-      { 
+      {
         path: 'branches',
+        canActivate: [RoleGuard],
+        data: { roles: ['super_admin', 'church_admin'] },
         loadChildren: () =>
           import('./branches/branches-module').then((m) => m.BranchesModule),
-        canMatch: [RoleGuard],
-        data: { roles: ['super_admin', 'church_admin'] },
       },
 
       {
         path: 'events',
+        canActivate: [RoleGuard],
+        data: { roles: ['super_admin', 'church_admin', 'pastor'] },
         loadChildren: () =>
           import('./events/events-module').then((m) => m.EventsModule),
       },
       {
         path: 'communications',
+        canActivate: [RoleGuard],
+        data: { roles: ['super_admin', 'church_admin', 'pastor'] },
         loadChildren: () =>
           import('./communications/communications-module').then(
             (m) => m.CommunicationsModule,
@@ -73,21 +89,23 @@ const routes: Routes = [
       },
       {
         path: 'user-roles',
+        canActivate: [RoleGuard],
+        data: { roles: ['super_admin', 'church_admin'] },
         loadChildren: () =>
           import('./user-roles/user-roles-module').then(
             (m) => m.UserRolesModule,
           ),
-        canActivate: [RoleGuard],
-        data: { roles: ['super_admin', 'church_admin'] },
       },
       {
         path: 'cms',
-        loadChildren: () => import('./cms/cms-module').then((m) => m.CmsModule),
         canActivate: [RoleGuard],
         data: { roles: ['super_admin', 'church_admin'] },
+        loadChildren: () => import('./cms/cms-module').then((m) => m.CmsModule),
       },
       {
         path: 'sermon',
+        canActivate: [RoleGuard],
+        data: { roles: ['super_admin', 'church_admin'] },
         loadChildren: () =>
           import('./sermons/sermons-module').then((m) => m.SermonsModule),
       },

@@ -4,6 +4,7 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { AuthGuard } from './core/guards/auth-guard';
+import { Unauthorized } from './shared/components/unauthorized/unauthorized';
 
 const routes: Routes = [
   // Default: redirect to auth
@@ -23,6 +24,10 @@ const routes: Routes = [
     loadChildren: () =>
       import('./features/features-module').then((m) => m.FeaturesModule),
     canActivate: [AuthGuard]
+  },
+    {
+    path: 'unauthorized',
+   component: Unauthorized,
   },
   // Catch-all: redirect to auth instead of creating a loop
   {

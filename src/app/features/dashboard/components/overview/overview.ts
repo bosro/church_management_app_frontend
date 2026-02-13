@@ -19,9 +19,10 @@ interface UpcomingBirthday {
   avatar?: string;
 }
 
-interface Pastor {
+interface TeamMember {
   id: string;
   name: string;
+  role: string;
   avatar?: string;
 }
 
@@ -36,6 +37,9 @@ export class Overview implements OnInit, OnDestroy {
 
   loading = true;
   churchId?: string;
+  userRole?: string;
+  hasError = false;
+  errorMessage = '';
 
   // Dashboard Stats
   dashboardStats: DashboardSummary | null = null;
@@ -44,28 +48,22 @@ export class Overview implements OnInit, OnDestroy {
   upcomingBirthdays: UpcomingBirthday[] = [];
 
   // Team Lists
-  pastors: Pastor[] = [];
-  shepherds: Pastor[] = [];
+  pastors: TeamMember[] = [];
+  shepherds: TeamMember[] = [];
 
-  // Revenue Chart Data
+  // Revenue Chart Data (for current year)
   revenueData = {
-    labels: [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sept',
-      'Oct',
-      'Nov',
-      'Dec',
-    ],
-    tithe: [30, 40, 35, 50, 45, 60, 55, 70, 65, 80, 75, 85],
-    offering: [25, 30, 40, 35, 50, 45, 60, 55, 70, 60, 75, 70],
+    labels: [] as string[],
+    tithe: [] as number[],
+    offering: [] as number[],
+    seed: [] as number[],
   };
+
+  // Quick action permissions
+  canAddMembers = false;
+  canCheckIn = false;
+  canCreateEvent = false;
+  canRecordGiving = false;
 
   constructor(
     private supabase: SupabaseService,
@@ -75,8 +73,17 @@ export class Overview implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.churchId = this.authService.getChurchId();
+    this.userRole = this.authService.currentProfile?.role;
+
+    this.setPermissions();
+
     if (this.churchId) {
       this.loadDashboardData();
+    } else {
+      this.hasError = true;
+      this.errorMessage =
+        'No church assigned to your account. Please contact administrator.';
+      this.loading = false;
     }
   }
 
@@ -85,25 +92,47 @@ export class Overview implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  private setPermissions(): void {
+    const adminRoles = ['super_admin', 'church_admin', 'pastor'];
+    const financeRoles = ['super_admin', 'church_admin', 'finance_officer'];
+
+    this.canAddMembers = this.authService.hasRole(adminRoles);
+    this.canCheckIn = this.authService.hasRole([...adminRoles, 'group_leader']);
+    this.canCreateEvent = this.authService.hasRole(adminRoles);
+    this.canRecordGiving = this.authService.hasRole(financeRoles);
+  }
+
   private async loadDashboardData(): Promise<void> {
     this.loading = true;
+    this.hasError = false;
 
     try {
-      // Load dashboard summary
-      await this.loadDashboardSummary();
+      // Refresh materialized view first
+      await this.refreshDashboardView();
 
-      // Load upcoming birthdays
-      await this.loadUpcomingBirthdays();
-
-      // Load team members
-      await this.loadTeamMembers();
-
-      // Load revenue data
-      await this.loadRevenueData();
-    } catch (error) {
+      // Load all data in parallel
+      await Promise.all([
+        this.loadDashboardSummary(),
+        this.loadUpcomingBirthdays(),
+        this.loadTeamMembers(),
+        this.loadRevenueData(),
+      ]);
+    } catch (error: any) {
       console.error('Error loading dashboard data:', error);
+      this.hasError = true;
+      this.errorMessage =
+        'Failed to load dashboard data. Please try refreshing the page.';
     } finally {
       this.loading = false;
+    }
+  }
+
+  private async refreshDashboardView(): Promise<void> {
+    try {
+      await this.supabase.callFunction('refresh_dashboard_summary', {});
+    } catch (error) {
+      console.warn('Could not refresh dashboard view:', error);
+      // Don't throw - continue with existing data
     }
   }
 
@@ -116,31 +145,45 @@ export class Overview implements OnInit, OnDestroy {
       },
     );
 
-    if (!error && data && data.length > 0) {
+    if (error) {
+      console.error('Error loading dashboard summary:', error);
+      throw error;
+    }
+
+    if (data && data.length > 0) {
       this.dashboardStats = data[0];
     }
   }
 
   private async loadUpcomingBirthdays(): Promise<void> {
-    // Get upcoming birthdays from view
+    const today = new Date();
+    const thirtyDaysLater = new Date();
+    thirtyDaysLater.setDate(today.getDate() + 30);
+
     const { data, error } = await this.supabase.client
       .from('upcoming_birthdays')
       .select('*')
       .eq('church_id', this.churchId)
-      .gte('celebration_date', new Date().toISOString().split('T')[0])
+      .gte('celebration_date', today.toISOString().split('T')[0])
+      .lte('celebration_date', thirtyDaysLater.toISOString().split('T')[0])
       .order('celebration_date', { ascending: true })
       .limit(10);
 
-    if (!error && data) {
+    if (error) {
+      console.error('Error loading birthdays:', error);
+      throw error;
+    }
+
+    if (data) {
       this.upcomingBirthdays = data.map((birthday: any) => {
         const celebrationDate = new Date(birthday.celebration_date);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const tomorrow = new Date(today);
+        const todayDate = new Date();
+        todayDate.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(todayDate);
         tomorrow.setDate(tomorrow.getDate() + 1);
 
         let status: 'Today' | 'Tomorrow' | 'Passed' = 'Passed';
-        if (celebrationDate.toDateString() === today.toDateString()) {
+        if (celebrationDate.toDateString() === todayDate.toDateString()) {
           status = 'Today';
         } else if (celebrationDate.toDateString() === tomorrow.toDateString()) {
           status = 'Tomorrow';
@@ -149,10 +192,10 @@ export class Overview implements OnInit, OnDestroy {
         return {
           id: birthday.id,
           name: `${birthday.first_name} ${birthday.last_name}`,
-          location: '6096 Marjolaine Landing', // Mock data
-          date: birthday.next_birthday,
-          age: birthday.age,
-          phone: birthday.phone_primary || '0000000000',
+          location: birthday.city || birthday.address || 'Not specified',
+          date: this.formatDate(birthday.next_birthday),
+          age: birthday.age + 1, // Next age
+          phone: birthday.phone_primary || '',
           status: status,
           avatar: undefined,
         };
@@ -161,68 +204,143 @@ export class Overview implements OnInit, OnDestroy {
   }
 
   private async loadTeamMembers(): Promise<void> {
-    // Load pastors
-    const { data: pastorData } = await this.supabase.query('members', {
-      select: 'id, first_name, last_name, photo_url',
-      filters: { church_id: this.churchId },
-      limit: 6,
-    });
+    // Load pastors using the view
+    const { data: pastorData, error: pastorError } = await this.supabase.client
+      .from('members_with_roles')
+      .select('id, first_name, last_name, photo_url, profile_role')
+      .eq('church_id', this.churchId)
+      .in('profile_role', ['pastor', 'senior_pastor', 'associate_pastor'])
+      .limit(6);
 
-    if (pastorData) {
+    if (!pastorError && pastorData) {
       this.pastors = pastorData.map((p: any) => ({
         id: p.id,
         name: `${p.first_name} ${p.last_name}`,
+        role: 'Pastor',
         avatar: p.photo_url,
       }));
     }
 
-    // Load shepherds (same query for now, you can add role filter)
-    const { data: shepherdData } = await this.supabase.query('members', {
-      select: 'id, first_name, last_name, photo_url',
-      filters: { church_id: this.churchId },
-      limit: 6,
-    });
+    // Load shepherds/group leaders
+    const { data: shepherdData, error: shepherdError } =
+      await this.supabase.client
+        .from('members_with_roles')
+        .select('id, first_name, last_name, photo_url, profile_role')
+        .eq('church_id', this.churchId)
+        .in('profile_role', ['group_leader', 'elder'])
+        .limit(6);
 
-    if (shepherdData) {
+    if (!shepherdError && shepherdData) {
       this.shepherds = shepherdData.map((s: any) => ({
         id: s.id,
         name: `${s.first_name} ${s.last_name}`,
+        role: 'Group Leader',
         avatar: s.photo_url,
       }));
     }
   }
 
   private async loadRevenueData(): Promise<void> {
-    // Get giving trends for current year
-    const { data, error } = await this.supabase.callFunction<any>(
-      'get_giving_trends',
-      {
-        church_uuid: this.churchId,
-        months_back: 12,
-      },
-    );
+    const currentYear = new Date().getFullYear();
 
-    if (!error && data) {
-      // Process data for chart
-      // This is simplified - you'd map actual data here
-      console.log('Revenue data loaded:', data);
+    // Get monthly giving for current year grouped by category
+    const { data, error } = await this.supabase.client
+      .from('monthly_giving_summary')
+      .select('*')
+      .eq('church_id', this.churchId)
+      .eq('year', currentYear)
+      .order('month', { ascending: true });
+
+    if (error) {
+      console.error('Error loading revenue data:', error);
+      // Use empty data
+      this.revenueData = {
+        labels: [
+          'Jan',
+          'Feb',
+          'Mar',
+          'Apr',
+          'May',
+          'Jun',
+          'Jul',
+          'Aug',
+          'Sep',
+          'Oct',
+          'Nov',
+          'Dec',
+        ],
+        tithe: Array(12).fill(0),
+        offering: Array(12).fill(0),
+        seed: Array(12).fill(0),
+      };
+      return;
+    }
+
+    if (data && data.length > 0) {
+      // Initialize arrays
+      const labels: string[] = [];
+      const tithe: number[] = [];
+      const offering: number[] = [];
+      const seed: number[] = [];
+
+      const monthNames = [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
+      ];
+
+      // Fill in the data
+      for (let i = 1; i <= 12; i++) {
+        const monthData = data.find((d) => d.month === i);
+        labels.push(monthNames[i - 1]);
+        tithe.push(monthData?.total_amount || 0);
+        offering.push(0); // Will calculate from category breakdown
+        seed.push(0);
+      }
+
+      this.revenueData = { labels, tithe, offering, seed };
     }
   }
 
-  // Quick Actions
+  // Quick Actions (with permission checks)
   navigateToAddMembers(): void {
+    if (!this.canAddMembers) {
+      alert('You do not have permission to add members');
+      return;
+    }
     this.router.navigate(['main/members/add']);
   }
 
   navigateToCheckIn(): void {
+    if (!this.canCheckIn) {
+      alert('You do not have permission to check in members');
+      return;
+    }
     this.router.navigate(['main/attendance/check-in']);
   }
 
   navigateToCreateEvent(): void {
+    if (!this.canCreateEvent) {
+      alert('You do not have permission to create events');
+      return;
+    }
     this.router.navigate(['main/events/create']);
   }
 
   navigateToRecordGiving(): void {
+    if (!this.canRecordGiving) {
+      alert('You do not have permission to record giving');
+      return;
+    }
     this.router.navigate(['main/finance/record-giving']);
   }
 
@@ -237,24 +355,26 @@ export class Overview implements OnInit, OnDestroy {
     this.router.navigate(['main/members', memberId]);
   }
 
-  getStatusClass(status: string): string {
-    switch (status) {
-      case 'Today':
-        return 'status-today';
-      case 'Tomorrow':
-        return 'status-tomorrow';
-      case 'Passed':
-        return 'status-passed';
-      default:
-        return '';
-    }
+  retryLoad(): void {
+    this.loadDashboardData();
   }
 
-  formatPhone(phone: string): string {
-    // Format phone number: 0555440404 -> 0555 440 404
-    if (phone.length === 10) {
-      return `${phone.substring(0, 4)} ${phone.substring(4, 7)} ${phone.substring(7)}`;
-    }
-    return phone;
+  private formatDate(dateString: string): string {
+    const date = new Date(dateString);
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
   }
 }

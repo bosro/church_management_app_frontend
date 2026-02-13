@@ -1,5 +1,10 @@
 <!-- src/app/shared/components/sidebar/sidebar.component.html -->
-<div class="sidebar">
+<div class="sidebar" [class.mobile-open]="isMobileMenuOpen">
+  <!-- Mobile Close Button -->
+  <button class="mobile-close-btn" *ngIf="isMobile" (click)="closeSidebar()">
+    <i class="ri-close-line"></i>
+  </button>
+
   <!-- Logo -->
   <div class="sidebar-logo">
     <i class="ri-church-line logo-icon"></i>
@@ -10,7 +15,7 @@
   <nav class="sidebar-nav">
     <ul class="menu-list">
       <li
-        *ngFor="let item of menuItems"
+        *ngFor="let item of filteredMenuItems"
         class="menu-item"
         [class.active]="item.active"
         (click)="navigate(item.route)"
@@ -36,6 +41,7 @@
       </div>
       <div class="user-info">
         <p class="user-name">{{ currentUser.full_name }}</p>
+        <p class="user-role">{{ currentUser.role | titlecase }}</p>
       </div>
     </div>
 

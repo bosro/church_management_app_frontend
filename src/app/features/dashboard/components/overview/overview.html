@@ -12,11 +12,23 @@
     <div class="dashboard-body">
       <!-- Loading State -->
       <div *ngIf="loading" class="loading-container">
-        <app-loading-spinner size="large" message="Loading dashboard..."></app-loading-spinner>
+        <div class="spinner"></div>
+        <p>Loading dashboard...</p>
+      </div>
+
+      <!-- Error State -->
+      <div *ngIf="!loading && hasError" class="error-container">
+        <i class="ri-error-warning-line error-icon"></i>
+        <h3>Failed to Load Dashboard</h3>
+        <p>{{ errorMessage }}</p>
+        <button class="btn-primary" (click)="retryLoad()">
+          <i class="ri-refresh-line"></i>
+          Retry
+        </button>
       </div>
 
       <!-- Dashboard Content -->
-      <div *ngIf="!loading" class="dashboard-grid">
+      <div *ngIf="!loading && !hasError" class="dashboard-grid">
         <!-- Left Section -->
         <div class="dashboard-main">
           <!-- Stats Cards -->
@@ -33,13 +45,13 @@
             ></app-stats-card>
 
             <app-stats-card
-              title="Attendance this week"
+              title="Attendance (Monthly)"
               [value]="dashboardStats?.attendance_this_month || 0"
               icon="ri-calendar-check-line"
               iconBg="#D1FAE5"
               iconColor="#10B981"
               [trend]="4.3"
-              trendText="Down from last month"
+              trendText="Compared to last month"
               trendUp="false"
             ></app-stats-card>
 
@@ -47,18 +59,16 @@
               title="New Members"
               [value]="dashboardStats?.new_members_this_month || 0"
               icon="ri-user-add-line"
-              iconBg="#DDD6FE"
-              iconColor="#7C3AED"
-              [trend]="4.3"
-              trendText="Down from last month"
-              trendUp="false"
+              iconBg="#FEF3C7"
+              iconColor="#F59E0B"
+              [trend]="12.5"
+              trendText="Compared to last month"
+              trendUp="true"
             ></app-stats-card>
           </div>
 
           <!-- Revenue Chart -->
-          <app-revenue-chart
-            [chartData]="revenueData"
-          ></app-revenue-chart>
+          <app-revenue-chart [chartData]="revenueData"></app-revenue-chart>
 
           <!-- Upcoming Birthdays -->
           <app-birthday-list
@@ -74,22 +84,42 @@
           <div class="quick-actions-card">
             <h3>Quick Actions</h3>
             <div class="action-grid">
-              <button class="action-btn action-purple" (click)="navigateToAddMembers()">
+              <button
+                class="action-btn action-purple"
+                (click)="navigateToAddMembers()"
+                [disabled]="!canAddMembers"
+                [class.disabled]="!canAddMembers"
+              >
                 <i class="ri-user-add-line"></i>
                 <span>Add Members</span>
               </button>
 
-              <button class="action-btn action-pink" (click)="navigateToCheckIn()">
+              <button
+                class="action-btn action-pink"
+                (click)="navigateToCheckIn()"
+                [disabled]="!canCheckIn"
+                [class.disabled]="!canCheckIn"
+              >
                 <i class="ri-file-list-3-line"></i>
                 <span>Check In</span>
               </button>
 
-              <button class="action-btn action-black" (click)="navigateToCreateEvent()">
+              <button
+                class="action-btn action-black"
+                (click)="navigateToCreateEvent()"
+                [disabled]="!canCreateEvent"
+                [class.disabled]="!canCreateEvent"
+              >
                 <i class="ri-calendar-event-line"></i>
                 <span>Create Event</span>
               </button>
 
-              <button class="action-btn action-teal" (click)="navigateToRecordGiving()">
+              <button
+                class="action-btn action-teal"
+                (click)="navigateToRecordGiving()"
+                [disabled]="!canRecordGiving"
+                [class.disabled]="!canRecordGiving"
+              >
                 <i class="ri-money-dollar-circle-line"></i>
                 <span>Record Giving</span>
               </button>
@@ -97,7 +127,7 @@
           </div>
 
           <!-- Pastors -->
-          <div class="team-card">
+          <div class="team-card" *ngIf="pastors.length > 0">
             <h3>Pastors</h3>
             <div class="team-list">
               <div *ngFor="let pastor of pastors" class="team-member">
@@ -113,8 +143,8 @@
           </div>
 
           <!-- Shepherds -->
-          <div class="team-card">
-            <h3>Shepherds</h3>
+          <div class="team-card" *ngIf="shepherds.length > 0">
+            <h3>Group Leaders</h3>
             <div class="team-list">
               <div *ngFor="let shepherd of shepherds" class="team-member">
                 <div class="member-avatar">

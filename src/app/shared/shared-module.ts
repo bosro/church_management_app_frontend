@@ -10,6 +10,7 @@ import { Button } from './components/button/button';
 import { InputComponent } from './components/input/input';
 import { Chart } from './components/chart/chart';
 import { ReactiveFormsModule, FormsModule } from '@angular/forms';
+import { Unauthorized } from './components/unauthorized/unauthorized';
 
 @NgModule({
   declarations: [
@@ -22,6 +23,7 @@ import { ReactiveFormsModule, FormsModule } from '@angular/forms';
     Button,
     InputComponent,
     Chart,
+    Unauthorized,
   ],
   imports: [CommonModule, ReactiveFormsModule, FormsModule],
   exports: [

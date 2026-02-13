@@ -1,116 +1,115 @@
 // src/app/features/dashboard/components/revenue-chart/revenue-chart.component.scss
-.dashboard-layout {
-  display: flex;
-  min-height: 100vh;
-  background: #F9FAFB;
-}
-
-.dashboard-content {
-  flex: 1;
-  margin-left: 260px;
-  display: flex;
-  flex-direction: column;
-}
-
-.dashboard-body {
-  flex: 1;
-  padding: 2rem;
-  overflow-y: auto;
-}
-
 .revenue-chart-card {
   background: white;
   border-radius: 12px;
-  padding: 1.5rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+
+  @media (max-width: 768px) {
+    padding: 16px;
+  }
 }
 
 .chart-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
+  margin-bottom: 24px;
 
   h3 {
-    font-size: 1.25rem;
-    font-weight: 700;
+    font-size: 18px;
+    font-weight: 600;
     color: #111827;
     margin: 0;
+
+    @media (max-width: 768px) {
+      font-size: 16px;
+    }
+  }
+}
+
+.year-selector {
+  position: relative;
+
+  select {
+    appearance: none;
+    padding: 8px 32px 8px 12px;
+    border: 1px solid #E5E7EB;
+    border-radius: 6px;
+    font-size: 14px;
+    color: #374151;
+    background: white;
+    cursor: pointer;
+    outline: none;
+
+    &:focus {
+      border-color: #7C3AED;
+    }
   }
 
-  .year-selector {
-    position: relative;
-
-    select {
-      padding: 0.5rem 2rem 0.5rem 0.75rem;
-      border: 1px solid #E5E7EB;
-      border-radius: 6px;
-      font-size: 0.875rem;
-      font-weight: 600;
-      color: #374151;
-      background: white;
-      cursor: pointer;
-      appearance: none;
-      font-family: 'Nunito Sans', sans-serif;
-
-      &:focus {
-        outline: none;
-        border-color: #5B21B6;
-      }
-    }
-
-    i {
-      position: absolute;
-      right: 0.5rem;
-      top: 50%;
-      transform: translateY(-50%);
-      font-size: 1.125rem;
-      color: #6B7280;
-      pointer-events: none;
-    }
+  i {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    color: #6B7280;
   }
 }
 
 .chart-container {
   width: 100%;
   height: 300px;
-  margin-bottom: 1rem;
   position: relative;
+  margin-bottom: 20px;
 
   canvas {
     width: 100%;
     height: 100%;
+  }
+
+  @media (max-width: 768px) {
+    height: 250px;
   }
 }
 
 .chart-legend {
   display: flex;
   justify-content: center;
-  gap: 2rem;
+  gap: 32px;
+  flex-wrap: wrap;
 
-  .legend-item {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
+  @media (max-width: 768px) {
+    gap: 20px;
+  }
+}
 
-    .legend-dot {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 
-      &.tithe {
-        background: #EC4899;
-      }
+.legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
 
-      &.offering {
-        background: #8B5CF6;
-      }
-    }
+  &.tithe {
+    background: #EC4899;
+  }
 
-    .legend-label {
-      font-size: 0.875rem;
-      color: #6B7280;
-      font-weight: 500;
-    }
+  &.offering {
+    background: #8B5CF6;
+  }
+}
+
+.legend-label {
+  font-size: 14px;
+  color: #6B7280;
+  font-weight: 500;
+
+  @media (max-width: 768px) {
+    font-size: 13px;
   }
 }
