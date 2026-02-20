@@ -1,11 +1,10 @@
-
 // src/app/features/cms/components/blog-list/blog-list.component.ts
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { BlogPost, BLOG_CATEGORIES } from '../../../../models/cms.model';
 import { CmsService } from '../../services/cms';
+import { BlogPost, BLOG_CATEGORIES } from '../../../../models/cms.model';
 
 @Component({
   selector: 'app-blog-list',
@@ -25,9 +24,13 @@ export class BlogList implements OnInit, OnDestroy {
 
   // Pagination
   currentPage = 1;
-  pageSize = 20;
-  totalPosts = 0;
+  pageSize = 12;
   totalPages = 0;
+  totalPosts = 0;
+
+  // Permissions
+  canManageContent = false;
+  canPublishContent = false;
 
   constructor(
     private cmsService: CmsService,
@@ -35,6 +38,7 @@ export class BlogList implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    this.checkPermissions();
     this.loadBlogPosts();
   }
 
@@ -43,10 +47,25 @@ export class BlogList implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  private checkPermissions(): void {
+    this.canManageContent = this.cmsService.canManageContent();
+    this.canPublishContent = this.cmsService.canPublishContent();
+
+    if (!this.cmsService.canViewContent()) {
+      this.router.navigate(['/unauthorized']);
+    }
+  }
+
   loadBlogPosts(): void {
     this.loading = true;
+    this.errorMessage = '';
 
-    this.cmsService.getBlogPosts(this.currentPage, this.pageSize, this.selectedCategory || undefined)
+    const filters = this.selectedCategory
+      ? { category: this.selectedCategory }
+      : undefined;
+
+    this.cmsService
+      .getBlogPosts(this.currentPage, this.pageSize, filters)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: ({ data, count }) => {
@@ -56,27 +75,14 @@ export class BlogList implements OnInit, OnDestroy {
           this.loading = false;
         },
         error: (error) => {
-          console.error('Error loading blog posts:', error);
+          this.errorMessage = error.message || 'Failed to load blog posts';
           this.loading = false;
+          console.error('Error loading blog posts:', error);
         }
       });
   }
 
-  // Navigation
-  createBlogPost(): void {
-    this.router.navigate(['main/cms/blog/create']);
-  }
-
-  editBlogPost(postId: string, event: Event): void {
-    event.stopPropagation();
-    this.router.navigate(['main/cms/blog', postId, 'edit']);
-  }
-
-  goBack(): void {
-    this.router.navigate(['main/cms']);
-  }
-
-  // Filters
+  // Filtering
   filterByCategory(category: string): void {
     this.selectedCategory = category;
     this.currentPage = 1;
@@ -89,9 +95,40 @@ export class BlogList implements OnInit, OnDestroy {
     this.loadBlogPosts();
   }
 
-  // Actions
-  togglePublish(post: BlogPost, event: Event): void {
+  // Navigation
+  createBlogPost(): void {
+    if (!this.canManageContent) {
+      this.errorMessage = 'You do not have permission to create blog posts';
+      this.scrollToTop();
+      return;
+    }
+    this.router.navigate(['main/cms/blog/create']);
+  }
+
+  editBlogPost(postId: string, event: MouseEvent): void {
     event.stopPropagation();
+
+    if (!this.canManageContent) {
+      this.errorMessage = 'You do not have permission to edit blog posts';
+      this.scrollToTop();
+      return;
+    }
+    this.router.navigate(['main/cms/blog', postId, 'edit']);
+  }
+
+  goBack(): void {
+    this.router.navigate(['main/cms']);
+  }
+
+  // Actions
+  togglePublish(post: BlogPost, event: MouseEvent): void {
+    event.stopPropagation();
+
+    if (!this.canPublishContent) {
+      this.errorMessage = 'You do not have permission to publish/unpublish blog posts';
+      this.scrollToTop();
+      return;
+    }
 
     const action = post.is_published ? 'unpublish' : 'publish';
     const observable = post.is_published
@@ -109,30 +146,50 @@ export class BlogList implements OnInit, OnDestroy {
       },
       error: (error) => {
         this.errorMessage = error.message || `Failed to ${action} blog post`;
+        this.scrollToTop();
+        console.error(`${action} error:`, error);
       }
     });
   }
 
-  deleteBlogPost(postId: string, event: Event): void {
+  deleteBlogPost(postId: string, event: MouseEvent): void {
     event.stopPropagation();
 
-    if (confirm('Are you sure you want to delete this blog post?')) {
-      this.cmsService.deleteBlogPost(postId)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: () => {
-            this.successMessage = 'Blog post deleted successfully!';
-            this.loadBlogPosts();
-
-            setTimeout(() => {
-              this.successMessage = '';
-            }, 3000);
-          },
-          error: (error) => {
-            this.errorMessage = error.message || 'Failed to delete blog post';
-          }
-        });
+    if (!this.canManageContent) {
+      this.errorMessage = 'You do not have permission to delete blog posts';
+      this.scrollToTop();
+      return;
     }
+
+    const post = this.blogPosts.find(p => p.id === postId);
+    if (!post) return;
+
+    const confirmMessage = post.is_published
+      ? `This blog post is currently published and has ${post.view_count} views. Are you sure you want to delete "${post.title}"?`
+      : `Are you sure you want to delete "${post.title}"?`;
+
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    this.cmsService
+      .deleteBlogPost(postId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.successMessage = 'Blog post deleted successfully!';
+          this.loadBlogPosts();
+
+          setTimeout(() => {
+            this.successMessage = '';
+          }, 3000);
+        },
+        error: (error) => {
+          this.errorMessage = error.message || 'Failed to delete blog post';
+          this.scrollToTop();
+          console.error('Delete error:', error);
+        }
+      });
   }
 
   // Pagination
@@ -140,6 +197,7 @@ export class BlogList implements OnInit, OnDestroy {
     if (this.currentPage > 1) {
       this.currentPage--;
       this.loadBlogPosts();
+      this.scrollToTop();
     }
   }
 
@@ -147,6 +205,11 @@ export class BlogList implements OnInit, OnDestroy {
     if (this.currentPage < this.totalPages) {
       this.currentPage++;
       this.loadBlogPosts();
+      this.scrollToTop();
     }
+  }
+
+  private scrollToTop(): void {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }

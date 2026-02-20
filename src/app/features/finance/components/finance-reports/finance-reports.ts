@@ -1,10 +1,10 @@
-
 // src/app/features/finance/components/finance-reports/finance-reports.component.ts
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormControl } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { FinanceService } from '../../services/finance.service';
+import { FinanceService, GivingStatistics, TopGiver } from '../../services/finance.service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-finance-reports',
@@ -16,8 +16,10 @@ export class FinanceReports implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   loading = true;
-  statistics: any = null;
-  topGivers: any[] = [];
+  statistics: GivingStatistics | null = null;
+  topGivers: TopGiver[] = [];
+  errorMessage = '';
+  successMessage = '';
 
   selectedYear = new Date().getFullYear();
   years: number[] = [];
@@ -26,8 +28,14 @@ export class FinanceReports implements OnInit, OnDestroy {
   startDateControl = new FormControl('');
   endDateControl = new FormControl('');
 
-  constructor(private financeService: FinanceService) {
-    // Generate year options
+  // Permissions
+  canViewFinance = false;
+
+  constructor(
+    private financeService: FinanceService,
+    private router: Router
+  ) {
+    // Generate year options (current year and 9 years back)
     const currentYear = new Date().getFullYear();
     for (let i = 0; i < 10; i++) {
       this.years.push(currentYear - i);
@@ -35,6 +43,7 @@ export class FinanceReports implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    this.checkPermissions();
     this.loadReports();
   }
 
@@ -43,8 +52,17 @@ export class FinanceReports implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  private checkPermissions(): void {
+    this.canViewFinance = this.financeService.canViewFinance();
+
+    if (!this.canViewFinance) {
+      this.router.navigate(['/unauthorized']);
+    }
+  }
+
   loadReports(): void {
     this.loading = true;
+    this.errorMessage = '';
 
     // Load statistics
     this.financeService.getGivingStatistics(this.selectedYear)
@@ -55,8 +73,9 @@ export class FinanceReports implements OnInit, OnDestroy {
           this.loading = false;
         },
         error: (error) => {
-          console.error('Error loading statistics:', error);
+          this.errorMessage = error.message || 'Failed to load statistics';
           this.loading = false;
+          console.error('Error loading statistics:', error);
         }
       });
 
@@ -81,13 +100,34 @@ export class FinanceReports implements OnInit, OnDestroy {
     const startDate = this.startDateControl.value || '';
     const endDate = this.endDateControl.value || '';
 
+    if (!startDate || !endDate) {
+      this.errorMessage = 'Please select both start and end dates';
+      setTimeout(() => {
+        this.errorMessage = '';
+      }, 3000);
+      return;
+    }
+
+    if (new Date(startDate) > new Date(endDate)) {
+      this.errorMessage = 'Start date cannot be after end date';
+      setTimeout(() => {
+        this.errorMessage = '';
+      }, 3000);
+      return;
+    }
+
     this.financeService.exportGivingReport(startDate, endDate)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (blob) => {
-          this.downloadFile(blob, 'giving_report.csv');
+          this.downloadFile(blob, `giving_report_${startDate}_to_${endDate}.csv`);
+          this.successMessage = 'Giving report exported successfully!';
+          setTimeout(() => {
+            this.successMessage = '';
+          }, 3000);
         },
         error: (error) => {
+          this.errorMessage = error.message || 'Failed to export giving report';
           console.error('Export error:', error);
         }
       });
@@ -98,9 +138,14 @@ export class FinanceReports implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (blob) => {
-          this.downloadFile(blob, 'pledges_report.csv');
+          this.downloadFile(blob, `pledges_report_${new Date().toISOString().split('T')[0]}.csv`);
+          this.successMessage = 'Pledges report exported successfully!';
+          setTimeout(() => {
+            this.successMessage = '';
+          }, 3000);
         },
         error: (error) => {
+          this.errorMessage = error.message || 'Failed to export pledges report';
           console.error('Export error:', error);
         }
       });
@@ -111,7 +156,9 @@ export class FinanceReports implements OnInit, OnDestroy {
     const a = document.createElement('a');
     a.href = url;
     a.download = filename;
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
   }
 
@@ -119,6 +166,6 @@ export class FinanceReports implements OnInit, OnDestroy {
     return new Intl.NumberFormat('en-GH', {
       style: 'currency',
       currency: currency
-    }).format(amount);
+    }).format(amount || 0);
   }
 }

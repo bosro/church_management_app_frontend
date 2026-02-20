@@ -21,6 +21,18 @@
           </div>
         </div>
 
+        <!-- Success Message -->
+<div *ngIf="successMessage" class="success-alert">
+  <i class="ri-checkbox-circle-line"></i>
+  <span>{{ successMessage }}</span>
+</div>
+
+<!-- Error Message -->
+<div *ngIf="errorMessage" class="error-alert">
+  <i class="ri-error-warning-line"></i>
+  <span>{{ errorMessage }}</span>
+</div>
+
         <!-- Loading State -->
         <div *ngIf="loading" class="loading-container">
           <app-loading-spinner message="Loading reports..."></app-loading-spinner>

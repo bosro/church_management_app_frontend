@@ -14,11 +14,20 @@
             <p class="subtitle">Manage church branches and locations</p>
           </div>
           <div class="header-actions">
-            <button class="btn-secondary" (click)="exportBranches()" [disabled]="branches.length === 0">
+            <button
+              class="btn-secondary"
+              (click)="exportBranches()"
+              [disabled]="branches.length === 0 || loading"
+            >
               <i class="ri-download-line"></i>
               Export CSV
             </button>
-            <button class="btn-primary" (click)="createBranch()">
+            <button
+              *ngIf="canManageBranches"
+              class="btn-primary"
+              (click)="createBranch()"
+              [disabled]="loading"
+            >
               <i class="ri-add-line"></i>
               Add Branch
             </button>
@@ -37,7 +46,7 @@
         </div>
 
         <!-- Statistics Cards -->
-        <div class="stats-grid" *ngIf="statistics">
+        <div class="stats-grid" *ngIf="statistics && !loading">
           <div class="stat-card">
             <div class="stat-icon" style="background: #DDD6FE; color: #7C3AED;">
               <i class="ri-building-line"></i>
@@ -95,11 +104,19 @@
               <div class="branch-icon">
                 <i class="ri-building-line"></i>
               </div>
-              <div class="card-actions">
-                <button class="btn-icon-small" (click)="editBranch(branch.id, $event)">
+              <div class="card-actions" *ngIf="canManageBranches">
+                <button
+                  class="btn-icon-small"
+                  (click)="editBranch(branch.id, $event)"
+                  title="Edit branch"
+                >
                   <i class="ri-edit-line"></i>
                 </button>
-                <button class="btn-icon-small btn-danger" (click)="deleteBranch(branch.id, $event)">
+                <button
+                  class="btn-icon-small btn-danger"
+                  (click)="deleteBranch(branch.id, $event)"
+                  title="Delete branch"
+                >
                   <i class="ri-delete-bin-line"></i>
                 </button>
               </div>
@@ -153,7 +170,11 @@
             <i class="ri-building-line"></i>
             <h3>No Branches Yet</h3>
             <p>Create your first branch to manage multiple locations</p>
-            <button class="btn-primary" (click)="createBranch()">
+            <button
+              *ngIf="canManageBranches"
+              class="btn-primary"
+              (click)="createBranch()"
+            >
               <i class="ri-add-line"></i>
               Add Branch
             </button>

@@ -1,12 +1,11 @@
-
 // src/app/features/cms/components/edit-page/edit-page.component.ts
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { CmsPage } from '../../../../models/cms.model';
 import { CmsService } from '../../services/cms';
+import { CmsPage } from '../../../../models/cms.model';
 
 @Component({
   selector: 'app-edit-page',
@@ -25,6 +24,9 @@ export class EditPage implements OnInit, OnDestroy {
   errorMessage = '';
   successMessage = '';
 
+  // Permissions
+  canManageContent = false;
+
   constructor(
     private fb: FormBuilder,
     private cmsService: CmsService,
@@ -33,10 +35,15 @@ export class EditPage implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    this.checkPermissions();
     this.pageId = this.route.snapshot.paramMap.get('id') || '';
     this.initForm();
+
     if (this.pageId) {
       this.loadPage();
+    } else {
+      this.errorMessage = 'Invalid page ID';
+      this.loadingPage = false;
     }
   }
 
@@ -45,19 +52,29 @@ export class EditPage implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  private checkPermissions(): void {
+    this.canManageContent = this.cmsService.canManageContent();
+
+    if (!this.canManageContent) {
+      this.router.navigate(['/unauthorized']);
+    }
+  }
+
   private initForm(): void {
     this.pageForm = this.fb.group({
-      title: ['', [Validators.required, Validators.minLength(3)]],
+      title: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(200)]],
       content: ['', [Validators.required, Validators.minLength(10)]],
-      meta_description: [''],
-      meta_keywords: ['']
+      meta_description: ['', [Validators.maxLength(160)]],
+      meta_keywords: ['', [Validators.maxLength(255)]]
     });
   }
 
   private loadPage(): void {
     this.loadingPage = true;
+    this.errorMessage = '';
 
-    this.cmsService.getPageById(this.pageId)
+    this.cmsService
+      .getPageById(this.pageId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (page) => {
@@ -68,6 +85,7 @@ export class EditPage implements OnInit, OnDestroy {
         error: (error) => {
           this.errorMessage = error.message || 'Failed to load page';
           this.loadingPage = false;
+          console.error('Load page error:', error);
         }
       });
   }
@@ -76,8 +94,8 @@ export class EditPage implements OnInit, OnDestroy {
     this.pageForm.patchValue({
       title: page.title,
       content: page.content,
-      meta_description: page.meta_description,
-      meta_keywords: page.meta_keywords
+      meta_description: page.meta_description || '',
+      meta_keywords: page.meta_keywords || ''
     });
   }
 
@@ -85,17 +103,22 @@ export class EditPage implements OnInit, OnDestroy {
     if (this.pageForm.invalid) {
       this.markFormGroupTouched(this.pageForm);
       this.errorMessage = 'Please fill in all required fields correctly';
+      this.scrollToTop();
       return;
     }
 
     this.loading = true;
     this.errorMessage = '';
+    this.successMessage = '';
 
-    this.cmsService.updatePage(this.pageId, this.pageForm.value)
+    this.cmsService
+      .updatePage(this.pageId, this.pageForm.value)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
           this.successMessage = 'Page updated successfully!';
+          this.loading = false;
+
           setTimeout(() => {
             this.router.navigate(['main/cms/pages']);
           }, 1500);
@@ -103,30 +126,56 @@ export class EditPage implements OnInit, OnDestroy {
         error: (error) => {
           this.loading = false;
           this.errorMessage = error.message || 'Failed to update page. Please try again.';
+          this.scrollToTop();
+          console.error('Update page error:', error);
         }
       });
   }
 
   cancel(): void {
-    this.router.navigate(['main/cms/pages']);
+    if (this.pageForm.dirty) {
+      if (confirm('You have unsaved changes. Are you sure you want to leave?')) {
+        this.router.navigate(['main/cms/pages']);
+      }
+    } else {
+      this.router.navigate(['main/cms/pages']);
+    }
   }
 
   private markFormGroupTouched(formGroup: FormGroup): void {
     Object.keys(formGroup.controls).forEach(key => {
       const control = formGroup.get(key);
       control?.markAsTouched();
+
+      if (control instanceof FormGroup) {
+        this.markFormGroupTouched(control);
+      }
     });
   }
 
   getErrorMessage(fieldName: string): string {
     const control = this.pageForm.get(fieldName);
-    if (control?.hasError('required')) {
+
+    if (!control || !control.errors || !control.touched) {
+      return '';
+    }
+
+    if (control.hasError('required')) {
       return 'This field is required';
     }
-    if (control?.hasError('minlength')) {
+    if (control.hasError('minlength')) {
       const minLength = control.getError('minlength').requiredLength;
       return `Minimum ${minLength} characters required`;
     }
-    return '';
+    if (control.hasError('maxlength')) {
+      const maxLength = control.getError('maxlength').requiredLength;
+      return `Maximum ${maxLength} characters allowed`;
+    }
+
+    return 'Invalid input';
+  }
+
+  private scrollToTop(): void {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }

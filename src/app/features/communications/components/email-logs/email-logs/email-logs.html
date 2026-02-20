@@ -1,4 +1,4 @@
-<!-- src/app/features/communications/components/sms-logs/sms-logs.component.html -->
+<!-- src/app/features/communications/components/email-logs/email-logs.component.html -->
 <div class="dashboard-layout">
   <app-sidebar></app-sidebar>
 
@@ -14,15 +14,21 @@
               <i class="ri-arrow-left-line"></i>
             </button>
             <div>
-              <h1>SMS Logs</h1>
-              <p class="subtitle">View all sent SMS messages</p>
+              <h1>Email Logs</h1>
+              <p class="subtitle">View all sent email messages</p>
             </div>
           </div>
         </div>
 
+        <!-- Error Message -->
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i>
+          <span>{{ errorMessage }}</span>
+        </div>
+
         <!-- Loading State -->
         <div *ngIf="loading" class="loading-container">
-          <app-loading-spinner message="Loading SMS logs..."></app-loading-spinner>
+          <app-loading-spinner message="Loading email logs..."></app-loading-spinner>
         </div>
 
         <!-- Logs Table -->
@@ -33,17 +39,17 @@
                 <tr>
                   <th>Date/Time</th>
                   <th>Recipient</th>
-                  <th>Phone Number</th>
-                  <th>Message</th>
+                  <th>Email Address</th>
+                  <th>Subject</th>
                   <th>Status</th>
                 </tr>
               </thead>
               <tbody>
-                <tr *ngFor="let log of smsLogs">
+                <tr *ngFor="let log of emailLogs">
                   <td>{{ log.sent_at | date:'MMM d, y h:mm a' }}</td>
                   <td>{{ getMemberName(log) }}</td>
-                  <td>{{ log.phone_number }}</td>
-                  <td class="message-cell">{{ log.message }}</td>
+                  <td>{{ log.email_address }}</td>
+                  <td class="subject-cell">{{ log.subject }}</td>
                   <td>
                     <span class="status-badge" [ngClass]="getStatusClass(log.status)">
                       {{ log.status | titlecase }}
@@ -51,10 +57,10 @@
                   </td>
                 </tr>
 
-                <tr *ngIf="smsLogs.length === 0">
-                  <td colspan="5" class="empty-state">
-                    <i class="ri-message-3-line"></i>
-                    <p>No SMS logs found</p>
+                <tr *ngIf="emailLogs.length === 0" class="empty-state">
+                  <td colspan="5">
+                    <i class="ri-mail-line"></i>
+                    <p>No email logs found</p>
                   </td>
                 </tr>
               </tbody>

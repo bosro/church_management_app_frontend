@@ -3,9 +3,10 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
+import { BranchesService } from '../../services/branches';
 import { MemberService } from '../../../members/services/member.service';
 import { Branch, BranchMember } from '../../../../models/branch.model';
-import { BranchesService } from '../../services/branches';
+import { Member } from '../../../../models/member.model';
 
 @Component({
   selector: 'app-branch-detail',
@@ -19,7 +20,7 @@ export class BranchDetail implements OnInit, OnDestroy {
   branchId: string = '';
   branch: Branch | null = null;
   branchMembers: BranchMember[] = [];
-  allMembers: any[] = [];
+  allMembers: Member[] = [];
   loading = false;
   loadingBranch = true;
   errorMessage = '';
@@ -34,21 +35,29 @@ export class BranchDetail implements OnInit, OnDestroy {
   // Assignment Modal
   showAssignModal = false;
   searchTerm = '';
-  filteredMembers: any[] = [];
+  filteredMembers: Member[] = [];
+
+  // Permissions
+  canManageBranches = false;
+  canAssignMembers = false;
 
   constructor(
     private branchesService: BranchesService,
-    private memberService: MemberService,
+    private membersService: MemberService,
     private router: Router,
     private route: ActivatedRoute,
   ) {}
 
   ngOnInit(): void {
+    this.checkPermissions();
     this.branchId = this.route.snapshot.paramMap.get('id') || '';
     if (this.branchId) {
       this.loadBranch();
       this.loadBranchMembers();
       this.loadAllMembers();
+    } else {
+      this.errorMessage = 'Invalid branch ID';
+      this.loadingBranch = false;
     }
   }
 
@@ -57,8 +66,18 @@ export class BranchDetail implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  private checkPermissions(): void {
+    this.canManageBranches = this.branchesService.canManageBranches();
+    this.canAssignMembers = this.branchesService.canAssignMembers();
+
+    if (!this.branchesService.canViewBranches()) {
+      this.router.navigate(['/unauthorized']);
+    }
+  }
+
   private loadBranch(): void {
     this.loadingBranch = true;
+    this.errorMessage = '';
 
     this.branchesService
       .getBranchById(this.branchId)
@@ -71,6 +90,7 @@ export class BranchDetail implements OnInit, OnDestroy {
         error: (error) => {
           this.errorMessage = error.message || 'Failed to load branch';
           this.loadingBranch = false;
+          console.error('Load branch error:', error);
         },
       });
   }
@@ -96,8 +116,8 @@ export class BranchDetail implements OnInit, OnDestroy {
   }
 
   private loadAllMembers(): void {
-    this.memberService
-      .getMembers({}, 1, 1000) // Pass empty filters object
+    this.membersService
+      .getMembers({}, 1, 1000)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: ({ data }) => {
@@ -116,11 +136,19 @@ export class BranchDetail implements OnInit, OnDestroy {
   }
 
   editBranch(): void {
+    if (!this.canManageBranches) {
+      this.errorMessage = 'You do not have permission to edit branches';
+      return;
+    }
     this.router.navigate(['main/branches', this.branchId, 'edit']);
   }
 
   // Member Assignment
   openAssignModal(): void {
+    if (!this.canAssignMembers) {
+      this.errorMessage = 'You do not have permission to assign members';
+      return;
+    }
     this.showAssignModal = true;
     this.searchTerm = '';
     this.filterMembers();
@@ -136,7 +164,7 @@ export class BranchDetail implements OnInit, OnDestroy {
 
     this.filteredMembers = this.allMembers.filter((member) => {
       const matchesSearch = this.searchTerm
-        ? `${member.first_name} ${member.last_name}`
+        ? `${member.first_name} ${member.last_name} ${member.email || ''}`
             .toLowerCase()
             .includes(this.searchTerm.toLowerCase())
         : true;
@@ -146,6 +174,11 @@ export class BranchDetail implements OnInit, OnDestroy {
   }
 
   assignMember(memberId: string): void {
+    if (!this.canAssignMembers) {
+      this.errorMessage = 'You do not have permission to assign members';
+      return;
+    }
+
     this.branchesService
       .assignMemberToBranch(this.branchId, memberId)
       .pipe(takeUntil(this.destroy$))
@@ -153,6 +186,7 @@ export class BranchDetail implements OnInit, OnDestroy {
         next: () => {
           this.successMessage = 'Member assigned successfully!';
           this.loadBranchMembers();
+          this.loadBranch(); // Reload to update member count
           this.closeAssignModal();
 
           setTimeout(() => {
@@ -161,33 +195,41 @@ export class BranchDetail implements OnInit, OnDestroy {
         },
         error: (error) => {
           this.errorMessage = error.message || 'Failed to assign member';
+          console.error('Assign member error:', error);
         },
       });
   }
 
-  removeMember(branchMemberId: string, event: Event): void {
+  removeMember(branchMemberId: string, event: MouseEvent): void {
     event.stopPropagation();
 
-    if (
-      confirm('Are you sure you want to remove this member from the branch?')
-    ) {
-      this.branchesService
-        .removeMemberFromBranch(branchMemberId, this.branchId)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: () => {
-            this.successMessage = 'Member removed successfully!';
-            this.loadBranchMembers();
-
-            setTimeout(() => {
-              this.successMessage = '';
-            }, 3000);
-          },
-          error: (error) => {
-            this.errorMessage = error.message || 'Failed to remove member';
-          },
-        });
+    if (!this.canAssignMembers) {
+      this.errorMessage = 'You do not have permission to remove members';
+      return;
     }
+
+    if (!confirm('Are you sure you want to remove this member from the branch?')) {
+      return;
+    }
+
+    this.branchesService
+      .removeMemberFromBranch(branchMemberId, this.branchId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.successMessage = 'Member removed successfully!';
+          this.loadBranchMembers();
+          this.loadBranch(); // Reload to update member count
+
+          setTimeout(() => {
+            this.successMessage = '';
+          }, 3000);
+        },
+        error: (error) => {
+          this.errorMessage = error.message || 'Failed to remove member';
+          console.error('Remove member error:', error);
+        },
+      });
   }
 
   // Pagination
@@ -195,6 +237,7 @@ export class BranchDetail implements OnInit, OnDestroy {
     if (this.currentPage > 1) {
       this.currentPage--;
       this.loadBranchMembers();
+      this.scrollToTop();
     }
   }
 
@@ -202,18 +245,28 @@ export class BranchDetail implements OnInit, OnDestroy {
     if (this.currentPage < this.totalPages) {
       this.currentPage++;
       this.loadBranchMembers();
+      this.scrollToTop();
     }
   }
 
   // Helper Methods
   getMemberName(branchMember: BranchMember): string {
     if (branchMember.member) {
-      return `${branchMember.member.first_name} ${branchMember.member.last_name}`;
+      const parts = [
+        branchMember.member.first_name,
+        branchMember.member.middle_name,
+        branchMember.member.last_name
+      ].filter(Boolean);
+      return parts.join(' ');
     }
     return 'N/A';
   }
 
   getMemberPhoto(branchMember: BranchMember): string {
     return branchMember.member?.photo_url || 'assets/images/default-avatar.png';
+  }
+
+  private scrollToTop(): void {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }

@@ -1,5 +1,4 @@
 <!-- src/app/features/branches/components/edit-branch/edit-branch.component.html -->
-<!-- Use same HTML as create-branch, just change title and button text -->
 <div class="dashboard-layout">
   <app-sidebar></app-sidebar>
 
@@ -39,9 +38,169 @@
             <span>{{ errorMessage }}</span>
           </div>
 
-          <!-- Reuse the same form structure from create-branch -->
-          <!-- Just change the submit button text from "Create Branch" to "Update Branch" -->
-          <!-- Copy entire form-card div from create-branch.component.html -->
+          <!-- Form Card -->
+          <div class="form-card">
+            <form [formGroup]="branchForm" (ngSubmit)="onSubmit()">
+              <!-- Basic Information -->
+              <div class="form-section">
+                <h3>Basic Information</h3>
+
+                <div class="form-grid">
+                  <!-- Branch Name -->
+                  <div class="form-group full-width">
+                    <label for="name">Branch Name *</label>
+                    <input
+                      id="name"
+                      type="text"
+                      formControlName="name"
+                      placeholder="e.g., Main Campus, Downtown Branch"
+                      [class.error]="branchForm.get('name')?.invalid && branchForm.get('name')?.touched"
+                    />
+                    <span
+                      *ngIf="branchForm.get('name')?.invalid && branchForm.get('name')?.touched"
+                      class="error-message"
+                    >
+                      {{ getErrorMessage('name') }}
+                    </span>
+                  </div>
+
+                  <!-- Pastor Name -->
+                  <div class="form-group full-width">
+                    <label for="pastor_name">Pastor/Leader Name</label>
+                    <input
+                      id="pastor_name"
+                      type="text"
+                      formControlName="pastor_name"
+                      placeholder="e.g., Rev. John Doe"
+                    />
+                  </div>
+
+                  <!-- Established Date -->
+                  <div class="form-group">
+                    <label for="established_date">Established Date</label>
+                    <input
+                      id="established_date"
+                      type="date"
+                      formControlName="established_date"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Contact Information -->
+              <div class="form-section">
+                <h3>Contact Information</h3>
+
+                <div class="form-grid">
+                  <!-- Phone -->
+                  <div class="form-group">
+                    <label for="phone">Phone Number</label>
+                    <input
+                      id="phone"
+                      type="tel"
+                      formControlName="phone"
+                      placeholder="e.g., +233 24 123 4567"
+                    />
+                  </div>
+
+                  <!-- Email -->
+                  <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input
+                      id="email"
+                      type="email"
+                      formControlName="email"
+                      placeholder="e.g., branch@church.com"
+                      [class.error]="branchForm.get('email')?.invalid && branchForm.get('email')?.touched"
+                    />
+                    <span
+                      *ngIf="branchForm.get('email')?.invalid && branchForm.get('email')?.touched"
+                      class="error-message"
+                    >
+                      {{ getErrorMessage('email') }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Location Information -->
+              <div class="form-section">
+                <h3>Location Information</h3>
+
+                <div class="form-grid">
+                  <!-- Address -->
+                  <div class="form-group full-width">
+                    <label for="address">Street Address</label>
+                    <input
+                      id="address"
+                      type="text"
+                      formControlName="address"
+                      placeholder="e.g., 123 Main Street"
+                    />
+                  </div>
+
+                  <!-- City -->
+                  <div class="form-group">
+                    <label for="city">City</label>
+                    <input
+                      id="city"
+                      type="text"
+                      formControlName="city"
+                      placeholder="e.g., Accra"
+                    />
+                  </div>
+
+                  <!-- State -->
+                  <div class="form-group">
+                    <label for="state">State/Region</label>
+                    <input
+                      id="state"
+                      type="text"
+                      formControlName="state"
+                      placeholder="e.g., Greater Accra"
+                    />
+                  </div>
+
+                  <!-- Country -->
+                  <div class="form-group">
+                    <label for="country">Country</label>
+                    <input
+                      id="country"
+                      type="text"
+                      formControlName="country"
+                      placeholder="e.g., Ghana"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Form Actions -->
+              <div class="form-actions">
+                <button
+                  type="button"
+                  class="btn-secondary"
+                  (click)="cancel()"
+                  [disabled]="loading"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  class="btn-primary"
+                  [disabled]="loading"
+                >
+                  <span *ngIf="!loading">
+                    <i class="ri-save-line"></i>
+                    Update Branch
+                  </span>
+                  <span *ngIf="loading">
+                    <i class="ri-loader-4-line spin"></i>
+                    Updating...
+                  </span>
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       </div>
     </div>

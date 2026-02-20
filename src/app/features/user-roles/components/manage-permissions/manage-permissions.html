@@ -9,7 +9,19 @@
       <div class="permissions-container">
         <!-- Loading State -->
         <div *ngIf="loadingUser" class="loading-container">
-          <app-loading-spinner size="large" message="Loading user..."></app-loading-spinner>
+          <div class="spinner"></div>
+          <p>Loading user details...</p>
+        </div>
+
+        <!-- Error State -->
+        <div *ngIf="errorMessage && !loadingUser && !user" class="error-alert-centered">
+          <i class="ri-error-warning-line"></i>
+          <h3>Failed to Load User</h3>
+          <p>{{ errorMessage }}</p>
+          <button class="btn-primary" (click)="goBack()">
+            <i class="ri-arrow-left-line"></i>
+            Back to Users
+          </button>
         </div>
 
         <!-- Permissions Content -->
@@ -27,37 +39,67 @@
             </div>
           </div>
 
-          <!-- Success/Error Messages -->
+          <!-- Success Message -->
           <div *ngIf="successMessage" class="success-alert">
             <i class="ri-checkbox-circle-line"></i>
             <span>{{ successMessage }}</span>
+            <button class="close-btn" (click)="clearMessages()">
+              <i class="ri-close-line"></i>
+            </button>
           </div>
 
+          <!-- Error Message -->
           <div *ngIf="errorMessage" class="error-alert">
             <i class="ri-error-warning-line"></i>
             <span>{{ errorMessage }}</span>
+            <button class="close-btn" (click)="clearMessages()">
+              <i class="ri-close-line"></i>
+            </button>
           </div>
 
           <!-- User Info Card -->
           <div class="user-info-card">
             <div class="user-avatar">
-              <img [src]="user.avatar_url || 'assets/images/default-avatar.png'" [alt]="user.full_name" />
+              <img *ngIf="user.avatar_url" [src]="user.avatar_url" [alt]="user.full_name" />
+              <div *ngIf="!user.avatar_url" class="avatar-placeholder">
+                {{ user.full_name.charAt(0).toUpperCase() }}
+              </div>
             </div>
             <div class="user-details">
               <h3>{{ user.full_name }}</h3>
-              <p>{{ user.email }}</p>
-              <span class="role-badge">{{ user.role | titlecase }}</span>
+              <p class="user-email">
+                <i class="ri-mail-line"></i>
+                {{ user.email }}
+              </p>
+              <p class="user-phone" *ngIf="user.phone_number">
+                <i class="ri-phone-line"></i>
+                {{ user.phone_number }}
+              </p>
+              <span class="role-badge">
+                <i class="ri-shield-user-line"></i>
+                {{ formatUserRole(user.role) }}
+              </span>
             </div>
             <div class="permission-count">
               <div class="count-item">
                 <span class="count-value">{{ userPermissions.length }}</span>
                 <span class="count-label">Active Permissions</span>
               </div>
+              <div class="count-item">
+                <span class="count-value">{{ availablePermissions.length }}</span>
+                <span class="count-label">Total Available</span>
+              </div>
             </div>
           </div>
 
+          <!-- Loading Permissions -->
+          <div *ngIf="loading" class="loading-container">
+            <div class="spinner"></div>
+            <p>Loading permissions...</p>
+          </div>
+
           <!-- Permissions by Category -->
-          <div class="permissions-sections">
+          <div *ngIf="!loading" class="permissions-sections">
             <div *ngFor="let category of permissionsByCategory | keyvalue" class="permission-category">
               <div class="category-header">
                 <div class="category-info">
@@ -66,32 +108,52 @@
                   <span class="category-count">
                     {{ getCategoryGrantedCount(category.key) }} / {{ getCategoryTotalCount(category.key) }}
                   </span>
+                  <div class="category-progress">
+                    <div class="progress-bar">
+                      <div class="progress-fill" [style.width.%]="getCategoryProgress(category.key)"></div>
+                    </div>
+                  </div>
                 </div>
-                <button
-                  class="btn-toggle-all"
-                  (click)="toggleCategoryPermissions(category.key)"
-                >
+                <button type="button" class="btn-toggle-all" (click)="toggleCategoryPermissions(category.key)"
+                  [disabled]="processingPermission">
                   <i [class]="isCategoryFullyGranted(category.key) ? 'ri-checkbox-line' : 'ri-checkbox-blank-line'"></i>
-                  {{ isCategoryFullyGranted(category.key) ? 'Revoke All' : 'Grant All' }}
+                  <span>{{ isCategoryFullyGranted(category.key) ? 'Revoke All' : 'Grant All' }}</span>
                 </button>
               </div>
 
               <div class="permissions-grid">
-                <div
-                  *ngFor="let permission of category.value"
-                  class="permission-item"
+                <div *ngFor="let permission of category.value" class="permission-item"
                   [class.granted]="hasPermission(permission.name)"
-                  (click)="togglePermission(permission.name)"
-                >
+                  [class.processing]="isProcessingPermission(permission.name)"
+                  (click)="togglePermission(permission.name)">
                   <div class="permission-checkbox">
-                    <i [class]="hasPermission(permission.name) ? 'ri-checkbox-circle-fill' : 'ri-checkbox-blank-circle-line'"></i>
+                    <i *ngIf="!isProcessingPermission(permission.name)"
+                      [class]="hasPermission(permission.name) ? 'ri-checkbox-circle-fill' : 'ri-checkbox-blank-circle-line'"></i>
+                    <i *ngIf="isProcessingPermission(permission.name)" class="ri-loader-4-line spin"></i>
                   </div>
                   <div class="permission-details">
                     <h4>{{ permission.label }}</h4>
                     <p>{{ permission.description }}</p>
                   </div>
+                  <div class="permission-status">
+                    <span *ngIf="hasPermission(permission.name)" class="status-badge granted">
+                      <i class="ri-check-line"></i>
+                      Granted
+                    </span>
+                    <span *ngIf="!hasPermission(permission.name)" class="status-badge revoked">
+                      Not Granted
+                    </span>
+                  </div>
                 </div>
               </div>
+            </div>
+
+            <!-- Empty State -->
+            <div *ngIf="!hasPermissionCategories" class="empty-state">
+
+              <i class="ri-shield-line"></i>
+              <h3>No Permissions Available</h3>
+              <p>There are no permissions to manage at this time</p>
             </div>
           </div>
         </div>

@@ -20,24 +20,32 @@
           </div>
           <button class="btn-primary" (click)="openCreateModal()">
             <i class="ri-add-line"></i>
-            Create Template
+            <span class="desktop-only">Create Template</span>
           </button>
         </div>
 
-        <!-- Success/Error Messages -->
+        <!-- Success Message -->
         <div *ngIf="successMessage" class="success-alert">
           <i class="ri-checkbox-circle-line"></i>
           <span>{{ successMessage }}</span>
+          <button class="close-btn" (click)="clearMessages()">
+            <i class="ri-close-line"></i>
+          </button>
         </div>
 
+        <!-- Error Message -->
         <div *ngIf="errorMessage" class="error-alert">
           <i class="ri-error-warning-line"></i>
           <span>{{ errorMessage }}</span>
+          <button class="close-btn" (click)="clearMessages()">
+            <i class="ri-close-line"></i>
+          </button>
         </div>
 
         <!-- Loading State -->
         <div *ngIf="loading" class="loading-container">
-          <app-loading-spinner message="Loading templates..."></app-loading-spinner>
+          <div class="spinner"></div>
+          <p>Loading templates...</p>
         </div>
 
         <!-- Templates Grid -->
@@ -48,10 +56,18 @@
                 <i class="ri-shield-user-line"></i>
               </div>
               <div class="card-actions">
-                <button class="btn-icon-small" (click)="openEditModal(template)">
+                <button
+                  class="btn-icon-small"
+                  (click)="openEditModal(template)"
+                  title="Edit template"
+                >
                   <i class="ri-edit-line"></i>
                 </button>
-                <button class="btn-icon-small btn-danger" (click)="deleteTemplate(template.id, $event)">
+                <button
+                  class="btn-icon-small btn-danger"
+                  (click)="deleteTemplate(template.id, $event)"
+                  title="Delete template"
+                >
                   <i class="ri-delete-bin-line"></i>
                 </button>
               </div>
@@ -62,10 +78,22 @@
               <p class="template-description" *ngIf="template.description">
                 {{ template.description }}
               </p>
+              <p class="template-description empty" *ngIf="!template.description">
+                No description provided
+              </p>
 
               <div class="permission-count">
                 <i class="ri-checkbox-circle-line"></i>
-                <span>{{ template.permissions.length || 0 }} permission{{ (template.permissions.length || 0) !== 1 ? 's' : '' }}</span>
+                <span>
+                  {{ (template.permissions.length || 0) }} permission{{ (template.permissions.length || 0) !== 1 ? 's' : '' }}
+                </span>
+              </div>
+
+              <div class="template-meta">
+                <span class="meta-item">
+                  <i class="ri-time-line"></i>
+                  Created {{ template.created_at | date:'MMM d, y' }}
+                </span>
               </div>
             </div>
           </div>
@@ -75,6 +103,7 @@
             <i class="ri-shield-user-line"></i>
             <h3>No Role Templates</h3>
             <p>Create your first role template to quickly assign permissions</p>
+            <p class="empty-hint">Templates help you standardize access levels across your team</p>
             <button class="btn-primary" (click)="openCreateModal()">
               <i class="ri-add-line"></i>
               Create Template
@@ -90,22 +119,42 @@
 <div class="modal-overlay" *ngIf="showCreateModal" (click)="closeCreateModal()">
   <div class="modal-content" (click)="$event.stopPropagation()">
     <div class="modal-header">
-      <h2>Create Role Template</h2>
-      <button class="close-btn" (click)="closeCreateModal()">
+      <h2>
+        <i class="ri-add-line"></i>
+        Create Role Template
+      </h2>
+      <button class="close-btn" (click)="closeCreateModal()" [disabled]="submitting">
         <i class="ri-close-line"></i>
       </button>
     </div>
 
     <div class="modal-body">
+      <!-- Error Message -->
+      <div *ngIf="errorMessage" class="error-alert-modal">
+        <i class="ri-error-warning-line"></i>
+        <span>{{ errorMessage }}</span>
+      </div>
+
       <form [formGroup]="templateForm">
         <div class="form-group">
-          <label for="role_name">Template Name *</label>
+          <label for="role_name">
+            Template Name <span class="required">*</span>
+          </label>
           <input
             id="role_name"
             type="text"
             formControlName="role_name"
             placeholder="e.g., Ministry Leader, Finance Manager"
+            maxlength="50"
+            [class.error]="templateForm.get('role_name')?.invalid && templateForm.get('role_name')?.touched"
           />
+          <span
+            *ngIf="templateForm.get('role_name')?.invalid && templateForm.get('role_name')?.touched"
+            class="error-message"
+          >
+            <i class="ri-error-warning-line"></i>
+            {{ getFormError('role_name') }}
+          </span>
         </div>
 
         <div class="form-group">
@@ -113,22 +162,35 @@
           <textarea
             id="description"
             formControlName="description"
-            placeholder="Describe this role..."
+            placeholder="Describe this role and what it's used for..."
             rows="3"
+            maxlength="200"
           ></textarea>
+          <span class="char-count">
+            {{ templateForm.get('description')?.value?.length || 0 }} / 200
+          </span>
         </div>
       </form>
 
       <div class="permissions-section">
-        <h3>Select Permissions</h3>
+        <h3>
+          <i class="ri-shield-check-line"></i>
+          Select Permissions
+          <span class="permission-count-badge">{{ selectedPermissions.size }} selected</span>
+        </h3>
 
         <div *ngFor="let category of permissionsByCategory | keyvalue" class="permission-category">
           <div class="category-header">
             <div class="category-info">
               <i [class]="getCategoryIcon(category.key)"></i>
               <h4>{{ getCategoryLabel(category.key) }}</h4>
+              <span class="category-count">
+                {{ getSelectedCount(category.key) }} / {{ category.value.length }}
+
+              </span>
             </div>
             <button
+              type="button"
               class="btn-toggle-category"
               (click)="toggleCategoryPermissions(category.key)"
             >
@@ -149,7 +211,11 @@
                 (change)="togglePermission(permission.name)"
               />
               <div class="permission-label">
-                <span class="label-text">{{ permission.label }}</span>
+                <span class="label-text">
+                  <i class="ri-checkbox-blank-circle-line unchecked"></i>
+                  <i class="ri-checkbox-circle-fill checked"></i>
+                  {{ permission.label }}
+                </span>
                 <span class="label-description">{{ permission.description }}</span>
               </div>
             </label>
@@ -159,12 +225,27 @@
     </div>
 
     <div class="modal-footer">
-      <button class="btn-secondary" (click)="closeCreateModal()">
+      <button
+        class="btn-secondary"
+        (click)="closeCreateModal()"
+        [disabled]="submitting"
+      >
+        <i class="ri-close-line"></i>
         Cancel
       </button>
-      <button class="btn-primary" (click)="createTemplate()">
-        <i class="ri-save-line"></i>
-        Create Template
+      <button
+        class="btn-primary"
+        (click)="createTemplate()"
+        [disabled]="submitting || templateForm.invalid || selectedPermissions.size === 0"
+      >
+        <span *ngIf="!submitting">
+          <i class="ri-save-line"></i>
+          Create Template
+        </span>
+        <span *ngIf="submitting" class="loading-content">
+          <i class="ri-loader-4-line spin"></i>
+          Creating...
+        </span>
       </button>
     </div>
   </div>
@@ -174,23 +255,42 @@
 <div class="modal-overlay" *ngIf="showEditModal" (click)="closeEditModal()">
   <div class="modal-content" (click)="$event.stopPropagation()">
     <div class="modal-header">
-      <h2>Edit Role Template</h2>
-      <button class="close-btn" (click)="closeEditModal()">
+      <h2>
+        <i class="ri-edit-line"></i>
+        Edit Role Template
+      </h2>
+      <button class="close-btn" (click)="closeEditModal()" [disabled]="submitting">
         <i class="ri-close-line"></i>
       </button>
     </div>
 
     <div class="modal-body">
-      <!-- Same form structure as create modal -->
+      <!-- Error Message -->
+      <div *ngIf="errorMessage" class="error-alert-modal">
+        <i class="ri-error-warning-line"></i>
+        <span>{{ errorMessage }}</span>
+      </div>
+
       <form [formGroup]="templateForm">
         <div class="form-group">
-          <label for="edit_role_name">Template Name *</label>
+          <label for="edit_role_name">
+            Template Name <span class="required">*</span>
+          </label>
           <input
             id="edit_role_name"
             type="text"
             formControlName="role_name"
             placeholder="e.g., Ministry Leader, Finance Manager"
+            maxlength="50"
+            [class.error]="templateForm.get('role_name')?.invalid && templateForm.get('role_name')?.touched"
           />
+          <span
+            *ngIf="templateForm.get('role_name')?.invalid && templateForm.get('role_name')?.touched"
+            class="error-message"
+          >
+            <i class="ri-error-warning-line"></i>
+            {{ getFormError('role_name') }}
+          </span>
         </div>
 
         <div class="form-group">
@@ -198,22 +298,34 @@
           <textarea
             id="edit_description"
             formControlName="description"
-            placeholder="Describe this role..."
+            placeholder="Describe this role and what it's used for..."
             rows="3"
+            maxlength="200"
           ></textarea>
+          <span class="char-count">
+            {{ templateForm.get('description')?.value?.length || 0 }} / 200
+          </span>
         </div>
       </form>
 
       <div class="permissions-section">
-        <h3>Select Permissions</h3>
+        <h3>
+          <i class="ri-shield-check-line"></i>
+          Select Permissions
+          <span class="permission-count-badge">{{ selectedPermissions.size }} selected</span>
+        </h3>
 
         <div *ngFor="let category of permissionsByCategory | keyvalue" class="permission-category">
           <div class="category-header">
             <div class="category-info">
               <i [class]="getCategoryIcon(category.key)"></i>
               <h4>{{ getCategoryLabel(category.key) }}</h4>
+              <span class="category-count">
+               {{ getSelectedCount(category.key) }} / {{ category.value.length }}
+              </span>
             </div>
             <button
+              type="button"
               class="btn-toggle-category"
               (click)="toggleCategoryPermissions(category.key)"
             >
@@ -234,7 +346,11 @@
                 (change)="togglePermission(permission.name)"
               />
               <div class="permission-label">
-                <span class="label-text">{{ permission.label }}</span>
+                <span class="label-text">
+                  <i class="ri-checkbox-blank-circle-line unchecked"></i>
+                  <i class="ri-checkbox-circle-fill checked"></i>
+                  {{ permission.label }}
+                </span>
                 <span class="label-description">{{ permission.description }}</span>
               </div>
             </label>
@@ -244,12 +360,27 @@
     </div>
 
     <div class="modal-footer">
-      <button class="btn-secondary" (click)="closeEditModal()">
+      <button
+        class="btn-secondary"
+        (click)="closeEditModal()"
+        [disabled]="submitting"
+      >
+        <i class="ri-close-line"></i>
         Cancel
       </button>
-      <button class="btn-primary" (click)="updateTemplate()">
-        <i class="ri-save-line"></i>
-        Update Template
+      <button
+        class="btn-primary"
+        (click)="updateTemplate()"
+        [disabled]="submitting || templateForm.invalid || selectedPermissions.size === 0"
+      >
+        <span *ngIf="!submitting">
+          <i class="ri-save-line"></i>
+          Update Template
+        </span>
+        <span *ngIf="submitting" class="loading-content">
+          <i class="ri-loader-4-line spin"></i>
+          Updating...
+        </span>
       </button>
     </div>
   </div>

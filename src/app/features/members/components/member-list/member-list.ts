@@ -1,4 +1,3 @@
-
 // src/app/features/members/components/member-list/member-list.component.ts
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
@@ -6,10 +5,11 @@ import { FormBuilder, FormGroup } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { takeUntil, debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { MemberService } from '../../services/member.service';
-import { Member, MemberSearchFilters } from '../../../../models/member.model';
+import { AuthService } from '../../../../core/services/auth';
+import { Member, MemberSearchFilters, MemberStatistics } from '../../../../models/member.model';
 
 @Component({
-    selector: 'app-member-list',
+  selector: 'app-member-list',
   standalone: false,
   templateUrl: './member-list.html',
   styleUrl: './member-list.scss',
@@ -19,6 +19,7 @@ export class MemberList implements OnInit, OnDestroy {
 
   members: Member[] = [];
   loading = false;
+  error = '';
 
   // Pagination
   currentPage = 1;
@@ -34,24 +35,48 @@ export class MemberList implements OnInit, OnDestroy {
   viewMode: 'grid' | 'list' = 'list';
 
   // Statistics
-  statistics: any = null;
+  statistics: MemberStatistics | null = null;
+
+  // Permissions
+  canAddMember = false;
+  canEditMember = false;
+  canDeleteMember = false;
+  canImportExport = false;
 
   constructor(
     private memberService: MemberService,
+    private authService: AuthService,
     private router: Router,
     private fb: FormBuilder
   ) {}
 
   ngOnInit(): void {
+    this.setPermissions();
     this.initFilterForm();
     this.loadMembers();
     this.loadStatistics();
     this.setupFilterListener();
+
+    // Load view mode from localStorage
+    const savedViewMode = localStorage.getItem('members-view-mode');
+    if (savedViewMode === 'grid' || savedViewMode === 'list') {
+      this.viewMode = savedViewMode;
+    }
   }
 
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  private setPermissions(): void {
+    const adminRoles = ['super_admin', 'church_admin', 'pastor'];
+    const editRoles = ['super_admin', 'church_admin', 'pastor', 'group_leader'];
+
+    this.canAddMember = this.authService.hasRole(adminRoles);
+    this.canEditMember = this.authService.hasRole(editRoles);
+    this.canDeleteMember = this.authService.hasRole(['super_admin', 'church_admin']);
+    this.canImportExport = this.authService.hasRole(['super_admin', 'church_admin']);
   }
 
   private initFilterForm(): void {
@@ -86,6 +111,7 @@ export class MemberList implements OnInit, OnDestroy {
 
   loadMembers(): void {
     this.loading = true;
+    this.error = '';
 
     this.memberService.getMembers(this.filters, this.currentPage, this.pageSize)
       .pipe(takeUntil(this.destroy$))
@@ -97,8 +123,9 @@ export class MemberList implements OnInit, OnDestroy {
           this.loading = false;
         },
         error: (error) => {
-          console.error('Error loading members:', error);
+          this.error = error.message || 'Failed to load members';
           this.loading = false;
+          console.error('Error loading members:', error);
         }
       });
   }
@@ -122,15 +149,27 @@ export class MemberList implements OnInit, OnDestroy {
   }
 
   addMember(): void {
+    if (!this.canAddMember) {
+      alert('You do not have permission to add members');
+      return;
+    }
     this.router.navigate(['main/members/add']);
   }
 
   editMember(memberId: string, event: Event): void {
     event.stopPropagation();
+    if (!this.canEditMember) {
+      alert('You do not have permission to edit members');
+      return;
+    }
     this.router.navigate(['main/members', memberId, 'edit']);
   }
 
   importMembers(): void {
+    if (!this.canImportExport) {
+      alert('You do not have permission to import members');
+      return;
+    }
     this.router.navigate(['main/members/import']);
   }
 
@@ -139,6 +178,7 @@ export class MemberList implements OnInit, OnDestroy {
     if (this.currentPage > 1) {
       this.currentPage--;
       this.loadMembers();
+      this.scrollToTop();
     }
   }
 
@@ -146,16 +186,29 @@ export class MemberList implements OnInit, OnDestroy {
     if (this.currentPage < this.totalPages) {
       this.currentPage++;
       this.loadMembers();
+      this.scrollToTop();
     }
   }
 
   goToPage(page: number): void {
-    this.currentPage = page;
-    this.loadMembers();
+    if (page >= 1 && page <= this.totalPages) {
+      this.currentPage = page;
+      this.loadMembers();
+      this.scrollToTop();
+    }
+  }
+
+  private scrollToTop(): void {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   // Export
   exportMembers(): void {
+    if (!this.canImportExport) {
+      alert('You do not have permission to export members');
+      return;
+    }
+
     this.memberService.exportMembersToCSV(this.filters)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
@@ -164,10 +217,13 @@ export class MemberList implements OnInit, OnDestroy {
           const a = document.createElement('a');
           a.href = url;
           a.download = `members_${new Date().toISOString().split('T')[0]}.csv`;
+          document.body.appendChild(a);
           a.click();
+          document.body.removeChild(a);
           window.URL.revokeObjectURL(url);
         },
         error: (error) => {
+          alert('Failed to export members: ' + error.message);
           console.error('Error exporting members:', error);
         }
       });
@@ -177,14 +233,21 @@ export class MemberList implements OnInit, OnDestroy {
   deleteMember(memberId: string, event: Event): void {
     event.stopPropagation();
 
-    if (confirm('Are you sure you want to deactivate this member?')) {
+    if (!this.canDeleteMember) {
+      alert('You do not have permission to delete members');
+      return;
+    }
+
+    if (confirm('Are you sure you want to deactivate this member? This action can be reversed by reactivating the member later.')) {
       this.memberService.deleteMember(memberId)
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: () => {
             this.loadMembers();
+            this.loadStatistics();
           },
           error: (error) => {
+            alert('Failed to delete member: ' + error.message);
             console.error('Error deleting member:', error);
           }
         });
@@ -194,14 +257,20 @@ export class MemberList implements OnInit, OnDestroy {
   // View toggle
   toggleViewMode(): void {
     this.viewMode = this.viewMode === 'list' ? 'grid' : 'list';
+    localStorage.setItem('members-view-mode', this.viewMode);
   }
 
   // Clear filters
   clearFilters(): void {
-    this.filterForm.reset();
+    this.filterForm.reset({
+      search: '',
+      gender: '',
+      status: '',
+      branch: '',
+      ministry: ''
+    });
     this.filters = {};
     this.currentPage = 1;
-    this.loadMembers();
   }
 
   // Helper methods

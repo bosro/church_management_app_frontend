@@ -31,7 +31,7 @@
               <i class="ri-arrow-left-line"></i>
               Back to Sermons
             </button>
-            <button class="edit-btn" (click)="editSermon()">
+            <button class="edit-btn" (click)="editSermon()" *ngIf="canManageSermons">
               <i class="ri-edit-line"></i>
               Edit Sermon
             </button>

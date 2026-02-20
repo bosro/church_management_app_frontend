@@ -14,23 +14,46 @@
             <p class="subtitle">Manage your church members</p>
           </div>
           <div class="header-actions">
-            <button class="btn-secondary" (click)="importMembers()">
+            <button
+              class="btn-secondary"
+              (click)="importMembers()"
+              [disabled]="!canImportExport"
+              *ngIf="canImportExport"
+            >
               <i class="ri-upload-line"></i>
-              <span>Import</span>
+              <span class="desktop-only">Import</span>
             </button>
-            <button class="btn-secondary" (click)="exportMembers()">
+            <button
+              class="btn-secondary"
+              (click)="exportMembers()"
+              [disabled]="!canImportExport"
+              *ngIf="canImportExport"
+            >
               <i class="ri-download-line"></i>
-              <span>Export</span>
+              <span class="desktop-only">Export</span>
             </button>
-            <button class="btn-primary" (click)="addMember()">
+            <button
+              class="btn-primary"
+              (click)="addMember()"
+              [disabled]="!canAddMember"
+            >
               <i class="ri-user-add-line"></i>
-              <span>Add Member</span>
+              <span class="desktop-only">Add Member</span>
             </button>
           </div>
         </div>
 
+        <!-- Error Message -->
+        <div *ngIf="error" class="error-alert">
+          <i class="ri-error-warning-line"></i>
+          <span>{{ error }}</span>
+          <button class="close-btn" (click)="error = ''">
+            <i class="ri-close-line"></i>
+          </button>
+        </div>
+
         <!-- Statistics Cards -->
-        <div class="stats-grid" *ngIf="statistics">
+        <div class="stats-grid" *ngIf="statistics && !loading">
           <div class="stat-card">
             <div class="stat-icon" style="background: #DDD6FE; color: #7C3AED;">
               <i class="ri-group-line"></i>
@@ -84,6 +107,11 @@
                 placeholder="Search members by name, email, or phone..."
                 class="search-input"
               />
+              <i
+                *ngIf="filterForm.get('search')?.value"
+                class="ri-close-line clear-search"
+                (click)="filterForm.get('search')?.setValue('')"
+              ></i>
             </div>
 
             <!-- Gender Filter -->
@@ -108,13 +136,24 @@
             </div>
 
             <!-- Clear Filters -->
-            <button type="button" class="btn-clear" (click)="clearFilters()">
+            <button
+              type="button"
+              class="btn-clear"
+              (click)="clearFilters()"
+              *ngIf="filterForm.dirty"
+              title="Clear all filters"
+            >
               <i class="ri-close-line"></i>
-              Clear
+              <span class="desktop-only">Clear</span>
             </button>
 
             <!-- View Toggle -->
-            <button type="button" class="btn-icon" (click)="toggleViewMode()" title="Toggle view">
+            <button
+              type="button"
+              class="btn-icon"
+              (click)="toggleViewMode()"
+              [title]="viewMode === 'list' ? 'Switch to grid view' : 'Switch to list view'"
+            >
               <i [class]="viewMode === 'list' ? 'ri-grid-line' : 'ri-list-check'"></i>
             </button>
           </form>
@@ -122,7 +161,8 @@
 
         <!-- Loading State -->
         <div *ngIf="loading" class="loading-container">
-          <app-loading-spinner message="Loading members..."></app-loading-spinner>
+          <div class="spinner"></div>
+          <p>Loading members...</p>
         </div>
 
         <!-- Members List View -->
@@ -134,9 +174,9 @@
                   <th>Member</th>
                   <th>Member Number</th>
                   <th>Contact</th>
-                  <th>Gender</th>
-                  <th>Age</th>
-                  <th>Join Date</th>
+                  <th class="desktop-only">Gender</th>
+                  <th class="desktop-only">Age</th>
+                  <th class="desktop-only">Join Date</th>
                   <th>Status</th>
                   <th>Actions</th>
                 </tr>
@@ -166,26 +206,26 @@
                   </td>
                   <td>
                     <div class="contact-info">
-                      <p *ngIf="member.email">
+                      <p *ngIf="member.email" class="contact-item">
                         <i class="ri-mail-line"></i>
-                        {{ member.email }}
+                        <span class="desktop-only">{{ member.email }}</span>
                       </p>
-                      <p *ngIf="member.phone_primary">
+                      <p *ngIf="member.phone_primary" class="contact-item">
                         <i class="ri-phone-line"></i>
                         {{ member.phone_primary }}
                       </p>
                     </div>
                   </td>
-                  <td>
+                  <td class="desktop-only">
                     <span class="capitalize">{{ member.gender || '-' }}</span>
                   </td>
-                  <td>
+                  <td class="desktop-only">
                     <span *ngIf="calculateAge(member.date_of_birth) !== null">
                       {{ calculateAge(member.date_of_birth) }} years
                     </span>
                     <span *ngIf="calculateAge(member.date_of_birth) === null">-</span>
                   </td>
-                  <td>{{ member.join_date | date:'MMM d, y' }}</td>
+                  <td class="desktop-only">{{ member.join_date | date:'MMM d, y' }}</td>
                   <td>
                     <span class="status-badge" [ngClass]="getStatusClass(member.membership_status)">
                       {{ member.membership_status }}
@@ -193,10 +233,22 @@
                   </td>
                   <td>
                     <div class="action-buttons">
-                      <button class="btn-icon-small" (click)="editMember(member.id, $event)" title="Edit">
+                      <button
+                        class="btn-icon-small"
+                        (click)="editMember(member.id, $event)"
+                        title="Edit"
+                        [disabled]="!canEditMember"
+                        *ngIf="canEditMember"
+                      >
                         <i class="ri-edit-line"></i>
                       </button>
-                      <button class="btn-icon-small btn-danger" (click)="deleteMember(member.id, $event)" title="Delete">
+                      <button
+                        class="btn-icon-small btn-danger"
+                        (click)="deleteMember(member.id, $event)"
+                        title="Delete"
+                        [disabled]="!canDeleteMember"
+                        *ngIf="canDeleteMember"
+                      >
                         <i class="ri-delete-bin-line"></i>
                       </button>
                     </div>
@@ -208,7 +260,13 @@
                   <td colspan="8" class="empty-state">
                     <i class="ri-user-line"></i>
                     <p>No members found</p>
-                    <button class="btn-primary-small" (click)="addMember()">
+                    <p class="empty-hint">Try adjusting your filters or add your first member</p>
+                    <button
+                      class="btn-primary-small"
+                      (click)="addMember()"
+                      *ngIf="canAddMember"
+                    >
+                      <i class="ri-user-add-line"></i>
                       Add Your First Member
                     </button>
                   </td>
@@ -225,12 +283,13 @@
               (click)="previousPage()"
             >
               <i class="ri-arrow-left-s-line"></i>
-              Previous
+              <span class="desktop-only">Previous</span>
             </button>
 
             <div class="pagination-pages">
               <span class="page-info">
-                Page {{ currentPage }} of {{ totalPages }} ({{ totalMembers }} members)
+                Page {{ currentPage }} of {{ totalPages }}
+                <span class="desktop-only">({{ totalMembers }} members)</span>
               </span>
             </div>
 
@@ -239,7 +298,7 @@
               [disabled]="currentPage === totalPages"
               (click)="nextPage()"
             >
-              Next
+              <span class="desktop-only">Next</span>
               <i class="ri-arrow-right-s-line"></i>
             </button>
           </div>
@@ -269,27 +328,37 @@
               <p class="member-number">{{ member.member_number }}</p>
 
               <div class="member-details">
-                <p *ngIf="member.email">
+                <p *ngIf="member.email" class="detail-item">
                   <i class="ri-mail-line"></i>
-                  {{ member.email }}
+                  <span>{{ member.email }}</span>
                 </p>
-                <p *ngIf="member.phone_primary">
+                <p *ngIf="member.phone_primary" class="detail-item">
                   <i class="ri-phone-line"></i>
-                  {{ member.phone_primary }}
+                  <span>{{ member.phone_primary }}</span>
                 </p>
-                <p *ngIf="member.date_of_birth">
+                <p *ngIf="member.date_of_birth" class="detail-item">
                   <i class="ri-calendar-line"></i>
-                  {{ calculateAge(member.date_of_birth) }} years old
+                  <span>{{ calculateAge(member.date_of_birth) }} years old</span>
                 </p>
               </div>
             </div>
 
             <div class="card-footer">
-              <button class="btn-card" (click)="editMember(member.id, $event)">
+              <button
+                class="btn-card"
+                (click)="editMember(member.id, $event)"
+                [disabled]="!canEditMember"
+                *ngIf="canEditMember"
+              >
                 <i class="ri-edit-line"></i>
                 Edit
               </button>
-              <button class="btn-card btn-danger" (click)="deleteMember(member.id, $event)">
+              <button
+                class="btn-card btn-danger"
+                (click)="deleteMember(member.id, $event)"
+                [disabled]="!canDeleteMember"
+                *ngIf="canDeleteMember"
+              >
                 <i class="ri-delete-bin-line"></i>
                 Delete
               </button>
@@ -300,7 +369,12 @@
           <div *ngIf="members.length === 0" class="empty-grid-state">
             <i class="ri-user-line"></i>
             <p>No members found</p>
-            <button class="btn-primary" (click)="addMember()">
+            <p class="empty-hint">Try adjusting your filters or add your first member</p>
+            <button
+              class="btn-primary"
+              (click)="addMember()"
+              *ngIf="canAddMember"
+            >
               <i class="ri-user-add-line"></i>
               Add Your First Member
             </button>

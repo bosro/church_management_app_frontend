@@ -3,11 +3,11 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { CmsPage } from '../../../../models/cms.model';
 import { CmsService } from '../../services/cms';
+import { CmsPage } from '../../../../models/cms.model';
 
 @Component({
- selector: 'app-pages-list',
+  selector: 'app-pages-list',
   standalone: false,
   templateUrl: './pages-list.html',
   styleUrl: './pages-list.scss',
@@ -26,12 +26,17 @@ export class PagesList implements OnInit, OnDestroy {
   totalPages = 0;
   totalPagesCount = 0;
 
+  // Permissions
+  canManageContent = false;
+  canPublishContent = false;
+
   constructor(
     private cmsService: CmsService,
     private router: Router
   ) {}
 
   ngOnInit(): void {
+    this.checkPermissions();
     this.loadPages();
   }
 
@@ -40,10 +45,21 @@ export class PagesList implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  private checkPermissions(): void {
+    this.canManageContent = this.cmsService.canManageContent();
+    this.canPublishContent = this.cmsService.canPublishContent();
+
+    if (!this.cmsService.canViewContent()) {
+      this.router.navigate(['/unauthorized']);
+    }
+  }
+
   loadPages(): void {
     this.loading = true;
+    this.errorMessage = '';
 
-    this.cmsService.getPages(this.currentPage, this.pageSize)
+    this.cmsService
+      .getPages(this.currentPage, this.pageSize)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: ({ data, count }) => {
@@ -53,19 +69,31 @@ export class PagesList implements OnInit, OnDestroy {
           this.loading = false;
         },
         error: (error) => {
-          console.error('Error loading pages:', error);
+          this.errorMessage = error.message || 'Failed to load pages';
           this.loading = false;
+          console.error('Error loading pages:', error);
         }
       });
   }
 
   // Navigation
   createPage(): void {
+    if (!this.canManageContent) {
+      this.errorMessage = 'You do not have permission to create pages';
+      this.scrollToTop();
+      return;
+    }
     this.router.navigate(['main/cms/pages/create']);
   }
 
-  editPage(pageId: string, event: Event): void {
+  editPage(pageId: string, event: MouseEvent): void {
     event.stopPropagation();
+
+    if (!this.canManageContent) {
+      this.errorMessage = 'You do not have permission to edit pages';
+      this.scrollToTop();
+      return;
+    }
     this.router.navigate(['main/cms/pages', pageId, 'edit']);
   }
 
@@ -74,8 +102,14 @@ export class PagesList implements OnInit, OnDestroy {
   }
 
   // Actions
-  togglePublish(page: CmsPage, event: Event): void {
+  togglePublish(page: CmsPage, event: MouseEvent): void {
     event.stopPropagation();
+
+    if (!this.canPublishContent) {
+      this.errorMessage = 'You do not have permission to publish/unpublish pages';
+      this.scrollToTop();
+      return;
+    }
 
     const action = page.is_published ? 'unpublish' : 'publish';
     const observable = page.is_published
@@ -93,30 +127,50 @@ export class PagesList implements OnInit, OnDestroy {
       },
       error: (error) => {
         this.errorMessage = error.message || `Failed to ${action} page`;
+        this.scrollToTop();
+        console.error(`${action} error:`, error);
       }
     });
   }
 
-  deletePage(pageId: string, event: Event): void {
+  deletePage(pageId: string, event: MouseEvent): void {
     event.stopPropagation();
 
-    if (confirm('Are you sure you want to delete this page?')) {
-      this.cmsService.deletePage(pageId)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: () => {
-            this.successMessage = 'Page deleted successfully!';
-            this.loadPages();
-
-            setTimeout(() => {
-              this.successMessage = '';
-            }, 3000);
-          },
-          error: (error) => {
-            this.errorMessage = error.message || 'Failed to delete page';
-          }
-        });
+    if (!this.canManageContent) {
+      this.errorMessage = 'You do not have permission to delete pages';
+      this.scrollToTop();
+      return;
     }
+
+    const page = this.pages.find(p => p.id === pageId);
+    if (!page) return;
+
+    const confirmMessage = page.is_published
+      ? `This page is currently published. Are you sure you want to delete "${page.title}"?`
+      : `Are you sure you want to delete "${page.title}"?`;
+
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    this.cmsService
+      .deletePage(pageId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.successMessage = 'Page deleted successfully!';
+          this.loadPages();
+
+          setTimeout(() => {
+            this.successMessage = '';
+          }, 3000);
+        },
+        error: (error) => {
+          this.errorMessage = error.message || 'Failed to delete page';
+          this.scrollToTop();
+          console.error('Delete error:', error);
+        }
+      });
   }
 
   // Pagination
@@ -124,6 +178,7 @@ export class PagesList implements OnInit, OnDestroy {
     if (this.currentPage > 1) {
       this.currentPage--;
       this.loadPages();
+      this.scrollToTop();
     }
   }
 
@@ -131,6 +186,11 @@ export class PagesList implements OnInit, OnDestroy {
     if (this.currentPage < this.totalPages) {
       this.currentPage++;
       this.loadPages();
+      this.scrollToTop();
     }
+  }
+
+  private scrollToTop(): void {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }

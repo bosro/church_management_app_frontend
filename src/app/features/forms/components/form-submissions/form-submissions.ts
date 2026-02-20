@@ -3,7 +3,7 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { FormTemplate, FormSubmission, SubmissionStatus } from '../../../../models/form.model';
+import { FormTemplate, FormSubmission } from '../../../../models/form.model';
 import { FormsService } from '../../services/forms';
 
 @Component({
@@ -33,14 +33,19 @@ export class FormSubmissions implements OnInit, OnDestroy {
   selectedSubmission: FormSubmission | null = null;
   showSubmissionModal = false;
 
+  // Permissions
+  canManageForms = false;
+
   constructor(
     private formsService: FormsService,
     private router: Router,
-    private route: ActivatedRoute,
+    private route: ActivatedRoute
   ) {}
 
   ngOnInit(): void {
+    this.checkPermissions();
     this.formId = this.route.snapshot.paramMap.get('id') || '';
+
     if (this.formId) {
       this.loadFormTemplate();
       this.loadSubmissions();
@@ -52,11 +57,14 @@ export class FormSubmissions implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  private checkPermissions(): void {
+    this.canManageForms = this.formsService.canManageForms();
+  }
+
   private loadFormTemplate(): void {
     this.loadingForm = true;
 
-    this.formsService
-      .getFormTemplateById(this.formId)
+    this.formsService.getFormTemplateById(this.formId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (template) => {
@@ -66,15 +74,16 @@ export class FormSubmissions implements OnInit, OnDestroy {
         error: (error) => {
           this.errorMessage = error.message || 'Failed to load form template';
           this.loadingForm = false;
-        },
+          console.error('Error loading form template:', error);
+        }
       });
   }
 
   loadSubmissions(): void {
     this.loading = true;
+    this.errorMessage = '';
 
-    this.formsService
-      .getFormSubmissions(this.formId, this.currentPage, this.pageSize)
+    this.formsService.getFormSubmissions(this.formId, this.currentPage, this.pageSize)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: ({ data, count }) => {
@@ -84,9 +93,10 @@ export class FormSubmissions implements OnInit, OnDestroy {
           this.loading = false;
         },
         error: (error) => {
-          console.error('Error loading submissions:', error);
+          this.errorMessage = error.message || 'Failed to load submissions';
           this.loading = false;
-        },
+          console.error('Error loading submissions:', error);
+        }
       });
   }
 
@@ -110,16 +120,38 @@ export class FormSubmissions implements OnInit, OnDestroy {
     this.selectedSubmission = null;
   }
 
-  // Update Status
-  updateStatus(submissionId: string, status: SubmissionStatus, event: Event): void {
+  // Note: Status updates removed since not in DB
+  // If you need status, consider adding a metadata JSONB column
+
+  get pendingSubmissionsCount(): number {
+    // All submissions are considered "pending" since status isn't in DB
+    return this.submissions.length;
+  }
+
+  get approvedSubmissionsCount(): number {
+    return 0; // Not tracked in current schema
+  }
+
+  // Delete Submission
+  deleteSubmission(submissionId: string, event: Event): void {
     event.stopPropagation();
 
-    this.formsService
-      .updateSubmissionStatus(submissionId, status)
+    if (!this.canManageForms) {
+      this.errorMessage = 'You do not have permission to delete submissions';
+      return;
+    }
+
+    const confirmMessage = 'Are you sure you want to delete this submission? This action cannot be undone.';
+
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    this.formsService.deleteSubmission(submissionId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
-          this.successMessage = `Status updated to ${status}`;
+          this.successMessage = 'Submission deleted successfully!';
           this.loadSubmissions();
 
           setTimeout(() => {
@@ -127,47 +159,20 @@ export class FormSubmissions implements OnInit, OnDestroy {
           }, 3000);
         },
         error: (error) => {
-          this.errorMessage = error.message || 'Failed to update status';
-        },
+          this.errorMessage = error.message || 'Failed to delete submission';
+          console.error('Error deleting submission:', error);
+        }
       });
-  }
-
-  get pendingSubmissionsCount(): number {
-    return this.submissions.filter((s) => s.status === 'submitted').length;
-  }
-
-  get approvedSubmissionsCount(): number {
-    return this.submissions.filter((s) => s.status === 'approved').length;
-  }
-
-  // Delete Submission
-  deleteSubmission(submissionId: string, event: Event): void {
-    event.stopPropagation();
-
-    if (confirm('Are you sure you want to delete this submission?')) {
-      this.formsService
-        .deleteSubmission(submissionId)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: () => {
-            this.successMessage = 'Submission deleted successfully!';
-            this.loadSubmissions();
-
-            setTimeout(() => {
-              this.successMessage = '';
-            }, 3000);
-          },
-          error: (error) => {
-            this.errorMessage = error.message || 'Failed to delete submission';
-          },
-        });
-    }
   }
 
   // Export
   exportToCSV(): void {
-    this.formsService
-      .exportSubmissions(this.formId)
+    if (!this.canManageForms) {
+      this.errorMessage = 'You do not have permission to export submissions';
+      return;
+    }
+
+    this.formsService.exportSubmissions(this.formId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (blob) => {
@@ -187,7 +192,8 @@ export class FormSubmissions implements OnInit, OnDestroy {
         },
         error: (error) => {
           this.errorMessage = error.message || 'Failed to export submissions';
-        },
+          console.error('Export error:', error);
+        }
       });
   }
 
@@ -196,6 +202,7 @@ export class FormSubmissions implements OnInit, OnDestroy {
     if (this.currentPage > 1) {
       this.currentPage--;
       this.loadSubmissions();
+      this.scrollToTop();
     }
   }
 
@@ -203,20 +210,11 @@ export class FormSubmissions implements OnInit, OnDestroy {
     if (this.currentPage < this.totalPages) {
       this.currentPage++;
       this.loadSubmissions();
+      this.scrollToTop();
     }
   }
 
   // Helper Methods
-  getStatusClass(status: SubmissionStatus): string {
-    const classes: Record<string, string> = {
-      submitted: 'status-submitted',
-      reviewed: 'status-reviewed',
-      approved: 'status-approved',
-      rejected: 'status-rejected',
-    };
-    return classes[status] || 'status-submitted';
-  }
-
   getMemberName(submission: FormSubmission): string {
     if (submission.member) {
       return `${submission.member.first_name} ${submission.member.last_name}`;
@@ -226,10 +224,21 @@ export class FormSubmissions implements OnInit, OnDestroy {
 
   getSubmissionPreview(submission: FormSubmission): string {
     const values = Object.values(submission.submission_data);
-    return values.slice(0, 2).join(', ') + (values.length > 2 ? '...' : '');
+    const preview = values.slice(0, 2).map(v => {
+      if (Array.isArray(v)) {
+        return v.join(', ');
+      }
+      return String(v);
+    }).join(' • ');
+
+    return preview + (values.length > 2 ? '...' : '');
   }
 
   isArray(value: any): value is any[] {
     return Array.isArray(value);
+  }
+
+  private scrollToTop(): void {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }

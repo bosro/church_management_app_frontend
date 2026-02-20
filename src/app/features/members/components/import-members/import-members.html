@@ -10,7 +10,7 @@
         <!-- Page Header -->
         <div class="page-header">
           <div class="header-left">
-            <button class="back-btn" (click)="cancel()">
+            <button class="back-btn" (click)="cancel()" [disabled]="uploading">
               <i class="ri-arrow-left-line"></i>
             </button>
             <div>
@@ -30,18 +30,35 @@
         <div *ngIf="errorMessage" class="error-alert">
           <i class="ri-error-warning-line"></i>
           <span>{{ errorMessage }}</span>
+          <button class="close-btn" (click)="errorMessage = ''">
+            <i class="ri-close-line"></i>
+          </button>
         </div>
 
         <!-- Import Card -->
         <div class="import-card">
           <!-- Instructions -->
           <div class="instructions-section">
-            <h3>Instructions</h3>
+            <h3>
+              <i class="ri-information-line"></i>
+              Instructions
+            </h3>
             <ol>
-              <li>Download the CSV template below</li>
-              <li>Fill in your member data following the template format</li>
-              <li>Upload the completed CSV file</li>
-              <li>Review the import results and fix any errors</li>
+              <li>
+                <strong>Download the template:</strong> Click the button below to get the CSV template with sample data
+              </li>
+              <li>
+                <strong>Fill in your data:</strong> Add your member information following the template format. Required fields are marked with *
+              </li>
+              <li>
+                <strong>Remove instructions:</strong> Delete the instruction rows (starting with #) before uploading
+              </li>
+              <li>
+                <strong>Upload the file:</strong> Drag and drop or browse to select your completed CSV file
+              </li>
+              <li>
+                <strong>Review results:</strong> Check the import summary and fix any errors if needed
+              </li>
             </ol>
 
             <button class="btn-template" (click)="downloadTemplate()">
@@ -56,6 +73,7 @@
               class="dropzone"
               [class.dragover]="dragOver"
               [class.has-file]="selectedFile"
+              [class.uploading]="uploading"
               (dragover)="onDragOver($event)"
               (dragleave)="onDragLeave($event)"
               (drop)="onDrop($event)"
@@ -65,13 +83,23 @@
                 <h4>Drag & Drop your CSV file here</h4>
                 <p>or</p>
                 <label class="btn-browse">
+                  <i class="ri-folder-open-line"></i>
                   Browse Files
-                  <input type="file" accept=".csv" (change)="onFileSelected($event)" hidden />
+                  <input
+                    type="file"
+                    accept=".csv,.CSV"
+                    (change)="onFileSelected($event)"
+                    [disabled]="uploading"
+                    hidden
+                  />
                 </label>
-                <span class="file-hint">Maximum file size: 10MB</span>
+                <span class="file-hint">
+                  <i class="ri-information-line"></i>
+                  Maximum file size: 10MB • Accepted format: .CSV
+                </span>
               </div>
 
-              <div *ngIf="selectedFile" class="file-selected">
+              <div *ngIf="selectedFile && !importResults" class="file-selected">
                 <div class="file-info">
                   <i class="ri-file-text-line"></i>
                   <div class="file-details">
@@ -82,6 +110,7 @@
                     class="btn-remove"
                     (click)="removeFile()"
                     *ngIf="!uploading"
+                    title="Remove file"
                   >
                     <i class="ri-close-line"></i>
                   </button>
@@ -92,12 +121,15 @@
                   <div class="progress-bar">
                     <div class="progress-fill" [style.width.%]="uploadProgress"></div>
                   </div>
-                  <p class="progress-text">{{ uploadProgress }}% uploaded</p>
+                  <p class="progress-text">
+                    <i class="ri-loader-4-line spin"></i>
+                    Processing... {{ uploadProgress }}%
+                  </p>
                 </div>
 
                 <!-- Upload Button -->
                 <button
-                  *ngIf="!uploading && !importResults"
+                  *ngIf="!uploading"
                   class="btn-upload"
                   (click)="uploadFile()"
                 >
@@ -110,7 +142,10 @@
 
           <!-- Import Results -->
           <div *ngIf="importResults" class="results-section">
-            <h3>Import Results</h3>
+            <h3>
+              <i class="ri-file-list-3-line"></i>
+              Import Results
+            </h3>
 
             <div class="results-summary">
               <div class="result-item success">
@@ -121,36 +156,83 @@
                 </div>
               </div>
 
-              <div class="result-item error" *ngIf="importResults.errors.length > 0">
+              <div class="result-item error" *ngIf="importResults.failed > 0">
                 <i class="ri-error-warning-fill"></i>
                 <div>
-                  <p class="result-count">{{ importResults.errors.length }}</p>
-                  <p class="result-label">Errors</p>
+                  <p class="result-count">{{ importResults.failed }}</p>
+                  <p class="result-label">Failed</p>
                 </div>
               </div>
             </div>
 
             <!-- Error Details -->
             <div *ngIf="importResults.errors.length > 0" class="error-details">
-              <h4>Errors</h4>
+              <h4>
+                <i class="ri-alert-line"></i>
+                Errors ({{ importResults.errors.length }})
+              </h4>
               <div class="error-list">
-                <div *ngFor="let error of importResults.errors" class="error-item">
+                <div *ngFor="let error of importResults.errors; let i = index" class="error-item">
+                  <span class="error-number">{{ i + 1 }}</span>
                   <i class="ri-alert-line"></i>
-                  <span>{{ error }}</span>
+                  <span class="error-text">{{ error }}</span>
                 </div>
               </div>
+              <p class="error-hint">
+                <i class="ri-information-line"></i>
+                Fix these errors in your CSV file and import again
+              </p>
+            </div>
+
+            <!-- Success Message -->
+            <div *ngIf="importResults.success > 0 && importResults.failed === 0" class="success-details">
+              <i class="ri-checkbox-circle-line"></i>
+              <h4>All members imported successfully!</h4>
+              <p>{{ importResults.success }} member{{ importResults.success > 1 ? 's' : '' }} have been added to your database.</p>
             </div>
 
             <!-- Actions -->
             <div class="results-actions">
               <button class="btn-secondary" (click)="removeFile()">
+                <i class="ri-upload-line"></i>
                 Import Another File
               </button>
               <button class="btn-primary" (click)="goToMembers()">
+                <i class="ri-group-line"></i>
                 View Members
               </button>
             </div>
           </div>
+        </div>
+
+        <!-- Tips Section -->
+        <div class="tips-section" *ngIf="!importResults">
+          <h3>
+            <i class="ri-lightbulb-line"></i>
+            Import Tips
+          </h3>
+          <ul class="tips-list">
+            <li>
+              <i class="ri-checkbox-circle-line"></i>
+              Ensure all required fields (First Name, Last Name, Join Date) are filled
+            </li>
+            <li>
+              <i class="ri-checkbox-circle-line"></i>
+              Use the format YYYY-MM-DD for dates (e.g., 2024-01-15)
+            </li>
+            <li>
+              <i class="ri-checkbox-circle-line"></i>
+              Phone numbers should be 10 digits without spaces (e.g., 0201234567)
+            </li>
+            <li>
+              <i class="ri-checkbox-circle-line"></i>
+              Gender values should be: male, female, or other
+            </li>
+            <li>
+              <i class="ri-checkbox-circle-line"></i>
+              The CSV file should not exceed 10MB in size
+            </li>
+          </ul>
         </div>
       </div>
     </div>

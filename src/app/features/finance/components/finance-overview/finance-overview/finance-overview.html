@@ -35,6 +35,13 @@
           </div>
         </div>
 
+         <!-- Error Message -->
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i>
+          <span>{{ errorMessage }}</span>
+        </div>
+
+        
         <!-- Loading State -->
         <div *ngIf="loading" class="loading-container">
           <app-loading-spinner message="Loading financial data..."></app-loading-spinner>

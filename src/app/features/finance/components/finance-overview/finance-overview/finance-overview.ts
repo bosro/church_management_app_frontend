@@ -1,10 +1,9 @@
-
 // src/app/features/finance/components/finance-overview/finance-overview.component.ts
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { FinanceService } from '../../../services/finance.service';
+import { FinanceService, GivingStatistics, TopGiver } from '../../../services/finance.service';
 
 @Component({
   selector: 'app-finance-overview',
@@ -16,13 +15,17 @@ export class FinanceOverview implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   loading = true;
-  statistics: any = null;
+  statistics: GivingStatistics | null = null;
   recentTransactions: any[] = [];
-  topGivers: any[] = [];
+  topGivers: TopGiver[] = [];
   givingTrends: any = null;
 
   selectedYear = new Date().getFullYear();
   years: number[] = [];
+
+  errorMessage = '';
+  canViewFinance = false;
+  canManageFinance = false;
 
   constructor(
     private financeService: FinanceService,
@@ -36,6 +39,7 @@ export class FinanceOverview implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    this.checkPermissions();
     this.loadFinanceData();
   }
 
@@ -44,8 +48,18 @@ export class FinanceOverview implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  private checkPermissions(): void {
+    this.canViewFinance = this.financeService.canViewFinance();
+    this.canManageFinance = this.financeService.canManageFinance();
+
+    if (!this.canViewFinance) {
+      this.router.navigate(['/unauthorized']);
+    }
+  }
+
   loadFinanceData(): void {
     this.loading = true;
+    this.errorMessage = '';
 
     // Load statistics
     this.financeService.getGivingStatistics(this.selectedYear)
@@ -56,8 +70,9 @@ export class FinanceOverview implements OnInit, OnDestroy {
           this.loading = false;
         },
         error: (error) => {
-          console.error('Error loading statistics:', error);
+          this.errorMessage = error.message || 'Failed to load statistics';
           this.loading = false;
+          console.error('Error loading statistics:', error);
         }
       });
 
@@ -104,6 +119,10 @@ export class FinanceOverview implements OnInit, OnDestroy {
 
   // Navigation
   recordGiving(): void {
+    if (!this.canManageFinance) {
+      this.errorMessage = 'You do not have permission to record giving';
+      return;
+    }
     this.router.navigate(['main/finance/record-giving']);
   }
 
@@ -120,6 +139,10 @@ export class FinanceOverview implements OnInit, OnDestroy {
   }
 
   manageCategories(): void {
+    if (!this.canManageFinance) {
+      this.errorMessage = 'You do not have permission to manage categories';
+      return;
+    }
     this.router.navigate(['main/finance/categories']);
   }
 
@@ -128,7 +151,7 @@ export class FinanceOverview implements OnInit, OnDestroy {
     return new Intl.NumberFormat('en-GH', {
       style: 'currency',
       currency: currency
-    }).format(amount);
+    }).format(amount || 0);
   }
 
   getMemberName(transaction: any): string {

@@ -12,38 +12,24 @@ export type EventCategory =
   | 'children'
   | 'other';
 
-export interface Event {
+export interface ChurchEvent {  // Changed from Event to ChurchEvent
   id: string;
   church_id: string;
   branch_id?: string;
   title: string;
   description?: string;
-  category?: EventCategory;
+  category: EventCategory;
   start_date: string;
   end_date?: string;
   location?: string;
   banner_url?: string;
   max_attendees?: number;
-  registration_required: boolean;
+  registration_required: boolean;  // Standardized to registration_required
   registration_deadline?: string;
   is_public: boolean;
   created_by?: string;
   created_at: string;
   updated_at: string;
-  requires_registration?: boolean;
-  event_type?: EventCategory;
-}
-
-export interface EventAttendee {
-  id: string;
-  event_id: string;
-  member_id?: string;
-  guest_name?: string;
-  guest_email?: string;
-  guest_phone?: string;
-  rsvp_status: string;
-  attended: boolean;
-  registered_at: string;
 }
 
 export interface EventRegistration {
@@ -58,4 +44,23 @@ export interface EventRegistration {
   checked_in: boolean;
   checked_in_at?: string;
   registered_at: string;
+
+  // Relations
+  member?: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    photo_url?: string;
+    member_number: string;
+    email?: string;
+    phone_primary?: string;
+  };
+}
+
+export interface EventStatistics {
+  total_registrations: number;
+  checked_in: number;
+  confirmed: number;
+  pending: number;
+  cancelled: number;
 }

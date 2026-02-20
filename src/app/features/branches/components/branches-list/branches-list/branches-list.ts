@@ -1,11 +1,10 @@
-
 // src/app/features/branches/components/branches-list/branches-list.component.ts
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { Branch } from '../../../../../models/branch.model';
 import { BranchesService } from '../../../services/branches';
+import { Branch, BranchStatistics } from '../../../../../models/branch.model';
 
 @Component({
   selector: 'app-branches-list',
@@ -17,7 +16,7 @@ export class BranchesList implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   branches: Branch[] = [];
-  statistics: any = null;
+  statistics: BranchStatistics | null = null;
   loading = false;
   errorMessage = '';
   successMessage = '';
@@ -28,12 +27,17 @@ export class BranchesList implements OnInit, OnDestroy {
   totalBranches = 0;
   totalPages = 0;
 
+  // Permissions
+  canManageBranches = false;
+  canViewBranches = false;
+
   constructor(
     private branchesService: BranchesService,
     private router: Router
   ) {}
 
   ngOnInit(): void {
+    this.checkPermissions();
     this.loadBranches();
     this.loadStatistics();
   }
@@ -43,10 +47,21 @@ export class BranchesList implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  private checkPermissions(): void {
+    this.canManageBranches = this.branchesService.canManageBranches();
+    this.canViewBranches = this.branchesService.canViewBranches();
+
+    if (!this.canViewBranches) {
+      this.router.navigate(['/unauthorized']);
+    }
+  }
+
   loadBranches(): void {
     this.loading = true;
+    this.errorMessage = '';
 
-    this.branchesService.getBranches(this.currentPage, this.pageSize)
+    this.branchesService
+      .getBranches(this.currentPage, this.pageSize)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: ({ data, count }) => {
@@ -56,14 +71,16 @@ export class BranchesList implements OnInit, OnDestroy {
           this.loading = false;
         },
         error: (error) => {
-          console.error('Error loading branches:', error);
+          this.errorMessage = error.message || 'Failed to load branches';
           this.loading = false;
+          console.error('Error loading branches:', error);
         }
       });
   }
 
   loadStatistics(): void {
-    this.branchesService.getBranchStatistics()
+    this.branchesService
+      .getBranchStatistics()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (stats) => {
@@ -77,6 +94,11 @@ export class BranchesList implements OnInit, OnDestroy {
 
   // Navigation
   createBranch(): void {
+    if (!this.canManageBranches) {
+      this.errorMessage = 'You do not have permission to create branches';
+      this.scrollToTop();
+      return;
+    }
     this.router.navigate(['main/branches/create']);
   }
 
@@ -84,36 +106,67 @@ export class BranchesList implements OnInit, OnDestroy {
     this.router.navigate(['main/branches', branchId]);
   }
 
-  editBranch(branchId: string, event: Event): void {
+  editBranch(branchId: string, event: MouseEvent): void {
     event.stopPropagation();
+
+    if (!this.canManageBranches) {
+      this.errorMessage = 'You do not have permission to edit branches';
+      this.scrollToTop();
+      return;
+    }
     this.router.navigate(['main/branches', branchId, 'edit']);
   }
 
-  deleteBranch(branchId: string, event: Event): void {
+  deleteBranch(branchId: string, event: MouseEvent): void {
     event.stopPropagation();
 
-    if (confirm('Are you sure you want to delete this branch? This will not delete members.')) {
-      this.branchesService.deleteBranch(branchId)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: () => {
-            this.successMessage = 'Branch deleted successfully!';
-            this.loadBranches();
-            this.loadStatistics();
-
-            setTimeout(() => {
-              this.successMessage = '';
-            }, 3000);
-          },
-          error: (error) => {
-            this.errorMessage = error.message || 'Failed to delete branch';
-          }
-        });
+    if (!this.canManageBranches) {
+      this.errorMessage = 'You do not have permission to delete branches';
+      this.scrollToTop();
+      return;
     }
+
+    const branch = this.branches.find(b => b.id === branchId);
+    if (!branch) return;
+
+    const confirmMessage = branch.member_count > 0
+      ? `This branch has ${branch.member_count} member${branch.member_count !== 1 ? 's' : ''}. Are you sure you want to delete it? This will not delete members.`
+      : 'Are you sure you want to delete this branch?';
+
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    this.branchesService
+      .deleteBranch(branchId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.successMessage = 'Branch deleted successfully!';
+          this.loadBranches();
+          this.loadStatistics();
+
+          setTimeout(() => {
+            this.successMessage = '';
+          }, 3000);
+        },
+        error: (error) => {
+          this.errorMessage = error.message || 'Failed to delete branch';
+          this.scrollToTop();
+          console.error('Delete error:', error);
+        }
+      });
   }
 
   exportBranches(): void {
-    this.branchesService.exportBranches()
+    if (this.branches.length === 0) {
+      this.errorMessage = 'No branches to export';
+      this.scrollToTop();
+      return;
+    }
+
+    this.branchesService
+      .exportBranches()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (blob) => {
@@ -133,6 +186,8 @@ export class BranchesList implements OnInit, OnDestroy {
         },
         error: (error) => {
           this.errorMessage = error.message || 'Failed to export branches';
+          this.scrollToTop();
+          console.error('Export error:', error);
         }
       });
   }
@@ -142,6 +197,7 @@ export class BranchesList implements OnInit, OnDestroy {
     if (this.currentPage > 1) {
       this.currentPage--;
       this.loadBranches();
+      this.scrollToTop();
     }
   }
 
@@ -149,6 +205,11 @@ export class BranchesList implements OnInit, OnDestroy {
     if (this.currentPage < this.totalPages) {
       this.currentPage++;
       this.loadBranches();
+      this.scrollToTop();
     }
+  }
+
+  private scrollToTop(): void {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }

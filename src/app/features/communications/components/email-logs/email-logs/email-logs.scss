@@ -1,4 +1,6 @@
-// src/app/features/communications/components/sms-logs/sms-logs.component.scss
+// src/app/features/communications/components/email-logs/email-logs.component.scss
+// Reuse the same styles as sms-logs.component.scss
+
 .dashboard-layout {
   display: flex;
   min-height: 100vh;
@@ -7,7 +9,7 @@
 
 .dashboard-content {
   flex: 1;
-  margin-left: 260px;
+  // margin-left: 260px;
   display: flex;
   flex-direction: column;
 }
@@ -76,6 +78,29 @@
   }
 }
 
+.error-alert {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  background: #FEE2E2;
+  border: 1px solid #FCA5A5;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  animation: slideDown 0.3s ease;
+
+  i {
+    font-size: 1.25rem;
+    color: #DC2626;
+  }
+
+  span {
+    font-size: 0.9375rem;
+    color: #991B1B;
+    font-weight: 500;
+  }
+}
+
 .loading-container {
   display: flex;
   justify-content: center;
@@ -119,7 +144,7 @@
             border-bottom: none;
           }
 
-          &:hover {
+          &:hover:not(.empty-state) {
             background: #FAFAFA;
           }
 
@@ -128,8 +153,8 @@
             font-size: 0.9375rem;
             color: #374151;
 
-            &.message-cell {
-              max-width: 400px;
+            &.subject-cell {
+              max-width: 300px;
               white-space: nowrap;
               overflow: hidden;
               text-overflow: ellipsis;
@@ -146,6 +171,11 @@
               &.status-delivered {
                 background: #D1FAE5;
                 color: #065F46;
+              }
+
+              &.status-opened {
+                background: #DBEAFE;
+                color: #1E40AF;
               }
 
               &.status-failed {
@@ -230,6 +260,17 @@
       font-size: 0.875rem;
       color: #6B7280;
     }
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 

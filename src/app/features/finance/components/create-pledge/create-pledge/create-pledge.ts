@@ -1,16 +1,13 @@
-
 // src/app/features/finance/components/create-pledge/create-pledge.component.ts
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, FormControl } from '@angular/forms';
 import { Router } from '@angular/router';
-import { FormControl } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { takeUntil, debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
 import { GivingCategory } from '../../../../../models/giving.model';
 import { Member } from '../../../../../models/member.model';
 import { FinanceService } from '../../../services/finance.service';
 import { MemberService } from '../../../../members/services/member.service';
-
 
 @Component({
   selector: 'app-create-pledge',
@@ -39,6 +36,9 @@ export class CreatePledge implements OnInit, OnDestroy {
   // Currencies
   currencies = ['GHS', 'USD', 'EUR', 'GBP'];
 
+  // Permissions
+  canManageFinance = false;
+
   constructor(
     private fb: FormBuilder,
     private financeService: FinanceService,
@@ -47,6 +47,7 @@ export class CreatePledge implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    this.checkPermissions();
     this.initForm();
     this.loadCategories();
     this.setupMemberSearch();
@@ -55,6 +56,14 @@ export class CreatePledge implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  private checkPermissions(): void {
+    this.canManageFinance = this.financeService.canManageFinance();
+
+    if (!this.canManageFinance) {
+      this.router.navigate(['/unauthorized']);
+    }
   }
 
   private initForm(): void {
@@ -66,7 +75,7 @@ export class CreatePledge implements OnInit, OnDestroy {
       category_id: [''],
       pledge_date: [today, [Validators.required]],
       due_date: [''],
-      notes: ['']
+      notes: ['', [Validators.maxLength(500)]]
     });
   }
 
@@ -110,6 +119,7 @@ export class CreatePledge implements OnInit, OnDestroy {
         error: (error) => {
           console.error('Search error:', error);
           this.searching = false;
+          this.searchResults = [];
         }
       });
   }
@@ -128,20 +138,26 @@ export class CreatePledge implements OnInit, OnDestroy {
     if (this.pledgeForm.invalid) {
       this.markFormGroupTouched(this.pledgeForm);
       this.errorMessage = 'Please fill in all required fields correctly';
+      this.scrollToError();
       return;
     }
 
     if (!this.selectedMember) {
       this.errorMessage = 'Please select a member';
+      this.scrollToTop();
       return;
     }
 
     this.loading = true;
     this.errorMessage = '';
+    this.successMessage = '';
 
     const pledgeData = {
       ...this.pledgeForm.value,
-      member_id: this.selectedMember.id
+      member_id: this.selectedMember.id,
+      pledge_amount: parseFloat(this.pledgeForm.value.pledge_amount),
+      category_id: this.pledgeForm.value.category_id || null,
+      due_date: this.pledgeForm.value.due_date || null
     };
 
     this.financeService.createPledge(pledgeData)
@@ -149,6 +165,8 @@ export class CreatePledge implements OnInit, OnDestroy {
       .subscribe({
         next: () => {
           this.successMessage = 'Pledge created successfully!';
+          this.loading = false;
+
           setTimeout(() => {
             this.router.navigate(['main/finance/pledges']);
           }, 1500);
@@ -156,6 +174,8 @@ export class CreatePledge implements OnInit, OnDestroy {
         error: (error) => {
           this.loading = false;
           this.errorMessage = error.message || 'Failed to create pledge. Please try again.';
+          this.scrollToTop();
+          console.error('Error creating pledge:', error);
         }
       });
   }
@@ -168,18 +188,32 @@ export class CreatePledge implements OnInit, OnDestroy {
     Object.keys(formGroup.controls).forEach(key => {
       const control = formGroup.get(key);
       control?.markAsTouched();
+
+      if (control instanceof FormGroup) {
+        this.markFormGroupTouched(control);
+      }
     });
   }
 
   getErrorMessage(fieldName: string): string {
     const control = this.pledgeForm.get(fieldName);
-    if (control?.hasError('required')) {
+
+    if (!control || !control.errors || !control.touched) {
+      return '';
+    }
+
+    if (control.hasError('required')) {
       return 'This field is required';
     }
-    if (control?.hasError('min')) {
+    if (control.hasError('min')) {
       return 'Amount must be greater than 0';
     }
-    return '';
+    if (control.hasError('maxlength')) {
+      const maxLength = control.getError('maxlength').requiredLength;
+      return `Maximum ${maxLength} characters allowed`;
+    }
+
+    return 'Invalid input';
   }
 
   getMemberFullName(member: Member): string {
@@ -188,5 +222,18 @@ export class CreatePledge implements OnInit, OnDestroy {
 
   getMemberInitials(member: Member): string {
     return `${member.first_name[0]}${member.last_name[0]}`.toUpperCase();
+  }
+
+  private scrollToTop(): void {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  private scrollToError(): void {
+    const firstError = document.querySelector('.error');
+    if (firstError) {
+      firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else {
+      this.scrollToTop();
+    }
   }
 }

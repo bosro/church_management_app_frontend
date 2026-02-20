@@ -80,8 +80,6 @@ const routes: Routes = [
       },
       {
         path: 'communications',
-        canActivate: [RoleGuard],
-        data: { roles: ['super_admin', 'church_admin', 'pastor'] },
         loadChildren: () =>
           import('./communications/communications-module').then(
             (m) => m.CommunicationsModule,
@@ -98,12 +96,10 @@ const routes: Routes = [
       },
       {
         path: 'cms',
-        canActivate: [RoleGuard],
-        data: { roles: ['super_admin', 'church_admin'] },
         loadChildren: () => import('./cms/cms-module').then((m) => m.CmsModule),
       },
       {
-        path: 'sermon',
+        path: 'sermons',
         canActivate: [RoleGuard],
         data: { roles: ['super_admin', 'church_admin'] },
         loadChildren: () =>
@@ -111,8 +107,11 @@ const routes: Routes = [
       },
       {
         path: 'settings',
+         canActivate: [RoleGuard],
+        data: { roles: ['super_admin', 'church_admin', 'pastor', 'finance_officer'] },
         loadChildren: () =>
           import('./settings/settings-module').then((m) => m.SettingsModule),
+
       },
     ],
   },

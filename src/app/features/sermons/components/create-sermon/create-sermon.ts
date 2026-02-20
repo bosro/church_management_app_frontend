@@ -5,7 +5,8 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { SermonSeries, SermonsService } from '../../services/sermons';
+import { SermonsService } from '../../services/sermons';
+import {SermonSeries } from '../../../../models/sermon.model';
 
 @Component({
   selector: 'app-create-sermon',
@@ -91,7 +92,7 @@ export class CreateSermon implements OnInit, OnDestroy {
         next: () => {
           this.successMessage = 'Sermon uploaded successfully!';
           setTimeout(() => {
-            this.router.navigate(['main/sermon']);
+            this.router.navigate(['/sermon']);
           }, 1500);
         },
         error: (error) => {
@@ -102,7 +103,7 @@ export class CreateSermon implements OnInit, OnDestroy {
   }
 
   cancel(): void {
-    this.router.navigate(['main/sermon']);
+    this.router.navigate(['/sermon']);
   }
 
   private markFormGroupTouched(formGroup: FormGroup): void {

@@ -13,6 +13,8 @@
             <h1>Pledges</h1>
             <p class="subtitle">Track member pledges and commitments</p>
           </div>
+
+
           <div class="header-actions">
             <button class="btn-secondary" (click)="exportPledges()">
               <i class="ri-download-line"></i>
@@ -25,6 +27,20 @@
           </div>
         </div>
 
+
+       
+        <!-- Success Message -->
+<div *ngIf="successMessage" class="success-alert">
+  <i class="ri-checkbox-circle-line"></i>
+  <span>{{ successMessage }}</span>
+</div>
+
+<!-- Error Message -->
+<div *ngIf="errorMessage" class="error-alert">
+  <i class="ri-error-warning-line"></i>
+  <span>{{ errorMessage }}</span>
+</div>
+
         <!-- Loading State -->
         <div *ngIf="loading" class="loading-container">
           <app-loading-spinner message="Loading pledges..."></app-loading-spinner>
@@ -36,11 +52,7 @@
             <div class="pledge-header">
               <div class="member-info">
                 <div class="member-avatar-small">
-                  <img
-                    *ngIf="pledge.member?.photo_url"
-                    [src]="pledge.member.photo_url"
-                    [alt]="getMemberName(pledge)"
-                  />
+                  <img *ngIf="pledge.member?.photo_url" [src]="pledge.member.photo_url" [alt]="getMemberName(pledge)" />
                   <div *ngIf="!pledge.member?.photo_url" class="avatar-placeholder-small">
                     {{ getMemberInitials(pledge) }}
                   </div>
@@ -79,11 +91,8 @@
                   </span>
                 </div>
                 <div class="progress-bar">
-                  <div
-                    class="progress-fill"
-                    [ngClass]="getProgressClass(getProgressPercentage(pledge))"
-                    [style.width.%]="getProgressPercentage(pledge)"
-                  ></div>
+                  <div class="progress-fill" [ngClass]="getProgressClass(getProgressPercentage(pledge))"
+                    [style.width.%]="getProgressPercentage(pledge)"></div>
                 </div>
               </div>
 
@@ -119,11 +128,7 @@
 
         <!-- Pagination -->
         <div class="pagination" *ngIf="totalPages > 1 && !loading">
-          <button
-            class="pagination-btn"
-            [disabled]="currentPage === 1"
-            (click)="previousPage()"
-          >
+          <button class="pagination-btn" [disabled]="currentPage === 1" (click)="previousPage()">
             <i class="ri-arrow-left-s-line"></i>
             Previous
           </button>
@@ -134,11 +139,7 @@
             </span>
           </div>
 
-          <button
-            class="pagination-btn"
-            [disabled]="currentPage === totalPages"
-            (click)="nextPage()"
-          >
+          <button class="pagination-btn" [disabled]="currentPage === totalPages" (click)="nextPage()">
             Next
             <i class="ri-arrow-right-s-line"></i>
           </button>

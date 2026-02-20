@@ -19,7 +19,12 @@
             </div>
           </div>
           <div class="header-actions">
-            <button class="btn-secondary" (click)="exportToCSV()" [disabled]="submissions.length === 0">
+            <button
+              class="btn-secondary"
+              (click)="exportToCSV()"
+              [disabled]="submissions.length === 0 || !canManageForms"
+              [title]="canManageForms ? 'Export to CSV' : 'No permission'"
+            >
               <i class="ri-download-line"></i>
               Export CSV
             </button>
@@ -54,13 +59,12 @@
           </div>
 
           <div class="stat-card">
-            <div class="stat-icon" style="background: #FEF3C7; color: #F59E0B;">
-              <i class="ri-time-line"></i>
+            <div class="stat-icon" style="background: #DBEAFE; color: #2563EB;">
+              <i class="ri-calendar-line"></i>
             </div>
             <div class="stat-info">
-              <p class="stat-label">Pending Review</p>
+              <p class="stat-label">This Month</p>
               <h3 class="stat-value">{{ pendingSubmissionsCount }}</h3>
-
             </div>
           </div>
 
@@ -68,11 +72,9 @@
             <div class="stat-icon" style="background: #D1FAE5; color: #10B981;">
               <i class="ri-checkbox-circle-line"></i>
             </div>
-
             <div class="stat-info">
-              <p class="stat-label">Approved</p>
-              <h3 class="stat-value">{{ approvedSubmissionsCount }}</h3>
-
+              <p class="stat-label">Form Active</p>
+              <h3 class="stat-value">{{ formTemplate?.is_active ? 'Yes' : 'No' }}</h3>
             </div>
           </div>
         </div>
@@ -93,17 +95,12 @@
                 </p>
               </div>
               <div class="card-actions">
-                <div class="status-dropdown">
-                  <select [value]="submission.status"
-                    (change)="updateStatus(submission.id, $any($event.target).value, $event)"
-                    (click)="$event.stopPropagation()">
-                    <option value="submitted">Submitted</option>
-                    <option value="reviewed">Reviewed</option>
-                    <option value="approved">Approved</option>
-                    <option value="rejected">Rejected</option>
-                  </select>
-                </div>
-                <button class="btn-icon-small btn-danger" (click)="deleteSubmission(submission.id, $event)">
+                <button
+                  class="btn-icon-small btn-danger"
+                  (click)="deleteSubmission(submission.id, $event)"
+                  [disabled]="!canManageForms"
+                  [title]="canManageForms ? 'Delete submission' : 'No permission'"
+                >
                   <i class="ri-delete-bin-line"></i>
                 </button>
               </div>
@@ -114,8 +111,9 @@
             </div>
 
             <div class="card-footer">
-              <span class="status-badge" [ngClass]="getStatusClass(submission.status)">
-                {{ submission.status | titlecase }}
+              <span class="ip-info" *ngIf="submission.ip_address">
+                <i class="ri-earth-line"></i>
+                {{ submission.ip_address }}
               </span>
             </div>
           </div>
@@ -175,11 +173,9 @@
           <span class="meta-label">Submitted At:</span>
           <span class="meta-value">{{ selectedSubmission.submitted_at | date:'full' }}</span>
         </div>
-        <div class="meta-item">
-          <span class="meta-label">Status:</span>
-          <span class="status-badge" [ngClass]="getStatusClass(selectedSubmission.status)">
-            {{ selectedSubmission.status | titlecase }}
-          </span>
+        <div class="meta-item" *ngIf="selectedSubmission.ip_address">
+          <span class="meta-label">IP Address:</span>
+          <span class="meta-value">{{ selectedSubmission.ip_address }}</span>
         </div>
       </div>
 
@@ -191,7 +187,6 @@
             <span class="data-value">
               {{ isArray(item.value) ? item.value.join(', ') : item.value }}
             </span>
-
           </div>
         </div>
       </div>

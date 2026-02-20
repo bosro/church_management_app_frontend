@@ -13,7 +13,8 @@
             <h1>Forms</h1>
             <p class="subtitle">Create and manage custom forms</p>
           </div>
-          <button class="btn-primary" (click)="createForm()">
+          <button class="btn-primary" (click)="createForm()" [disabled]="!canManageForms"
+            [title]="canManageForms ? 'Create new form' : 'No permission'">
             <i class="ri-add-line"></i>
             <span>Create Form</span>
           </button>
@@ -37,23 +38,21 @@
 
         <!-- Forms Grid -->
         <div *ngIf="!loading" class="forms-grid">
-          <div
-            *ngFor="let form of formTemplates"
-            class="form-card"
-            (click)="viewSubmissions(form.id)"
-          >
+          <div *ngFor="let form of formTemplates" class="form-card" (click)="viewSubmissions(form.id)">
             <div class="card-header">
               <div class="form-icon">
                 <i class="ri-file-list-3-line"></i>
               </div>
               <div class="card-actions">
-                <button class="btn-icon-small" (click)="fillForm(form.id, $event)">
+                <button class="btn-icon-small" (click)="fillForm(form.id, $event)" title="Fill form">
                   <i class="ri-edit-box-line"></i>
                 </button>
-                <button class="btn-icon-small" (click)="editForm(form.id, $event)">
+                <button class="btn-icon-small" (click)="editForm(form.id, $event)" [disabled]="!canManageForms"
+                  [title]="canManageForms ? 'Edit form' : 'No permission'">
                   <i class="ri-settings-3-line"></i>
                 </button>
-                <button class="btn-icon-small btn-danger" (click)="deleteForm(form.id, $event)">
+                <button class="btn-icon-small btn-danger" (click)="deleteForm(form.id, $event)"
+                  [disabled]="!canManageForms" [title]="canManageForms ? 'Delete form' : 'No permission'">
                   <i class="ri-delete-bin-line"></i>
                 </button>
               </div>
@@ -98,11 +97,7 @@
 
         <!-- Pagination -->
         <div class="pagination" *ngIf="totalPages > 1 && !loading">
-          <button
-            class="pagination-btn"
-            [disabled]="currentPage === 1"
-            (click)="previousPage()"
-          >
+          <button class="pagination-btn" [disabled]="currentPage === 1" (click)="previousPage()">
             <i class="ri-arrow-left-s-line"></i>
             Previous
           </button>
@@ -113,11 +108,7 @@
             </span>
           </div>
 
-          <button
-            class="pagination-btn"
-            [disabled]="currentPage === totalPages"
-            (click)="nextPage()"
-          >
+          <button class="pagination-btn" [disabled]="currentPage === totalPages" (click)="nextPage()">
             Next
             <i class="ri-arrow-right-s-line"></i>
           </button>

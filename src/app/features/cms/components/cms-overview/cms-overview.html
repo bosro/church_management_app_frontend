@@ -15,6 +15,12 @@
           </div>
         </div>
 
+        <!-- Error Message -->
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i>
+          <span>{{ errorMessage }}</span>
+        </div>
+
         <!-- Loading State -->
         <div *ngIf="loading" class="loading-container">
           <app-loading-spinner message="Loading CMS overview..."></app-loading-spinner>
@@ -91,7 +97,11 @@
             <i class="ri-arrow-right-line action-arrow"></i>
           </div>
 
-          <div class="action-card" (click)="createPage()">
+          <div
+            *ngIf="canManageContent"
+            class="action-card"
+            (click)="createPage()"
+          >
             <div class="action-icon">
               <i class="ri-add-circle-line"></i>
             </div>
@@ -102,7 +112,11 @@
             <i class="ri-arrow-right-line action-arrow"></i>
           </div>
 
-          <div class="action-card" (click)="createBlogPost()">
+          <div
+            *ngIf="canManageContent"
+            class="action-card"
+            (click)="createBlogPost()"
+          >
             <div class="action-icon">
               <i class="ri-quill-pen-line"></i>
             </div>

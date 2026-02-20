@@ -25,6 +25,18 @@
           </div>
         </div>
 
+        <!-- Success Message -->
+        <div *ngIf="successMessage" class="success-alert">
+          <i class="ri-checkbox-circle-line"></i>
+          <span>{{ successMessage }}</span>
+        </div>
+
+        <!-- Error Message -->
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i>
+          <span>{{ errorMessage }}</span>
+        </div>
+
         <!-- Filters -->
         <div class="filters-card">
           <div class="filters-grid">
@@ -90,11 +102,8 @@
                   <td>
                     <div class="member-cell">
                       <div class="member-avatar-small">
-                        <img
-                          *ngIf="transaction.member?.photo_url"
-                          [src]="transaction.member.photo_url"
-                          [alt]="getMemberName(transaction)"
-                        />
+                        <img *ngIf="transaction.member?.photo_url" [src]="transaction.member.photo_url"
+                          [alt]="getMemberName(transaction)" />
                         <div *ngIf="!transaction.member?.photo_url" class="avatar-placeholder-small">
                           {{ getMemberInitials(transaction) }}
                         </div>
@@ -128,11 +137,7 @@
                     </span>
                   </td>
                   <td>
-                    <button
-                      class="btn-delete"
-                      (click)="deleteTransaction(transaction.id, $event)"
-                      title="Delete"
-                    >
+                    <button class="btn-delete" (click)="deleteTransaction(transaction.id, $event)" title="Delete">
                       <i class="ri-delete-bin-line"></i>
                     </button>
                   </td>
@@ -151,11 +156,7 @@
 
         <!-- Pagination -->
         <div class="pagination" *ngIf="totalPages > 1 && !loading">
-          <button
-            class="pagination-btn"
-            [disabled]="currentPage === 1"
-            (click)="previousPage()"
-          >
+          <button class="pagination-btn" [disabled]="currentPage === 1" (click)="previousPage()">
             <i class="ri-arrow-left-s-line"></i>
             Previous
           </button>
@@ -166,11 +167,7 @@
             </span>
           </div>
 
-          <button
-            class="pagination-btn"
-            [disabled]="currentPage === totalPages"
-            (click)="nextPage()"
-          >
+          <button class="pagination-btn" [disabled]="currentPage === totalPages" (click)="nextPage()">
             Next
             <i class="ri-arrow-right-s-line"></i>
           </button>

@@ -1,11 +1,11 @@
 // src/app/features/events/components/events-list/events-list.component.ts
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { Router } from '@angular/router';
 import { FormControl } from '@angular/forms';
+import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { takeUntil, debounceTime } from 'rxjs/operators';
 import { EventsService } from '../../services/events';
-import { EventCategory, Event } from '../../../../models/event.model';
+import { ChurchEvent, EventCategory } from '../../../../models/event.model';
 
 @Component({
   selector: 'app-events-list',
@@ -16,12 +16,11 @@ import { EventCategory, Event } from '../../../../models/event.model';
 export class EventsList implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
-  events: Event[] = [];
-  upcomingEvents: Event[] = [];
+  events: ChurchEvent[] = [];
+  upcomingEvents: ChurchEvent[] = [];
   loading = false;
-
-  // View mode
-  viewMode: 'list' | 'calendar' = 'list';
+  errorMessage = '';
+  successMessage = '';
 
   // Pagination
   currentPage = 1;
@@ -29,13 +28,16 @@ export class EventsList implements OnInit, OnDestroy {
   totalEvents = 0;
   totalPages = 0;
 
+  // View mode
+  viewMode: 'list' | 'calendar' = 'list';
+
   // Filters
   startDateControl = new FormControl('');
   endDateControl = new FormControl('');
-  EventCategoryControl = new FormControl('');
+  categoryControl = new FormControl<EventCategory | 'all'>('all');
 
-  EventCategorys: { value: EventCategory | ''; label: string }[] = [
-    { value: '', label: 'All Types' },
+  categories: { value: EventCategory | 'all'; label: string }[] = [
+    { value: 'all', label: 'All Types' },
     { value: 'service', label: 'Service' },
     { value: 'meeting', label: 'Meeting' },
     { value: 'conference', label: 'Conference' },
@@ -49,12 +51,16 @@ export class EventsList implements OnInit, OnDestroy {
     { value: 'other', label: 'Other' },
   ];
 
+  // Permissions
+  canManageEvents = false;
+
   constructor(
     private eventsService: EventsService,
-    private router: Router,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
+    this.checkPermissions();
     this.loadEvents();
     this.loadUpcomingEvents();
     this.setupFilterListeners();
@@ -65,19 +71,50 @@ export class EventsList implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  private loadEvents(): void {
+  private checkPermissions(): void {
+    this.canManageEvents = this.eventsService.canManageEvents();
+  }
+
+  private setupFilterListeners(): void {
+    this.startDateControl.valueChanges
+      .pipe(debounceTime(300), takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.currentPage = 1;
+        this.loadEvents();
+      });
+
+    this.endDateControl.valueChanges
+      .pipe(debounceTime(300), takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.currentPage = 1;
+        this.loadEvents();
+      });
+
+    this.categoryControl.valueChanges
+      .pipe(debounceTime(300), takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.currentPage = 1;
+        this.loadEvents();
+      });
+  }
+
+  loadEvents(): void {
     this.loading = true;
+    this.errorMessage = '';
 
     const filters: any = {};
 
     if (this.startDateControl.value) {
       filters.startDate = this.startDateControl.value;
     }
+
     if (this.endDateControl.value) {
       filters.endDate = this.endDateControl.value;
     }
-    if (this.EventCategoryControl.value) {
-      filters.EventCategory = this.EventCategoryControl.value;
+
+    const category = this.categoryControl.value;
+    if (category && category !== 'all') {
+      filters.category = category;
     }
 
     this.eventsService
@@ -91,8 +128,9 @@ export class EventsList implements OnInit, OnDestroy {
           this.loading = false;
         },
         error: (error) => {
-          console.error('Error loading events:', error);
+          this.errorMessage = error.message || 'Failed to load events';
           this.loading = false;
+          console.error('Error loading events:', error);
         },
       });
   }
@@ -111,70 +149,74 @@ export class EventsList implements OnInit, OnDestroy {
       });
   }
 
-  private setupFilterListeners(): void {
-    this.startDateControl.valueChanges
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(() => {
-        this.currentPage = 1;
-        this.loadEvents();
-      });
-
-    this.endDateControl.valueChanges
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(() => {
-        this.currentPage = 1;
-        this.loadEvents();
-      });
-
-    this.EventCategoryControl.valueChanges
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(() => {
-        this.currentPage = 1;
-        this.loadEvents();
-      });
-  }
-
-  clearFilters(): void {
-    this.startDateControl.setValue('');
-    this.endDateControl.setValue('');
-    this.EventCategoryControl.setValue('');
-  }
-
-  switchView(mode: 'list' | 'calendar'): void {
-    this.viewMode = mode;
-  }
-
   // Navigation
+  createEvent(): void {
+    if (!this.canManageEvents) {
+      this.errorMessage = 'You do not have permission to create events';
+      return;
+    }
+    this.router.navigate(['main/events/create']);
+  }
+
   viewEvent(eventId: string): void {
     this.router.navigate(['main/events', eventId]);
   }
 
-  createEvent(): void {
-    this.router.navigate(['main/events/create']);
-  }
-
-  editEvent(eventId: string, event: MouseEvent): void {
+  editEvent(eventId: string, event: MouseEvent): void {  // Changed parameter type
     event.stopPropagation();
+
+    if (!this.canManageEvents) {
+      this.errorMessage = 'You do not have permission to edit events';
+      return;
+    }
+
     this.router.navigate(['main/events', eventId, 'edit']);
   }
 
-  deleteEvent(eventId: string, event: MouseEvent): void {
+  deleteEvent(eventId: string, event: MouseEvent): void {  // Changed parameter type
     event.stopPropagation();
 
-    if (confirm('Are you sure you want to delete this event?')) {
-      this.eventsService
-        .deleteEvent(eventId)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: () => {
-            this.loadEvents();
-            this.loadUpcomingEvents();
-          },
-          error: (error) => {
-            console.error('Error deleting event:', error);
-          },
-        });
+    if (!this.canManageEvents) {
+      this.errorMessage = 'You do not have permission to delete events';
+      return;
     }
+
+    const confirmMessage = 'Are you sure you want to delete this event? All registrations will also be deleted.';
+
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    this.eventsService
+      .deleteEvent(eventId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.successMessage = 'Event deleted successfully!';
+          this.loadEvents();
+          this.loadUpcomingEvents();
+
+          setTimeout(() => {
+            this.successMessage = '';
+          }, 3000);
+        },
+        error: (error) => {
+          this.errorMessage = error.message || 'Failed to delete event';
+          console.error('Error deleting event:', error);
+        },
+      });
+  }
+
+  // View switching
+  switchView(mode: 'list' | 'calendar'): void {
+    this.viewMode = mode;
+  }
+
+  // Filters
+  clearFilters(): void {
+    this.startDateControl.setValue('');
+    this.endDateControl.setValue('');
+    this.categoryControl.setValue('all');
   }
 
   // Pagination
@@ -182,6 +224,7 @@ export class EventsList implements OnInit, OnDestroy {
     if (this.currentPage > 1) {
       this.currentPage--;
       this.loadEvents();
+      this.scrollToTop();
     }
   }
 
@@ -189,56 +232,64 @@ export class EventsList implements OnInit, OnDestroy {
     if (this.currentPage < this.totalPages) {
       this.currentPage++;
       this.loadEvents();
+      this.scrollToTop();
     }
   }
 
   // Helper methods
-  getEventCategoryLabel(type: EventCategory): string {
-    const typeObj = this.EventCategorys.find((t) => t.value === type);
-    return typeObj?.label || type;
+  getEventCategoryLabel(category: EventCategory): string {
+    const categoryMap: Record<EventCategory, string> = {
+      service: 'Service',
+      meeting: 'Meeting',
+      conference: 'Conference',
+      seminar: 'Seminar',
+      retreat: 'Retreat',
+      workshop: 'Workshop',
+      outreach: 'Outreach',
+      social: 'Social',
+      youth: 'Youth',
+      children: 'Children',
+      other: 'Other',
+    };
+    return categoryMap[category] || 'Other';
   }
 
-  getEventCategoryClass(type: EventCategory): string {
-    const classes: Partial<Record<EventCategory, string>>  = {
+  getEventCategoryClass(category: EventCategory): string {
+    const classMap: Record<EventCategory, string> = {
       service: 'type-service',
       meeting: 'type-meeting',
       conference: 'type-conference',
+      seminar: 'type-seminar',
       retreat: 'type-retreat',
       workshop: 'type-workshop',
+      outreach: 'type-outreach',
       social: 'type-social',
+      youth: 'type-youth',
+      children: 'type-children',
       other: 'type-other',
     };
-
-    return classes[type] || 'type-other';
+    return classMap[category] || 'type-other';
   }
 
-  isEventPast(event: Event): boolean {
-    const eventDate = new Date(event.end_date || event.start_date);
-    return eventDate < new Date();
-  }
-
-  isEventToday(event: Event): boolean {
+  isEventToday(event: ChurchEvent): boolean {
     const today = new Date().toISOString().split('T')[0];
-    return event.start_date === today;
+    const eventDate = event.start_date.split('T')[0];
+    return eventDate === today;
   }
 
-  isEventUpcoming(event: Event): boolean {
+  isEventUpcoming(event: ChurchEvent): boolean {
+    const today = new Date();
     const eventDate = new Date(event.start_date);
-    return eventDate > new Date();
+    return eventDate > today;
   }
 
-  formatDateRange(event: Event): string {
-    const start = new Date(event.start_date);
-    const end = event.end_date ? new Date(event.end_date) : new Date(event.start_date);
+  isEventPast(event: ChurchEvent): boolean {
+    const today = new Date();
+    const eventDate = new Date(event.end_date || event.start_date);
+    return eventDate < today;
+  }
 
-    if (event.start_date === event.end_date) {
-      return start.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-      });
-    }
-
-    return `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+  private scrollToTop(): void {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }

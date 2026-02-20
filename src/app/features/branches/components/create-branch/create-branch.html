@@ -180,7 +180,7 @@
               <button
                 type="submit"
                 class="btn-primary"
-                [disabled]="loading"
+                [disabled]="loading || branchForm.invalid"
               >
                 <span *ngIf="!loading">
                   <i class="ri-save-line"></i>

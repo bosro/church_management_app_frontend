@@ -13,26 +13,38 @@
             <h1>User Roles & Permissions</h1>
             <p class="subtitle">Manage user access and permissions</p>
           </div>
-          <button class="btn-primary" (click)="viewRoleTemplates()">
+          <button
+            class="btn-primary"
+            (click)="viewRoleTemplates()"
+            [disabled]="!canManageRoles"
+          >
             <i class="ri-shield-user-line"></i>
-            Role Templates
+            <span class="desktop-only">Role Templates</span>
           </button>
         </div>
 
-        <!-- Success/Error Messages -->
+        <!-- Success Message -->
         <div *ngIf="successMessage" class="success-alert">
           <i class="ri-checkbox-circle-line"></i>
           <span>{{ successMessage }}</span>
+          <button class="close-btn" (click)="clearMessages()">
+            <i class="ri-close-line"></i>
+          </button>
         </div>
 
+        <!-- Error Message -->
         <div *ngIf="errorMessage" class="error-alert">
           <i class="ri-error-warning-line"></i>
           <span>{{ errorMessage }}</span>
+          <button class="close-btn" (click)="clearMessages()">
+            <i class="ri-close-line"></i>
+          </button>
         </div>
 
         <!-- Loading State -->
         <div *ngIf="loading" class="loading-container">
-          <app-loading-spinner message="Loading users..."></app-loading-spinner>
+          <div class="spinner"></div>
+          <p>Loading users...</p>
         </div>
 
         <!-- Users List -->
@@ -40,30 +52,47 @@
           <div
             *ngFor="let user of users"
             class="user-card"
+            [class.disabled]="!canManagePermissions"
             (click)="managePermissions(user.id)"
           >
             <div class="card-header">
               <div class="user-avatar">
                 <img
-                  [src]="user.avatar_url || 'assets/images/default-avatar.png'"
+                  *ngIf="user.avatar_url"
+                  [src]="user.avatar_url"
                   [alt]="user.full_name"
                 />
+                <div *ngIf="!user.avatar_url" class="avatar-placeholder">
+                  {{ user.full_name.charAt(0).toUpperCase() }}
+                </div>
               </div>
               <div class="user-info">
                 <h3>{{ user.full_name }}</h3>
-                <p class="user-email">{{ user.email }}</p>
+                <p class="user-email">
+                  <i class="ri-mail-line"></i>
+                  {{ user.email }}
+                </p>
+                <p class="user-phone" *ngIf="user.phone_number">
+                  <i class="ri-phone-line"></i>
+                  {{ user.phone_number }}
+                </p>
               </div>
               <div class="user-role">
                 <span class="role-badge" [ngClass]="getRoleBadgeClass(user.role)">
+                  <i class="ri-shield-user-line"></i>
                   {{ getRoleLabel(user.role) }}
                 </span>
               </div>
             </div>
 
             <div class="card-footer">
-              <button class="btn-manage">
+              <button
+                class="btn-manage"
+                [disabled]="!canManagePermissions"
+                (click)="managePermissions(user.id); $event.stopPropagation()"
+              >
                 <i class="ri-settings-3-line"></i>
-                Manage Permissions
+                <span>Manage Permissions</span>
               </button>
             </div>
           </div>
@@ -72,7 +101,8 @@
           <div *ngIf="users.length === 0" class="empty-state">
             <i class="ri-user-settings-line"></i>
             <h3>No Users Found</h3>
-            <p>No users available to manage</p>
+            <p>No active users available to manage</p>
+            <p class="empty-hint">Users will appear here once they are approved and activated</p>
           </div>
         </div>
 
@@ -84,12 +114,13 @@
             (click)="previousPage()"
           >
             <i class="ri-arrow-left-s-line"></i>
-            Previous
+            <span class="desktop-only">Previous</span>
           </button>
 
           <div class="pagination-pages">
             <span class="page-info">
-              Page {{ currentPage }} of {{ totalPages }} ({{ totalUsers }} users)
+              Page {{ currentPage }} of {{ totalPages }}
+              <span class="desktop-only">({{ totalUsers }} users)</span>
             </span>
           </div>
 
@@ -98,7 +129,7 @@
             [disabled]="currentPage === totalPages"
             (click)="nextPage()"
           >
-            Next
+            <span class="desktop-only">Next</span>
             <i class="ri-arrow-right-s-line"></i>
           </button>
         </div>

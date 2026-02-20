@@ -7,18 +7,69 @@ import { MarkAttendance } from './components/mark-attendance/mark-attendance';
 import { AttendanceReports } from './components/attendance-reports/attendance-reports';
 import { CreateEvent } from './components/create-event/create-event/create-event';
 import { AttendanceList } from './components/attendance-list/attendance-list';
+import { RoleGuard } from '../../core/guards/role-guard';
 
 
 const routes: Routes = [
-  { path: '', component: AttendanceList },
-  { path: 'create', component: CreateEvent },
-  { path: 'reports', component: AttendanceReports },
-  // { path: 'visitors', component: VisitorList },
-  { path: 'qr-checkin/:eventId', component: QrCheckin },
-  { path: ':id', component: AttendanceDetail },
-  { path: ':id/mark', component: MarkAttendance }
+  {
+    path: '',
+    component: AttendanceList,
+    canActivate: [ RoleGuard],
+    data: {
+      title: 'Attendance',
+      breadcrumb: 'Attendance',
+      roles: ['super_admin', 'church_admin', 'pastor', 'ministry_leader', 'secretary']
+    }
+  },
+  {
+    path: 'create',
+    component: CreateEvent,
+    canActivate: [ RoleGuard],
+    data: {
+      title: 'Create Event',
+      breadcrumb: 'Create Event',
+      roles: ['super_admin', 'church_admin', 'pastor', 'ministry_leader']
+    }
+  },
+  {
+    path: 'reports',
+    component: AttendanceReports,
+    canActivate: [ RoleGuard],
+    data: {
+      title: 'Attendance Reports',
+      breadcrumb: 'Reports',
+      roles: ['super_admin', 'church_admin', 'pastor', 'ministry_leader', 'secretary']
+    }
+  },
+  {
+    path: 'qr-checkin/:eventId',
+    component: QrCheckin,
+    data: {
+      title: 'Check In',
+      breadcrumb: 'QR Check-in'
+    }
+  },
+  {
+    path: ':id',
+    component: AttendanceDetail,
+    canActivate: [ RoleGuard],
+    data: {
+      title: 'Event Details',
+      breadcrumb: 'Details',
+      roles: ['super_admin', 'church_admin', 'pastor', 'ministry_leader', 'secretary']
+    }
+  },
+  {
+    path: ':id/mark',
+    component: MarkAttendance,
+    canActivate: [ RoleGuard],
+    data: {
+      title: 'Mark Attendance',
+      breadcrumb: 'Mark Attendance',
+      roles: ['super_admin', 'church_admin', 'pastor', 'ministry_leader', 'usher']
+    }
+  }
 ];
-
 @NgModule({
   imports: [RouterModule.forChild(routes)],
   exports: [RouterModule]

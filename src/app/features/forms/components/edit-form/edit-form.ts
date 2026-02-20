@@ -1,4 +1,3 @@
-
 // src/app/features/forms/components/edit-form/edit-form.component.ts
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
@@ -9,7 +8,7 @@ import { FormTemplate, FormField, FieldType } from '../../../../models/form.mode
 import { FormsService } from '../../services/forms';
 
 @Component({
- selector: 'app-edit-form',
+  selector: 'app-edit-form',
   standalone: false,
   templateUrl: './edit-form.html',
   styleUrl: './edit-form.scss',
@@ -48,6 +47,9 @@ export class EditForm implements OnInit, OnDestroy {
   newFieldPlaceholder = '';
   newFieldOptions = '';
 
+  // Permissions
+  canManageForms = false;
+
   constructor(
     private fb: FormBuilder,
     private formsService: FormsService,
@@ -56,8 +58,10 @@ export class EditForm implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    this.checkPermissions();
     this.formId = this.route.snapshot.paramMap.get('id') || '';
     this.initForm();
+
     if (this.formId) {
       this.loadFormTemplate();
     }
@@ -68,15 +72,24 @@ export class EditForm implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  private checkPermissions(): void {
+    this.canManageForms = this.formsService.canManageForms();
+
+    if (!this.canManageForms) {
+      this.router.navigate(['/unauthorized']);
+    }
+  }
+
   private initForm(): void {
     this.formDetailsForm = this.fb.group({
-      title: ['', [Validators.required, Validators.minLength(3)]],
-      description: ['']
+      title: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(100)]],
+      description: ['', [Validators.maxLength(500)]]
     });
   }
 
   private loadFormTemplate(): void {
     this.loadingForm = true;
+    this.errorMessage = '';
 
     this.formsService.getFormTemplateById(this.formId)
       .pipe(takeUntil(this.destroy$))
@@ -89,6 +102,7 @@ export class EditForm implements OnInit, OnDestroy {
         error: (error) => {
           this.errorMessage = error.message || 'Failed to load form template';
           this.loadingForm = false;
+          console.error('Error loading form:', error);
         }
       });
   }
@@ -96,9 +110,11 @@ export class EditForm implements OnInit, OnDestroy {
   private populateForm(template: FormTemplate): void {
     this.formDetailsForm.patchValue({
       title: template.title,
-      description: template.description
+      description: template.description || ''
     });
-    this.formFields = [...template.form_fields];
+
+    // Deep copy to avoid reference issues
+    this.formFields = JSON.parse(JSON.stringify(template.form_fields));
   }
 
   // Field Management (same as create)
@@ -109,7 +125,13 @@ export class EditForm implements OnInit, OnDestroy {
       return;
     }
 
-    if (['select', 'radio', 'checkbox'].includes(this.newFieldType) && !this.newFieldOptions.trim()) {
+    if (this.newFieldLabel.length > 100) {
+      this.errorMessage = 'Field label must be 100 characters or less';
+      setTimeout(() => this.errorMessage = '', 3000);
+      return;
+    }
+
+    if (this.needsOptions(this.newFieldType) && !this.newFieldOptions.trim()) {
       this.errorMessage = 'Options are required for this field type';
       setTimeout(() => this.errorMessage = '', 3000);
       return;
@@ -117,11 +139,13 @@ export class EditForm implements OnInit, OnDestroy {
 
     const newField: FormField = {
       id: this.generateFieldId(),
-      label: this.newFieldLabel,
+      label: this.newFieldLabel.trim(),
       field_type: this.newFieldType,
       required: this.newFieldRequired,
-      placeholder: this.newFieldPlaceholder || undefined,
-      options: this.newFieldOptions ? this.newFieldOptions.split('\n').map(o => o.trim()).filter(o => o) : undefined,
+      placeholder: this.newFieldPlaceholder?.trim() || undefined,
+      options: this.newFieldOptions
+        ? this.newFieldOptions.split('\n').map(o => o.trim()).filter(o => o)
+        : undefined,
       order: this.formFields.length
     };
 
@@ -134,6 +158,7 @@ export class EditForm implements OnInit, OnDestroy {
     }
 
     this.resetFieldForm();
+    this.clearMessages();
   }
 
   editField(field: FormField, index: number): void {
@@ -144,11 +169,14 @@ export class EditForm implements OnInit, OnDestroy {
     this.newFieldRequired = field.required;
     this.newFieldPlaceholder = field.placeholder || '';
     this.newFieldOptions = field.options ? field.options.join('\n') : '';
+    this.clearMessages();
   }
 
   removeField(index: number): void {
-    this.formFields.splice(index, 1);
-    this.formFields.forEach((field, i) => field.order = i);
+    if (confirm('Are you sure you want to remove this field?')) {
+      this.formFields.splice(index, 1);
+      this.formFields.forEach((field, i) => field.order = i);
+    }
   }
 
   moveFieldUp(index: number): void {
@@ -183,25 +211,30 @@ export class EditForm implements OnInit, OnDestroy {
     this.editingIndex = -1;
     this.editingField = null;
     this.resetFieldForm();
+    this.clearMessages();
   }
 
   onSubmit(): void {
     if (this.formDetailsForm.invalid) {
-      this.errorMessage = 'Please fill in all required fields';
+      this.markFormGroupTouched(this.formDetailsForm);
+      this.errorMessage = 'Please fill in all required fields correctly';
+      this.scrollToTop();
       return;
     }
 
     if (this.formFields.length === 0) {
       this.errorMessage = 'Please add at least one field to the form';
+      this.scrollToTop();
       return;
     }
 
     this.loading = true;
     this.errorMessage = '';
+    this.successMessage = '';
 
     const formData = {
-      title: this.formDetailsForm.value.title,
-      description: this.formDetailsForm.value.description,
+      title: this.formDetailsForm.value.title.trim(),
+      description: this.formDetailsForm.value.description?.trim() || undefined,
       form_fields: this.formFields
     };
 
@@ -210,6 +243,8 @@ export class EditForm implements OnInit, OnDestroy {
       .subscribe({
         next: () => {
           this.successMessage = 'Form updated successfully!';
+          this.loading = false;
+
           setTimeout(() => {
             this.router.navigate(['main/forms']);
           }, 1500);
@@ -217,12 +252,20 @@ export class EditForm implements OnInit, OnDestroy {
         error: (error) => {
           this.loading = false;
           this.errorMessage = error.message || 'Failed to update form. Please try again.';
+          this.scrollToTop();
+          console.error('Error updating form:', error);
         }
       });
   }
 
   cancel(): void {
-    this.router.navigate(['main/forms']);
+    if (this.formDetailsForm.dirty || JSON.stringify(this.formFields) !== JSON.stringify(this.formTemplate?.form_fields)) {
+      if (confirm('You have unsaved changes. Are you sure you want to leave?')) {
+        this.router.navigate(['main/forms']);
+      }
+    } else {
+      this.router.navigate(['main/forms']);
+    }
   }
 
   private generateFieldId(): string {
@@ -235,5 +278,25 @@ export class EditForm implements OnInit, OnDestroy {
 
   needsOptions(type: FieldType): boolean {
     return ['select', 'radio', 'checkbox'].includes(type);
+  }
+
+  private markFormGroupTouched(formGroup: FormGroup): void {
+    Object.keys(formGroup.controls).forEach(key => {
+      const control = formGroup.get(key);
+      control?.markAsTouched();
+
+      if (control instanceof FormGroup) {
+        this.markFormGroupTouched(control);
+      }
+    });
+  }
+
+  private clearMessages(): void {
+    this.errorMessage = '';
+    this.successMessage = '';
+  }
+
+  private scrollToTop(): void {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }

@@ -56,8 +56,8 @@
                 <span class="date-year">{{ event.start_date | date:'yyyy' }}</span>
               </div>
               <div class="event-header-info">
-                <div class="event-type-badge" [ngClass]="getEventCategoryClass(event.event_type)">
-                  {{ getEventCategoryLabel(event.event_type) }}
+                <div class="event-type-badge" [ngClass]="getEventCategoryClass(event.category)">
+                  {{ getEventCategoryLabel(event.category) }}
                 </div>
 
                 <h1>{{ event.title }}</h1>
@@ -109,7 +109,7 @@
             </div>
 
             <div class="event-badges">
-              <span class="badge badge-registration" *ngIf="event.requires_registration">
+              <span class="badge badge-registration" *ngIf="event.registration_required">
                 <i class="ri-checkbox-circle-line"></i>
                 Registration Required
               </span>
@@ -342,3 +342,5 @@
     </div>
   </div>
 </div>
+
+

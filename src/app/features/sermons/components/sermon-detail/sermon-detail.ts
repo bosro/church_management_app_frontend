@@ -1,11 +1,11 @@
-
 // src/app/features/sermons/components/sermon-detail/sermon-detail.component.ts
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { takeUntil, finalize } from 'rxjs/operators';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
-import { Sermon, SermonsService } from '../../services/sermons';
+import { SermonsService } from '../../services/sermons';
+import { Sermon } from '../../../../models/sermon.model';
 
 @Component({
   selector: 'app-sermon-detail',
@@ -23,6 +23,9 @@ export class SermonDetail implements OnInit, OnDestroy {
 
   safeVideoUrl: SafeResourceUrl | null = null;
 
+  // Permissions
+  canManageSermons = false;
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
@@ -31,10 +34,15 @@ export class SermonDetail implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    this.checkPermissions();
     this.sermonId = this.route.snapshot.paramMap.get('id') || '';
+
     if (this.sermonId) {
       this.loadSermon();
       this.incrementViewCount();
+    } else {
+      this.errorMessage = 'Invalid sermon ID';
+      this.loading = false;
     }
   }
 
@@ -43,28 +51,43 @@ export class SermonDetail implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  private checkPermissions(): void {
+    this.canManageSermons = this.sermonsService.canManageSermons();
+  }
+
   private loadSermon(): void {
     this.loading = true;
+    this.errorMessage = '';
 
-    this.sermonsService.getSermonById(this.sermonId)
-      .pipe(takeUntil(this.destroy$))
+    this.sermonsService
+      .getSermonById(this.sermonId)
+      .pipe(
+        takeUntil(this.destroy$),
+        finalize(() => this.loading = false)
+      )
       .subscribe({
         next: (sermon) => {
           this.sermon = sermon;
           this.processVideoUrl(sermon.video_url);
-          this.loading = false;
         },
         error: (error) => {
           this.errorMessage = error.message || 'Failed to load sermon';
-          this.loading = false;
+          console.error('Error loading sermon:', error);
         }
       });
   }
 
   private incrementViewCount(): void {
-    this.sermonsService.incrementViewCount(this.sermonId)
+    // Increment view count in background (don't wait for response)
+    this.sermonsService
+      .incrementViewCount(this.sermonId)
       .pipe(takeUntil(this.destroy$))
-      .subscribe();
+      .subscribe({
+        error: (error) => {
+          console.error('Error incrementing view count:', error);
+          // Silently fail - this is non-critical
+        }
+      });
   }
 
   private processVideoUrl(url?: string): void {
@@ -73,19 +96,7 @@ export class SermonDetail implements OnInit, OnDestroy {
       return;
     }
 
-    // Convert YouTube watch URLs to embed URLs
-    let embedUrl = url;
-    if (url.includes('youtube.com/watch?v=')) {
-      const videoId = url.split('v=')[1]?.split('&')[0];
-      embedUrl = `https://www.youtube.com/embed/${videoId}`;
-    } else if (url.includes('youtu.be/')) {
-      const videoId = url.split('youtu.be/')[1]?.split('?')[0];
-      embedUrl = `https://www.youtube.com/embed/${videoId}`;
-    } else if (url.includes('vimeo.com/')) {
-      const videoId = url.split('vimeo.com/')[1]?.split('?')[0];
-      embedUrl = `https://player.vimeo.com/video/${videoId}`;
-    }
-
+    const embedUrl = this.sermonsService.processVideoUrl(url);
     this.safeVideoUrl = this.sanitizer.bypassSecurityTrustResourceUrl(embedUrl);
   }
 
@@ -94,28 +105,39 @@ export class SermonDetail implements OnInit, OnDestroy {
   }
 
   editSermon(): void {
+    if (!this.canManageSermons) {
+      alert('You do not have permission to edit sermons');
+      return;
+    }
     this.router.navigate(['main/sermon', this.sermonId, 'edit']);
   }
 
   downloadAudio(): void {
-    if (this.sermon?.audio_url) {
-      this.sermonsService.incrementDownloadCount(this.sermonId)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe();
-      window.open(this.sermon.audio_url, '_blank');
-    }
+    if (!this.sermon?.audio_url) return;
+
+    // Increment download count in background
+    this.sermonsService
+      .incrementDownloadCount(this.sermonId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        error: (error) => {
+          console.error('Error incrementing download count:', error);
+          // Silently fail - this is non-critical
+        }
+      });
+
+    // Open audio URL in new tab
+    window.open(this.sermon.audio_url, '_blank');
   }
 
   downloadNotes(): void {
-    if (this.sermon?.notes_url) {
-      window.open(this.sermon.notes_url, '_blank');
-    }
+    if (!this.sermon?.notes_url) return;
+
+    // Open notes URL in new tab
+    window.open(this.sermon.notes_url, '_blank');
   }
 
   formatDuration(minutes?: number): string {
-    if (!minutes) return 'N/A';
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+    return this.sermonsService.formatDuration(minutes);
   }
 }

@@ -8,7 +8,7 @@ import { FormField, FieldType } from '../../../../models/form.model';
 import { FormsService } from '../../services/forms';
 
 @Component({
-   selector: 'app-create-form',
+  selector: 'app-create-form',
   standalone: false,
   templateUrl: './create-form.html',
   styleUrl: './create-form.scss',
@@ -47,6 +47,9 @@ export class CreateForm implements OnInit, OnDestroy {
   newFieldPlaceholder = '';
   newFieldOptions = '';
 
+  // Permissions
+  canManageForms = false;
+
   constructor(
     private fb: FormBuilder,
     private formsService: FormsService,
@@ -54,6 +57,7 @@ export class CreateForm implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    this.checkPermissions();
     this.initForm();
   }
 
@@ -62,10 +66,18 @@ export class CreateForm implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  private checkPermissions(): void {
+    this.canManageForms = this.formsService.canManageForms();
+
+    if (!this.canManageForms) {
+      this.router.navigate(['/unauthorized']);
+    }
+  }
+
   private initForm(): void {
     this.formDetailsForm = this.fb.group({
-      title: ['', [Validators.required, Validators.minLength(3)]],
-      description: ['']
+      title: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(100)]],
+      description: ['', [Validators.maxLength(500)]]
     });
   }
 
@@ -77,7 +89,13 @@ export class CreateForm implements OnInit, OnDestroy {
       return;
     }
 
-    if (['select', 'radio', 'checkbox'].includes(this.newFieldType) && !this.newFieldOptions.trim()) {
+    if (this.newFieldLabel.length > 100) {
+      this.errorMessage = 'Field label must be 100 characters or less';
+      setTimeout(() => this.errorMessage = '', 3000);
+      return;
+    }
+
+    if (this.needsOptions(this.newFieldType) && !this.newFieldOptions.trim()) {
       this.errorMessage = 'Options are required for this field type';
       setTimeout(() => this.errorMessage = '', 3000);
       return;
@@ -85,11 +103,13 @@ export class CreateForm implements OnInit, OnDestroy {
 
     const newField: FormField = {
       id: this.generateFieldId(),
-      label: this.newFieldLabel,
+      label: this.newFieldLabel.trim(),
       field_type: this.newFieldType,
       required: this.newFieldRequired,
-      placeholder: this.newFieldPlaceholder || undefined,
-      options: this.newFieldOptions ? this.newFieldOptions.split('\n').map(o => o.trim()).filter(o => o) : undefined,
+      placeholder: this.newFieldPlaceholder?.trim() || undefined,
+      options: this.newFieldOptions
+        ? this.newFieldOptions.split('\n').map(o => o.trim()).filter(o => o)
+        : undefined,
       order: this.formFields.length
     };
 
@@ -104,6 +124,7 @@ export class CreateForm implements OnInit, OnDestroy {
     }
 
     this.resetFieldForm();
+    this.clearMessages();
   }
 
   editField(field: FormField, index: number): void {
@@ -114,12 +135,15 @@ export class CreateForm implements OnInit, OnDestroy {
     this.newFieldRequired = field.required;
     this.newFieldPlaceholder = field.placeholder || '';
     this.newFieldOptions = field.options ? field.options.join('\n') : '';
+    this.clearMessages();
   }
 
   removeField(index: number): void {
-    this.formFields.splice(index, 1);
-    // Update order
-    this.formFields.forEach((field, i) => field.order = i);
+    if (confirm('Are you sure you want to remove this field?')) {
+      this.formFields.splice(index, 1);
+      // Update order
+      this.formFields.forEach((field, i) => field.order = i);
+    }
   }
 
   moveFieldUp(index: number): void {
@@ -154,26 +178,31 @@ export class CreateForm implements OnInit, OnDestroy {
     this.editingIndex = -1;
     this.editingField = null;
     this.resetFieldForm();
+    this.clearMessages();
   }
 
   // Form Submission
   onSubmit(): void {
     if (this.formDetailsForm.invalid) {
-      this.errorMessage = 'Please fill in all required fields';
+      this.markFormGroupTouched(this.formDetailsForm);
+      this.errorMessage = 'Please fill in all required fields correctly';
+      this.scrollToTop();
       return;
     }
 
     if (this.formFields.length === 0) {
       this.errorMessage = 'Please add at least one field to the form';
+      this.scrollToTop();
       return;
     }
 
     this.loading = true;
     this.errorMessage = '';
+    this.successMessage = '';
 
     const formData = {
-      title: this.formDetailsForm.value.title,
-      description: this.formDetailsForm.value.description,
+      title: this.formDetailsForm.value.title.trim(),
+      description: this.formDetailsForm.value.description?.trim() || undefined,
       form_fields: this.formFields
     };
 
@@ -182,19 +211,29 @@ export class CreateForm implements OnInit, OnDestroy {
       .subscribe({
         next: () => {
           this.successMessage = 'Form created successfully!';
+          this.loading = false;
+
           setTimeout(() => {
             this.router.navigate(['main/forms']);
           }, 1500);
         },
-        error: (error) => {
+        error: (error:any) => {
           this.loading = false;
           this.errorMessage = error.message || 'Failed to create form. Please try again.';
+          this.scrollToTop();
+          console.error('Error creating form:', error);
         }
       });
   }
 
   cancel(): void {
-    this.router.navigate(['main/forms']);
+    if (this.formFields.length > 0 || this.formDetailsForm.dirty) {
+      if (confirm('You have unsaved changes. Are you sure you want to leave?')) {
+        this.router.navigate(['main/forms']);
+      }
+    } else {
+      this.router.navigate(['main/forms']);
+    }
   }
 
   // Helper Methods
@@ -208,5 +247,25 @@ export class CreateForm implements OnInit, OnDestroy {
 
   needsOptions(type: FieldType): boolean {
     return ['select', 'radio', 'checkbox'].includes(type);
+  }
+
+  private markFormGroupTouched(formGroup: FormGroup): void {
+    Object.keys(formGroup.controls).forEach(key => {
+      const control = formGroup.get(key);
+      control?.markAsTouched();
+
+      if (control instanceof FormGroup) {
+        this.markFormGroupTouched(control);
+      }
+    });
+  }
+
+  private clearMessages(): void {
+    this.errorMessage = '';
+    this.successMessage = '';
+  }
+
+  private scrollToTop(): void {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }

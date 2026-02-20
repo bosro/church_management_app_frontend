@@ -24,11 +24,11 @@
                 <i class="ri-download-line"></i>
                 Export
               </button>
-              <button class="btn-secondary" (click)="editMinistry()">
+              <button *ngIf="canManageMinistries" class="btn-secondary" (click)="editMinistry()">
                 <i class="ri-edit-line"></i>
                 Edit
               </button>
-              <button class="btn-danger" (click)="deleteMinistry()">
+              <button *ngIf="canManageMinistries" class="btn-danger" (click)="deleteMinistry()">
                 <i class="ri-delete-bin-line"></i>
                 Delete
               </button>
@@ -99,18 +99,10 @@
           <!-- Tabs -->
           <div class="tabs-container">
             <div class="tabs">
-              <button
-                class="tab"
-                [class.active]="activeTab === 'members'"
-                (click)="switchTab('members')"
-              >
+              <button class="tab" [class.active]="activeTab === 'members'" (click)="switchTab('members')">
                 Members ({{ members.length }})
               </button>
-              <button
-                class="tab"
-                [class.active]="activeTab === 'leaders'"
-                (click)="switchTab('leaders')"
-              >
+              <button class="tab" [class.active]="activeTab === 'leaders'" (click)="switchTab('leaders')">
                 Leaders ({{ leaders.length }})
               </button>
             </div>
@@ -122,7 +114,7 @@
             <div *ngIf="activeTab === 'members'" class="members-tab">
               <div class="tab-header">
                 <h3>Ministry Members</h3>
-                <button class="btn-primary" (click)="toggleAddMember()">
+                <button *ngIf="canManageMembers" class="btn-primary" (click)="toggleAddMember()">
                   <i [class]="showAddMember ? 'ri-close-line' : 'ri-add-line'"></i>
                   <span>{{ showAddMember ? 'Cancel' : 'Add Member' }}</span>
                 </button>
@@ -133,22 +125,15 @@
                 <h4>Search and Add Member</h4>
                 <div class="search-input-wrapper">
                   <i class="ri-search-line search-icon"></i>
-                  <input
-                    type="text"
-                    [formControl]="searchControl"
-                    placeholder="Search member by name, email, or phone..."
-                    class="search-input"
-                  />
+                  <input type="text" [formControl]="searchControl"
+                    placeholder="Search member by name, email, or phone..." class="search-input" />
                   <i *ngIf="searching" class="ri-loader-4-line spin"></i>
                 </div>
 
                 <!-- Search Results -->
                 <div class="search-results" *ngIf="searchResults.length > 0">
-                  <div
-                    *ngFor="let member of searchResults"
-                    class="search-result-item"
-                    (click)="addMemberToMinistry(member)"
-                  >
+                  <div *ngFor="let member of searchResults" class="search-result-item"
+                    (click)="addMemberToMinistry(member)">
                     <div class="member-avatar-small">
                       <img *ngIf="member.photo_url" [src]="member.photo_url" [alt]="getMemberName(member)" />
                       <div *ngIf="!member.photo_url" class="avatar-placeholder-small">
@@ -168,22 +153,19 @@
               <div class="members-grid">
                 <div *ngFor="let membership of members" class="member-card">
                   <div class="member-avatar-medium">
-                    <img
-                      *ngIf="membership.member?.photo_url"
-                      [src]="membership.member.photo_url"
-                      [alt]="getMemberName(membership.member)"
-                    />
+                    <img *ngIf="membership.member?.photo_url" [src]="membership.member?.photo_url"
+                      [alt]="getMemberName(membership.member)" />
                     <div *ngIf="!membership.member?.photo_url" class="avatar-placeholder-medium">
                       {{ getMemberInitials(membership.member) }}
                     </div>
                   </div>
                   <div class="member-info">
                     <h4>{{ getMemberName(membership.member) }}</h4>
-                    <p class="member-number">{{ membership.member.member_number }}</p>
+                    <p class="member-number">{{ membership.member?.member_number }}</p>
                     <p class="member-role" *ngIf="membership.role">{{ membership.role }}</p>
                     <p class="member-meta">Joined: {{ membership.joined_date | date:'MMM d, y' }}</p>
                   </div>
-                  <button class="btn-remove" (click)="removeMember(membership.id)">
+                  <button *ngIf="canManageMembers" class="btn-remove" (click)="removeMember(membership.id)">
                     <i class="ri-close-line"></i>
                   </button>
                 </div>
@@ -200,7 +182,7 @@
             <div *ngIf="activeTab === 'leaders'" class="leaders-tab">
               <div class="tab-header">
                 <h3>Ministry Leaders</h3>
-                <button class="btn-primary" (click)="toggleAddLeader()">
+                <button *ngIf="canManageMembers" class="btn-primary" (click)="toggleAddLeader()">
                   <i [class]="showAddLeader ? 'ri-close-line' : 'ri-add-line'"></i>
                   <span>{{ showAddLeader ? 'Cancel' : 'Add Leader' }}</span>
                 </button>
@@ -215,21 +197,14 @@
                   <label>Select Member</label>
                   <div class="search-input-wrapper">
                     <i class="ri-search-line search-icon"></i>
-                    <input
-                      type="text"
-                      [formControl]="searchControl"
-                      placeholder="Search member..."
-                      class="search-input"
-                    />
+                    <input type="text" [formControl]="searchControl" placeholder="Search member..."
+                      class="search-input" />
                     <i *ngIf="searching" class="ri-loader-4-line spin"></i>
                   </div>
 
                   <div class="search-results" *ngIf="searchResults.length > 0">
-                    <div
-                      *ngFor="let member of searchResults"
-                      class="search-result-item"
-                      (click)="selectMemberForLeader(member)"
-                    >
+                    <div *ngFor="let member of searchResults" class="search-result-item"
+                      (click)="selectMemberForLeader(member)">
                       <div class="member-avatar-small">
                         <img *ngIf="member.photo_url" [src]="member.photo_url" [alt]="getMemberName(member)" />
                         <div *ngIf="!member.photo_url" class="avatar-placeholder-small">
@@ -248,11 +223,8 @@
                 <!-- Selected Member Display -->
                 <div *ngIf="selectedMemberForLeader" class="selected-member">
                   <div class="member-avatar-medium">
-                    <img
-                      *ngIf="selectedMemberForLeader.photo_url"
-                      [src]="selectedMemberForLeader.photo_url"
-                      [alt]="getMemberName(selectedMemberForLeader)"
-                    />
+                    <img *ngIf="selectedMemberForLeader.photo_url" [src]="selectedMemberForLeader.photo_url"
+                      [alt]="getMemberName(selectedMemberForLeader)" />
                     <div *ngIf="!selectedMemberForLeader.photo_url" class="avatar-placeholder-medium">
                       {{ getMemberInitials(selectedMemberForLeader) }}
                     </div>
@@ -270,39 +242,23 @@
                 <div *ngIf="selectedMemberForLeader" class="leader-form">
                   <div class="form-group">
                     <label>Position *</label>
-                    <input
-                      type="text"
-                      [(ngModel)]="leaderPosition"
-                      placeholder="e.g., Ministry Head, Co-leader"
-                      class="form-input"
-                    />
+                    <input type="text" [(ngModel)]="leaderPosition" placeholder="e.g., Ministry Head, Co-leader"
+                      class="form-input" />
                   </div>
 
                   <div class="form-row">
                     <div class="form-group">
                       <label>Start Date *</label>
-                      <input
-                        type="date"
-                        [(ngModel)]="leaderStartDate"
-                        class="form-input"
-                      />
+                      <input type="date" [(ngModel)]="leaderStartDate" class="form-input" />
                     </div>
 
                     <div class="form-group">
                       <label>End Date (Optional)</label>
-                      <input
-                        type="date"
-                        [(ngModel)]="leaderEndDate"
-                        class="form-input"
-                      />
+                      <input type="date" [(ngModel)]="leaderEndDate" class="form-input" />
                     </div>
                   </div>
 
-                  <button
-                    class="btn-submit"
-                    (click)="addLeader()"
-                    [disabled]="addingLeader"
-                  >
+                  <button class="btn-submit" (click)="addLeader()" [disabled]="addingLeader">
                     <span *ngIf="!addingLeader">Add Leader</span>
                     <span *ngIf="addingLeader">
                       <i class="ri-loader-4-line spin"></i>
@@ -319,11 +275,8 @@
                     <i class="ri-star-fill"></i>
                   </div>
                   <div class="member-avatar-medium">
-                    <img
-                      *ngIf="leadership.member?.photo_url"
-                      [src]="leadership.member.photo_url"
-                      [alt]="getMemberName(leadership.member)"
-                    />
+                    <img *ngIf="leadership.member?.photo_url" [src]="leadership.member?.photo_url"
+                      [alt]="getMemberName(leadership.member)" />
                     <div *ngIf="!leadership.member?.photo_url" class="avatar-placeholder-medium">
                       {{ getMemberInitials(leadership.member) }}
                     </div>
@@ -337,7 +290,7 @@
                     </p>
                     <span class="current-badge" *ngIf="leadership.is_current">Current</span>
                   </div>
-                  <button class="btn-remove" (click)="removeLeader(leadership.id)">
+                  <button *ngIf="canManageMembers" class="btn-remove" (click)="removeLeader(leadership.id)">
                     <i class="ri-close-line"></i>
                   </button>
                 </div>

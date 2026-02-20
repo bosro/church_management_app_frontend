@@ -1,5 +1,4 @@
 <!-- src/app/features/cms/components/edit-page/edit-page.component.html -->
-<!-- Same HTML as create-page but with loading state and "Update Page" instead of "Create Page" -->
 <div class="dashboard-layout">
   <app-sidebar></app-sidebar>
 
@@ -14,7 +13,7 @@
         </div>
 
         <!-- Form Content -->
-        <div *ngIf="!loadingPage">
+        <div *ngIf="!loadingPage && page">
           <!-- Page Header -->
           <div class="page-header">
             <div class="header-left">
@@ -23,13 +22,143 @@
               </button>
               <div>
                 <h1>Edit Page</h1>
-                <p class="subtitle" *ngIf="page">{{ page.title }}</p>
+                <p class="subtitle">{{ page.title }}</p>
               </div>
             </div>
           </div>
 
-          <!-- Copy the rest from create-page.component.html -->
-          <!-- Change button text from "Create Page" to "Update Page" -->
+          <!-- Success/Error Messages -->
+          <div *ngIf="successMessage" class="success-alert">
+            <i class="ri-checkbox-circle-line"></i>
+            <span>{{ successMessage }}</span>
+          </div>
+
+          <div *ngIf="errorMessage" class="error-alert">
+            <i class="ri-error-warning-line"></i>
+            <span>{{ errorMessage }}</span>
+          </div>
+
+          <!-- Form Card -->
+          <div class="form-card">
+            <form [formGroup]="pageForm" (ngSubmit)="onSubmit()">
+              <!-- Content Section -->
+              <div class="form-section">
+                <h3>Page Content</h3>
+
+                <div class="form-group">
+                  <label for="title">Page Title *</label>
+                  <input
+                    id="title"
+                    type="text"
+                    formControlName="title"
+                    placeholder="e.g., About Us, Contact"
+                    [class.error]="pageForm.get('title')?.invalid && pageForm.get('title')?.touched"
+                  />
+                  <span
+                    *ngIf="pageForm.get('title')?.invalid && pageForm.get('title')?.touched"
+                    class="error-message"
+                  >
+                    {{ getErrorMessage('title') }}
+                  </span>
+                </div>
+
+                <div class="form-group">
+                  <label for="content">Page Content *</label>
+                  <textarea
+                    id="content"
+                    formControlName="content"
+                    placeholder="Write your page content here..."
+                    rows="15"
+                    [class.error]="pageForm.get('content')?.invalid && pageForm.get('content')?.touched"
+                  ></textarea>
+                  <span
+                    *ngIf="pageForm.get('content')?.invalid && pageForm.get('content')?.touched"
+                    class="error-message"
+                  >
+                    {{ getErrorMessage('content') }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- SEO Section -->
+              <div class="form-section">
+                <h3>SEO Settings</h3>
+
+                <div class="form-group">
+                  <label for="meta_description">Meta Description</label>
+                  <textarea
+                    id="meta_description"
+                    formControlName="meta_description"
+                    placeholder="Brief description for search engines..."
+                    rows="3"
+                    [class.error]="pageForm.get('meta_description')?.invalid && pageForm.get('meta_description')?.touched"
+                  ></textarea>
+                  <p class="help-text">Recommended: 150-160 characters</p>
+                  <span
+                    *ngIf="pageForm.get('meta_description')?.invalid && pageForm.get('meta_description')?.touched"
+                    class="error-message"
+                  >
+                    {{ getErrorMessage('meta_description') }}
+                  </span>
+                </div>
+
+                <div class="form-group">
+                  <label for="meta_keywords">Meta Keywords</label>
+                  <input
+                    id="meta_keywords"
+                    type="text"
+                    formControlName="meta_keywords"
+                    placeholder="keyword1, keyword2, keyword3"
+                    [class.error]="pageForm.get('meta_keywords')?.invalid && pageForm.get('meta_keywords')?.touched"
+                  />
+                  <p class="help-text">Comma-separated keywords</p>
+                  <span
+                    *ngIf="pageForm.get('meta_keywords')?.invalid && pageForm.get('meta_keywords')?.touched"
+                    class="error-message"
+                  >
+                    {{ getErrorMessage('meta_keywords') }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Form Actions -->
+              <div class="form-actions">
+                <button
+                  type="button"
+                  class="btn-secondary"
+                  (click)="cancel()"
+                  [disabled]="loading"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  class="btn-primary"
+                  [disabled]="loading || pageForm.invalid"
+                >
+                  <span *ngIf="!loading">
+                    <i class="ri-save-line"></i>
+                    Update Page
+                  </span>
+                  <span *ngIf="loading">
+                    <i class="ri-loader-4-line spin"></i>
+                    Updating...
+                  </span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Error State (when page not found) -->
+        <div *ngIf="!loadingPage && !page && errorMessage" class="empty-state">
+          <i class="ri-error-warning-line"></i>
+          <h3>Page Not Found</h3>
+          <p>{{ errorMessage }}</p>
+          <button class="btn-primary" (click)="cancel()">
+            <i class="ri-arrow-left-line"></i>
+            Back to Pages
+          </button>
         </div>
       </div>
     </div>

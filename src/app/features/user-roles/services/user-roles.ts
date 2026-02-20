@@ -1,8 +1,17 @@
 // src/app/features/user-roles/services/user-roles.service.ts
 import { Injectable } from '@angular/core';
-import { Observable, from } from 'rxjs';
-import { map } from 'rxjs/operators';
-import { UserPermission, RoleTemplate, AVAILABLE_PERMISSIONS, Permission } from '../../../models/user-role.model';
+import { Observable, from, throwError, of } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
+import {
+  UserPermission,
+  RoleTemplate,
+  AVAILABLE_PERMISSIONS,
+  Permission,
+  PermissionCategory,
+  UserListResult,
+  RoleTemplateCreateInput,
+  RoleTemplateUpdateInput
+} from '../../../models/user-role.model';
 import { SupabaseService } from '../../../core/services/supabase';
 import { AuthService } from '../../../core/services/auth';
 
@@ -10,227 +19,374 @@ import { AuthService } from '../../../core/services/auth';
   providedIn: 'root'
 })
 export class UserRolesService {
+  private churchId?: string;
+  private currentUserId?: string;
+
   constructor(
     private supabase: SupabaseService,
     private authService: AuthService
-  ) {}
+  ) {
+    this.churchId = this.authService.getChurchId();
+    this.currentUserId = this.authService.getUserId();
+  }
 
-  // USERS
+  // ==================== USERS ====================
+
   getUsers(
     page: number = 1,
     pageSize: number = 20
-  ): Observable<{ data: any[], count: number }> {
-    const churchId = this.authService.getChurchId();
+  ): Observable<UserListResult> {
+    return from(this.fetchUsers(page, pageSize));
+  }
+
+  private async fetchUsers(
+    page: number,
+    pageSize: number
+  ): Promise<UserListResult> {
     const offset = (page - 1) * pageSize;
 
-    return from(
-      (async () => {
-        const { data, error, count } = await this.supabase.client
-          .from('users')
-          .select('*', { count: 'exact' })
-          .eq('church_id', churchId)
-          .order('full_name', { ascending: true })
-          .range(offset, offset + pageSize - 1);
+    const { data, error, count } = await this.supabase.client
+      .from('users')
+      .select('*', { count: 'exact' })
+      .eq('church_id', this.churchId)
+      .eq('is_active', true)
+      .order('full_name', { ascending: true })
+      .range(offset, offset + pageSize - 1);
 
-        if (error) throw error;
+    if (error) {
+      throw new Error(error.message);
+    }
 
-        return { data: data || [], count: count || 0 };
-      })()
-    );
+    const totalPages = count ? Math.ceil(count / pageSize) : 0;
+
+    return {
+      data: data || [],
+      count: count || 0,
+      page,
+      pageSize,
+      totalPages
+    };
   }
 
   getUserById(userId: string): Observable<any> {
     return from(
-      this.supabase.query<any>('users', {
-        filters: { id: userId },
-        limit: 1
-      })
+      this.supabase.client
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .eq('church_id', this.churchId)
+        .single()
     ).pipe(
       map(({ data, error }) => {
-        if (error) throw error;
-        if (!data || data.length === 0) throw new Error('User not found');
-        return data[0];
-      })
+        if (error) throw new Error(error.message);
+        if (!data) throw new Error('User not found');
+        return data;
+      }),
+      catchError(err => throwError(() => err))
     );
   }
 
-  // USER PERMISSIONS
+  updateUserRole(userId: string, role: string): Observable<any> {
+    return from(
+      this.supabase.client
+        .from('users')
+        .update({
+          role,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId)
+        .eq('church_id', this.churchId)
+        .select()
+        .single()
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw new Error(error.message);
+        return data;
+      }),
+      catchError(err => throwError(() => err))
+    );
+  }
+
+  deactivateUser(userId: string): Observable<void> {
+    return from(
+      this.supabase.client
+        .from('users')
+        .update({
+          is_active: false,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId)
+        .eq('church_id', this.churchId)
+    ).pipe(
+      map(({ error }) => {
+        if (error) throw new Error(error.message);
+      }),
+      catchError(err => throwError(() => err))
+    );
+  }
+
+  // ==================== USER PERMISSIONS ====================
+
   getUserPermissions(userId: string): Observable<UserPermission[]> {
     return from(
-      (async () => {
-        const { data, error } = await this.supabase.client
-          .from('user_permissions')
-          .select('*')
-          .eq('user_id', userId)
-          .order('permission_name', { ascending: true });
-
-        if (error) throw error;
-
-        return data as UserPermission[];
-      })()
+      this.supabase.client
+        .from('user_permissions')
+        .select('*')
+        .eq('user_id', userId)
+        .order('permission_name', { ascending: true })
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw new Error(error.message);
+        return (data || []) as UserPermission[];
+      }),
+      catchError(err => throwError(() => err))
     );
   }
 
   grantPermission(userId: string, permissionName: string): Observable<UserPermission> {
-    const grantedBy = this.authService.getUserId();
+    return from(this.insertPermission(userId, permissionName));
+  }
 
-    return from(
-      this.supabase.insert<UserPermission>('user_permissions', {
+  private async insertPermission(
+    userId: string,
+    permissionName: string
+  ): Promise<UserPermission> {
+    // Check if permission already exists
+    const { data: existing } = await this.supabase.client
+      .from('user_permissions')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('permission_name', permissionName)
+      .single();
+
+    if (existing) {
+      throw new Error('Permission already granted');
+    }
+
+    const { data, error } = await this.supabase.client
+      .from('user_permissions')
+      .insert({
         user_id: userId,
         permission_name: permissionName,
-        granted_by: grantedBy
+        granted_by: this.currentUserId,
+        granted_at: new Date().toISOString()
       })
-    ).pipe(
-      map(({ data, error }) => {
-        if (error) throw error;
-        return data![0];
-      })
-    );
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return data as UserPermission;
   }
 
   revokePermission(permissionId: string): Observable<void> {
     return from(
-      this.supabase.delete('user_permissions', permissionId)
+      this.supabase.client
+        .from('user_permissions')
+        .delete()
+        .eq('id', permissionId)
     ).pipe(
       map(({ error }) => {
-        if (error) throw error;
-      })
+        if (error) throw new Error(error.message);
+      }),
+      catchError(err => throwError(() => err))
     );
   }
 
   bulkGrantPermissions(userId: string, permissionNames: string[]): Observable<void> {
-    const grantedBy = this.authService.getUserId();
+    return from(this.insertBulkPermissions(userId, permissionNames));
+  }
 
-    return from(
-      (async () => {
-        // First, get existing permissions
-        const { data: existing } = await this.supabase.client
-          .from('user_permissions')
-          .select('permission_name')
-          .eq('user_id', userId);
+  private async insertBulkPermissions(
+    userId: string,
+    permissionNames: string[]
+  ): Promise<void> {
+    // Get existing permissions
+    const { data: existing } = await this.supabase.client
+      .from('user_permissions')
+      .select('permission_name')
+      .eq('user_id', userId);
 
-        const existingPermissions = existing?.map(p => p.permission_name) || [];
-        const newPermissions = permissionNames.filter(p => !existingPermissions.includes(p));
+    const existingPermissions = existing?.map(p => p.permission_name) || [];
+    const newPermissions = permissionNames.filter(p => !existingPermissions.includes(p));
 
-        if (newPermissions.length > 0) {
-          const inserts = newPermissions.map(permissionName => ({
-            user_id: userId,
-            permission_name: permissionName,
-            granted_by: grantedBy
-          }));
+    if (newPermissions.length === 0) {
+      return; // All permissions already granted
+    }
 
-          const { error } = await this.supabase.client
-            .from('user_permissions')
-            .insert(inserts);
+    const inserts = newPermissions.map(permissionName => ({
+      user_id: userId,
+      permission_name: permissionName,
+      granted_by: this.currentUserId,
+      granted_at: new Date().toISOString()
+    }));
 
-          if (error) throw error;
-        }
-      })()
-    );
+    const { error } = await this.supabase.client
+      .from('user_permissions')
+      .insert(inserts);
+
+    if (error) {
+      throw new Error(error.message);
+    }
   }
 
   bulkRevokePermissions(userId: string, permissionNames: string[]): Observable<void> {
     return from(
-      (async () => {
-        const { error } = await this.supabase.client
-          .from('user_permissions')
-          .delete()
-          .eq('user_id', userId)
-          .in('permission_name', permissionNames);
-
-        if (error) throw error;
-      })()
+      this.supabase.client
+        .from('user_permissions')
+        .delete()
+        .eq('user_id', userId)
+        .in('permission_name', permissionNames)
+    ).pipe(
+      map(({ error }) => {
+        if (error) throw new Error(error.message);
+      }),
+      catchError(err => throwError(() => err))
     );
   }
 
-  // ROLE TEMPLATES
+  // ==================== ROLE TEMPLATES ====================
+
   getRoleTemplates(): Observable<RoleTemplate[]> {
-    const churchId = this.authService.getChurchId();
-
     return from(
-      (async () => {
-        const { data, error } = await this.supabase.client
-          .from('role_templates')
-          .select('*')
-          .eq('church_id', churchId)
-          .order('role_name', { ascending: true });
-
-        if (error) throw error;
-
-        return data as RoleTemplate[];
-      })()
+      this.supabase.client
+        .from('role_templates')
+        .select('*')
+        .eq('church_id', this.churchId)
+        .order('role_name', { ascending: true })
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw new Error(error.message);
+        return (data || []) as RoleTemplate[];
+      }),
+      catchError(err => throwError(() => err))
     );
   }
 
-  createRoleTemplate(templateData: Partial<RoleTemplate>): Observable<RoleTemplate> {
-    const churchId = this.authService.getChurchId();
-
+  getRoleTemplateById(templateId: string): Observable<RoleTemplate> {
     return from(
-      this.supabase.insert<RoleTemplate>('role_templates', {
-        ...templateData,
-        church_id: churchId
-      })
+      this.supabase.client
+        .from('role_templates')
+        .select('*')
+        .eq('id', templateId)
+        .eq('church_id', this.churchId)
+        .single()
     ).pipe(
       map(({ data, error }) => {
-        if (error) throw error;
-        return data![0];
-      })
+        if (error) throw new Error(error.message);
+        if (!data) throw new Error('Role template not found');
+        return data as RoleTemplate;
+      }),
+      catchError(err => throwError(() => err))
     );
   }
 
-  updateRoleTemplate(templateId: string, templateData: Partial<RoleTemplate>): Observable<RoleTemplate> {
+  createRoleTemplate(templateData: RoleTemplateCreateInput): Observable<RoleTemplate> {
     return from(
-      this.supabase.update<RoleTemplate>('role_templates', templateId, templateData)
+      this.supabase.client
+        .from('role_templates')
+        .insert({
+          ...templateData,
+          church_id: this.churchId,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single()
     ).pipe(
       map(({ data, error }) => {
-        if (error) throw error;
-        return data![0];
-      })
+        if (error) throw new Error(error.message);
+        return data as RoleTemplate;
+      }),
+      catchError(err => throwError(() => err))
+    );
+  }
+
+  updateRoleTemplate(
+    templateId: string,
+    templateData: RoleTemplateUpdateInput
+  ): Observable<RoleTemplate> {
+    return from(
+      this.supabase.client
+        .from('role_templates')
+        .update({
+          ...templateData,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', templateId)
+        .eq('church_id', this.churchId)
+        .select()
+        .single()
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw new Error(error.message);
+        return data as RoleTemplate;
+      }),
+      catchError(err => throwError(() => err))
     );
   }
 
   deleteRoleTemplate(templateId: string): Observable<void> {
     return from(
-      this.supabase.delete('role_templates', templateId)
+      this.supabase.client
+        .from('role_templates')
+        .delete()
+        .eq('id', templateId)
+        .eq('church_id', this.churchId)
     ).pipe(
       map(({ error }) => {
-        if (error) throw error;
-      })
+        if (error) throw new Error(error.message);
+      }),
+      catchError(err => throwError(() => err))
     );
   }
 
   applyRoleTemplate(userId: string, templateId: string): Observable<void> {
-    return from(
-      (async () => {
-        // Get template
-        const { data: template } = await this.supabase.client
-          .from('role_templates')
-          .select('permissions')
-          .eq('id', templateId)
-          .single();
-
-        if (!template) throw new Error('Role template not found');
-
-        // Clear existing permissions
-        await this.supabase.client
-          .from('user_permissions')
-          .delete()
-          .eq('user_id', userId);
-
-        // Apply new permissions
-        if (template.permissions && template.permissions.length > 0) {
-          await this.bulkGrantPermissions(userId, template.permissions).toPromise();
-        }
-      })()
-    );
+    return from(this.applyTemplate(userId, templateId));
   }
 
-  // UTILITY
+  private async applyTemplate(userId: string, templateId: string): Promise<void> {
+    // Get template
+    const { data: template, error: templateError } = await this.supabase.client
+      .from('role_templates')
+      .select('permissions')
+      .eq('id', templateId)
+      .eq('church_id', this.churchId)
+      .single();
+
+    if (templateError) {
+      throw new Error(templateError.message);
+    }
+
+    if (!template) {
+      throw new Error('Role template not found');
+    }
+
+    // Clear existing permissions
+    const { error: deleteError } = await this.supabase.client
+      .from('user_permissions')
+      .delete()
+      .eq('user_id', userId);
+
+    if (deleteError) {
+      throw new Error(deleteError.message);
+    }
+
+    // Apply new permissions
+    if (template.permissions && template.permissions.length > 0) {
+      await this.insertBulkPermissions(userId, template.permissions);
+    }
+  }
+
+  // ==================== UTILITY ====================
+
   getAvailablePermissions(): Permission[] {
     return AVAILABLE_PERMISSIONS;
   }
 
-  getPermissionsByCategory() {
+  getPermissionsByCategory(): Record<string, Permission[]> {
     const grouped: Record<string, Permission[]> = {};
 
     AVAILABLE_PERMISSIONS.forEach(permission => {
@@ -241,5 +397,26 @@ export class UserRolesService {
     });
 
     return grouped;
+  }
+
+  getPermissionsByNames(names: string[]): Permission[] {
+    return AVAILABLE_PERMISSIONS.filter(p => names.includes(p.name));
+  }
+
+  validatePermissions(permissions: string[]): boolean {
+    const validNames = AVAILABLE_PERMISSIONS.map(p => p.name);
+    return permissions.every(p => validNames.includes(p));
+  }
+
+  // Check if current user has permission to manage roles
+  canManageRoles(): boolean {
+    const adminRoles = ['super_admin', 'church_admin'];
+    return this.authService.hasRole(adminRoles);
+  }
+
+  // Check if current user has permission to manage permissions
+  canManagePermissions(): boolean {
+    const adminRoles = ['super_admin', 'church_admin'];
+    return this.authService.hasRole(adminRoles);
   }
 }

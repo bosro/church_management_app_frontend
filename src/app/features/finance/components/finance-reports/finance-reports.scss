@@ -7,7 +7,7 @@
 
 .dashboard-content {
   flex: 1;
-  margin-left: 260px;
+  // margin-left: 260px;
   display: flex;
   flex-direction: column;
 }
@@ -391,4 +391,74 @@
       margin-top: 0.5rem;
     }
   }
+}
+
+
+// Add to each component's SCSS file
+.success-alert {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: #D1FAE5;
+  border: 1px solid #059669;
+  border-radius: 8px;
+  color: #065F46;
+  margin-bottom: 1.5rem;
+
+  i {
+    font-size: 1.25rem;
+  }
+}
+
+.error-alert {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: #FEE2E2;
+  border: 1px solid #DC2626;
+  border-radius: 8px;
+  color: #991B1B;
+  margin-bottom: 1.5rem;
+
+  i {
+    font-size: 1.25rem;
+  }
+}
+
+.error-message {
+  display: block;
+  color: #DC2626;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
+input.error,
+select.error,
+textarea.error {
+  border-color: #DC2626;
+
+  &:focus {
+    border-color: #DC2626;
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+  }
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

@@ -1,11 +1,10 @@
-
 // src/app/features/ministries/components/ministries-list/ministries-list.component.ts
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { MinistryService } from '../../services/ministry.service';
-import { Ministry } from '../../../../models/ministry.model';
+import { Ministry, MinistryStatistics } from '../../../../models/ministry.model';
 
 @Component({
   selector: 'app-ministry-list',
@@ -18,6 +17,8 @@ export class MinistryList implements OnInit, OnDestroy {
 
   ministries: Ministry[] = [];
   loading = false;
+  errorMessage = '';
+  successMessage = '';
 
   // Pagination
   currentPage = 1;
@@ -26,7 +27,11 @@ export class MinistryList implements OnInit, OnDestroy {
   totalPages = 0;
 
   // Statistics
-  statistics: any = null;
+  statistics: MinistryStatistics | null = null;
+
+  // Permissions
+  canManageMinistries = false;
+  canViewMinistries = false;
 
   constructor(
     private ministryService: MinistryService,
@@ -34,6 +39,7 @@ export class MinistryList implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    this.checkPermissions();
     this.loadMinistries();
     this.loadStatistics();
   }
@@ -43,10 +49,21 @@ export class MinistryList implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  private checkPermissions(): void {
+    this.canManageMinistries = this.ministryService.canManageMinistries();
+    this.canViewMinistries = this.ministryService.canViewMinistries();
+
+    if (!this.canViewMinistries) {
+      this.router.navigate(['/unauthorized']);
+    }
+  }
+
   loadMinistries(): void {
     this.loading = true;
+    this.errorMessage = '';
 
-    this.ministryService.getMinistries(this.currentPage, this.pageSize)
+    this.ministryService
+      .getMinistries(this.currentPage, this.pageSize, { isActive: true })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: ({ data, count }) => {
@@ -56,14 +73,16 @@ export class MinistryList implements OnInit, OnDestroy {
           this.loading = false;
         },
         error: (error) => {
-          console.error('Error loading ministries:', error);
+          this.errorMessage = error.message || 'Failed to load ministries';
           this.loading = false;
+          console.error('Error loading ministries:', error);
         }
       });
   }
 
   loadStatistics(): void {
-    this.ministryService.getMinistryStatistics()
+    this.ministryService
+      .getMinistryStatistics()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (stats) => {
@@ -71,6 +90,7 @@ export class MinistryList implements OnInit, OnDestroy {
         },
         error: (error) => {
           console.error('Error loading statistics:', error);
+          // Don't show error to user for statistics failure
         }
       });
   }
@@ -81,30 +101,69 @@ export class MinistryList implements OnInit, OnDestroy {
   }
 
   createMinistry(): void {
+    if (!this.canManageMinistries) {
+      this.errorMessage = 'You do not have permission to create ministries';
+      this.scrollToTop();
+      return;
+    }
     this.router.navigate(['main/ministries/create']);
   }
 
   editMinistry(ministryId: string, event: Event): void {
     event.stopPropagation();
+
+    if (!this.canManageMinistries) {
+      this.errorMessage = 'You do not have permission to edit ministries';
+      this.scrollToTop();
+      return;
+    }
     this.router.navigate(['main/ministries', ministryId, 'edit']);
   }
 
   deleteMinistry(ministryId: string, event: Event): void {
     event.stopPropagation();
 
-    if (confirm('Are you sure you want to delete this ministry?')) {
-      this.ministryService.deleteMinistry(ministryId)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: () => {
-            this.loadMinistries();
-            this.loadStatistics();
-          },
-          error: (error) => {
-            console.error('Error deleting ministry:', error);
-          }
-        });
+    if (!this.canManageMinistries) {
+      this.errorMessage = 'You do not have permission to delete ministries';
+      this.scrollToTop();
+      return;
     }
+
+    const ministry = this.ministries.find(m => m.id === ministryId);
+    if (!ministry) return;
+
+    let confirmMessage = `Are you sure you want to delete "${ministry.name}"?`;
+
+    if (ministry.member_count && ministry.member_count > 0) {
+      confirmMessage = `"${ministry.name}" has ${ministry.member_count} members. ` +
+        `Please remove all members before deleting the ministry.`;
+      alert(confirmMessage);
+      return;
+    }
+
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    this.ministryService
+      .deleteMinistry(ministryId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.successMessage = 'Ministry deleted successfully!';
+          this.loadMinistries();
+          this.loadStatistics();
+
+          setTimeout(() => {
+            this.successMessage = '';
+          }, 3000);
+        },
+        error: (error) => {
+          this.errorMessage = error.message || 'Failed to delete ministry';
+          this.scrollToTop();
+          console.error('Error deleting ministry:', error);
+        }
+      });
   }
 
   // Pagination
@@ -112,6 +171,7 @@ export class MinistryList implements OnInit, OnDestroy {
     if (this.currentPage > 1) {
       this.currentPage--;
       this.loadMinistries();
+      this.scrollToTop();
     }
   }
 
@@ -119,6 +179,11 @@ export class MinistryList implements OnInit, OnDestroy {
     if (this.currentPage < this.totalPages) {
       this.currentPage++;
       this.loadMinistries();
+      this.scrollToTop();
     }
+  }
+
+  private scrollToTop(): void {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }

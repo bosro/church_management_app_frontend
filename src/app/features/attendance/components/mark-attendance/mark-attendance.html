@@ -202,7 +202,7 @@
                     <div class="member-avatar-small">
                       <img
                         *ngIf="record.member?.photo_url"
-                        [src]="record.member.photo_url"
+                        [src]="record.member?.photo_url"
                         [alt]="getAttendanceName(record)"
                       />
                       <div *ngIf="!record.member?.photo_url" class="avatar-placeholder-small">
@@ -239,3 +239,5 @@
     </div>
   </div>
 </div>
+
+

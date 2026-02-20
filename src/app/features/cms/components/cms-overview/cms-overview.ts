@@ -1,10 +1,10 @@
-
 // src/app/features/cms/components/cms-overview/cms-overview.component.ts
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { CmsService } from '../../services/cms';
+import { CmsStatistics } from '../../../../models/cms.model';
 
 @Component({
   selector: 'app-cms-overview',
@@ -15,8 +15,13 @@ import { CmsService } from '../../services/cms';
 export class CmsOverview implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
-  statistics: any = null;
+  statistics: CmsStatistics | null = null;
   loading = true;
+  errorMessage = '';
+
+  // Permissions
+  canManageContent = false;
+  canViewContent = false;
 
   constructor(
     private cmsService: CmsService,
@@ -24,6 +29,7 @@ export class CmsOverview implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    this.checkPermissions();
     this.loadStatistics();
   }
 
@@ -32,10 +38,21 @@ export class CmsOverview implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  private checkPermissions(): void {
+    this.canManageContent = this.cmsService.canManageContent();
+    this.canViewContent = this.cmsService.canViewContent();
+
+    if (!this.canViewContent) {
+      this.router.navigate(['/unauthorized']);
+    }
+  }
+
   loadStatistics(): void {
     this.loading = true;
+    this.errorMessage = '';
 
-    this.cmsService.getCmsStatistics()
+    this.cmsService
+      .getCmsStatistics()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (stats) => {
@@ -43,8 +60,9 @@ export class CmsOverview implements OnInit, OnDestroy {
           this.loading = false;
         },
         error: (error) => {
-          console.error('Error loading statistics:', error);
+          this.errorMessage = error.message || 'Failed to load statistics';
           this.loading = false;
+          console.error('Error loading statistics:', error);
         }
       });
   }
@@ -59,10 +77,18 @@ export class CmsOverview implements OnInit, OnDestroy {
   }
 
   createPage(): void {
+    if (!this.canManageContent) {
+      this.errorMessage = 'You do not have permission to create pages';
+      return;
+    }
     this.router.navigate(['main/cms/pages/create']);
   }
 
   createBlogPost(): void {
+    if (!this.canManageContent) {
+      this.errorMessage = 'You do not have permission to create blog posts';
+      return;
+    }
     this.router.navigate(['main/cms/blog/create']);
   }
 }

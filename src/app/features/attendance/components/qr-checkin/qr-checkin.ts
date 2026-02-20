@@ -1,5 +1,3 @@
-
-
 // src/app/features/attendance/components/qr-checkin/qr-checkin.component.ts
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -8,7 +6,7 @@ import { Subject } from 'rxjs';
 import { takeUntil, debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
 import { AttendanceService } from '../../services/attendance.service';
 import { MemberService } from '../../../members/services/member.service';
-import { AttendanceEvent } from '../../../../models/attendance.model';
+import { AttendanceEvent, AttendanceRecord } from '../../../../models/attendance.model';
 import { Member } from '../../../../models/member.model';
 
 @Component({
@@ -34,12 +32,13 @@ export class QrCheckin implements OnInit, OnDestroy {
   // Check-in status
   checkedIn = false;
   checkedInMember: Member | null = null;
+  currentTime: Date = new Date();
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private attendanceService: AttendanceService,
-    private memberService: MemberService
+    private membersService: MemberService
   ) {}
 
   ngOnInit(): void {
@@ -47,6 +46,8 @@ export class QrCheckin implements OnInit, OnDestroy {
     if (this.eventId) {
       this.loadEvent();
       this.setupSearch();
+    } else {
+      this.errorMessage = 'Invalid event link';
     }
   }
 
@@ -56,7 +57,8 @@ export class QrCheckin implements OnInit, OnDestroy {
   }
 
   private loadEvent(): void {
-    this.attendanceService.getAttendanceEventById(this.eventId)
+    this.attendanceService
+      .getAttendanceEventById(this.eventId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (event) => {
@@ -64,6 +66,7 @@ export class QrCheckin implements OnInit, OnDestroy {
         },
         error: (error) => {
           this.errorMessage = 'Event not found or you do not have access';
+          console.error('Load event error:', error);
         }
       });
   }
@@ -79,7 +82,7 @@ export class QrCheckin implements OnInit, OnDestroy {
             return [];
           }
           this.searching = true;
-          return this.memberService.searchMembers(query);
+          return this.membersService.searchMembers(query);
         }),
         takeUntil(this.destroy$)
       )
@@ -100,20 +103,26 @@ export class QrCheckin implements OnInit, OnDestroy {
     this.errorMessage = '';
     this.successMessage = '';
 
-    this.attendanceService.verifyQRCheckIn(this.eventId, memberId)
+    this.attendanceService
+      .verifyQRCheckIn(this.eventId, memberId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (record) => {
           this.loading = false;
           this.checkedIn = true;
+          this.currentTime = new Date();
           this.successMessage = 'Successfully checked in!';
 
           // Load member details
-          this.memberService.getMemberById(memberId)
+          this.membersService
+            .getMemberById(memberId)
             .pipe(takeUntil(this.destroy$))
             .subscribe({
               next: (member) => {
                 this.checkedInMember = member;
+              },
+              error: (error) => {
+                console.error('Error loading member:', error);
               }
             });
 
@@ -125,6 +134,7 @@ export class QrCheckin implements OnInit, OnDestroy {
         error: (error) => {
           this.loading = false;
           this.errorMessage = error.message || 'Check-in failed. You may have already checked in.';
+          console.error('QR check-in error:', error);
         }
       });
   }
@@ -139,14 +149,11 @@ export class QrCheckin implements OnInit, OnDestroy {
   }
 
   getMemberFullName(member: Member): string {
-    return `${member.first_name} ${member.middle_name || ''} ${member.last_name}`.trim();
+    const parts = [member.first_name, member.middle_name, member.last_name].filter(Boolean);
+    return parts.join(' ');
   }
 
   getMemberInitials(member: Member): string {
     return `${member.first_name[0]}${member.last_name[0]}`.toUpperCase();
   }
-
-  get currentTime(): Date {
-  return new Date();
-}
 }

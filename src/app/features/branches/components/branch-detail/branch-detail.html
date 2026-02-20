@@ -25,7 +25,11 @@
                 <p class="subtitle" *ngIf="branch.pastor_name">Led by {{ branch.pastor_name }}</p>
               </div>
             </div>
-            <button class="btn-primary" (click)="editBranch()">
+            <button
+              *ngIf="canManageBranches"
+              class="btn-primary"
+              (click)="editBranch()"
+            >
               <i class="ri-edit-line"></i>
               Edit Branch
             </button>
@@ -93,7 +97,12 @@
           <div class="members-section">
             <div class="section-header">
               <h3>Branch Members ({{ totalMembers }})</h3>
-              <button class="btn-secondary" (click)="openAssignModal()">
+              <button
+                *ngIf="canAssignMembers"
+                class="btn-secondary"
+                (click)="openAssignModal()"
+                [disabled]="loading"
+              >
                 <i class="ri-user-add-line"></i>
                 Assign Member
               </button>
@@ -112,15 +121,17 @@
                 </div>
                 <div class="member-info">
                   <h4>{{ getMemberName(branchMember) }}</h4>
-                  <p *ngIf="branchMember.member?.email">{{ branchMember.member.email }}</p>
-                  <p *ngIf="branchMember.member?.phone_primary">{{ branchMember.member.phone_primary }}</p>
+                  <p *ngIf="branchMember.member?.email">{{ branchMember.member?.email }}</p>
+                  <p *ngIf="branchMember.member?.phone_primary">{{ branchMember.member?.phone_primary }}</p>
                   <span class="assigned-date">
                     Assigned {{ branchMember.assigned_date | date:'MMM d, y' }}
                   </span>
                 </div>
                 <button
+                  *ngIf="canAssignMembers"
                   class="remove-btn"
                   (click)="removeMember(branchMember.id, $event)"
+                  title="Remove member from branch"
                 >
                   <i class="ri-close-line"></i>
                 </button>
@@ -131,7 +142,11 @@
                 <i class="ri-group-line"></i>
                 <h3>No Members Assigned</h3>
                 <p>Assign members to this branch to get started</p>
-                <button class="btn-primary" (click)="openAssignModal()">
+                <button
+                  *ngIf="canAssignMembers"
+                  class="btn-primary"
+                  (click)="openAssignModal()"
+                >
                   <i class="ri-user-add-line"></i>
                   Assign Member
                 </button>
@@ -165,6 +180,17 @@
               </button>
             </div>
           </div>
+        </div>
+
+        <!-- Error State (when branch not found) -->
+        <div *ngIf="!loadingBranch && !branch && errorMessage" class="empty-state">
+          <i class="ri-error-warning-line"></i>
+          <h3>Branch Not Found</h3>
+          <p>{{ errorMessage }}</p>
+          <button class="btn-primary" (click)="goBack()">
+            <i class="ri-arrow-left-line"></i>
+            Back to Branches
+          </button>
         </div>
       </div>
     </div>
@@ -204,7 +230,7 @@
             <img [src]="member.photo_url || 'assets/images/default-avatar.png'" [alt]="member.first_name" />
           </div>
           <div class="member-details">
-            <h4>{{ member.first_name }} {{ member.last_name }}</h4>
+            <h4>{{ member.first_name }} {{ member.middle_name || '' }} {{ member.last_name }}</h4>
             <p>{{ member.email }}</p>
           </div>
           <i class="ri-add-circle-line"></i>

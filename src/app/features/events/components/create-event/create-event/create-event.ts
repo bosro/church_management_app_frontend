@@ -5,7 +5,7 @@ import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { EventsService } from '../../../services/events';
-import { EventCategory } from '../../../../../models/event.model';
+import {  EventCategory } from '../../../../../models/event.model';
 
 @Component({
   selector: 'app-create-event',
@@ -23,9 +23,11 @@ export class CreateEvent implements OnInit, OnDestroy {
 
   eventTypes: { value: EventCategory; label: string }[] = [
     { value: 'service', label: 'Service' },
+    { value: 'meeting', label: 'Meeting' },
     { value: 'conference', label: 'Conference' },
     { value: 'seminar', label: 'Seminar' },
     { value: 'retreat', label: 'Retreat' },
+    { value: 'workshop', label: 'Workshop' },
     { value: 'outreach', label: 'Outreach' },
     { value: 'social', label: 'Social' },
     { value: 'youth', label: 'Youth' },
@@ -33,13 +35,17 @@ export class CreateEvent implements OnInit, OnDestroy {
     { value: 'other', label: 'Other' },
   ];
 
+  // Permissions
+  canManageEvents = false;
+
   constructor(
     private fb: FormBuilder,
     private eventsService: EventsService,
-    private router: Router,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
+    this.checkPermissions();
     this.initForm();
   }
 
@@ -48,19 +54,27 @@ export class CreateEvent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  private checkPermissions(): void {
+    this.canManageEvents = this.eventsService.canManageEvents();
+
+    if (!this.canManageEvents) {
+      this.router.navigate(['/unauthorized']);
+    }
+  }
+
   private initForm(): void {
     const today = new Date().toISOString().split('T')[0];
 
     this.eventForm = this.fb.group({
-      title: ['', [Validators.required, Validators.minLength(3)]],
-      description: [''],
-      category: ['service' as EventCategory, [Validators.required]], // <-- use EventCategory
+      title: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(200)]],
+      description: ['', [Validators.maxLength(2000)]],
+      category: ['service' as EventCategory, [Validators.required]],
       start_date: [today, [Validators.required]],
       end_date: [today, [Validators.required]],
       start_time: [''],
       end_time: [''],
-      location: [''],
-      max_attendees: [''],
+      location: ['', [Validators.maxLength(200)]],
+      max_attendees: [null, [Validators.min(1)]],
       registration_deadline: [''],
       registration_required: [false],
       is_public: [true],
@@ -71,6 +85,7 @@ export class CreateEvent implements OnInit, OnDestroy {
     if (this.eventForm.invalid) {
       this.markFormGroupTouched(this.eventForm);
       this.errorMessage = 'Please fill in all required fields correctly';
+      this.scrollToTop();
       return;
     }
 
@@ -80,21 +95,39 @@ export class CreateEvent implements OnInit, OnDestroy {
 
     if (endDate < startDate) {
       this.errorMessage = 'End date cannot be before start date';
+      this.scrollToTop();
       return;
+    }
+
+    // Validate registration deadline
+    if (this.eventForm.value.registration_deadline) {
+      const deadline = new Date(this.eventForm.value.registration_deadline);
+      if (deadline > startDate) {
+        this.errorMessage = 'Registration deadline must be before the event start date';
+        this.scrollToTop();
+        return;
+      }
     }
 
     this.loading = true;
     this.errorMessage = '';
+    this.successMessage = '';
 
     const eventData = {
-      ...this.eventForm.value,
+      title: this.eventForm.value.title.trim(),
+      description: this.eventForm.value.description?.trim() || undefined,
+      category: this.eventForm.value.category,
+      start_date: this.eventForm.value.start_date,
+      end_date: this.eventForm.value.end_date,
+      start_time: this.eventForm.value.start_time || undefined,
+      end_time: this.eventForm.value.end_time || undefined,
+      location: this.eventForm.value.location?.trim() || undefined,
       max_attendees: this.eventForm.value.max_attendees
         ? parseInt(this.eventForm.value.max_attendees)
-        : null,
-      start_time: this.eventForm.value.start_time || null,
-      end_time: this.eventForm.value.end_time || null,
-      location: this.eventForm.value.location || null,
-      registration_deadline: this.eventForm.value.registration_deadline || null,
+        : undefined,
+      registration_deadline: this.eventForm.value.registration_deadline || undefined,
+      registration_required: this.eventForm.value.registration_required || false,
+      is_public: this.eventForm.value.is_public !== undefined ? this.eventForm.value.is_public : true,
     };
 
     this.eventsService
@@ -103,38 +136,69 @@ export class CreateEvent implements OnInit, OnDestroy {
       .subscribe({
         next: (event) => {
           this.successMessage = 'Event created successfully!';
+          this.loading = false;
+
           setTimeout(() => {
             this.router.navigate(['main/events', event.id]);
           }, 1500);
         },
         error: (error) => {
           this.loading = false;
-          this.errorMessage =
-            error.message || 'Failed to create event. Please try again.';
+          this.errorMessage = error.message || 'Failed to create event. Please try again.';
+          this.scrollToTop();
+          console.error('Error creating event:', error);
         },
       });
   }
 
   cancel(): void {
-    this.router.navigate(['main/events']);
+    if (this.eventForm.dirty) {
+      if (confirm('You have unsaved changes. Are you sure you want to leave?')) {
+        this.router.navigate(['main/events']);
+      }
+    } else {
+      this.router.navigate(['main/events']);
+    }
   }
 
   private markFormGroupTouched(formGroup: FormGroup): void {
     Object.keys(formGroup.controls).forEach((key) => {
       const control = formGroup.get(key);
       control?.markAsTouched();
+
+      if (control instanceof FormGroup) {
+        this.markFormGroupTouched(control);
+      }
     });
   }
 
   getErrorMessage(fieldName: string): string {
     const control = this.eventForm.get(fieldName);
-    if (control?.hasError('required')) {
+
+    if (!control || !control.errors || !control.touched) {
+      return '';
+    }
+
+    if (control.hasError('required')) {
       return 'This field is required';
     }
-    if (control?.hasError('minlength')) {
+    if (control.hasError('minlength')) {
       const minLength = control.getError('minlength').requiredLength;
       return `Minimum ${minLength} characters required`;
     }
-    return '';
+    if (control.hasError('maxlength')) {
+      const maxLength = control.getError('maxlength').requiredLength;
+      return `Maximum ${maxLength} characters allowed`;
+    }
+    if (control.hasError('min')) {
+      const min = control.getError('min').min;
+      return `Minimum value is ${min}`;
+    }
+
+    return 'Invalid input';
+  }
+
+  private scrollToTop(): void {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }

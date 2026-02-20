@@ -7,7 +7,7 @@
 
 .dashboard-content {
   flex: 1;
-  margin-left: 260px;
+  // margin-left: 260px;
   display: flex;
   flex-direction: column;
 }
@@ -664,5 +664,21 @@
       width: 100%;
       justify-content: center;
     }
+  }
+}
+
+
+.ip-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: #6B7280;
+  background: #F3F4F6;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+
+  i {
+    font-size: 0.875rem;
   }
 }

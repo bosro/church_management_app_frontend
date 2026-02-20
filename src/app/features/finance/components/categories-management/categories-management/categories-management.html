@@ -13,7 +13,11 @@
             <h1>Giving Categories</h1>
             <p class="subtitle">Manage categories for organizing giving records</p>
           </div>
-          <button class="btn-primary" (click)="toggleForm()">
+          <button
+            class="btn-primary"
+            (click)="toggleForm()"
+            [disabled]="!canManageCategories"
+          >
             <i [class]="showForm ? 'ri-close-line' : 'ri-add-line'"></i>
             <span>{{ showForm ? 'Cancel' : 'Add Category' }}</span>
           </button>
@@ -43,7 +47,16 @@
                   type="text"
                   formControlName="name"
                   placeholder="e.g., Tithe, Offering, Building Fund"
+                  [class.error]="categoryForm.get('name')?.invalid && categoryForm.get('name')?.touched"
                 />
+                <span
+                  *ngIf="categoryForm.get('name')?.invalid && categoryForm.get('name')?.touched"
+                  class="error-message"
+                >
+                  <span *ngIf="categoryForm.get('name')?.hasError('required')">Category name is required</span>
+                  <span *ngIf="categoryForm.get('name')?.hasError('minlength')">Minimum 2 characters required</span>
+                  <span *ngIf="categoryForm.get('name')?.hasError('maxlength')">Maximum 50 characters allowed</span>
+                </span>
               </div>
 
               <div class="form-group full-width">
@@ -53,16 +66,36 @@
                   formControlName="description"
                   placeholder="Add a description for this category..."
                   rows="3"
+                  [class.error]="categoryForm.get('description')?.invalid && categoryForm.get('description')?.touched"
                 ></textarea>
+                <span
+                  *ngIf="categoryForm.get('description')?.hasError('maxlength')"
+                  class="error-message"
+                >
+                  Maximum 200 characters allowed
+                </span>
               </div>
             </div>
 
             <div class="form-actions">
-              <button type="button" class="btn-secondary" (click)="toggleForm()">
+              <button
+                type="button"
+                class="btn-secondary"
+                (click)="toggleForm()"
+                [disabled]="submitting"
+              >
                 Cancel
               </button>
-              <button type="submit" class="btn-primary" [disabled]="categoryForm.invalid">
-                {{ editingCategory ? 'Update' : 'Create' }} Category
+              <button
+                type="submit"
+                class="btn-primary"
+                [disabled]="categoryForm.invalid || submitting"
+              >
+                <span *ngIf="!submitting">{{ editingCategory ? 'Update' : 'Create' }} Category</span>
+                <span *ngIf="submitting">
+                  <i class="ri-loader-4-line spin"></i>
+                  {{ editingCategory ? 'Updating...' : 'Creating...' }}
+                </span>
               </button>
             </div>
           </form>
@@ -84,10 +117,20 @@
                 <p *ngIf="category.description">{{ category.description }}</p>
               </div>
               <div class="category-actions">
-                <button class="btn-edit" (click)="editCategory(category)">
+                <button
+                  class="btn-edit"
+                  (click)="editCategory(category)"
+                  [disabled]="!canManageCategories"
+                  [title]="canManageCategories ? 'Edit category' : 'No permission'"
+                >
                   <i class="ri-edit-line"></i>
                 </button>
-                <button class="btn-delete" (click)="deleteCategory(category.id)">
+                <button
+                  class="btn-delete"
+                  (click)="deleteCategory(category.id)"
+                  [disabled]="!canManageCategories"
+                  [title]="canManageCategories ? 'Delete category' : 'No permission'"
+                >
                   <i class="ri-delete-bin-line"></i>
                 </button>
               </div>

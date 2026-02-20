@@ -1,4 +1,3 @@
-
 // src/app/features/ministries/components/ministry-detail/ministry-detail.component.ts
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -6,8 +5,7 @@ import { FormControl } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { takeUntil, debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
 import { MinistryService } from '../../services/ministry.service';
-import { MemberService } from '../../../members/services/member.service';
-import { Ministry } from '../../../../models/ministry.model';
+import { Ministry, MinistryMember, MinistryLeader } from '../../../../models/ministry.model';
 
 @Component({
   selector: 'app-ministry-detail',
@@ -20,8 +18,8 @@ export class MinistryDetail implements OnInit, OnDestroy {
 
   ministryId: string = '';
   ministry: Ministry | null = null;
-  members: any[] = [];
-  leaders: any[] = [];
+  members: MinistryMember[] = [];
+  leaders: MinistryLeader[] = [];
   loading = true;
   errorMessage = '';
   successMessage = '';
@@ -44,18 +42,26 @@ export class MinistryDetail implements OnInit, OnDestroy {
   leaderEndDate = '';
   addingLeader = false;
 
+  // Permissions
+  canManageMinistries = false;
+  canManageMembers = false;
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private ministryService: MinistryService,
-    private memberService: MemberService
+    private ministryService: MinistryService
   ) {}
 
   ngOnInit(): void {
+    this.checkPermissions();
     this.ministryId = this.route.snapshot.paramMap.get('id') || '';
+
     if (this.ministryId) {
       this.loadMinistryDetails();
       this.setupMemberSearch();
+    } else {
+      this.errorMessage = 'Invalid ministry ID';
+      this.loading = false;
     }
   }
 
@@ -64,19 +70,32 @@ export class MinistryDetail implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  private checkPermissions(): void {
+    this.canManageMinistries = this.ministryService.canManageMinistries();
+    this.canManageMembers = this.ministryService.canManageMembers();
+
+    if (!this.ministryService.canViewMinistries()) {
+      this.router.navigate(['/unauthorized']);
+    }
+  }
+
   private loadMinistryDetails(): void {
     this.loading = true;
+    this.errorMessage = '';
 
     // Load ministry
-    this.ministryService.getMinistryById(this.ministryId)
+    this.ministryService
+      .getMinistryById(this.ministryId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (ministry) => {
           this.ministry = ministry;
+          this.loading = false;
         },
         error: (error) => {
           this.errorMessage = error.message || 'Failed to load ministry';
           this.loading = false;
+          console.error('Ministry load error:', error);
         }
       });
 
@@ -88,22 +107,23 @@ export class MinistryDetail implements OnInit, OnDestroy {
   }
 
   private loadMembers(): void {
-    this.ministryService.getMinistryMembers(this.ministryId)
+    this.ministryService
+      .getMinistryMembers(this.ministryId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (members) => {
           this.members = members;
-          this.loading = false;
         },
         error: (error) => {
           console.error('Error loading members:', error);
-          this.loading = false;
+          // Don't show error for members load failure
         }
       });
   }
 
   private loadLeaders(): void {
-    this.ministryService.getMinistryLeaders(this.ministryId)
+    this.ministryService
+      .getMinistryLeaders(this.ministryId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (leaders) => {
@@ -111,6 +131,7 @@ export class MinistryDetail implements OnInit, OnDestroy {
         },
         error: (error) => {
           console.error('Error loading leaders:', error);
+          // Don't show error for leaders load failure
         }
       });
   }
@@ -137,6 +158,7 @@ export class MinistryDetail implements OnInit, OnDestroy {
         },
         error: (error) => {
           console.error('Search error:', error);
+          this.searchResults = [];
           this.searching = false;
         }
       });
@@ -145,10 +167,27 @@ export class MinistryDetail implements OnInit, OnDestroy {
   // Tab switching
   switchTab(tab: 'members' | 'leaders'): void {
     this.activeTab = tab;
+
+    // Reset add forms when switching tabs
+    if (tab === 'members') {
+      this.showAddLeader = false;
+      this.selectedMemberForLeader = null;
+    } else {
+      this.showAddMember = false;
+    }
+
+    this.searchControl.setValue('');
+    this.searchResults = [];
   }
 
   // Add Member
   toggleAddMember(): void {
+    if (!this.canManageMembers) {
+      this.errorMessage = 'You do not have permission to manage ministry members';
+      this.scrollToTop();
+      return;
+    }
+
     this.showAddMember = !this.showAddMember;
     if (!this.showAddMember) {
       this.searchControl.setValue('');
@@ -157,16 +196,25 @@ export class MinistryDetail implements OnInit, OnDestroy {
   }
 
   addMemberToMinistry(member: any): void {
-    this.addingMember = true;
+    if (this.addingMember) return;
 
-    this.ministryService.addMemberToMinistry(this.ministryId, member.id)
+    this.addingMember = true;
+    this.errorMessage = '';
+
+    this.ministryService
+      .addMemberToMinistry(this.ministryId, member.id)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
-          this.successMessage = 'Member added successfully!';
+          this.successMessage = `${this.getMemberName(member)} added successfully!`;
           this.loadMembers();
           this.toggleAddMember();
           this.addingMember = false;
+
+          // Reload ministry to update member count
+          this.ministryService.getMinistryById(this.ministryId)
+            .pipe(takeUntil(this.destroy$))
+            .subscribe(ministry => this.ministry = ministry);
 
           setTimeout(() => {
             this.successMessage = '';
@@ -175,32 +223,60 @@ export class MinistryDetail implements OnInit, OnDestroy {
         error: (error) => {
           this.errorMessage = error.message || 'Failed to add member';
           this.addingMember = false;
+          this.scrollToTop();
+          console.error('Add member error:', error);
         }
       });
   }
 
   removeMember(membershipId: string): void {
-    if (confirm('Are you sure you want to remove this member from the ministry?')) {
-      this.ministryService.removeMemberFromMinistry(membershipId, this.ministryId)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: () => {
-            this.successMessage = 'Member removed successfully!';
-            this.loadMembers();
-
-            setTimeout(() => {
-              this.successMessage = '';
-            }, 3000);
-          },
-          error: (error) => {
-            this.errorMessage = error.message || 'Failed to remove member';
-          }
-        });
+    if (!this.canManageMembers) {
+      this.errorMessage = 'You do not have permission to manage ministry members';
+      this.scrollToTop();
+      return;
     }
+
+    const membership = this.members.find(m => m.id === membershipId);
+    if (!membership) return;
+
+    const memberName = this.getMemberName(membership.member);
+    if (!confirm(`Are you sure you want to remove ${memberName} from this ministry?`)) {
+      return;
+    }
+
+    this.ministryService
+      .removeMemberFromMinistry(membershipId, this.ministryId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.successMessage = `${memberName} removed successfully!`;
+          this.loadMembers();
+
+          // Reload ministry to update member count
+          this.ministryService.getMinistryById(this.ministryId)
+            .pipe(takeUntil(this.destroy$))
+            .subscribe(ministry => this.ministry = ministry);
+
+          setTimeout(() => {
+            this.successMessage = '';
+          }, 3000);
+        },
+        error: (error) => {
+          this.errorMessage = error.message || 'Failed to remove member';
+          this.scrollToTop();
+          console.error('Remove member error:', error);
+        }
+      });
   }
 
   // Add Leader
   toggleAddLeader(): void {
+    if (!this.canManageMembers) {
+      this.errorMessage = 'You do not have permission to manage ministry leaders';
+      this.scrollToTop();
+      return;
+    }
+
     this.showAddLeader = !this.showAddLeader;
     if (!this.showAddLeader) {
       this.selectedMemberForLeader = null;
@@ -221,22 +297,33 @@ export class MinistryDetail implements OnInit, OnDestroy {
   addLeader(): void {
     if (!this.selectedMemberForLeader || !this.leaderPosition || !this.leaderStartDate) {
       this.errorMessage = 'Please fill in all required fields';
+      this.scrollToTop();
       return;
     }
 
-    this.addingLeader = true;
+    if (this.leaderPosition.trim().length < 2) {
+      this.errorMessage = 'Position must be at least 2 characters';
+      this.scrollToTop();
+      return;
+    }
 
-    this.ministryService.addMinistryLeader(
-      this.ministryId,
-      this.selectedMemberForLeader.id,
-      this.leaderPosition,
-      this.leaderStartDate,
-      this.leaderEndDate || undefined
-    )
+    if (this.addingLeader) return;
+
+    this.addingLeader = true;
+    this.errorMessage = '';
+
+    this.ministryService
+      .addMinistryLeader(
+        this.ministryId,
+        this.selectedMemberForLeader.id,
+        this.leaderPosition.trim(),
+        this.leaderStartDate,
+        this.leaderEndDate || undefined
+      )
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
-          this.successMessage = 'Leader added successfully!';
+          this.successMessage = `${this.getMemberName(this.selectedMemberForLeader)} added as leader!`;
           this.loadLeaders();
           this.toggleAddLeader();
           this.addingLeader = false;
@@ -248,44 +335,72 @@ export class MinistryDetail implements OnInit, OnDestroy {
         error: (error) => {
           this.errorMessage = error.message || 'Failed to add leader';
           this.addingLeader = false;
+          this.scrollToTop();
+          console.error('Add leader error:', error);
         }
       });
   }
 
   removeLeader(leadershipId: string): void {
-    if (confirm('Are you sure you want to remove this leader?')) {
-      this.ministryService.removeMinistryLeader(leadershipId)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: () => {
-            this.successMessage = 'Leader removed successfully!';
-            this.loadLeaders();
-
-            setTimeout(() => {
-              this.successMessage = '';
-            }, 3000);
-          },
-          error: (error) => {
-            this.errorMessage = error.message || 'Failed to remove leader';
-          }
-        });
+    if (!this.canManageMembers) {
+      this.errorMessage = 'You do not have permission to manage ministry leaders';
+      this.scrollToTop();
+      return;
     }
+
+    const leadership = this.leaders.find(l => l.id === leadershipId);
+    if (!leadership) return;
+
+    const leaderName = this.getMemberName(leadership.member);
+    const confirmMessage = `Are you sure you want to remove ${leaderName} as ${leadership.position}?`;
+
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    this.ministryService
+      .removeMinistryLeader(leadershipId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.successMessage = `${leaderName} removed as leader!`;
+          this.loadLeaders();
+
+          setTimeout(() => {
+            this.successMessage = '';
+          }, 3000);
+        },
+        error: (error) => {
+          this.errorMessage = error.message || 'Failed to remove leader';
+          this.scrollToTop();
+          console.error('Remove leader error:', error);
+        }
+      });
   }
 
   // Export
   exportMinistryReport(): void {
-    this.ministryService.exportMinistryReport(this.ministryId)
+    this.ministryService
+      .exportMinistryReport(this.ministryId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (blob) => {
           const url = window.URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
-          a.download = `${this.ministry?.name}_members.csv`;
+          a.download = `${this.ministry?.name.replace(/\s+/g, '_')}_members_${new Date().toISOString().split('T')[0]}.csv`;
+          document.body.appendChild(a);
           a.click();
+          document.body.removeChild(a);
           window.URL.revokeObjectURL(url);
+
+          this.successMessage = 'Report exported successfully!';
+          setTimeout(() => {
+            this.successMessage = '';
+          }, 3000);
         },
         error: (error) => {
+          this.errorMessage = 'Failed to export report';
           console.error('Export error:', error);
         }
       });
@@ -297,30 +412,61 @@ export class MinistryDetail implements OnInit, OnDestroy {
   }
 
   editMinistry(): void {
+    if (!this.canManageMinistries) {
+      this.errorMessage = 'You do not have permission to edit ministries';
+      this.scrollToTop();
+      return;
+    }
     this.router.navigate(['main/ministries', this.ministryId, 'edit']);
   }
 
   deleteMinistry(): void {
-    if (confirm('Are you sure you want to delete this ministry?')) {
-      this.ministryService.deleteMinistry(this.ministryId)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: () => {
-            this.router.navigate(['/ministries']);
-          },
-          error: (error) => {
-            this.errorMessage = error.message || 'Failed to delete ministry';
-          }
-        });
+    if (!this.canManageMinistries) {
+      this.errorMessage = 'You do not have permission to delete ministries';
+      this.scrollToTop();
+      return;
     }
+
+    if (!this.ministry) return;
+
+    let confirmMessage = `Are you sure you want to delete "${this.ministry.name}"?`;
+
+    if (this.ministry.member_count && this.ministry.member_count > 0) {
+      alert(`"${this.ministry.name}" has ${this.ministry.member_count} members. Please remove all members before deleting the ministry.`);
+      return;
+    }
+
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    this.ministryService
+      .deleteMinistry(this.ministryId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.router.navigate(['main/ministries']);
+        },
+        error: (error) => {
+          this.errorMessage = error.message || 'Failed to delete ministry';
+          this.scrollToTop();
+          console.error('Delete error:', error);
+        }
+      });
   }
 
   // Helper methods
   getMemberName(member: any): string {
+    if (!member) return 'Unknown';
     return `${member.first_name} ${member.last_name}`;
   }
 
   getMemberInitials(member: any): string {
+    if (!member) return '??';
     return `${member.first_name[0]}${member.last_name[0]}`.toUpperCase();
+  }
+
+  private scrollToTop(): void {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }

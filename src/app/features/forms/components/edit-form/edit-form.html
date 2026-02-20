@@ -1,6 +1,4 @@
 <!-- src/app/features/forms/components/edit-form/edit-form.component.html -->
-<!-- Reuse the same HTML structure as create-form.component.html -->
-<!-- Just change the title and button text -->
 <div class="dashboard-layout">
   <app-sidebar></app-sidebar>
 
@@ -14,8 +12,9 @@
           <app-loading-spinner size="large" message="Loading form..."></app-loading-spinner>
         </div>
 
-        <!-- Form Content (same as create-form but with updated header) -->
+        <!-- Form Content -->
         <div *ngIf="!loadingForm">
+          <!-- Page Header -->
           <div class="page-header">
             <div class="header-left">
               <button class="back-btn" (click)="cancel()">
@@ -28,7 +27,6 @@
             </div>
           </div>
 
-          <!-- Rest of the form (identical to create-form.component.html) -->
           <!-- Success/Error Messages -->
           <div *ngIf="successMessage" class="success-alert">
             <i class="ri-checkbox-circle-line"></i>
@@ -40,9 +38,232 @@
             <span>{{ errorMessage }}</span>
           </div>
 
-          <!-- Builder Layout (same as create-form) -->
-          <!-- Copy the entire builder-layout div from create-form.component.html -->
-          <!-- Just change the submit button text from "Create Form" to "Update Form" -->
+          <div class="builder-layout">
+            <!-- Left Panel - Form Builder -->
+            <div class="builder-panel">
+              <div class="panel-card">
+                <h3>Form Details</h3>
+                <form [formGroup]="formDetailsForm">
+                  <div class="form-group">
+                    <label>Form Title *</label>
+                    <input
+                      type="text"
+                      formControlName="title"
+                      placeholder="e.g., Member Registration, Event RSVP"
+                    />
+                  </div>
+
+                  <div class="form-group">
+                    <label>Description</label>
+                    <textarea
+                      formControlName="description"
+                      placeholder="Describe the purpose of this form..."
+                      rows="3"
+                    ></textarea>
+                  </div>
+                </form>
+              </div>
+
+              <!-- Add Field Section -->
+              <div class="panel-card">
+                <h3>{{ editingIndex >= 0 ? 'Edit Field' : 'Add Field' }}</h3>
+
+                <div class="form-group">
+                  <label>Field Type *</label>
+                  <div class="field-types-grid">
+                    <div
+                      *ngFor="let type of fieldTypes"
+                      class="field-type-btn"
+                      [class.selected]="newFieldType === type.value"
+                      (click)="newFieldType = type.value"
+                    >
+                      <i [class]="type.icon"></i>
+                      <span>{{ type.label }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label>Field Label *</label>
+                  <input
+                    type="text"
+                    [(ngModel)]="newFieldLabel"
+                    placeholder="e.g., Full Name, Email Address"
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label>Placeholder</label>
+                  <input
+                    type="text"
+                    [(ngModel)]="newFieldPlaceholder"
+                    placeholder="Enter placeholder text..."
+                  />
+                </div>
+
+                <div class="form-group" *ngIf="needsOptions(newFieldType)">
+                  <label>Options (one per line) *</label>
+                  <textarea
+                    [(ngModel)]="newFieldOptions"
+                    placeholder="Option 1&#10;Option 2&#10;Option 3"
+                    rows="4"
+                  ></textarea>
+                </div>
+
+                <div class="form-group checkbox-group">
+                  <label class="checkbox-label">
+                    <input type="checkbox" [(ngModel)]="newFieldRequired" />
+                    <span>Required Field</span>
+                  </label>
+                </div>
+
+                <div class="field-actions">
+                  <button
+                    *ngIf="editingIndex >= 0"
+                    class="btn-secondary"
+                    (click)="cancelEditField()"
+                  >
+                    Cancel
+                  </button>
+                  <button class="btn-primary" (click)="addField()">
+                    <i [class]="editingIndex >= 0 ? 'ri-save-line' : 'ri-add-line'"></i>
+                    {{ editingIndex >= 0 ? 'Update Field' : 'Add Field' }}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Panel - Preview -->
+            <div class="preview-panel">
+              <div class="panel-card">
+                <div class="preview-header">
+                  <h3>Form Preview</h3>
+                  <span class="field-count">{{ formFields.length }} field{{ formFields.length !== 1 ? 's' : '' }}</span>
+                </div>
+
+                <div class="preview-form" *ngIf="formFields.length > 0">
+                  <div
+                    *ngFor="let field of formFields; let i = index"
+                    class="preview-field"
+                  >
+                    <div class="field-header">
+                      <div class="field-label">
+                        {{ field.label }}
+                        <span class="required-mark" *ngIf="field.required">*</span>
+                      </div>
+                      <div class="field-controls">
+                        <button
+                          class="control-btn"
+                          (click)="moveFieldUp(i)"
+                          [disabled]="i === 0"
+                        >
+                          <i class="ri-arrow-up-line"></i>
+                        </button>
+                        <button
+                          class="control-btn"
+                          (click)="moveFieldDown(i)"
+                          [disabled]="i === formFields.length - 1"
+                        >
+                          <i class="ri-arrow-down-line"></i>
+                        </button>
+                        <button class="control-btn" (click)="editField(field, i)">
+                          <i class="ri-edit-line"></i>
+                        </button>
+                        <button class="control-btn danger" (click)="removeField(i)">
+                          <i class="ri-delete-bin-line"></i>
+                        </button>
+                      </div>
+                    </div>
+
+                    <!-- Field Preview -->
+                    <div class="field-input">
+                      <input
+                        *ngIf="field.field_type === 'text' || field.field_type === 'email' || field.field_type === 'phone'"
+                        type="text"
+                        [placeholder]="field.placeholder || ''"
+                        disabled
+                      />
+
+                      <input
+                        *ngIf="field.field_type === 'number'"
+                        type="number"
+                        [placeholder]="field.placeholder || ''"
+                        disabled
+                      />
+
+                      <input
+                        *ngIf="field.field_type === 'date'"
+                        type="date"
+                        disabled
+                      />
+
+                      <textarea
+                        *ngIf="field.field_type === 'textarea'"
+                        [placeholder]="field.placeholder || ''"
+                        rows="3"
+                        disabled
+                      ></textarea>
+
+                      <select *ngIf="field.field_type === 'select'" disabled>
+                        <option value="">Select an option</option>
+                        <option *ngFor="let option of field.options">{{ option }}</option>
+                      </select>
+
+                      <div *ngIf="field.field_type === 'radio'" class="radio-group">
+                        <label *ngFor="let option of field.options" class="radio-label">
+                          <input type="radio" disabled />
+                          <span>{{ option }}</span>
+                        </label>
+                      </div>
+
+                      <div *ngIf="field.field_type === 'checkbox'" class="checkbox-group-preview">
+                        <label *ngFor="let option of field.options" class="checkbox-label-preview">
+                          <input type="checkbox" disabled />
+                          <span>{{ option }}</span>
+                        </label>
+                      </div>
+
+                      <div *ngIf="field.field_type === 'file'" class="file-upload">
+                        <i class="ri-upload-cloud-line"></i>
+                        <span>Choose file</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="empty-preview" *ngIf="formFields.length === 0">
+                  <i class="ri-file-list-3-line"></i>
+                  <p>No fields added yet</p>
+                  <p class="hint">Add fields using the panel on the left</p>
+                </div>
+              </div>
+
+              <!-- Submit Button -->
+              <div class="submit-section">
+                <button
+                  class="btn-secondary btn-full"
+                  (click)="cancel()"
+                  [disabled]="loading"
+                >
+                  Cancel
+                </button>
+                <button
+                  class="btn-primary btn-full"
+                  (click)="onSubmit()"
+                  [disabled]="loading || formFields.length === 0"
+                >
+                  <span *ngIf="!loading">
+                    <i class="ri-save-line"></i>
+                    Update Form
+                  </span>
+                  <span *ngIf="loading">
+                    <i class="ri-loader-4-line spin"></i>
+                    Updating...
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

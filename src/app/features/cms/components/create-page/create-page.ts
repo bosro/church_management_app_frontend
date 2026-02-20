@@ -20,6 +20,9 @@ export class CreatePage implements OnInit, OnDestroy {
   errorMessage = '';
   successMessage = '';
 
+  // Permissions
+  canManageContent = false;
+
   constructor(
     private fb: FormBuilder,
     private cmsService: CmsService,
@@ -27,6 +30,7 @@ export class CreatePage implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    this.checkPermissions();
     this.initForm();
   }
 
@@ -35,12 +39,20 @@ export class CreatePage implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  private checkPermissions(): void {
+    this.canManageContent = this.cmsService.canManageContent();
+
+    if (!this.canManageContent) {
+      this.router.navigate(['/unauthorized']);
+    }
+  }
+
   private initForm(): void {
     this.pageForm = this.fb.group({
-      title: ['', [Validators.required, Validators.minLength(3)]],
+      title: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(200)]],
       content: ['', [Validators.required, Validators.minLength(10)]],
-      meta_description: [''],
-      meta_keywords: ['']
+      meta_description: ['', [Validators.maxLength(160)]],
+      meta_keywords: ['', [Validators.maxLength(255)]]
     });
   }
 
@@ -48,17 +60,22 @@ export class CreatePage implements OnInit, OnDestroy {
     if (this.pageForm.invalid) {
       this.markFormGroupTouched(this.pageForm);
       this.errorMessage = 'Please fill in all required fields correctly';
+      this.scrollToTop();
       return;
     }
 
     this.loading = true;
     this.errorMessage = '';
+    this.successMessage = '';
 
-    this.cmsService.createPage(this.pageForm.value)
+    this.cmsService
+      .createPage(this.pageForm.value)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: () => {
+        next: (page) => {
           this.successMessage = 'Page created successfully!';
+          this.loading = false;
+
           setTimeout(() => {
             this.router.navigate(['main/cms/pages']);
           }, 1500);
@@ -66,30 +83,56 @@ export class CreatePage implements OnInit, OnDestroy {
         error: (error) => {
           this.loading = false;
           this.errorMessage = error.message || 'Failed to create page. Please try again.';
+          this.scrollToTop();
+          console.error('Create page error:', error);
         }
       });
   }
 
   cancel(): void {
-    this.router.navigate(['main/cms/pages']);
+    if (this.pageForm.dirty) {
+      if (confirm('You have unsaved changes. Are you sure you want to leave?')) {
+        this.router.navigate(['main/cms/pages']);
+      }
+    } else {
+      this.router.navigate(['main/cms/pages']);
+    }
   }
 
   private markFormGroupTouched(formGroup: FormGroup): void {
     Object.keys(formGroup.controls).forEach(key => {
       const control = formGroup.get(key);
       control?.markAsTouched();
+
+      if (control instanceof FormGroup) {
+        this.markFormGroupTouched(control);
+      }
     });
   }
 
   getErrorMessage(fieldName: string): string {
     const control = this.pageForm.get(fieldName);
-    if (control?.hasError('required')) {
+
+    if (!control || !control.errors || !control.touched) {
+      return '';
+    }
+
+    if (control.hasError('required')) {
       return 'This field is required';
     }
-    if (control?.hasError('minlength')) {
+    if (control.hasError('minlength')) {
       const minLength = control.getError('minlength').requiredLength;
       return `Minimum ${minLength} characters required`;
     }
-    return '';
+    if (control.hasError('maxlength')) {
+      const maxLength = control.getError('maxlength').requiredLength;
+      return `Maximum ${maxLength} characters allowed`;
+    }
+
+    return 'Invalid input';
+  }
+
+  private scrollToTop(): void {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }

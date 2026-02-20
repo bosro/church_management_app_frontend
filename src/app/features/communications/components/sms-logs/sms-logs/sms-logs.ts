@@ -1,13 +1,13 @@
-
 // src/app/features/communications/components/sms-logs/sms-logs.component.ts
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { CommunicationsService } from '../../../services/communications';
+import { SmsLog } from '../../../../../models/communication.model';
 
 @Component({
-   selector: 'app-sms-logs',
+  selector: 'app-sms-logs',
   standalone: false,
   templateUrl: './sms-logs.html',
   styleUrl: './sms-logs.scss',
@@ -15,8 +15,9 @@ import { CommunicationsService } from '../../../services/communications';
 export class SmsLogs implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
-  smsLogs: any[] = [];
+  smsLogs: SmsLog[] = [];
   loading = false;
+  errorMessage = '';
 
   // Pagination
   currentPage = 1;
@@ -24,12 +25,16 @@ export class SmsLogs implements OnInit, OnDestroy {
   totalLogs = 0;
   totalPages = 0;
 
+  // Permissions
+  canViewCommunications = false;
+
   constructor(
     private communicationsService: CommunicationsService,
     private router: Router
   ) {}
 
   ngOnInit(): void {
+    this.checkPermissions();
     this.loadSmsLogs();
   }
 
@@ -38,10 +43,20 @@ export class SmsLogs implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  private checkPermissions(): void {
+    this.canViewCommunications = this.communicationsService.canViewCommunications();
+
+    if (!this.canViewCommunications) {
+      this.router.navigate(['/unauthorized']);
+    }
+  }
+
   loadSmsLogs(): void {
     this.loading = true;
+    this.errorMessage = '';
 
-    this.communicationsService.getSmsLogs(this.currentPage, this.pageSize)
+    this.communicationsService
+      .getSmsLogs(this.currentPage, this.pageSize)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: ({ data, count }) => {
@@ -51,8 +66,9 @@ export class SmsLogs implements OnInit, OnDestroy {
           this.loading = false;
         },
         error: (error) => {
-          console.error('Error loading SMS logs:', error);
+          this.errorMessage = error.message || 'Failed to load SMS logs';
           this.loading = false;
+          console.error('Error loading SMS logs:', error);
         }
       });
   }
@@ -66,6 +82,7 @@ export class SmsLogs implements OnInit, OnDestroy {
     if (this.currentPage > 1) {
       this.currentPage--;
       this.loadSmsLogs();
+      this.scrollToTop();
     }
   }
 
@@ -73,6 +90,7 @@ export class SmsLogs implements OnInit, OnDestroy {
     if (this.currentPage < this.totalPages) {
       this.currentPage++;
       this.loadSmsLogs();
+      this.scrollToTop();
     }
   }
 
@@ -86,10 +104,14 @@ export class SmsLogs implements OnInit, OnDestroy {
     return classes[status] || 'status-pending';
   }
 
-  getMemberName(log: any): string {
+  getMemberName(log: SmsLog): string {
     if (log.member) {
       return `${log.member.first_name} ${log.member.last_name}`;
     }
     return 'N/A';
+  }
+
+  private scrollToTop(): void {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }

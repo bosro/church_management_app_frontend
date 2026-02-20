@@ -13,8 +13,13 @@ export interface CmsPage {
   created_at: string;
   updated_at: string;
 
-  // Relations
-  author?: any;
+  // Relations (populated by joins)
+  author?: {
+    id: string;
+    full_name: string;
+    email: string;
+    avatar_url?: string;
+  };
 }
 
 export interface BlogPost {
@@ -34,8 +39,44 @@ export interface BlogPost {
   created_at: string;
   updated_at: string;
 
-  // Relations
-  author?: any;
+  // Relations (populated by joins)
+  author?: {
+    id: string;
+    full_name: string;
+    email: string;
+    avatar_url?: string;
+  };
+}
+
+export interface CmsStatistics {
+  total_pages: number;
+  published_pages: number;
+  draft_pages: number;
+  total_posts: number;
+  published_posts: number;
+  draft_posts: number;
+  total_views: number;
+  most_viewed_post?: {
+    title: string;
+    view_count: number;
+  };
+  recent_activity_count: number;
+}
+
+export interface PageFormData {
+  title: string;
+  content: string;
+  meta_description?: string;
+  meta_keywords?: string;
+}
+
+export interface BlogPostFormData {
+  title: string;
+  content: string;
+  excerpt?: string;
+  featured_image_url?: string;
+  category?: string;
+  tags?: string[];
 }
 
 export const BLOG_CATEGORIES = [
@@ -51,4 +92,6 @@ export const BLOG_CATEGORIES = [
   'Youth',
   'Children',
   'Missions'
-];
+] as const;
+
+export type BlogCategory = typeof BLOG_CATEGORIES[number];

@@ -1,4 +1,3 @@
-
 // src/app/features/forms/components/forms-list/forms-list.component.ts
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
@@ -27,12 +26,16 @@ export class FormsList implements OnInit, OnDestroy {
   totalForms = 0;
   totalPages = 0;
 
+  // Permissions
+  canManageForms = false;
+
   constructor(
     private formsService: FormsService,
     private router: Router
   ) {}
 
   ngOnInit(): void {
+    this.checkPermissions();
     this.loadFormTemplates();
   }
 
@@ -41,8 +44,13 @@ export class FormsList implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  private checkPermissions(): void {
+    this.canManageForms = this.formsService.canManageForms();
+  }
+
   loadFormTemplates(): void {
     this.loading = true;
+    this.errorMessage = '';
 
     this.formsService.getFormTemplates(this.currentPage, this.pageSize)
       .pipe(takeUntil(this.destroy$))
@@ -54,19 +62,30 @@ export class FormsList implements OnInit, OnDestroy {
           this.loading = false;
         },
         error: (error) => {
-          console.error('Error loading forms:', error);
+          this.errorMessage = error.message || 'Failed to load forms';
           this.loading = false;
+          console.error('Error loading forms:', error);
         }
       });
   }
 
   // Navigation
   createForm(): void {
+    if (!this.canManageForms) {
+      this.errorMessage = 'You do not have permission to create forms';
+      return;
+    }
     this.router.navigate(['main/forms/create']);
   }
 
   editForm(formId: string, event: Event): void {
     event.stopPropagation();
+
+    if (!this.canManageForms) {
+      this.errorMessage = 'You do not have permission to edit forms';
+      return;
+    }
+
     this.router.navigate(['main/forms', formId, 'edit']);
   }
 
@@ -82,23 +101,33 @@ export class FormsList implements OnInit, OnDestroy {
   deleteForm(formId: string, event: Event): void {
     event.stopPropagation();
 
-    if (confirm('Are you sure you want to delete this form template?')) {
-      this.formsService.deleteFormTemplate(formId)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: () => {
-            this.successMessage = 'Form deleted successfully!';
-            this.loadFormTemplates();
-
-            setTimeout(() => {
-              this.successMessage = '';
-            }, 3000);
-          },
-          error: (error) => {
-            this.errorMessage = error.message || 'Failed to delete form';
-          }
-        });
+    if (!this.canManageForms) {
+      this.errorMessage = 'You do not have permission to delete forms';
+      return;
     }
+
+    const confirmMessage = 'Are you sure you want to delete this form template? All submissions will remain but the form will be archived.';
+
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    this.formsService.deleteFormTemplate(formId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.successMessage = 'Form archived successfully!';
+          this.loadFormTemplates();
+
+          setTimeout(() => {
+            this.successMessage = '';
+          }, 3000);
+        },
+        error: (error) => {
+          this.errorMessage = error.message || 'Failed to delete form';
+          console.error('Error deleting form:', error);
+        }
+      });
   }
 
   // Pagination
@@ -106,6 +135,7 @@ export class FormsList implements OnInit, OnDestroy {
     if (this.currentPage > 1) {
       this.currentPage--;
       this.loadFormTemplates();
+      this.scrollToTop();
     }
   }
 
@@ -113,6 +143,11 @@ export class FormsList implements OnInit, OnDestroy {
     if (this.currentPage < this.totalPages) {
       this.currentPage++;
       this.loadFormTemplates();
+      this.scrollToTop();
     }
+  }
+
+  private scrollToTop(): void {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }

@@ -1,10 +1,10 @@
-
 // src/app/features/communications/components/communications-list/communications-list.component.ts
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { Communication, CommunicationsService } from '../../../services/communications';
+import { CommunicationsService } from '../../../services/communications';
+import { Communication, CommunicationStatistics } from '../../../../../models/communication.model';
 
 @Component({
   selector: 'app-communications-list',
@@ -16,7 +16,7 @@ export class CommunicationsList implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   communications: Communication[] = [];
-  statistics: any = null;
+  statistics: CommunicationStatistics | null = null;
   loading = false;
   errorMessage = '';
   successMessage = '';
@@ -27,12 +27,17 @@ export class CommunicationsList implements OnInit, OnDestroy {
   totalCommunications = 0;
   totalPages = 0;
 
+  // Permissions
+  canManageCommunications = false;
+  canSendCommunications = false;
+
   constructor(
     private communicationsService: CommunicationsService,
     private router: Router
   ) {}
 
   ngOnInit(): void {
+    this.checkPermissions();
     this.loadCommunications();
     this.loadStatistics();
   }
@@ -42,10 +47,21 @@ export class CommunicationsList implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  private checkPermissions(): void {
+    this.canManageCommunications = this.communicationsService.canManageCommunications();
+    this.canSendCommunications = this.communicationsService.canSendCommunications();
+
+    if (!this.communicationsService.canViewCommunications()) {
+      this.router.navigate(['/unauthorized']);
+    }
+  }
+
   loadCommunications(): void {
     this.loading = true;
+    this.errorMessage = '';
 
-    this.communicationsService.getCommunications(this.currentPage, this.pageSize)
+    this.communicationsService
+      .getCommunications(this.currentPage, this.pageSize)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: ({ data, count }) => {
@@ -55,14 +71,16 @@ export class CommunicationsList implements OnInit, OnDestroy {
           this.loading = false;
         },
         error: (error) => {
-          console.error('Error loading communications:', error);
+          this.errorMessage = error.message || 'Failed to load communications';
           this.loading = false;
+          console.error('Error loading communications:', error);
         }
       });
   }
 
   loadStatistics(): void {
-    this.communicationsService.getCommunicationStatistics()
+    this.communicationsService
+      .getCommunicationStatistics()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (stats) => {
@@ -76,6 +94,10 @@ export class CommunicationsList implements OnInit, OnDestroy {
 
   // Navigation
   createCommunication(): void {
+    if (!this.canManageCommunications) {
+      this.errorMessage = 'You do not have permission to create communications';
+      return;
+    }
     this.router.navigate(['main/communications/create']);
   }
 
@@ -87,50 +109,81 @@ export class CommunicationsList implements OnInit, OnDestroy {
     this.router.navigate(['main/communications/email-logs']);
   }
 
-  sendCommunication(communicationId: string, event: Event): void {
+  sendCommunication(communicationId: string, event: MouseEvent): void {
     event.stopPropagation();
 
-    if (confirm('Are you sure you want to send this communication?')) {
-      this.communicationsService.sendCommunication(communicationId)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: () => {
-            this.successMessage = 'Communication sent successfully!';
-            this.loadCommunications();
-            this.loadStatistics();
-
-            setTimeout(() => {
-              this.successMessage = '';
-            }, 3000);
-          },
-          error: (error) => {
-            this.errorMessage = error.message || 'Failed to send communication';
-          }
-        });
+    if (!this.canSendCommunications) {
+      this.errorMessage = 'You do not have permission to send communications';
+      return;
     }
+
+    const communication = this.communications.find(c => c.id === communicationId);
+    if (!communication) return;
+
+    const confirmMessage = `Are you sure you want to send "${communication.title}"? This will send ${communication.communication_type === 'both' ? 'SMS and Email' : communication.communication_type.toUpperCase()} to ${communication.target_audience} members.`;
+
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    this.communicationsService
+      .sendCommunication(communicationId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.successMessage = 'Communication sent successfully!';
+          this.loadCommunications();
+          this.loadStatistics();
+
+          setTimeout(() => {
+            this.successMessage = '';
+          }, 3000);
+        },
+        error: (error) => {
+          this.errorMessage = error.message || 'Failed to send communication';
+          console.error('Send error:', error);
+        }
+      });
   }
 
-  deleteCommunication(communicationId: string, event: Event): void {
+  deleteCommunication(communicationId: string, event: MouseEvent): void {
     event.stopPropagation();
 
-    if (confirm('Are you sure you want to delete this communication?')) {
-      this.communicationsService.deleteCommunication(communicationId)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: () => {
-            this.successMessage = 'Communication deleted successfully!';
-            this.loadCommunications();
-            this.loadStatistics();
-
-            setTimeout(() => {
-              this.successMessage = '';
-            }, 3000);
-          },
-          error: (error) => {
-            this.errorMessage = error.message || 'Failed to delete communication';
-          }
-        });
+    if (!this.canManageCommunications) {
+      this.errorMessage = 'You do not have permission to delete communications';
+      return;
     }
+
+    const communication = this.communications.find(c => c.id === communicationId);
+    if (!communication) return;
+
+    if (communication.status === 'sent') {
+      this.errorMessage = 'Cannot delete a sent communication';
+      return;
+    }
+
+    if (!confirm('Are you sure you want to delete this communication?')) {
+      return;
+    }
+
+    this.communicationsService
+      .deleteCommunication(communicationId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.successMessage = 'Communication deleted successfully!';
+          this.loadCommunications();
+          this.loadStatistics();
+
+          setTimeout(() => {
+            this.successMessage = '';
+          }, 3000);
+        },
+        error: (error) => {
+          this.errorMessage = error.message || 'Failed to delete communication';
+          console.error('Delete error:', error);
+        }
+      });
   }
 
   // Pagination
@@ -138,6 +191,7 @@ export class CommunicationsList implements OnInit, OnDestroy {
     if (this.currentPage > 1) {
       this.currentPage--;
       this.loadCommunications();
+      this.scrollToTop();
     }
   }
 
@@ -145,6 +199,7 @@ export class CommunicationsList implements OnInit, OnDestroy {
     if (this.currentPage < this.totalPages) {
       this.currentPage++;
       this.loadCommunications();
+      this.scrollToTop();
     }
   }
 
@@ -187,5 +242,9 @@ export class CommunicationsList implements OnInit, OnDestroy {
       both: 'SMS & Email'
     };
     return labels[type] || type;
+  }
+
+  private scrollToTop(): void {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }

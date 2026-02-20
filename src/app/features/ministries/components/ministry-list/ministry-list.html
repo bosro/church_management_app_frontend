@@ -13,10 +13,26 @@
             <h1>Ministries</h1>
             <p class="subtitle">Organize and manage church ministries</p>
           </div>
-          <button class="btn-primary" (click)="createMinistry()">
+          <button
+            *ngIf="canManageMinistries"
+            class="btn-primary"
+            (click)="createMinistry()"
+          >
             <i class="ri-add-line"></i>
             <span>Create Ministry</span>
           </button>
+        </div>
+
+        <!-- Success Message -->
+        <div *ngIf="successMessage" class="success-alert">
+          <i class="ri-checkbox-circle-line"></i>
+          <span>{{ successMessage }}</span>
+        </div>
+
+        <!-- Error Message -->
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i>
+          <span>{{ errorMessage }}</span>
         </div>
 
         <!-- Statistics Cards -->
@@ -62,6 +78,7 @@
 
         <!-- Ministries Grid -->
         <div *ngIf="!loading" class="ministries-grid">
+          <!-- THIS IS THE FIX - ministry is defined here in the *ngFor -->
           <div
             *ngFor="let ministry of ministries"
             class="ministry-card"
@@ -71,7 +88,8 @@
               <div class="ministry-icon">
                 <i class="ri-community-line"></i>
               </div>
-              <div class="ministry-actions">
+              <!-- FIX: Now ministry is accessible here -->
+              <div class="ministry-actions" *ngIf="canManageMinistries">
                 <button class="btn-icon-small" (click)="editMinistry(ministry.id, $event)">
                   <i class="ri-edit-line"></i>
                 </button>
@@ -109,7 +127,11 @@
             <i class="ri-community-line"></i>
             <h3>No Ministries Found</h3>
             <p>Create your first ministry to get started</p>
-            <button class="btn-primary" (click)="createMinistry()">
+            <button
+              *ngIf="canManageMinistries"
+              class="btn-primary"
+              (click)="createMinistry()"
+            >
               <i class="ri-add-line"></i>
               Create Ministry
             </button>

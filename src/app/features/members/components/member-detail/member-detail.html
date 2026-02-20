@@ -8,13 +8,19 @@
     <div class="dashboard-body">
       <!-- Loading State -->
       <div *ngIf="loading" class="loading-container">
-        <app-loading-spinner size="large" message="Loading member details..."></app-loading-spinner>
+        <div class="spinner"></div>
+        <p>Loading member details...</p>
       </div>
 
       <!-- Error Message -->
-      <div *ngIf="errorMessage && !loading" class="error-alert">
+      <div *ngIf="errorMessage && !loading" class="error-alert-centered">
         <i class="ri-error-warning-line"></i>
-        <span>{{ errorMessage }}</span>
+        <h3>Failed to Load Member</h3>
+        <p>{{ errorMessage }}</p>
+        <button class="btn-primary" (click)="goBack()">
+          <i class="ri-arrow-left-line"></i>
+          Back to Members
+        </button>
       </div>
 
       <!-- Member Details -->
@@ -23,15 +29,26 @@
         <div class="detail-header">
           <button class="back-btn" (click)="goBack()">
             <i class="ri-arrow-left-line"></i>
+            <span class="desktop-only">Back</span>
           </button>
           <div class="header-actions">
-            <button class="btn-secondary" (click)="editMember()">
+            <button
+              class="btn-secondary"
+              (click)="editMember()"
+              [disabled]="!canEditMember"
+              *ngIf="canEditMember"
+            >
               <i class="ri-edit-line"></i>
-              Edit
+              <span class="desktop-only">Edit</span>
             </button>
-            <button class="btn-danger" (click)="deleteMember()">
+            <button
+              class="btn-danger"
+              (click)="deleteMember()"
+              [disabled]="!canDeleteMember"
+              *ngIf="canDeleteMember"
+            >
               <i class="ri-delete-bin-line"></i>
-              Delete
+              <span class="desktop-only">Delete</span>
             </button>
           </div>
         </div>
@@ -47,10 +64,23 @@
             </div>
             <div class="profile-info">
               <h1>{{ getMemberFullName() }}</h1>
-              <p class="member-number">{{ member.member_number }}</p>
-              <span class="status-badge" [ngClass]="getStatusClass()">
-                {{ member.membership_status }}
-              </span>
+              <p class="member-number">
+                <i class="ri-hashtag"></i>
+                {{ member.member_number }}
+              </p>
+              <div class="member-badges">
+                <span class="status-badge" [ngClass]="getStatusClass()">
+                  {{ member.membership_status }}
+                </span>
+                <span *ngIf="member.is_new_convert" class="badge badge-new">
+                  <i class="ri-star-line"></i>
+                  New Convert
+                </span>
+                <span *ngIf="member.is_visitor" class="badge badge-visitor">
+                  <i class="ri-user-location-line"></i>
+                  Visitor
+                </span>
+              </div>
             </div>
           </div>
 
@@ -97,6 +127,7 @@
               [class.active]="activeTab === 'overview'"
               (click)="setActiveTab('overview')"
             >
+              <i class="ri-file-list-line"></i>
               Overview
             </button>
             <button
@@ -104,6 +135,7 @@
               [class.active]="activeTab === 'attendance'"
               (click)="setActiveTab('attendance')"
             >
+              <i class="ri-calendar-check-line"></i>
               Attendance
             </button>
             <button
@@ -111,6 +143,7 @@
               [class.active]="activeTab === 'giving'"
               (click)="setActiveTab('giving')"
             >
+              <i class="ri-money-dollar-circle-line"></i>
               Giving
             </button>
             <button
@@ -118,6 +151,7 @@
               [class.active]="activeTab === 'ministries'"
               (click)="setActiveTab('ministries')"
             >
+              <i class="ri-team-line"></i>
               Ministries
             </button>
           </div>
@@ -130,13 +164,18 @@
             <div class="info-grid">
               <!-- Contact Information -->
               <div class="info-card">
-                <h3>Contact Information</h3>
+                <h3>
+                  <i class="ri-contacts-line"></i>
+                  Contact Information
+                </h3>
                 <div class="info-list">
                   <div class="info-item" *ngIf="member.phone_primary">
                     <i class="ri-phone-line"></i>
                     <div>
                       <p class="info-label">Primary Phone</p>
-                      <p class="info-value">{{ member.phone_primary }}</p>
+                      <p class="info-value">
+                        <a href="tel:{{ member.phone_primary }}">{{ formatPhoneNumber(member.phone_primary) }}</a>
+                      </p>
                     </div>
                   </div>
 
@@ -144,7 +183,9 @@
                     <i class="ri-phone-line"></i>
                     <div>
                       <p class="info-label">Secondary Phone</p>
-                      <p class="info-value">{{ member.phone_secondary }}</p>
+                      <p class="info-value">
+                        <a href="tel:{{ member.phone_secondary }}">{{ formatPhoneNumber(member.phone_secondary) }}</a>
+                      </p>
                     </div>
                   </div>
 
@@ -152,7 +193,9 @@
                     <i class="ri-mail-line"></i>
                     <div>
                       <p class="info-label">Email</p>
-                      <p class="info-value">{{ member.email }}</p>
+                      <p class="info-value">
+                        <a href="mailto:{{ member.email }}">{{ member.email }}</a>
+                      </p>
                     </div>
                   </div>
 
@@ -171,12 +214,21 @@
                       <p class="info-value">{{ member.city }}</p>
                     </div>
                   </div>
+
+                  <!-- Empty State -->
+                  <div *ngIf="!member.phone_primary && !member.phone_secondary && !member.email && !member.address && !member.city" class="empty-info">
+                    <i class="ri-information-line"></i>
+                    <p>No contact information available</p>
+                  </div>
                 </div>
               </div>
 
               <!-- Personal Information -->
               <div class="info-card">
-                <h3>Personal Information</h3>
+                <h3>
+                  <i class="ri-user-3-line"></i>
+                  Personal Information
+                </h3>
                 <div class="info-list">
                   <div class="info-item" *ngIf="member.date_of_birth">
                     <i class="ri-calendar-line"></i>
@@ -217,12 +269,21 @@
                       <p class="info-value">{{ member.education_level }}</p>
                     </div>
                   </div>
+
+                  <!-- Empty State -->
+                  <div *ngIf="!member.date_of_birth && !member.marital_status && !member.occupation && !member.employer && !member.education_level" class="empty-info">
+                    <i class="ri-information-line"></i>
+                    <p>No personal information available</p>
+                  </div>
                 </div>
               </div>
 
               <!-- Emergency Contact -->
               <div class="info-card" *ngIf="member.emergency_contact_name || member.emergency_contact_phone">
-                <h3>Emergency Contact</h3>
+                <h3>
+                  <i class="ri-user-heart-line"></i>
+                  Emergency Contact
+                </h3>
                 <div class="info-list">
                   <div class="info-item" *ngIf="member.emergency_contact_name">
                     <i class="ri-user-heart-line"></i>
@@ -236,7 +297,9 @@
                     <i class="ri-phone-line"></i>
                     <div>
                       <p class="info-label">Contact Phone</p>
-                      <p class="info-value">{{ member.emergency_contact_phone }}</p>
+                      <p class="info-value">
+                        <a href="tel:{{ member.emergency_contact_phone }}">{{ formatPhoneNumber(member.emergency_contact_phone) }}</a>
+                      </p>
                     </div>
                   </div>
 
@@ -252,7 +315,10 @@
 
               <!-- Church Information -->
               <div class="info-card">
-                <h3>Church Information</h3>
+                <h3>
+                  <i class="ri-church-line"></i>
+                  Church Information
+                </h3>
                 <div class="info-list">
                   <div class="info-item" *ngIf="member.baptism_date">
                     <i class="ri-water-flash-line"></i>
@@ -270,24 +336,18 @@
                     </div>
                   </div>
 
-                  <div class="info-item">
-                    <i class="ri-user-star-line"></i>
-                    <div>
-                      <p class="info-label">Member Type</p>
-                      <p class="info-value">
-                        <span *ngIf="member.is_new_convert" class="badge badge-new">New Convert</span>
-                        <span *ngIf="member.is_visitor" class="badge badge-visitor">Visitor</span>
-                        <span *ngIf="!member.is_new_convert && !member.is_visitor">Regular Member</span>
-                      </p>
-                    </div>
-                  </div>
-
                   <div class="info-item" *ngIf="member.notes">
                     <i class="ri-file-text-line"></i>
                     <div>
                       <p class="info-label">Notes</p>
                       <p class="info-value">{{ member.notes }}</p>
                     </div>
+                  </div>
+
+                  <!-- Empty State -->
+                  <div *ngIf="!member.baptism_date && !member.baptism_location && !member.notes" class="empty-info">
+                    <i class="ri-information-line"></i>
+                    <p>No additional church information</p>
                   </div>
                 </div>
               </div>
@@ -300,6 +360,7 @@
               <i class="ri-calendar-check-line"></i>
               <h3>Attendance Records</h3>
               <p>Attendance tracking coming soon...</p>
+              <p class="empty-hint">You'll be able to view attendance history, patterns, and statistics here.</p>
             </div>
           </div>
 
@@ -309,6 +370,7 @@
               <i class="ri-money-dollar-circle-line"></i>
               <h3>Giving History</h3>
               <p>Giving records coming soon...</p>
+              <p class="empty-hint">You'll be able to view giving history, pledges, and contribution summaries here.</p>
             </div>
           </div>
 
@@ -318,6 +380,7 @@
               <i class="ri-team-line"></i>
               <h3>Ministry Involvement</h3>
               <p>Ministry assignments coming soon...</p>
+              <p class="empty-hint">You'll be able to view and manage ministry memberships here.</p>
             </div>
           </div>
         </div>

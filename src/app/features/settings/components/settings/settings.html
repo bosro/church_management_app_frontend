@@ -15,20 +15,28 @@
           </div>
         </div>
 
-        <!-- Success/Error Messages -->
+        <!-- Success Message -->
         <div *ngIf="successMessage" class="success-alert">
           <i class="ri-checkbox-circle-line"></i>
           <span>{{ successMessage }}</span>
+          <button class="close-btn" (click)="clearMessages()">
+            <i class="ri-close-line"></i>
+          </button>
         </div>
 
+        <!-- Error Message -->
         <div *ngIf="errorMessage" class="error-alert">
           <i class="ri-error-warning-line"></i>
           <span>{{ errorMessage }}</span>
+          <button class="close-btn" (click)="clearMessages()">
+            <i class="ri-close-line"></i>
+          </button>
         </div>
 
         <!-- Loading State -->
         <div *ngIf="loadingProfile" class="loading-container">
-          <app-loading-spinner size="large" message="Loading settings..."></app-loading-spinner>
+          <div class="spinner"></div>
+          <p>Loading settings...</p>
         </div>
 
         <!-- Settings Content -->
@@ -41,7 +49,7 @@
               (click)="switchTab('general')"
             >
               <i class="ri-settings-3-line"></i>
-              General
+              <span>General</span>
             </button>
             <button
               class="tab-btn"
@@ -49,15 +57,16 @@
               (click)="switchTab('notifications')"
             >
               <i class="ri-notification-3-line"></i>
-              Notifications
+              <span>Notifications</span>
             </button>
             <button
               class="tab-btn"
               [class.active]="activeTab === 'finance'"
               (click)="switchTab('finance')"
+              [disabled]="!canManageFinanceSettings"
             >
               <i class="ri-money-dollar-circle-line"></i>
-              Finance
+              <span>Finance</span>
             </button>
             <button
               class="tab-btn"
@@ -65,15 +74,16 @@
               (click)="switchTab('communications')"
             >
               <i class="ri-mail-line"></i>
-              Communications
+              <span>Communications</span>
             </button>
             <button
               class="tab-btn"
               [class.active]="activeTab === 'security'"
               (click)="switchTab('security')"
+              [disabled]="!canManageSecuritySettings"
             >
               <i class="ri-shield-check-line"></i>
-              Security
+              <span>Security</span>
             </button>
           </div>
 
@@ -82,7 +92,10 @@
             <!-- General Settings -->
             <div *ngIf="activeTab === 'general'" class="settings-panel">
               <div class="panel-header">
-                <h2>General Settings</h2>
+                <h2>
+                  <i class="ri-settings-3-line"></i>
+                  General Settings
+                </h2>
                 <p>Configure your church basic information</p>
               </div>
 
@@ -93,24 +106,30 @@
 
                   <div class="form-grid">
                     <div class="form-group">
-                      <label for="name">Church Name *</label>
+                      <label for="name">
+                        Church Name <span class="required">*</span>
+                      </label>
                       <input
                         id="name"
                         type="text"
                         formControlName="name"
                         placeholder="e.g., Grace Fellowship Church"
+                        maxlength="100"
                         [class.error]="churchForm.get('name')?.invalid && churchForm.get('name')?.touched"
                       />
                       <span
                         *ngIf="churchForm.get('name')?.invalid && churchForm.get('name')?.touched"
                         class="error-message"
                       >
+                        <i class="ri-error-warning-line"></i>
                         {{ getErrorMessage('name') }}
                       </span>
                     </div>
 
                     <div class="form-group">
-                      <label for="email">Email Address *</label>
+                      <label for="email">
+                        Email Address <span class="required">*</span>
+                      </label>
                       <input
                         id="email"
                         type="email"
@@ -122,6 +141,7 @@
                         *ngIf="churchForm.get('email')?.invalid && churchForm.get('email')?.touched"
                         class="error-message"
                       >
+                        <i class="ri-error-warning-line"></i>
                         {{ getErrorMessage('email') }}
                       </span>
                     </div>
@@ -135,7 +155,15 @@
                         type="tel"
                         formControlName="phone"
                         placeholder="+233 XX XXX XXXX"
+                        [class.error]="churchForm.get('phone')?.invalid && churchForm.get('phone')?.touched"
                       />
+                      <span
+                        *ngIf="churchForm.get('phone')?.invalid && churchForm.get('phone')?.touched"
+                        class="error-message"
+                      >
+                        <i class="ri-error-warning-line"></i>
+                        {{ getErrorMessage('phone') }}
+                      </span>
                     </div>
 
                     <div class="form-group">
@@ -145,7 +173,15 @@
                         type="url"
                         formControlName="website"
                         placeholder="https://www.church.com"
+                        [class.error]="churchForm.get('website')?.invalid && churchForm.get('website')?.touched"
                       />
+                      <span
+                        *ngIf="churchForm.get('website')?.invalid && churchForm.get('website')?.touched"
+                        class="error-message"
+                      >
+                        <i class="ri-error-warning-line"></i>
+                        {{ getErrorMessage('website') }}
+                      </span>
                     </div>
                   </div>
 
@@ -156,7 +192,11 @@
                       formControlName="description"
                       placeholder="Brief description of your church..."
                       rows="4"
+                      maxlength="500"
                     ></textarea>
+                    <span class="char-count">
+                      {{ churchForm.get('description')?.value?.length || 0 }} / 500
+                    </span>
                   </div>
                 </div>
 
@@ -171,6 +211,7 @@
                       type="text"
                       formControlName="address"
                       placeholder="Street address"
+                      maxlength="200"
                     />
                   </div>
 
@@ -182,6 +223,7 @@
                         type="text"
                         formControlName="city"
                         placeholder="e.g., Accra"
+                        maxlength="100"
                       />
                     </div>
 
@@ -192,6 +234,7 @@
                         type="text"
                         formControlName="state"
                         placeholder="e.g., Greater Accra"
+                        maxlength="100"
                       />
                     </div>
                   </div>
@@ -204,6 +247,7 @@
                         type="text"
                         formControlName="country"
                         placeholder="e.g., Ghana"
+                        maxlength="100"
                       />
                     </div>
 
@@ -214,6 +258,7 @@
                         type="text"
                         formControlName="zip_code"
                         placeholder="Postal/Zip code"
+                        maxlength="20"
                       />
                     </div>
                   </div>
@@ -228,22 +273,27 @@
                       <label for="timezone">Timezone</label>
                       <select id="timezone" formControlName="timezone">
                         <option value="">Select timezone</option>
-                        <option value="Africa/Accra">Africa/Accra (GMT)</option>
-                        <option value="America/New_York">America/New York (EST)</option>
-                        <option value="Europe/London">Europe/London (GMT)</option>
-                        <option value="Asia/Dubai">Asia/Dubai (GST)</option>
+                        <option *ngFor="let tz of timezones" [value]="tz.value">
+                          {{ tz.label }}
+                        </option>
                       </select>
+                      <p class="help-text">
+                        <i class="ri-information-line"></i>
+                        Choose the timezone for your church location
+                      </p>
                     </div>
 
                     <div class="form-group">
                       <label for="currency">Currency</label>
                       <select id="currency" formControlName="currency">
-                        <option value="GHS">GHS - Ghanaian Cedi</option>
-                        <option value="USD">USD - US Dollar</option>
-                        <option value="EUR">EUR - Euro</option>
-                        <option value="GBP">GBP - British Pound</option>
-                        <option value="NGN">NGN - Nigerian Naira</option>
+                        <option *ngFor="let curr of currencies" [value]="curr.value">
+                          {{ curr.label }}
+                        </option>
                       </select>
+                      <p class="help-text">
+                        <i class="ri-information-line"></i>
+                        Currency for financial transactions
+                      </p>
                     </div>
                   </div>
 
@@ -254,8 +304,19 @@
                       type="url"
                       formControlName="logo_url"
                       placeholder="https://example.com/logo.png"
+                      [class.error]="churchForm.get('logo_url')?.invalid && churchForm.get('logo_url')?.touched"
                     />
-                    <p class="help-text">URL to your church logo image</p>
+                    <p class="help-text">
+                      <i class="ri-information-line"></i>
+                      URL to your church logo image (must start with http:// or https://)
+                    </p>
+                    <span
+                      *ngIf="churchForm.get('logo_url')?.invalid && churchForm.get('logo_url')?.touched"
+                      class="error-message"
+                    >
+                      <i class="ri-error-warning-line"></i>
+                      {{ getErrorMessage('logo_url') }}
+                    </span>
                   </div>
                 </div>
 
@@ -264,13 +325,13 @@
                   <button
                     type="submit"
                     class="btn-primary"
-                    [disabled]="loading"
+                    [disabled]="loading || !canManageSettings || churchForm.invalid"
                   >
                     <span *ngIf="!loading">
                       <i class="ri-save-line"></i>
                       Save Changes
                     </span>
-                    <span *ngIf="loading">
+                    <span *ngIf="loading" class="loading-content">
                       <i class="ri-loader-4-line spin"></i>
                       Saving...
                     </span>
@@ -282,62 +343,111 @@
             <!-- Notifications Settings -->
             <div *ngIf="activeTab === 'notifications'" class="settings-panel">
               <div class="panel-header">
-                <h2>Notification Settings</h2>
+                <h2>
+                  <i class="ri-notification-3-line"></i>
+                  Notification Settings
+                </h2>
                 <p>Configure how you receive notifications</p>
               </div>
 
-              <div class="settings-list">
+              <!-- Loading State -->
+              <div *ngIf="loadingSettings" class="loading-container">
+                <div class="spinner"></div>
+                <p>Loading notification settings...</p>
+              </div>
+
+              <div *ngIf="!loadingSettings && notificationSettings" class="settings-list">
                 <div class="setting-item">
                   <div class="setting-info">
-                    <h4>Email Notifications</h4>
-                    <p>Receive notifications via email</p>
+                    <div class="setting-header">
+                      <i class="ri-mail-line"></i>
+                      <h4>Email Notifications</h4>
+                    </div>
+                    <p>Receive notifications via email for important updates</p>
                   </div>
                   <label class="toggle-switch">
-                    <input type="checkbox" checked />
+                    <input
+                      type="checkbox"
+                      [checked]="notificationSettings.email_notifications"
+                      (change)="toggleNotificationSetting('email_notifications')"
+                      [disabled]="savingSettings || !canManageSettings"
+                    />
                     <span class="slider"></span>
                   </label>
                 </div>
 
                 <div class="setting-item">
                   <div class="setting-info">
-                    <h4>SMS Notifications</h4>
-                    <p>Receive notifications via SMS</p>
+                    <div class="setting-header">
+                      <i class="ri-message-3-line"></i>
+                      <h4>SMS Notifications</h4>
+                    </div>
+                    <p>Receive notifications via SMS for urgent matters</p>
                   </div>
                   <label class="toggle-switch">
-                    <input type="checkbox" />
+                    <input
+                      type="checkbox"
+                      [checked]="notificationSettings.sms_notifications"
+                      (change)="toggleNotificationSetting('sms_notifications')"
+                      [disabled]="savingSettings || !canManageSettings"
+                    />
                     <span class="slider"></span>
                   </label>
                 </div>
 
                 <div class="setting-item">
                   <div class="setting-info">
-                    <h4>Event Reminders</h4>
-                    <p>Get reminders for upcoming events</p>
+                    <div class="setting-header">
+                      <i class="ri-calendar-event-line"></i>
+                      <h4>Event Reminders</h4>
+                    </div>
+                    <p>Get reminders for upcoming events and services</p>
                   </div>
                   <label class="toggle-switch">
-                    <input type="checkbox" checked />
+                    <input
+                      type="checkbox"
+                      [checked]="notificationSettings.event_reminders"
+                      (change)="toggleNotificationSetting('event_reminders')"
+                      [disabled]="savingSettings || !canManageSettings"
+                    />
                     <span class="slider"></span>
                   </label>
                 </div>
 
                 <div class="setting-item">
                   <div class="setting-info">
-                    <h4>New Member Alerts</h4>
-                    <p>Notify when new members join</p>
+                    <div class="setting-header">
+                      <i class="ri-user-add-line"></i>
+                      <h4>New Member Alerts</h4>
+                    </div>
+                    <p>Notify when new members join the church</p>
                   </div>
                   <label class="toggle-switch">
-                    <input type="checkbox" checked />
+                    <input
+                      type="checkbox"
+                      [checked]="notificationSettings.new_member_alerts"
+                      (change)="toggleNotificationSetting('new_member_alerts')"
+                      [disabled]="savingSettings || !canManageSettings"
+                    />
                     <span class="slider"></span>
                   </label>
                 </div>
 
                 <div class="setting-item">
                   <div class="setting-info">
-                    <h4>Donation Receipts</h4>
-                    <p>Send automated donation receipts</p>
+                    <div class="setting-header">
+                      <i class="ri-file-list-line"></i>
+                      <h4>Donation Receipts</h4>
+                    </div>
+                    <p>Send automated receipts for donations and offerings</p>
                   </div>
                   <label class="toggle-switch">
-                    <input type="checkbox" checked />
+                    <input
+                      type="checkbox"
+                      [checked]="notificationSettings.donation_receipts"
+                      (change)="toggleNotificationSetting('donation_receipts')"
+                      [disabled]="savingSettings || !canManageSettings"
+                    />
                     <span class="slider"></span>
                   </label>
                 </div>
@@ -347,51 +457,98 @@
             <!-- Finance Settings -->
             <div *ngIf="activeTab === 'finance'" class="settings-panel">
               <div class="panel-header">
-                <h2>Finance Settings</h2>
+                <h2>
+                  <i class="ri-money-dollar-circle-line"></i>
+                  Finance Settings
+                </h2>
                 <p>Configure financial and payment settings</p>
               </div>
 
-              <div class="settings-list">
+              <!-- Permission Warning -->
+              <div *ngIf="!canManageFinanceSettings" class="warning-alert">
+                <i class="ri-error-warning-line"></i>
+                <span>You do not have permission to modify finance settings</span>
+              </div>
+
+              <!-- Loading State -->
+              <div *ngIf="loadingSettings" class="loading-container">
+                <div class="spinner"></div>
+                <p>Loading finance settings...</p>
+              </div>
+
+              <div *ngIf="!loadingSettings && financeSettings" class="settings-list">
                 <div class="setting-item">
                   <div class="setting-info">
-                    <h4>Online Giving</h4>
-                    <p>Enable online donation capabilities</p>
+                    <div class="setting-header">
+                      <i class="ri-shopping-cart-line"></i>
+                      <h4>Online Giving</h4>
+                    </div>
+                    <p>Enable online donation capabilities for members</p>
                   </div>
                   <label class="toggle-switch">
-                    <input type="checkbox" checked />
+                    <input
+                      type="checkbox"
+                      [checked]="financeSettings.online_giving"
+                      (change)="toggleFinanceSetting('online_giving')"
+                      [disabled]="savingSettings || !canManageFinanceSettings"
+                    />
                     <span class="slider"></span>
                   </label>
                 </div>
 
                 <div class="setting-item">
                   <div class="setting-info">
-                    <h4>Recurring Donations</h4>
-                    <p>Allow members to set up recurring gifts</p>
+                    <div class="setting-header">
+                      <i class="ri-repeat-line"></i>
+                      <h4>Recurring Donations</h4>
+                    </div>
+                    <p>Allow members to set up recurring gifts and pledges</p>
                   </div>
                   <label class="toggle-switch">
-                    <input type="checkbox" checked />
+                    <input
+                      type="checkbox"
+                      [checked]="financeSettings.recurring_donations"
+                      (change)="toggleFinanceSetting('recurring_donations')"
+                      [disabled]="savingSettings || !canManageFinanceSettings"
+                    />
                     <span class="slider"></span>
                   </label>
                 </div>
 
                 <div class="setting-item">
                   <div class="setting-info">
-                    <h4>Auto-Generate Receipts</h4>
-                    <p>Automatically create donation receipts</p>
+                    <div class="setting-header">
+                      <i class="ri-file-text-line"></i>
+                      <h4>Auto-Generate Receipts</h4>
+                    </div>
+                    <p>Automatically create and send donation receipts</p>
                   </div>
                   <label class="toggle-switch">
-                    <input type="checkbox" checked />
+                    <input
+                      type="checkbox"
+                      [checked]="financeSettings.auto_generate_receipts"
+                      (change)="toggleFinanceSetting('auto_generate_receipts')"
+                      [disabled]="savingSettings || !canManageFinanceSettings"
+                    />
                     <span class="slider"></span>
                   </label>
                 </div>
 
                 <div class="setting-item">
                   <div class="setting-info">
-                    <h4>Tax Deductible Receipts</h4>
-                    <p>Mark receipts as tax-deductible</p>
+                    <div class="setting-header">
+                      <i class="ri-government-line"></i>
+                      <h4>Tax Deductible Receipts</h4>
+                    </div>
+                    <p>Mark receipts as tax-deductible for member benefits</p>
                   </div>
                   <label class="toggle-switch">
-                    <input type="checkbox" />
+                    <input
+                      type="checkbox"
+                      [checked]="financeSettings.tax_deductible_receipts"
+                      (change)="toggleFinanceSetting('tax_deductible_receipts')"
+                      [disabled]="savingSettings || !canManageFinanceSettings"
+                    />
                     <span class="slider"></span>
                   </label>
                 </div>
@@ -401,51 +558,92 @@
             <!-- Communications Settings -->
             <div *ngIf="activeTab === 'communications'" class="settings-panel">
               <div class="panel-header">
-                <h2>Communication Settings</h2>
+                <h2>
+                  <i class="ri-mail-line"></i>
+                  Communication Settings
+                </h2>
                 <p>Configure email and messaging preferences</p>
               </div>
 
-              <div class="settings-list">
+              <!-- Loading State -->
+              <div *ngIf="loadingSettings" class="loading-container">
+                <div class="spinner"></div>
+                <p>Loading communication settings...</p>
+              </div>
+
+              <div *ngIf="!loadingSettings && communicationSettings" class="settings-list">
                 <div class="setting-item">
                   <div class="setting-info">
-                    <h4>Email Campaigns</h4>
-                    <p>Enable bulk email campaigns</p>
+                    <div class="setting-header">
+                      <i class="ri-mail-send-line"></i>
+                      <h4>Email Campaigns</h4>
+                    </div>
+                    <p>Enable bulk email campaigns to members</p>
                   </div>
                   <label class="toggle-switch">
-                    <input type="checkbox" checked />
+                    <input
+                      type="checkbox"
+                      [checked]="communicationSettings.email_campaigns"
+                      (change)="toggleCommunicationSetting('email_campaigns')"
+                      [disabled]="savingSettings || !canManageSettings"
+                    />
                     <span class="slider"></span>
                   </label>
                 </div>
 
                 <div class="setting-item">
                   <div class="setting-info">
-                    <h4>SMS Campaigns</h4>
-                    <p>Enable bulk SMS campaigns</p>
+                    <div class="setting-header">
+                      <i class="ri-message-line"></i>
+                      <h4>SMS Campaigns</h4>
+                    </div>
+                    <p>Enable bulk SMS campaigns to members</p>
                   </div>
                   <label class="toggle-switch">
-                    <input type="checkbox" checked />
+                    <input
+                      type="checkbox"
+                      [checked]="communicationSettings.sms_campaigns"
+                      (change)="toggleCommunicationSetting('sms_campaigns')"
+                      [disabled]="savingSettings || !canManageSettings"
+                    />
                     <span class="slider"></span>
                   </label>
                 </div>
 
                 <div class="setting-item">
                   <div class="setting-info">
-                    <h4>Automated Welcome Emails</h4>
-                    <p>Send welcome emails to new members</p>
+                    <div class="setting-header">
+                      <i class="ri-hand-heart-line"></i>
+                      <h4>Automated Welcome Emails</h4>
+                    </div>
+                    <p>Send welcome emails to new members automatically</p>
                   </div>
                   <label class="toggle-switch">
-                    <input type="checkbox" checked />
+                    <input
+                      type="checkbox"
+                      [checked]="communicationSettings.automated_welcome_emails"
+                      (change)="toggleCommunicationSetting('automated_welcome_emails')"
+                      [disabled]="savingSettings || !canManageSettings"
+                    />
                     <span class="slider"></span>
                   </label>
                 </div>
 
                 <div class="setting-item">
                   <div class="setting-info">
-                    <h4>Birthday Greetings</h4>
-                    <p>Send automated birthday messages</p>
+                    <div class="setting-header">
+                      <i class="ri-cake-3-line"></i>
+                      <h4>Birthday Greetings</h4>
+                    </div>
+                    <p>Send automated birthday messages to members</p>
                   </div>
                   <label class="toggle-switch">
-                    <input type="checkbox" checked />
+                    <input
+                      type="checkbox"
+                      [checked]="communicationSettings.birthday_greetings"
+                      (change)="toggleCommunicationSetting('birthday_greetings')"
+                      [disabled]="savingSettings || !canManageSettings"
+                    />
                     <span class="slider"></span>
                   </label>
                 </div>
@@ -455,51 +653,98 @@
             <!-- Security Settings -->
             <div *ngIf="activeTab === 'security'" class="settings-panel">
               <div class="panel-header">
-                <h2>Security Settings</h2>
+                <h2>
+                  <i class="ri-shield-check-line"></i>
+                  Security Settings
+                </h2>
                 <p>Manage security and privacy settings</p>
               </div>
 
-              <div class="settings-list">
+              <!-- Permission Warning -->
+              <div *ngIf="!canManageSecuritySettings" class="warning-alert">
+                <i class="ri-error-warning-line"></i>
+                <span>You do not have permission to modify security settings</span>
+              </div>
+
+              <!-- Loading State -->
+              <div *ngIf="loadingSettings" class="loading-container">
+                <div class="spinner"></div>
+                <p>Loading security settings...</p>
+              </div>
+
+              <div *ngIf="!loadingSettings && securitySettings" class="settings-list">
                 <div class="setting-item">
                   <div class="setting-info">
-                    <h4>Two-Factor Authentication</h4>
-                    <p>Require 2FA for admin accounts</p>
+                    <div class="setting-header">
+                      <i class="ri-shield-keyhole-line"></i>
+                      <h4>Two-Factor Authentication</h4>
+                    </div>
+                    <p>Require 2FA for admin accounts for enhanced security</p>
                   </div>
                   <label class="toggle-switch">
-                    <input type="checkbox" />
+                    <input
+                      type="checkbox"
+                      [checked]="securitySettings.two_factor_authentication"
+                      (change)="toggleSecuritySetting('two_factor_authentication')"
+                      [disabled]="savingSettings || !canManageSecuritySettings"
+                    />
                     <span class="slider"></span>
                   </label>
                 </div>
 
                 <div class="setting-item">
                   <div class="setting-info">
-                    <h4>Session Timeout</h4>
+                    <div class="setting-header">
+                      <i class="ri-time-line"></i>
+                      <h4>Session Timeout</h4>
+                    </div>
                     <p>Auto logout after 30 minutes of inactivity</p>
                   </div>
                   <label class="toggle-switch">
-                    <input type="checkbox" checked />
+                    <input
+                      type="checkbox"
+                      [checked]="securitySettings.session_timeout"
+                      (change)="toggleSecuritySetting('session_timeout')"
+                      [disabled]="savingSettings || !canManageSecuritySettings"
+                    />
                     <span class="slider"></span>
                   </label>
                 </div>
 
                 <div class="setting-item">
                   <div class="setting-info">
-                    <h4>Login Notifications</h4>
-                    <p>Get notified of new login attempts</p>
+                    <div class="setting-header">
+                      <i class="ri-login-circle-line"></i>
+                      <h4>Login Notifications</h4>
+                    </div>
+                    <p>Get notified of new login attempts to your account</p>
                   </div>
                   <label class="toggle-switch">
-                    <input type="checkbox" checked />
+                    <input
+                      type="checkbox"
+                      [checked]="securitySettings.login_notifications"
+                      (change)="toggleSecuritySetting('login_notifications')"
+                      [disabled]="savingSettings || !canManageSecuritySettings"
+                    />
                     <span class="slider"></span>
                   </label>
                 </div>
 
                 <div class="setting-item">
                   <div class="setting-info">
-                    <h4>Data Export</h4>
-                    <p>Allow members to export their data</p>
+                    <div class="setting-header">
+                      <i class="ri-download-cloud-line"></i>
+                      <h4>Data Export</h4>
+                    </div>
+                    <p>Allow members to export their personal data</p>
                   </div>
                   <label class="toggle-switch">
-                    <input type="checkbox" checked />
+                    <input
+                      type="checkbox"
+                      [checked]="securitySettings.data_export"
+                      (change)="toggleSecuritySetting('data_export')"
+                      [disabled]="savingSettings || !canManageSecuritySettings"
+                    />
                     <span class="slider"></span>
                   </label>
                 </div>

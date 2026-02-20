@@ -1,5 +1,3 @@
-
-
 // src/app/features/finance/components/pledges-list/pledges-list.component.ts
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
@@ -8,7 +6,7 @@ import { takeUntil } from 'rxjs/operators';
 import { FinanceService } from '../../services/finance.service';
 
 @Component({
-  selector: 'app-pledges',
+  selector: 'app-pledges-list',
   standalone: false,
   templateUrl: './pledges.html',
   styleUrl: './pledges.scss',
@@ -18,6 +16,8 @@ export class Pledges implements OnInit, OnDestroy {
 
   pledges: any[] = [];
   loading = false;
+  errorMessage = '';
+  successMessage = '';
 
   // Pagination
   currentPage = 1;
@@ -25,12 +25,17 @@ export class Pledges implements OnInit, OnDestroy {
   totalPledges = 0;
   totalPages = 0;
 
+  // Permissions
+  canViewFinance = false;
+  canManageFinance = false;
+
   constructor(
     private financeService: FinanceService,
     private router: Router
   ) {}
 
   ngOnInit(): void {
+    this.checkPermissions();
     this.loadPledges();
   }
 
@@ -39,8 +44,18 @@ export class Pledges implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  private checkPermissions(): void {
+    this.canViewFinance = this.financeService.canViewFinance();
+    this.canManageFinance = this.financeService.canManageFinance();
+
+    if (!this.canViewFinance) {
+      this.router.navigate(['/unauthorized']);
+    }
+  }
+
   loadPledges(): void {
     this.loading = true;
+    this.errorMessage = '';
 
     this.financeService.getPledges(this.currentPage, this.pageSize)
       .pipe(takeUntil(this.destroy$))
@@ -52,34 +67,59 @@ export class Pledges implements OnInit, OnDestroy {
           this.loading = false;
         },
         error: (error) => {
-          console.error('Error loading pledges:', error);
+          this.errorMessage = error.message || 'Failed to load pledges';
           this.loading = false;
+          console.error('Error loading pledges:', error);
         }
       });
   }
 
   createPledge(): void {
+    if (!this.canManageFinance) {
+      this.errorMessage = 'You do not have permission to create pledges';
+      return;
+    }
     this.router.navigate(['main/finance/pledges/create']);
   }
 
   deletePledge(pledgeId: string, event: Event): void {
     event.stopPropagation();
 
-    if (confirm('Are you sure you want to delete this pledge?')) {
-      this.financeService.deletePledge(pledgeId)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: () => {
-            this.loadPledges();
-          },
-          error: (error) => {
-            console.error('Error deleting pledge:', error);
-          }
-        });
+    if (!this.canManageFinance) {
+      this.errorMessage = 'You do not have permission to delete pledges';
+      return;
     }
+
+    const confirmMessage = 'Are you sure you want to delete this pledge? This action cannot be undone.';
+
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    this.financeService.deletePledge(pledgeId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.successMessage = 'Pledge deleted successfully!';
+          this.loadPledges();
+
+          setTimeout(() => {
+            this.successMessage = '';
+          }, 3000);
+        },
+        error: (error) => {
+          this.errorMessage = error.message || 'Failed to delete pledge';
+          console.error('Error deleting pledge:', error);
+        }
+      });
   }
 
   exportPledges(): void {
+    if (!this.canViewFinance) {
+      this.errorMessage = 'You do not have permission to export pledges';
+      return;
+    }
+
     this.financeService.exportPledgesReport()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
@@ -88,10 +128,18 @@ export class Pledges implements OnInit, OnDestroy {
           const a = document.createElement('a');
           a.href = url;
           a.download = `pledges_report_${new Date().toISOString().split('T')[0]}.csv`;
+          document.body.appendChild(a);
           a.click();
+          document.body.removeChild(a);
           window.URL.revokeObjectURL(url);
+
+          this.successMessage = 'Pledges exported successfully!';
+          setTimeout(() => {
+            this.successMessage = '';
+          }, 3000);
         },
         error: (error) => {
+          this.errorMessage = error.message || 'Failed to export pledges';
           console.error('Export error:', error);
         }
       });
@@ -102,6 +150,7 @@ export class Pledges implements OnInit, OnDestroy {
     if (this.currentPage > 1) {
       this.currentPage--;
       this.loadPledges();
+      this.scrollToTop();
     }
   }
 
@@ -109,6 +158,7 @@ export class Pledges implements OnInit, OnDestroy {
     if (this.currentPage < this.totalPages) {
       this.currentPage++;
       this.loadPledges();
+      this.scrollToTop();
     }
   }
 
@@ -117,7 +167,7 @@ export class Pledges implements OnInit, OnDestroy {
     return new Intl.NumberFormat('en-GH', {
       style: 'currency',
       currency: currency
-    }).format(amount);
+    }).format(amount || 0);
   }
 
   getBalance(pledge: any): number {
@@ -126,7 +176,8 @@ export class Pledges implements OnInit, OnDestroy {
 
   getProgressPercentage(pledge: any): number {
     if (pledge.pledge_amount === 0) return 0;
-    return Math.round((pledge.amount_paid / pledge.pledge_amount) * 100);
+    const percentage = (pledge.amount_paid / pledge.pledge_amount) * 100;
+    return Math.min(Math.round(percentage), 100);
   }
 
   getProgressClass(percentage: number): string {
@@ -136,10 +187,20 @@ export class Pledges implements OnInit, OnDestroy {
   }
 
   getMemberName(pledge: any): string {
-    return `${pledge.member.first_name} ${pledge.member.last_name}`;
+    if (pledge.member) {
+      return `${pledge.member.first_name} ${pledge.member.last_name}`;
+    }
+    return 'Unknown';
   }
 
   getMemberInitials(pledge: any): string {
-    return `${pledge.member.first_name[0]}${pledge.member.last_name[0]}`.toUpperCase();
+    if (pledge.member) {
+      return `${pledge.member.first_name[0]}${pledge.member.last_name[0]}`.toUpperCase();
+    }
+    return '?';
+  }
+
+  private scrollToTop(): void {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }

@@ -1,5 +1,4 @@
 <!-- src/app/features/members/components/edit-member/edit-member.component.html -->
-<!-- Reuses the same template as add-member, just changes the title -->
 <div class="dashboard-layout">
   <app-sidebar></app-sidebar>
 
@@ -10,7 +9,8 @@
       <div class="add-member-container">
         <!-- Loading State -->
         <div *ngIf="loadingMember" class="loading-container">
-          <app-loading-spinner size="large" message="Loading member..."></app-loading-spinner>
+          <div class="spinner"></div>
+          <p>Loading member details...</p>
         </div>
 
         <!-- Form Content -->
@@ -18,7 +18,7 @@
           <!-- Page Header -->
           <div class="page-header">
             <div class="header-left">
-              <button class="back-btn" (click)="cancel()">
+              <button class="back-btn" (click)="cancel()" [disabled]="loading || uploadingPhoto">
                 <i class="ri-arrow-left-line"></i>
               </button>
               <div>
@@ -38,18 +38,385 @@
           <div *ngIf="errorMessage" class="error-alert">
             <i class="ri-error-warning-line"></i>
             <span>{{ errorMessage }}</span>
+            <button class="close-btn" (click)="errorMessage = ''">
+              <i class="ri-close-line"></i>
+            </button>
           </div>
 
-          <!-- Same form as add-member.component.html -->
-          <!-- Copy the entire form from add-member.component.html -->
-          <!-- Just change button text from "Add Member" to "Update Member" -->
           <form [formGroup]="memberForm" (ngSubmit)="onSubmit()">
-            <!-- Include all form fields from add-member component -->
-            <!-- For brevity, I'll show just the structure -->
-
             <div class="form-grid">
-              <!-- Photo, Basic Info, Contact, etc. - Same as add-member -->
-              <!-- ... (copy all form-card sections from add-member) ... -->
+              <!-- Photo Upload Section -->
+              <div class="form-card">
+                <h3>Photo</h3>
+                <div class="photo-upload-section">
+                  <div class="photo-preview">
+                    <img *ngIf="photoPreview" [src]="photoPreview" alt="Member photo" />
+                    <div *ngIf="!photoPreview" class="photo-placeholder">
+                      <i class="ri-user-line"></i>
+                      <span>No photo</span>
+                    </div>
+                  </div>
+                  <div class="photo-actions">
+                    <label class="btn-upload" [class.disabled]="loading || uploadingPhoto">
+                      <i class="ri-upload-2-line"></i>
+                      <span>{{ photoPreview ? 'Change Photo' : 'Upload Photo' }}</span>
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/gif"
+                        (change)="onPhotoSelected($event)"
+                        [disabled]="loading || uploadingPhoto"
+                        hidden
+                      />
+                    </label>
+                    <button
+                      *ngIf="photoPreview && photoPreview !== originalPhotoUrl"
+                      type="button"
+                      class="btn-remove"
+                      (click)="removePhoto()"
+                      [disabled]="loading || uploadingPhoto"
+                    >
+                      <i class="ri-delete-bin-line"></i>
+                      Remove
+                    </button>
+                  </div>
+                  <p class="photo-hint">Max size: 5MB. Supported: JPG, PNG, GIF</p>
+                </div>
+              </div>
+
+              <!-- Basic Information -->
+              <div class="form-card">
+                <h3>Basic Information <span class="required-indicator">* Required fields</span></h3>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="first_name">First Name <span class="required">*</span></label>
+                    <input
+                      id="first_name"
+                      type="text"
+                      formControlName="first_name"
+                      placeholder="Enter first name"
+                      [class.error]="memberForm.get('first_name')?.invalid && memberForm.get('first_name')?.touched"
+                    />
+                    <span
+                      *ngIf="memberForm.get('first_name')?.invalid && memberForm.get('first_name')?.touched"
+                      class="error-message"
+                    >
+                      <i class="ri-error-warning-line"></i>
+                      {{ getErrorMessage('first_name') }}
+                    </span>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="middle_name">Middle Name</label>
+                    <input
+                      id="middle_name"
+                      type="text"
+                      formControlName="middle_name"
+                      placeholder="Enter middle name (optional)"
+                    />
+                  </div>
+
+                  <div class="form-group">
+                    <label for="last_name">Last Name <span class="required">*</span></label>
+                    <input
+                      id="last_name"
+                      type="text"
+                      formControlName="last_name"
+                      placeholder="Enter last name"
+                      [class.error]="memberForm.get('last_name')?.invalid && memberForm.get('last_name')?.touched"
+                    />
+                    <span
+                      *ngIf="memberForm.get('last_name')?.invalid && memberForm.get('last_name')?.touched"
+                      class="error-message"
+                    >
+                      <i class="ri-error-warning-line"></i>
+                      {{ getErrorMessage('last_name') }}
+                    </span>
+                  </div>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="date_of_birth">Date of Birth</label>
+                    <input
+                      id="date_of_birth"
+                      type="date"
+                      formControlName="date_of_birth"
+                      [max]="today"
+                    />
+                  </div>
+
+                  <div class="form-group">
+                    <label for="gender">Gender</label>
+                    <select id="gender" formControlName="gender">
+                      <option value="">Select gender</option>
+                      <option *ngFor="let option of genderOptions" [value]="option.value">
+                        {{ option.label }}
+                      </option>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="marital_status">Marital Status</label>
+                    <select id="marital_status" formControlName="marital_status">
+                      <option value="">Select status</option>
+                      <option *ngFor="let option of maritalStatusOptions" [value]="option.value">
+                        {{ option.label }}
+                      </option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Contact Information -->
+              <div class="form-card">
+                <h3>Contact Information</h3>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="phone_primary">Primary Phone</label>
+                    <input
+                      id="phone_primary"
+                      type="tel"
+                      formControlName="phone_primary"
+                      placeholder="0XXXXXXXXX"
+                      maxlength="10"
+                      [class.error]="memberForm.get('phone_primary')?.invalid && memberForm.get('phone_primary')?.touched"
+                    />
+                    <span
+                      *ngIf="memberForm.get('phone_primary')?.invalid && memberForm.get('phone_primary')?.touched"
+                      class="error-message"
+                    >
+                      <i class="ri-error-warning-line"></i>
+                      {{ getErrorMessage('phone_primary') }}
+                    </span>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="phone_secondary">Secondary Phone</label>
+                    <input
+                      id="phone_secondary"
+                      type="tel"
+                      formControlName="phone_secondary"
+                      placeholder="0XXXXXXXXX (optional)"
+                      maxlength="10"
+                      [class.error]="memberForm.get('phone_secondary')?.invalid && memberForm.get('phone_secondary')?.touched"
+                    />
+                    <span
+                      *ngIf="memberForm.get('phone_secondary')?.invalid && memberForm.get('phone_secondary')?.touched"
+                      class="error-message"
+                    >
+                      <i class="ri-error-warning-line"></i>
+                      {{ getErrorMessage('phone_secondary') }}
+                    </span>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="email">Email</label>
+                    <input
+                      id="email"
+                      type="email"
+                      formControlName="email"
+                      placeholder="email@example.com"
+                      [class.error]="memberForm.get('email')?.invalid && memberForm.get('email')?.touched"
+                    />
+                    <span
+                      *ngIf="memberForm.get('email')?.invalid && memberForm.get('email')?.touched"
+                      class="error-message"
+                    >
+                      <i class="ri-error-warning-line"></i>
+                      {{ getErrorMessage('email') }}
+                    </span>
+                  </div>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group full-width">
+                    <label for="address">Address</label>
+                    <input
+                      id="address"
+                      type="text"
+                      formControlName="address"
+                      placeholder="Enter residential address"
+                    />
+                  </div>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="city">City</label>
+                    <input
+                      id="city"
+                      type="text"
+                      formControlName="city"
+                      placeholder="Enter city"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Occupation & Education -->
+              <div class="form-card">
+                <h3>Occupation & Education</h3>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="occupation">Occupation</label>
+                    <input
+                      id="occupation"
+                      type="text"
+                      formControlName="occupation"
+                      placeholder="Enter occupation"
+                    />
+                  </div>
+
+                  <div class="form-group">
+                    <label for="employer">Employer</label>
+                    <input
+                      id="employer"
+                      type="text"
+                      formControlName="employer"
+                      placeholder="Enter employer"
+                    />
+                  </div>
+
+                  <div class="form-group">
+                    <label for="education_level">Education Level</label>
+                    <select id="education_level" formControlName="education_level">
+                      <option value="">Select level</option>
+                      <option *ngFor="let level of educationLevels" [value]="level">
+                        {{ level }}
+                      </option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Emergency Contact -->
+              <div class="form-card">
+                <h3>Emergency Contact</h3>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="emergency_contact_name">Contact Name</label>
+                    <input
+                      id="emergency_contact_name"
+                      type="text"
+                      formControlName="emergency_contact_name"
+                      placeholder="Enter contact name"
+                    />
+                  </div>
+
+                  <div class="form-group">
+                    <label for="emergency_contact_phone">Contact Phone</label>
+                    <input
+                      id="emergency_contact_phone"
+                      type="tel"
+                      formControlName="emergency_contact_phone"
+                      placeholder="0XXXXXXXXX"
+                      maxlength="10"
+                      [class.error]="memberForm.get('emergency_contact_phone')?.invalid && memberForm.get('emergency_contact_phone')?.touched"
+                    />
+                    <span
+                      *ngIf="memberForm.get('emergency_contact_phone')?.invalid && memberForm.get('emergency_contact_phone')?.touched"
+                      class="error-message"
+                    >
+                      <i class="ri-error-warning-line"></i>
+                      {{ getErrorMessage('emergency_contact_phone') }}
+                    </span>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="emergency_contact_relationship">Relationship</label>
+                    <input
+                      id="emergency_contact_relationship"
+                      type="text"
+                      formControlName="emergency_contact_relationship"
+                      placeholder="e.g., Spouse, Parent, Sibling"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Church Information -->
+              <div class="form-card">
+                <h3>Church Information</h3>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="baptism_date">Baptism Date</label>
+                    <input
+                      id="baptism_date"
+                      type="date"
+                      formControlName="baptism_date"
+                      [max]="today"
+                    />
+                  </div>
+
+                  <div class="form-group">
+                    <label for="baptism_location">Baptism Location</label>
+                    <input
+                      id="baptism_location"
+                      type="text"
+                      formControlName="baptism_location"
+                      placeholder="Enter location"
+                    />
+                  </div>
+
+                  <div class="form-group">
+                    <label for="join_date">Join Date <span class="required">*</span></label>
+                    <input
+                      id="join_date"
+                      type="date"
+                      formControlName="join_date"
+                      [max]="today"
+                      [class.error]="memberForm.get('join_date')?.invalid && memberForm.get('join_date')?.touched"
+                    />
+                    <span
+                      *ngIf="memberForm.get('join_date')?.invalid && memberForm.get('join_date')?.touched"
+                      class="error-message"
+                    >
+                      <i class="ri-error-warning-line"></i>
+                      {{ getErrorMessage('join_date') }}
+                    </span>
+                  </div>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group checkbox-group">
+                    <label class="checkbox-label">
+                      <input type="checkbox" formControlName="is_new_convert" />
+                      <span class="checkbox-text">
+                        <i class="ri-checkbox-blank-line unchecked"></i>
+                        <i class="ri-checkbox-fill checked"></i>
+                        New Convert
+                      </span>
+                    </label>
+                  </div>
+
+                  <div class="form-group checkbox-group">
+                    <label class="checkbox-label">
+                      <input type="checkbox" formControlName="is_visitor" />
+                      <span class="checkbox-text">
+                        <i class="ri-checkbox-blank-line unchecked"></i>
+                        <i class="ri-checkbox-fill checked"></i>
+                        Visitor
+                      </span>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group full-width">
+                    <label for="notes">Notes</label>
+                    <textarea
+                      id="notes"
+                      formControlName="notes"
+                      placeholder="Additional notes about the member..."
+                      rows="4"
+                      maxlength="500"
+                    ></textarea>
+                    <span class="char-count">
+                      {{ memberForm.get('notes')?.value?.length || 0 }} / 500
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <!-- Form Actions -->
@@ -58,17 +425,21 @@
                 type="button"
                 class="btn-secondary"
                 (click)="cancel()"
-                [disabled]="loading"
+                [disabled]="loading || uploadingPhoto"
               >
+                <i class="ri-close-line"></i>
                 Cancel
               </button>
               <button
                 type="submit"
                 class="btn-primary"
-                [disabled]="loading || uploadingPhoto"
+                [disabled]="loading || uploadingPhoto || memberForm.invalid"
               >
-                <span *ngIf="!loading && !uploadingPhoto">Update Member</span>
-                <span *ngIf="loading || uploadingPhoto">
+                <span *ngIf="!loading && !uploadingPhoto">
+                  <i class="ri-save-line"></i>
+                  Update Member
+                </span>
+                <span *ngIf="loading || uploadingPhoto" class="loading-content">
                   <i class="ri-loader-4-line spin"></i>
                   {{ uploadingPhoto ? 'Uploading photo...' : 'Updating member...' }}
                 </span>
