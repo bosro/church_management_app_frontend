@@ -1,2 +1,9 @@
-<!-- src/app/app.component.html -->
-<router-outlet></router-outlet>
+<div *ngIf="!authInitialized" class="auth-loading">
+  <div class="loading-spinner"></div>
+  <p>Loading...</p>
+</div>
+
+<!-- Show app when auth is ready -->
+<div *ngIf="authInitialized">
+  <router-outlet></router-outlet>
+</div>

@@ -2,7 +2,7 @@
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { BehaviorSubject, Observable, from, of, throwError } from 'rxjs';
-import { map, catchError, tap, switchMap, retry, delay } from 'rxjs/operators';
+import { map, catchError, tap, switchMap, retry, delay, filter, take } from 'rxjs/operators';
 import { User, AuthResponse, SignUpData, SignupRequest } from '../../models/user.model';
 import { SupabaseService } from './supabase';
 import { Church } from '../../models/church.model';
@@ -24,15 +24,21 @@ export class AuthService {
     this.initializeAuth();
   }
 
-  private initializeAuth() {
-    this.supabase.currentUser$.subscribe(async (user) => {
-      if (user) {
-        await this.loadUserProfile(user.id);
-      } else {
-        this.currentProfileSubject.next(null);
-      }
-    });
-  }
+  // In auth.service.ts
+private initializeAuth() {
+  // ✅ Wait for Supabase auth to initialize first
+  this.supabase.authInitialized$.pipe(
+    filter(initialized => initialized),
+    take(1),
+    switchMap(() => this.supabase.currentUser$)
+  ).subscribe(async (user) => {
+    if (user) {
+      await this.loadUserProfile(user.id);
+    } else {
+      this.currentProfileSubject.next(null);
+    }
+  });
+}
 
   private async loadUserProfile(userId: string) {
     try {

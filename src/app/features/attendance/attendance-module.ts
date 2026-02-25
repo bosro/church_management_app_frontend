@@ -9,6 +9,7 @@ import { AttendanceRoutingModule } from './attendance-routing.module';
 import { CreateEvent } from './components/create-event/create-event/create-event';
 import { QrCheckin } from './components/qr-checkin/qr-checkin';
 import { AttendanceDetail } from './components/attendance-detail/attendance-detail/attendance-detail';
+import { QrCodeComponent } from 'ng-qrcode';
 
 @NgModule({
   declarations: [
@@ -24,6 +25,7 @@ import { AttendanceDetail } from './components/attendance-detail/attendance-deta
     ReactiveFormsModule,
     SharedModule,
     AttendanceRoutingModule,
+        QrCodeComponent,
   ],
 })
 export class AttendanceModule {}

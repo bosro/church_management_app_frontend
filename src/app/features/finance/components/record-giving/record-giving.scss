@@ -6,16 +6,30 @@
 }
 
 .dashboard-content {
+  /* Offset content so it starts AFTER the fixed sidebar */
+  margin-left: 280px;
   flex: 1;
-  // margin-left: 260px;
   display: flex;
   flex-direction: column;
+  min-width: 0; /* prevents flex children from overflowing */
+  width: calc(100% - 280px);
+
+  @media (max-width: 768px) {
+    /* On mobile the sidebar slides off-screen, so no offset needed */
+    margin-left: 0;
+    width: 100%;
+  }
 }
 
 .dashboard-body {
   flex: 1;
   padding: 2rem;
   overflow-y: auto;
+
+  @media (max-width: 768px) {
+    padding: 1rem;
+  }
+
 }
 .record-giving-container {
   max-width: 900px;

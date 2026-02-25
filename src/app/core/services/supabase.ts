@@ -23,6 +23,11 @@ export class SupabaseService {
 
   private currentUserSubject: BehaviorSubject<User | null>;
   public currentUser$: Observable<User | null>;
+
+  // ✅ NEW: Track auth initialization
+  private authInitializedSubject = new BehaviorSubject<boolean>(false);
+  public authInitialized$ = this.authInitializedSubject.asObservable();
+
   private isInitialized = false;
 
   constructor() {
@@ -65,6 +70,9 @@ export class SupabaseService {
       this.currentUserSubject.next(session?.user ?? null);
       this.isInitialized = true;
 
+      // ✅ NEW: Mark auth as initialized
+      this.authInitializedSubject.next(true);
+
       // Listen to auth changes
       this.supabase.auth.onAuthStateChange((event, session) => {
         console.log('Auth state changed:', event);
@@ -74,6 +82,9 @@ export class SupabaseService {
       console.error('Failed to initialize auth state:', error);
       this.currentUserSubject.next(null);
       this.isInitialized = true;
+
+      // ✅ NEW: Still mark as initialized even on error
+      this.authInitializedSubject.next(true);
     }
   }
 

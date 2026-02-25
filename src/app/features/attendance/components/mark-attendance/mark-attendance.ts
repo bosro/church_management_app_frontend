@@ -16,6 +16,7 @@ import {
   AttendanceRecord,
 } from '../../../../models/attendance.model';
 import { Member } from '../../../../models/member.model';
+import { QrCodeComponent } from 'ng-qrcode';
 
 @Component({
   selector: 'app-mark-attendance',
@@ -146,33 +147,99 @@ export class MarkAttendance implements OnInit, OnDestroy {
       });
   }
 
-  checkInMember(memberId: string): void {
-    this.loading = true;
-    this.errorMessage = '';
+ checkInMember(memberId: string): void {
+  this.loading = true;
+  this.errorMessage = '';
 
-    this.attendanceService
-      .checkInMember(this.eventId, memberId, 'manual')
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: () => {
-          this.successMessage = 'Member checked in successfully!';
-          this.loadAttendanceRecords();
-          this.loadEvent();
-          this.searchControl.setValue('');
-          this.searchResults = [];
-          this.loading = false;
+  this.attendanceService
+    .checkInMember(this.eventId, memberId, 'manual')
+    .pipe(takeUntil(this.destroy$))
+    .subscribe({
+      next: () => {
+        this.successMessage = 'Member checked in successfully!';
+        this.loadAttendanceRecords();
+        this.loadEvent();
+        this.searchControl.setValue('');
+        this.searchResults = [];
+        this.loading = false;
 
-          setTimeout(() => {
-            this.successMessage = '';
-          }, 3000);
-        },
-        error: (error) => {
-          this.loading = false;
+        setTimeout(() => {
+          this.successMessage = '';
+        }, 3000);
+      },
+      error: (error) => {
+        this.loading = false;
+
+        // ✅ Handle duplicate check-in error
+        if (error?.error?.code === '23505') {
+          this.errorMessage = 'This member has already been checked in for this event';
+        } else {
           this.errorMessage = error.message || 'Failed to check in member';
-          console.error('Check-in error:', error);
-        },
-      });
+        }
+
+        console.error('Check-in error:', error);
+
+        // Clear search
+        this.searchControl.setValue('');
+        this.searchResults = [];
+      },
+    });
+}
+
+checkInVisitor(): void {
+  if (!this.visitorName.trim()) {
+    this.errorMessage = 'Visitor name is required';
+    return;
   }
+
+  const nameParts = this.visitorName.trim().split(/\s+/);
+  if (nameParts.length < 2) {
+    this.errorMessage = 'Please enter both first and last name';
+    return;
+  }
+
+  this.addingVisitor = true;
+  this.errorMessage = '';
+
+  const firstName = nameParts[0];
+  const lastName = nameParts.slice(1).join(' ');
+
+  this.attendanceService
+    .checkInVisitor(this.eventId, {
+      first_name: firstName,
+      last_name: lastName,
+      phone: this.visitorPhone || undefined,
+      email: this.visitorEmail || undefined,
+    })
+    .pipe(takeUntil(this.destroy$))
+    .subscribe({
+      next: () => {
+        this.successMessage = 'Visitor checked in successfully!';
+        this.loadAttendanceRecords();
+        this.loadEvent();
+        this.toggleVisitorForm();
+        this.addingVisitor = false;
+
+        setTimeout(() => {
+          this.successMessage = '';
+        }, 3000);
+      },
+      error: (error) => {
+        this.addingVisitor = false;
+
+        // ✅ Handle duplicate check-in error
+        if (error?.error?.code === '23505') {
+          this.errorMessage = 'This visitor has already been checked in for this event';
+        } else {
+          this.errorMessage = error.message || 'Failed to check in visitor';
+        }
+
+        console.error('Visitor check-in error:', error);
+
+        // Keep form open so user can modify the visitor details
+      },
+    });
+}
 
   toggleVisitorForm(): void {
     this.showVisitorForm = !this.showVisitorForm;
@@ -181,52 +248,6 @@ export class MarkAttendance implements OnInit, OnDestroy {
       this.visitorPhone = '';
       this.visitorEmail = '';
     }
-  }
-
-  checkInVisitor(): void {
-    if (!this.visitorName.trim()) {
-      this.errorMessage = 'Visitor name is required';
-      return;
-    }
-
-    const nameParts = this.visitorName.trim().split(/\s+/);
-    if (nameParts.length < 2) {
-      this.errorMessage = 'Please enter both first and last name';
-      return;
-    }
-
-    this.addingVisitor = true;
-    this.errorMessage = '';
-
-    const firstName = nameParts[0];
-    const lastName = nameParts.slice(1).join(' ');
-
-    this.attendanceService
-      .checkInVisitor(this.eventId, {
-        first_name: firstName,
-        last_name: lastName,
-        phone: this.visitorPhone || undefined,
-        email: this.visitorEmail || undefined,
-      })
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: () => {
-          this.successMessage = 'Visitor checked in successfully!';
-          this.loadAttendanceRecords();
-          this.loadEvent();
-          this.toggleVisitorForm();
-          this.addingVisitor = false;
-
-          setTimeout(() => {
-            this.successMessage = '';
-          }, 3000);
-        },
-        error: (error) => {
-          this.addingVisitor = false;
-          this.errorMessage = error.message || 'Failed to check in visitor';
-          console.error('Visitor check-in error:', error);
-        },
-      });
   }
 
   toggleBulkMode(): void {

@@ -1,26 +1,47 @@
-// src/app/shared/components/sidebar/sidebar.component.scss
-// Updated sidebar.component.scss with mobile close button
 .sidebar {
   width: 280px;
   background: #FFFFFF;
   border-right: 1px solid #E5E7EB;
   display: flex;
   flex-direction: column;
+
+  /* Fixed sidebar — stays in place while content scrolls */
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  z-index: 200;
+  overflow-y: auto;
+
+  /* Smooth transition for mobile open/close */
   transition: transform 0.3s ease;
-  position: relative;
+  box-shadow: none;
 
   @media (max-width: 768px) {
-    position: fixed;
-    top: 0;
-    left: 0;
-    height: 100vh;
-    z-index: 1000;
+    /* On mobile, sidebar is hidden off-screen by default */
     transform: translateX(-100%);
-    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 2px 0 16px rgba(0, 0, 0, 0.12);
+    z-index: 1000;
 
     &.mobile-open {
       transform: translateX(0);
     }
+  }
+}
+
+/* Overlay behind the sidebar on mobile */
+.mobile-overlay {
+  display: none;
+
+  @media (max-width: 768px) {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
   }
 }
 
@@ -36,10 +57,10 @@
   color: #374151;
   font-size: 20px;
   cursor: pointer;
-  display: none;
   align-items: center;
   justify-content: center;
   z-index: 10;
+  display: none;
 
   @media (max-width: 768px) {
     display: flex;
@@ -56,6 +77,7 @@
   gap: 12px;
   padding: 24px 20px;
   border-bottom: 1px solid #E5E7EB;
+  flex-shrink: 0;
 
   .logo-icon {
     font-size: 32px;
@@ -78,6 +100,20 @@
   padding: 20px 0;
   overflow-y: auto;
 
+  /* Custom scrollbar so it doesn't look broken */
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #E5E7EB;
+    border-radius: 4px;
+  }
+
   .menu-list {
     list-style: none;
     padding: 0;
@@ -99,6 +135,7 @@
 
     i {
       font-size: 20px;
+      flex-shrink: 0;
     }
 
     &:hover {
@@ -116,6 +153,7 @@
 .sidebar-footer {
   padding: 20px;
   border-top: 1px solid #E5E7EB;
+  flex-shrink: 0;
 }
 
 .user-profile {
@@ -165,6 +203,13 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
+
+    .user-role {
+      font-size: 12px;
+      color: #6B7280;
+      margin: 0;
+      text-transform: capitalize;
+    }
   }
 }
 
@@ -188,21 +233,5 @@
     background: #FEE2E2;
     border-color: #FCA5A5;
     color: #DC2626;
-  }
-}
-
-// Mobile overlay
-.mobile-overlay {
-  display: none;
-
-  @media (max-width: 768px) {
-    display: block;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 999;
   }
 }

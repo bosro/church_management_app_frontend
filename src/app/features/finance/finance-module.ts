@@ -10,6 +10,7 @@ import { SharedModule } from '../../shared/shared-module';
 import { FinanceOverview } from './components/finance-overview/finance-overview/finance-overview';
 import { CategoriesManagement } from './components/categories-management/categories-management/categories-management';
 import { CreatePledge } from './components/create-pledge/create-pledge/create-pledge';
+import { PledgeDetails } from './pledge-details/pledge-details';
 
 
 
@@ -21,7 +22,8 @@ import { CreatePledge } from './components/create-pledge/create-pledge/create-pl
     FinanceReports,
     FinanceOverview,
     CreatePledge,
-    CategoriesManagement
+    CategoriesManagement,
+    PledgeDetails
   ],
   imports: [
       CommonModule,

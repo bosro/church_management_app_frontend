@@ -6,16 +6,30 @@
 }
 
 .dashboard-content {
+  /* Offset content so it starts AFTER the fixed sidebar */
+  margin-left: 280px;
   flex: 1;
-  // margin-left: 260px;
   display: flex;
   flex-direction: column;
+  min-width: 0; /* prevents flex children from overflowing */
+  width: calc(100% - 280px);
+
+  @media (max-width: 768px) {
+    /* On mobile the sidebar slides off-screen, so no offset needed */
+    margin-left: 0;
+    width: 100%;
+  }
 }
 
 .dashboard-body {
   flex: 1;
   padding: 2rem;
   overflow-y: auto;
+
+  @media (max-width: 768px) {
+    padding: 1rem;
+  }
+
 }
 
 .mark-attendance-container {
@@ -753,4 +767,31 @@
       justify-content: center;
     }
   }
+}
+
+
+.qr-code-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+  padding: 1.5rem;
+  background: white;
+  border-radius: 12px;
+
+  // ✅ Style the QR code
+  ::ng-deep .qr-code-canvas {
+    border: 4px solid #F3F4F6;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+}
+
+.qr-event-name {
+  text-align: center;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #5B21B6;
+  margin: 0.75rem 0 0 0;
+  padding-top: 0.75rem;
+  border-top: 1px solid #E5E7EB;
 }

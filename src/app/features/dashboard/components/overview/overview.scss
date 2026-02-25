@@ -3,27 +3,33 @@
   display: flex;
   min-height: 100vh;
   background: #F9FAFB;
-
-  @media (max-width: 768px) {
-    flex-direction: column;
-  }
 }
 
 .dashboard-content {
+  /* Offset content so it starts AFTER the fixed sidebar */
+  margin-left: 280px;
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow-x: hidden;
+  min-width: 0; /* prevents flex children from overflowing */
+  width: calc(100% - 280px);
+
+  @media (max-width: 768px) {
+    /* On mobile the sidebar slides off-screen, so no offset needed */
+    margin-left: 0;
+    width: 100%;
+  }
 }
 
 .dashboard-body {
   flex: 1;
-  padding: 24px;
+  padding: 2rem;
   overflow-y: auto;
 
   @media (max-width: 768px) {
-    padding: 16px;
+    padding: 1rem;
   }
+
 }
 
 .loading-container,

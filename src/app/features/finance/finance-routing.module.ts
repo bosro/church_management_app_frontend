@@ -8,6 +8,7 @@ import { CategoriesManagement } from './components/categories-management/categor
 import { FinanceOverview } from './components/finance-overview/finance-overview/finance-overview';
 import { RecordGiving } from './components/record-giving/record-giving';
 import { Pledges } from './components/pledges/pledges';
+import { PledgeDetails } from './pledge-details/pledge-details';
 
 const routes: Routes = [
   { path: '', component: FinanceOverview },
@@ -16,11 +17,12 @@ const routes: Routes = [
   { path: 'pledges', component: Pledges },
   { path: 'pledges/create', component: CreatePledge },
   { path: 'reports', component: FinanceReports },
-  { path: 'categories', component: CategoriesManagement }
+  { path: 'categories', component: CategoriesManagement },
+  { path: 'pledges/:id', component: PledgeDetails },
 ];
 
 @NgModule({
   imports: [RouterModule.forChild(routes)],
-  exports: [RouterModule]
+  exports: [RouterModule],
 })
-export class FinanceRoutingModule { }
+export class FinanceRoutingModule {}

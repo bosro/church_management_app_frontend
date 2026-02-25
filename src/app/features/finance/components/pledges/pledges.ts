@@ -31,7 +31,7 @@ export class Pledges implements OnInit, OnDestroy {
 
   constructor(
     private financeService: FinanceService,
-    private router: Router
+    private router: Router,
   ) {}
 
   ngOnInit(): void {
@@ -57,7 +57,8 @@ export class Pledges implements OnInit, OnDestroy {
     this.loading = true;
     this.errorMessage = '';
 
-    this.financeService.getPledges(this.currentPage, this.pageSize)
+    this.financeService
+      .getPledges(this.currentPage, this.pageSize)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: ({ data, count }) => {
@@ -70,7 +71,7 @@ export class Pledges implements OnInit, OnDestroy {
           this.errorMessage = error.message || 'Failed to load pledges';
           this.loading = false;
           console.error('Error loading pledges:', error);
-        }
+        },
       });
   }
 
@@ -90,13 +91,15 @@ export class Pledges implements OnInit, OnDestroy {
       return;
     }
 
-    const confirmMessage = 'Are you sure you want to delete this pledge? This action cannot be undone.';
+    const confirmMessage =
+      'Are you sure you want to delete this pledge? This action cannot be undone.';
 
     if (!confirm(confirmMessage)) {
       return;
     }
 
-    this.financeService.deletePledge(pledgeId)
+    this.financeService
+      .deletePledge(pledgeId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
@@ -110,7 +113,7 @@ export class Pledges implements OnInit, OnDestroy {
         error: (error) => {
           this.errorMessage = error.message || 'Failed to delete pledge';
           console.error('Error deleting pledge:', error);
-        }
+        },
       });
   }
 
@@ -120,7 +123,8 @@ export class Pledges implements OnInit, OnDestroy {
       return;
     }
 
-    this.financeService.exportPledgesReport()
+    this.financeService
+      .exportPledgesReport()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (blob) => {
@@ -141,7 +145,7 @@ export class Pledges implements OnInit, OnDestroy {
         error: (error) => {
           this.errorMessage = error.message || 'Failed to export pledges';
           console.error('Export error:', error);
-        }
+        },
       });
   }
 
@@ -162,11 +166,15 @@ export class Pledges implements OnInit, OnDestroy {
     }
   }
 
+  viewPledgeDetails(pledgeId: string): void {
+    this.router.navigate(['main/finance/pledges', pledgeId]);
+  }
+
   // Helper methods
   formatCurrency(amount: number, currency: string = 'GHS'): string {
     return new Intl.NumberFormat('en-GH', {
       style: 'currency',
-      currency: currency
+      currency: currency,
     }).format(amount || 0);
   }
 

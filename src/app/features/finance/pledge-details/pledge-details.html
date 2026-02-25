@@ -1,0 +1,302 @@
+<!-- src/app/features/finance/components/pledge-details/pledge-details.component.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+
+  <div class="dashboard-content">
+    <app-header></app-header>
+
+    <div class="dashboard-body">
+      <div class="pledge-details-container">
+        <!-- Page Header -->
+        <div class="page-header">
+          <div class="header-left">
+            <button class="back-btn" (click)="goBack()">
+              <i class="ri-arrow-left-line"></i>
+            </button>
+            <div>
+              <h1>Pledge Details</h1>
+              <p class="subtitle" *ngIf="pledge">{{ getPledgerName() }}</p>
+            </div>
+          </div>
+
+          <div class="header-actions" *ngIf="pledge && canManageFinance">
+            <button
+              class="btn-primary"
+              (click)="openPaymentModal()"
+              [disabled]="pledge.is_fulfilled"
+            >
+              <i class="ri-money-dollar-circle-line"></i>
+              <span>Record Payment</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Success Message -->
+        <div *ngIf="successMessage" class="success-alert">
+          <i class="ri-checkbox-circle-line"></i>
+          <span>{{ successMessage }}</span>
+        </div>
+
+        <!-- Error Message -->
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i>
+          <span>{{ errorMessage }}</span>
+        </div>
+
+        <!-- Loading State -->
+        <div *ngIf="loading" class="loading-container">
+          <app-loading-spinner message="Loading pledge details..."></app-loading-spinner>
+        </div>
+
+        <!-- Content -->
+        <div *ngIf="!loading && pledge" class="content-grid">
+          <!-- Pledge Summary Card -->
+          <div class="summary-card">
+            <h3>Pledge Summary</h3>
+
+            <!-- Pledger Info -->
+            <div class="pledger-info">
+              <div class="pledger-avatar">
+                <img *ngIf="pledge.member?.photo_url" [src]="pledge.member.photo_url" [alt]="getPledgerName()" />
+                <div *ngIf="!pledge.member?.photo_url" class="avatar-placeholder">
+                  {{ getPledgerInitials() }}
+                </div>
+              </div>
+              <div>
+                <p class="pledger-name">{{ getPledgerName() }}</p>
+                <p class="pledger-type">{{ getPledgerType() }}</p>
+                <p class="pledger-contact" *ngIf="pledge.member">
+                  {{ pledge.member.member_number }}
+                </p>
+                <p class="pledger-contact" *ngIf="pledge.visitor_phone">
+                  <i class="ri-phone-line"></i> {{ pledge.visitor_phone }}
+                </p>
+                <p class="pledger-contact" *ngIf="pledge.visitor_email">
+                  <i class="ri-mail-line"></i> {{ pledge.visitor_email }}
+                </p>
+              </div>
+            </div>
+
+            <!-- Category -->
+            <div class="info-row" *ngIf="pledge.category">
+              <span class="label">Category</span>
+              <span class="value">{{ pledge.category.name }}</span>
+            </div>
+
+            <!-- Amounts -->
+            <div class="amounts-grid">
+              <div class="amount-box">
+                <p class="amount-label">Pledged Amount</p>
+                <p class="amount-value">{{ formatCurrency(pledge.pledge_amount, pledge.currency) }}</p>
+              </div>
+              <div class="amount-box paid">
+                <p class="amount-label">Amount Paid</p>
+                <p class="amount-value">{{ formatCurrency(pledge.amount_paid, pledge.currency) }}</p>
+              </div>
+              <div class="amount-box balance">
+                <p class="amount-label">Balance</p>
+                <p class="amount-value">{{ formatCurrency(getBalance(), pledge.currency) }}</p>
+              </div>
+            </div>
+
+            <!-- Progress -->
+            <div class="progress-section">
+              <div class="progress-header">
+                <span>Progress</span>
+                <span class="progress-percentage" [ngClass]="getProgressClass()">
+                  {{ getProgressPercentage() }}%
+                </span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" [ngClass]="getProgressClass()"
+                  [style.width.%]="getProgressPercentage()"></div>
+              </div>
+            </div>
+
+            <!-- Dates -->
+            <div class="dates-grid">
+              <div class="date-item">
+                <i class="ri-calendar-line"></i>
+                <div>
+                  <p class="date-label">Pledge Date</p>
+                  <p class="date-value">{{ pledge.pledge_date | date:'MMM d, y' }}</p>
+                </div>
+              </div>
+              <div class="date-item" *ngIf="pledge.due_date">
+                <i class="ri-time-line"></i>
+                <div>
+                  <p class="date-label">Due Date</p>
+                  <p class="date-value">{{ pledge.due_date | date:'MMM d, y' }}</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Status -->
+            <div class="status-badge" *ngIf="pledge.is_fulfilled">
+              <i class="ri-checkbox-circle-fill"></i>
+              Fulfilled
+            </div>
+
+            <!-- Notes -->
+            <div class="notes-section" *ngIf="pledge.notes">
+              <p class="notes-label">Notes</p>
+              <p class="notes-text">{{ pledge.notes }}</p>
+            </div>
+          </div>
+
+          <!-- Payment History Card -->
+          <div class="payments-card">
+            <h3>Payment History ({{ payments.length }})</h3>
+
+            <div class="payments-list">
+              <div *ngFor="let payment of payments" class="payment-item">
+                <div class="payment-info">
+                  <div class="payment-icon">
+                    <i class="ri-money-dollar-circle-line"></i>
+                  </div>
+                  <div class="payment-details">
+                    <p class="payment-amount">{{ formatCurrency(payment.amount, payment.currency) }}</p>
+                    <p class="payment-meta">
+                      {{ formatPaymentMethod(payment.payment_method) }}
+                      <span *ngIf="payment.transaction_reference">• {{ payment.transaction_reference }}</span>
+                    </p>
+                    <p class="payment-date">
+                      <i class="ri-calendar-line"></i>
+                      {{ payment.payment_date | date:'MMM d, y' }}
+                    </p>
+                    <p class="payment-notes" *ngIf="payment.notes">{{ payment.notes }}</p>
+                  </div>
+                </div>
+                <button
+                  class="btn-delete-payment"
+                  (click)="deletePayment(payment.id, $event)"
+                  *ngIf="canManageFinance"
+                  title="Delete payment"
+                >
+                  <i class="ri-delete-bin-line"></i>
+                </button>
+              </div>
+
+              <!-- Empty State -->
+              <div *ngIf="payments.length === 0" class="empty-payments">
+                <i class="ri-wallet-line"></i>
+                <p>No payments recorded yet</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Payment Modal -->
+<div *ngIf="showPaymentModal" class="modal-overlay" (click)="closePaymentModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Record Payment</h3>
+      <button class="close-btn" (click)="closePaymentModal()">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+
+    <form [formGroup]="paymentForm" (ngSubmit)="recordPayment()">
+      <div class="modal-body">
+        <div class="balance-alert">
+          <i class="ri-information-line"></i>
+          <span>Remaining balance: {{ formatCurrency(getBalance(), pledge.currency) }}</span>
+        </div>
+
+        <div class="form-group">
+          <label>Amount *</label>
+          <input
+            type="number"
+            formControlName="amount"
+            step="0.01"
+            placeholder="Enter payment amount"
+            [class.error]="paymentForm.get('amount')?.invalid && paymentForm.get('amount')?.touched"
+          />
+          <span class="error-message" *ngIf="paymentForm.get('amount')?.invalid && paymentForm.get('amount')?.touched">
+            <span *ngIf="paymentForm.get('amount')?.errors?.['required']">Amount is required</span>
+            <span *ngIf="paymentForm.get('amount')?.errors?.['min']">Amount must be greater than 0</span>
+            <span *ngIf="paymentForm.get('amount')?.errors?.['max']">Amount cannot exceed remaining balance</span>
+          </span>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Currency *</label>
+            <select formControlName="currency" [disabled]="true">
+              <option value="GHS">GHS (₵)</option>
+              <option value="USD">USD ($)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Payment Date *</label>
+            <input
+              type="date"
+              formControlName="payment_date"
+              [class.error]="paymentForm.get('payment_date')?.invalid && paymentForm.get('payment_date')?.touched"
+            />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Payment Method *</label>
+          <select
+            formControlName="payment_method"
+            [class.error]="paymentForm.get('payment_method')?.invalid && paymentForm.get('payment_method')?.touched"
+          >
+            <option value="cash">Cash</option>
+            <option value="mobile_money">Mobile Money</option>
+            <option value="bank_transfer">Bank Transfer</option>
+            <option value="check">Check</option>
+            <option value="card">Card</option>
+            <option value="online">Online</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Transaction Reference</label>
+          <input
+            type="text"
+            formControlName="transaction_reference"
+            placeholder="Enter reference number (optional)"
+          />
+        </div>
+
+        <div class="form-group">
+          <label>Notes</label>
+          <textarea
+            formControlName="notes"
+            rows="3"
+            placeholder="Add any additional notes (optional)"
+          ></textarea>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button
+          type="button"
+          class="btn-secondary"
+          (click)="closePaymentModal()"
+          [disabled]="recordingPayment"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          class="btn-primary"
+          [disabled]="recordingPayment || paymentForm.invalid"
+        >
+          <span *ngIf="!recordingPayment">Record Payment</span>
+          <span *ngIf="recordingPayment">
+            <i class="ri-loader-4-line spin"></i>
+            Recording...
+          </span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

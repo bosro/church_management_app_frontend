@@ -3,3 +3,38 @@
   display: block;
   min-height: 100vh;
 }
+
+
+// src/app/app.component.scss
+
+// ✅ NEW: Loading screen styles
+.auth-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: #F9FAFB;
+
+  .loading-spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid #E5E7EB;
+    border-top-color: #5B21B6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  p {
+    margin-top: 1rem;
+    font-size: 0.875rem;
+    color: #6B7280;
+    font-weight: 500;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

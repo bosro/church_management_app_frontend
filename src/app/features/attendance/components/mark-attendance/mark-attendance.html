@@ -23,11 +23,7 @@
               <i class="ri-qr-code-line"></i>
               <span>QR Code</span>
             </button>
-            <button
-              class="btn-secondary"
-              (click)="toggleBulkMode()"
-              [class.active]="bulkCheckInMode"
-            >
+            <button class="btn-secondary" (click)="toggleBulkMode()" [class.active]="bulkCheckInMode">
               <i class="ri-checkbox-multiple-line"></i>
               <span>{{ bulkCheckInMode ? 'Cancel Bulk' : 'Bulk Check-in' }}</span>
             </button>
@@ -54,13 +50,12 @@
             </button>
             <h3>Scan to Check In</h3>
             <div class="qr-code-wrapper">
-              <!-- In a real app, use a library like ngx-qrcode2 -->
-              <div class="qr-placeholder">
-                <i class="ri-qr-code-line"></i>
-                <p>{{ qrCodeData }}</p>
-              </div>
+              <!-- ✅ ng-qrcode component -->
+              <qr-code [value]="qrCodeData" [size]="280" [errorCorrectionLevel]="'M'"
+                cssClass="qr-code-canvas"></qr-code>
             </div>
             <p class="qr-hint">Members can scan this QR code to check in</p>
+            <p class="qr-event-name">{{ event?.event_name }}</p>
           </div>
         </div>
 
@@ -74,22 +69,15 @@
               <div class="search-section">
                 <div class="search-input-wrapper">
                   <i class="ri-search-line search-icon"></i>
-                  <input
-                    type="text"
-                    [formControl]="searchControl"
-                    placeholder="Search member by name, email, or phone..."
-                    class="search-input"
-                  />
+                  <input type="text" [formControl]="searchControl"
+                    placeholder="Search member by name, email, or phone..." class="search-input" />
                   <i *ngIf="searching" class="ri-loader-4-line spin"></i>
                 </div>
 
                 <!-- Search Results -->
                 <div class="search-results" *ngIf="searchResults.length > 0">
-                  <div
-                    *ngFor="let member of searchResults"
-                    class="search-result-item"
-                    (click)="checkInMember(member.id)"
-                  >
+                  <div *ngFor="let member of searchResults" class="search-result-item"
+                    (click)="checkInMember(member.id)">
                     <div class="member-avatar-small">
                       <img *ngIf="member.photo_url" [src]="member.photo_url" [alt]="getMemberFullName(member)" />
                       <div *ngIf="!member.photo_url" class="avatar-placeholder-small">
@@ -107,11 +95,7 @@
 
               <!-- Visitor Check-in -->
               <div class="visitor-section">
-                <button
-                  class="btn-visitor"
-                  (click)="toggleVisitorForm()"
-                  *ngIf="!showVisitorForm"
-                >
+                <button class="btn-visitor" (click)="toggleVisitorForm()" *ngIf="!showVisitorForm">
                   <i class="ri-user-add-line"></i>
                   <span>Check In Visitor</span>
                 </button>
@@ -121,47 +105,25 @@
 
                   <div class="form-group">
                     <label>Full Name *</label>
-                    <input
-                      type="text"
-                      [(ngModel)]="visitorName"
-                      placeholder="Enter visitor name"
-                      class="form-input"
-                    />
+                    <input type="text" [(ngModel)]="visitorName" placeholder="Enter visitor name" class="form-input" />
                   </div>
 
                   <div class="form-group">
                     <label>Phone</label>
-                    <input
-                      type="tel"
-                      [(ngModel)]="visitorPhone"
-                      placeholder="Enter phone number"
-                      class="form-input"
-                    />
+                    <input type="tel" [(ngModel)]="visitorPhone" placeholder="Enter phone number" class="form-input" />
                   </div>
 
                   <div class="form-group">
                     <label>Email</label>
-                    <input
-                      type="email"
-                      [(ngModel)]="visitorEmail"
-                      placeholder="Enter email address"
-                      class="form-input"
-                    />
+                    <input type="email" [(ngModel)]="visitorEmail" placeholder="Enter email address"
+                      class="form-input" />
                   </div>
 
                   <div class="form-actions-inline">
-                    <button
-                      class="btn-secondary-small"
-                      (click)="toggleVisitorForm()"
-                      [disabled]="addingVisitor"
-                    >
+                    <button class="btn-secondary-small" (click)="toggleVisitorForm()" [disabled]="addingVisitor">
                       Cancel
                     </button>
-                    <button
-                      class="btn-primary-small"
-                      (click)="checkInVisitor()"
-                      [disabled]="addingVisitor"
-                    >
+                    <button class="btn-primary-small" (click)="checkInVisitor()" [disabled]="addingVisitor">
                       <span *ngIf="!addingVisitor">Check In</span>
                       <span *ngIf="addingVisitor">
                         <i class="ri-loader-4-line spin"></i>
@@ -193,18 +155,12 @@
               </div>
 
               <div class="attendance-list">
-                <div
-                  *ngFor="let record of attendanceRecords"
-                  class="attendance-item"
-                  [class.selectable]="bulkCheckInMode"
-                >
+                <div *ngFor="let record of attendanceRecords" class="attendance-item"
+                  [class.selectable]="bulkCheckInMode">
                   <div class="attendance-info">
                     <div class="member-avatar-small">
-                      <img
-                        *ngIf="record.member?.photo_url"
-                        [src]="record.member?.photo_url"
-                        [alt]="getAttendanceName(record)"
-                      />
+                      <img *ngIf="record.member?.photo_url" [src]="record.member?.photo_url"
+                        [alt]="getAttendanceName(record)" />
                       <div *ngIf="!record.member?.photo_url" class="avatar-placeholder-small">
                         {{ record.member ? getMemberInitials(record.member) : 'V' }}
                       </div>
@@ -217,11 +173,7 @@
                       </p>
                     </div>
                   </div>
-                  <button
-                    class="btn-remove"
-                    (click)="removeAttendance(record.id)"
-                    title="Remove"
-                  >
+                  <button class="btn-remove" (click)="removeAttendance(record.id)" title="Remove">
                     <i class="ri-close-line"></i>
                   </button>
                 </div>
@@ -239,5 +191,3 @@
     </div>
   </div>
 </div>
-
-

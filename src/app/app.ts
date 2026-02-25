@@ -1,10 +1,8 @@
 // src/app/app.component.ts
-// FIXED VERSION V2 - No conflicting redirects
-
 import { Component, OnInit } from '@angular/core';
 import { Router, NavigationEnd, NavigationStart } from '@angular/router';
-import { filter } from 'rxjs/operators';
 import { AuthService } from './core/services/auth';
+import { SupabaseService } from './core/services/supabase';
 
 @Component({
   selector: 'app-root',
@@ -16,15 +14,25 @@ export class App implements OnInit {
   title = 'Churchman';
   showLayout = true;
 
+  // ✅ NEW: Track auth initialization
+  authInitialized = false;
+
   constructor(
     private router: Router,
-    private authService: AuthService
+    private authService: AuthService,
+    private supabase: SupabaseService // ✅ Add SupabaseService
   ) {
     // Clear stuck locks on first load ONLY
     this.clearStuckLocks();
   }
 
   ngOnInit(): void {
+    // ✅ NEW: Wait for auth to initialize
+    this.supabase.authInitialized$.subscribe(initialized => {
+      this.authInitialized = initialized;
+      console.log('Auth initialized:', initialized);
+    });
+
     // Debug routing
     this.router.events.subscribe(event => {
       if (event instanceof NavigationStart) {
@@ -35,9 +43,6 @@ export class App implements OnInit {
         this.showLayout = !event.url.includes('/auth');
       }
     });
-
-    // REMOVED: Manual auth redirect
-    // Let the routing configuration and AuthGuard handle redirects
   }
 
   private clearStuckLocks(): void {

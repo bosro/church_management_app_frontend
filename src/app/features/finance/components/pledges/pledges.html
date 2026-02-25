@@ -28,18 +28,18 @@
         </div>
 
 
-       
-        <!-- Success Message -->
-<div *ngIf="successMessage" class="success-alert">
-  <i class="ri-checkbox-circle-line"></i>
-  <span>{{ successMessage }}</span>
-</div>
 
-<!-- Error Message -->
-<div *ngIf="errorMessage" class="error-alert">
-  <i class="ri-error-warning-line"></i>
-  <span>{{ errorMessage }}</span>
-</div>
+        <!-- Success Message -->
+        <div *ngIf="successMessage" class="success-alert">
+          <i class="ri-checkbox-circle-line"></i>
+          <span>{{ successMessage }}</span>
+        </div>
+
+        <!-- Error Message -->
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i>
+          <span>{{ errorMessage }}</span>
+        </div>
 
         <!-- Loading State -->
         <div *ngIf="loading" class="loading-container">
@@ -48,7 +48,8 @@
 
         <!-- Pledges Grid -->
         <div *ngIf="!loading" class="pledges-grid">
-          <div *ngFor="let pledge of pledges" class="pledge-card">
+          <div *ngFor="let pledge of pledges" class="pledge-card" (click)="viewPledgeDetails(pledge.id)" role="button"
+            tabindex="0">
             <div class="pledge-header">
               <div class="member-info">
                 <div class="member-avatar-small">
