@@ -76,7 +76,7 @@ export class Header implements OnInit {
   }
 
   navigateToProfile(): void {
-    this.router.navigate(['main/settings/profile']);
+    this.router.navigate(['main/settings']);
     this.showUserMenu = false;
   }
 
