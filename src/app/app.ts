@@ -11,7 +11,7 @@ import { SupabaseService } from './core/services/supabase';
   styleUrl: './app.scss'
 })
 export class App implements OnInit {
-  title = 'Churchman';
+  title = 'Churchman.';
   showLayout = true;
 
   // ✅ NEW: Track auth initialization

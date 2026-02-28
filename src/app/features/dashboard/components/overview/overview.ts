@@ -2,7 +2,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { filter, takeUntil } from 'rxjs/operators';
 
 import { DashboardSummary } from '../../../../models/statistics.model';
 import { SupabaseService } from '../../../../core/services/supabase';
@@ -72,25 +72,33 @@ export class Overview implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    this.churchId = this.authService.getChurchId();
-    this.userRole = this.authService.currentProfile?.role;
+    // ✅ Wait for the profile to be loaded
+    this.authService.currentProfile$
+      .pipe(
+        takeUntil(this.destroy$),
+        filter(profile => profile !== null) // Only proceed when profile is loaded
+      )
+      .subscribe(profile => {
+        this.churchId = profile?.church_id;
+        this.userRole = profile?.role;
 
-    this.setPermissions();
+        this.setPermissions();
 
-    if (this.churchId) {
-      this.loadDashboardData();
-    } else {
-      this.hasError = true;
-      this.errorMessage =
-        'No church assigned to your account. Please contact administrator.';
-      this.loading = false;
-    }
+        if (this.churchId) {
+          this.loadDashboardData();
+        } else {
+          this.hasError = true;
+          this.errorMessage = 'No church assigned to your account. Please contact administrator.';
+          this.loading = false;
+        }
+      });
   }
 
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
   }
+
 
   private setPermissions(): void {
     const adminRoles = ['super_admin', 'church_admin', 'pastor'];

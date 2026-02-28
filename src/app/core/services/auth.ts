@@ -2,8 +2,23 @@
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { BehaviorSubject, Observable, from, of, throwError } from 'rxjs';
-import { map, catchError, tap, switchMap, retry, delay, filter, take } from 'rxjs/operators';
-import { User, AuthResponse, SignUpData, SignupRequest } from '../../models/user.model';
+import {
+  map,
+  catchError,
+  tap,
+  switchMap,
+  retry,
+  delay,
+  filter,
+  take,
+} from 'rxjs/operators';
+import {
+  User,
+  AuthResponse,
+  SignUpData,
+  SignupRequest,
+  UserRole,
+} from '../../models/user.model';
 import { SupabaseService } from './supabase';
 import { Church } from '../../models/church.model';
 
@@ -25,20 +40,22 @@ export class AuthService {
   }
 
   // In auth.service.ts
-private initializeAuth() {
-  // ✅ Wait for Supabase auth to initialize first
-  this.supabase.authInitialized$.pipe(
-    filter(initialized => initialized),
-    take(1),
-    switchMap(() => this.supabase.currentUser$)
-  ).subscribe(async (user) => {
-    if (user) {
-      await this.loadUserProfile(user.id);
-    } else {
-      this.currentProfileSubject.next(null);
-    }
-  });
-}
+  private initializeAuth() {
+    // ✅ Wait for Supabase auth to initialize first
+    this.supabase.authInitialized$
+      .pipe(
+        filter((initialized) => initialized),
+        take(1),
+        switchMap(() => this.supabase.currentUser$),
+      )
+      .subscribe(async (user) => {
+        if (user) {
+          await this.loadUserProfile(user.id);
+        } else {
+          this.currentProfileSubject.next(null);
+        }
+      });
+  }
 
   private async loadUserProfile(userId: string) {
     try {
@@ -69,6 +86,7 @@ private initializeAuth() {
   }
 
   // Sign In with Email & Password
+  // Sign In with Email & Password
   signIn(email: string, password: string): Observable<AuthResponse> {
     this.loadingSubject.next(true);
 
@@ -88,27 +106,52 @@ private initializeAuth() {
           throw new Error('Profile not found');
         }
 
-        // Check approval status - with null/undefined safety
-        const approvalStatus = profile[0].approval_status || 'pending';
+        const userProfile = profile[0];
+
+        console.log(
+          'Auth user email_confirmed_at:',
+          data.user?.email_confirmed_at,
+        );
+        console.log('User role:', userProfile.role);
+
+        // Check approval status FIRST
+        const approvalStatus = userProfile.approval_status || 'pending';
 
         if (approvalStatus === 'pending') {
-          // Sign out the user
           await this.supabase.client.auth.signOut();
-          throw new Error('Your account is pending admin approval. Please wait for approval email.');
+          throw new Error(
+            'Your account is pending admin approval. You will receive an email once approved.',
+          );
         }
 
         if (approvalStatus === 'rejected') {
           await this.supabase.client.auth.signOut();
-          throw new Error('Your signup request was not approved. Please contact support.');
+          throw new Error(
+            'Your signup request was not approved. Please contact support for more information.',
+          );
         }
 
-        if (!profile[0].is_active) {
+        // Check active status
+        if (!userProfile.is_active) {
           await this.supabase.client.auth.signOut();
           throw new Error('Your account is inactive. Please contact support.');
         }
 
+        // Define admin roles that can bypass email verification
+        const adminRoles: UserRole[] = ['super_admin', 'church_admin'];
+        const isAdmin = adminRoles.includes(userProfile.role);
+
+        // Check email verification - BYPASS for admins
+        // Use data.user.email_confirmed_at from auth, not userProfile.email_verified
+        if (!isAdmin && !data.user?.email_confirmed_at) {
+          await this.supabase.client.auth.signOut();
+          throw new Error(
+            'Please verify your email address before signing in. Check your inbox for the confirmation link.',
+          );
+        }
+
         return {
-          user: profile[0],
+          user: userProfile,
           session: data.session,
         };
       }),
@@ -116,7 +159,9 @@ private initializeAuth() {
       catchError((error) => {
         this.loadingSubject.next(false);
         console.error('Sign in error:', error);
-        return throwError(() => new Error(error.message || 'Failed to sign in'));
+        return throwError(
+          () => new Error(error.message || 'Failed to sign in'),
+        );
       }),
     );
   }
@@ -130,7 +175,7 @@ private initializeAuth() {
         email: signUpData.email,
         password: signUpData.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: `${window.location.origin}/auth/email-confirmed`,
           data: {
             full_name: signUpData.full_name,
           },
@@ -150,22 +195,26 @@ private initializeAuth() {
         console.log('User created successfully:', data.user.id);
 
         // Wait for profile creation trigger
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise((resolve) => setTimeout(resolve, 1000));
 
         try {
-          // Create signup request record with proper typing
-          const { data: signupRequest, error: requestError } = await this.supabase.insert<SignupRequest>('signup_requests', {
-            user_id: data.user.id,
-            full_name: signUpData.full_name,
-            email: signUpData.email,
-            phone: signUpData.phone,
-            position: signUpData.position,
-            church_name: signUpData.church_name,
-            church_location: signUpData.church_location,
-            church_size: signUpData.church_size,
-            how_heard: signUpData.how_heard,
-            status: 'pending',
-          });
+          // Determine role based on position
+          const suggestedRole = this.mapPositionToRole(signUpData.position);
+
+          // Create signup request record
+          const { data: signupRequest, error: requestError } =
+            await this.supabase.insert<SignupRequest>('signup_requests', {
+              user_id: data.user.id,
+              full_name: signUpData.full_name,
+              email: signUpData.email,
+              phone: signUpData.phone,
+              position: signUpData.position,
+              church_name: signUpData.church_name,
+              church_location: signUpData.church_location,
+              church_size: signUpData.church_size,
+              how_heard: signUpData.how_heard,
+              status: 'pending',
+            });
 
           if (requestError) {
             console.error('Signup request creation error:', requestError);
@@ -180,17 +229,19 @@ private initializeAuth() {
 
           // Send notification to admins via edge function
           try {
-            const { data: notifyData, error: notifyError } = await this.supabase.invokeEdgeFunction('notify-admin-signup', {
-              full_name: signUpData.full_name,
-              email: signUpData.email,
-              phone: signUpData.phone,
-              church_name: signUpData.church_name,
-              church_location: signUpData.church_location,
-              position: signUpData.position,
-              church_size: signUpData.church_size,
-              how_heard: signUpData.how_heard,
-              request_id: signupRequest[0].id,
-            });
+            const { data: notifyData, error: notifyError } =
+              await this.supabase.invokeEdgeFunction('notify-admin-signup', {
+                full_name: signUpData.full_name,
+                email: signUpData.email,
+                phone: signUpData.phone,
+                church_name: signUpData.church_name,
+                church_location: signUpData.church_location,
+                position: signUpData.position,
+                church_size: signUpData.church_size,
+                how_heard: signUpData.how_heard,
+                suggested_role: suggestedRole,
+                request_id: signupRequest[0].id,
+              });
 
             if (notifyError) {
               console.warn('Failed to send admin notification:', notifyError);
@@ -199,21 +250,23 @@ private initializeAuth() {
             }
           } catch (notifyError) {
             console.warn('Failed to send admin notification:', notifyError);
-            // Don't throw - signup still succeeded
           }
 
           return {
             ...data,
+            needsEmailConfirmation: !data.user.email_confirmed_at,
             pendingApproval: true,
-            message: 'Signup request submitted. An admin will review your request and you will receive an email notification.'
+            message:
+              'Please check your email to confirm your account. After email confirmation, an administrator will review your signup request.',
           };
-
         } catch (postSignupError) {
           console.error('Post-signup process error:', postSignupError);
           return {
             ...data,
+            needsEmailConfirmation: true,
             pendingApproval: true,
-            message: 'Account created. Awaiting admin approval.'
+            message:
+              'Account created. Please check your email to confirm your account.',
           };
         }
       }),
@@ -239,6 +292,19 @@ private initializeAuth() {
     );
   }
 
+  private mapPositionToRole(position: string): UserRole {
+    const roleMap: Record<string, UserRole> = {
+      senior_pastor: 'pastor',
+      associate_pastor: 'pastor',
+      church_administrator: 'church_admin',
+      worship_leader: 'ministry_leader',
+      youth_pastor: 'ministry_leader',
+      elder: 'elder',
+    };
+
+    return roleMap[position] || 'member';
+  }
+
   // Sign In with Google
   signInWithGoogle(): Observable<any> {
     return from(
@@ -252,7 +318,7 @@ private initializeAuth() {
       catchError((error) => {
         console.error('Google sign in error:', error);
         return throwError(() => new Error('Failed to sign in with Google'));
-      })
+      }),
     );
   }
 
@@ -279,8 +345,10 @@ private initializeAuth() {
     ).pipe(
       catchError((error) => {
         console.error('Password reset error:', error);
-        return throwError(() => new Error('Failed to send password reset email'));
-      })
+        return throwError(
+          () => new Error('Failed to send password reset email'),
+        );
+      }),
     );
   }
 
@@ -294,7 +362,7 @@ private initializeAuth() {
       catchError((error) => {
         console.error('Password update error:', error);
         return throwError(() => new Error('Failed to update password'));
-      })
+      }),
     );
   }
 
@@ -310,7 +378,7 @@ private initializeAuth() {
       catchError((error) => {
         console.error('OTP verification error:', error);
         return throwError(() => new Error('Failed to verify OTP'));
-      })
+      }),
     );
   }
 
@@ -325,7 +393,7 @@ private initializeAuth() {
       catchError((error) => {
         console.error('Resend OTP error:', error);
         return throwError(() => new Error('Failed to resend OTP'));
-      })
+      }),
     );
   }
 
@@ -408,12 +476,12 @@ private initializeAuth() {
         request_id: requestId,
         admin_id: this.getUserId(),
         assign_church_id: churchId || null,
-      })
+      }),
     ).pipe(
       catchError((error) => {
         console.error('Approve request error:', error);
         return throwError(() => new Error('Failed to approve signup request'));
-      })
+      }),
     );
   }
 
@@ -426,12 +494,12 @@ private initializeAuth() {
         request_id: requestId,
         admin_id: this.getUserId(),
         reason: reason || null,
-      })
+      }),
     ).pipe(
       catchError((error) => {
         console.error('Reject request error:', error);
         return throwError(() => new Error('Failed to reject signup request'));
-      })
+      }),
     );
   }
 
@@ -444,7 +512,7 @@ private initializeAuth() {
         filters: { status: 'pending' },
         select: '*',
         order: { column: 'created_at', ascending: false },
-      })
+      }),
     ).pipe(
       map(({ data, error }) => {
         if (error) throw error;
@@ -453,7 +521,7 @@ private initializeAuth() {
       catchError((error) => {
         console.error('Get signup requests error:', error);
         return throwError(() => new Error('Failed to load signup requests'));
-      })
+      }),
     );
   }
 }

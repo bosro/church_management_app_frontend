@@ -1,0 +1,279 @@
+<!-- src/app/features/attendance/components/check-in/check-in.component.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+
+  <div class="dashboard-content">
+    <app-header></app-header>
+
+    <div class="dashboard-body">
+      <div class="attendance-container">
+        <!-- Page Header -->
+        <div class="page-header">
+          <div class="header-left">
+            <h1>Quick Check-In</h1>
+            <p class="subtitle">Select an event to check in members and visitors</p>
+          </div>
+          <div class="header-actions">
+            <button class="btn-secondary" routerLink="/main/attendance">
+              <i class="ri-arrow-left-line"></i>
+              <span>All Events</span>
+            </button>
+            <button
+              *ngIf="canCreateEvent"
+              class="btn-primary"
+              (click)="createEvent()"
+            >
+              <i class="ri-add-line"></i>
+              <span>Create Event</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Loading State -->
+        <div *ngIf="loading" class="loading-container">
+          <app-loading-spinner message="Loading events..."></app-loading-spinner>
+        </div>
+
+        <!-- Error State -->
+        <div *ngIf="!loading && hasError" class="events-grid">
+          <div class="empty-state">
+            <i class="ri-error-warning-line"></i>
+            <h3>Failed to Load Events</h3>
+            <p>{{ errorMessage }}</p>
+            <button class="btn-primary" (click)="retryLoad()">
+              <i class="ri-refresh-line"></i>
+              Retry
+            </button>
+          </div>
+        </div>
+
+        <!-- Content -->
+        <div *ngIf="!loading && !hasError">
+          <!-- Today's Events -->
+          <div *ngIf="todayEvents.length > 0">
+            <div class="section-header">
+              <h2>Today's Events</h2>
+              <span class="event-badge">{{ todayEvents.length }} event{{ todayEvents.length > 1 ? 's' : '' }}</span>
+            </div>
+
+            <div class="events-grid">
+              <div
+                *ngFor="let event of todayEvents"
+                class="event-card today-highlight"
+                (click)="goToMarkAttendance(event.id)"
+              >
+                <div class="event-header">
+                  <div class="event-type-badge" [ngClass]="getEventTypeClass(event.event_type)">
+                    {{ getEventTypeLabel(event.event_type) }}
+                  </div>
+                  <div class="today-badge">
+                    <i class="ri-time-line"></i>
+                    Today
+                  </div>
+                </div>
+
+                <div class="event-body">
+                  <h3 class="event-name">{{ event.event_name }}</h3>
+
+                  <div class="event-details">
+                    <div class="detail-item" *ngIf="event.event_time">
+                      <i class="ri-time-line"></i>
+                      <span>{{ formatTime(event.event_time) }}</span>
+                    </div>
+
+                    <div class="detail-item" *ngIf="event.location">
+                      <i class="ri-map-pin-line"></i>
+                      <span>{{ event.location }}</span>
+                    </div>
+
+                    <div class="detail-item">
+                      <i class="ri-group-line"></i>
+                      <span>{{ event.total_attendance || 0 }} checked in</span>
+                    </div>
+                  </div>
+
+                  <div class="event-stats">
+                    <div class="stat-item">
+                      <div class="stat-icon-small">
+                        <i class="ri-group-line"></i>
+                      </div>
+                      <div>
+                        <p class="stat-number">{{ event.total_attendance || 0 }}</p>
+                        <p class="stat-text">Attended</p>
+                      </div>
+                    </div>
+
+                    <div class="stat-item" *ngIf="event.expected_attendance">
+                      <div class="stat-icon-small">
+                        <i class="ri-user-line"></i>
+                      </div>
+                      <div>
+                        <p class="stat-number">{{ event.expected_attendance }}</p>
+                        <p class="stat-text">Expected</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button class="check-in-action-btn">
+                    <i class="ri-checkbox-line"></i>
+                    Check In Members
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Upcoming Events -->
+          <div *ngIf="upcomingEvents.length > 0" style="margin-top: 2rem;">
+            <div class="section-header">
+              <h2>Upcoming Events</h2>
+              <span class="event-badge">{{ upcomingEvents.length }} event{{ upcomingEvents.length > 1 ? 's' : '' }}</span>
+            </div>
+
+            <div class="events-grid">
+              <div
+                *ngFor="let event of upcomingEvents"
+                class="event-card"
+                (click)="goToEventDetails(event.id)"
+              >
+                <div class="event-header">
+                  <div class="event-type-badge" [ngClass]="getEventTypeClass(event.event_type)">
+                    {{ getEventTypeLabel(event.event_type) }}
+                  </div>
+                  <div class="event-actions">
+                    <button
+                      class="btn-icon-small"
+                      (click)="goToMarkAttendance(event.id); $event.stopPropagation()"
+                      title="Mark Attendance"
+                    >
+                      <i class="ri-checkbox-line"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="event-body">
+                  <h3 class="event-name">{{ event.event_name }}</h3>
+
+                  <div class="event-details">
+                    <div class="detail-item">
+                      <i class="ri-calendar-line"></i>
+                      <span>{{ formatDate(event.event_date) }}</span>
+                    </div>
+
+                    <div class="detail-item" *ngIf="event.event_time">
+                      <i class="ri-time-line"></i>
+                      <span>{{ formatTime(event.event_time) }}</span>
+                    </div>
+
+                    <div class="detail-item" *ngIf="event.location">
+                      <i class="ri-map-pin-line"></i>
+                      <span>{{ event.location }}</span>
+                    </div>
+                  </div>
+
+                  <div class="event-stats" *ngIf="event.expected_attendance">
+                    <div class="stat-item">
+                      <div class="stat-icon-small">
+                        <i class="ri-user-line"></i>
+                      </div>
+                      <div>
+                        <p class="stat-number">{{ event.expected_attendance }}</p>
+                        <p class="stat-text">Expected</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recent Events -->
+          <div *ngIf="recentEvents.length > 0" style="margin-top: 2rem;">
+            <div class="section-header">
+              <h2>Recent Events</h2>
+              <span class="event-badge">{{ recentEvents.length }} event{{ recentEvents.length > 1 ? 's' : '' }}</span>
+            </div>
+
+            <div class="events-grid">
+              <div
+                *ngFor="let event of recentEvents"
+                class="event-card"
+                (click)="goToEventDetails(event.id)"
+              >
+                <div class="event-header">
+                  <div class="event-type-badge" [ngClass]="getEventTypeClass(event.event_type)">
+                    {{ getEventTypeLabel(event.event_type) }}
+                  </div>
+                  <div class="event-actions">
+                    <button
+                      class="btn-icon-small"
+                      (click)="goToEventDetails(event.id); $event.stopPropagation()"
+                      title="View Details"
+                    >
+                      <i class="ri-eye-line"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="event-body">
+                  <h3 class="event-name">{{ event.event_name }}</h3>
+
+                  <div class="event-details">
+                    <div class="detail-item">
+                      <i class="ri-calendar-line"></i>
+                      <span>{{ formatDate(event.event_date) }}</span>
+                    </div>
+
+                    <div class="detail-item" *ngIf="event.event_time">
+                      <i class="ri-time-line"></i>
+                      <span>{{ formatTime(event.event_time) }}</span>
+                    </div>
+                  </div>
+
+                  <div class="event-stats">
+                    <div class="stat-item">
+                      <div class="stat-icon-small">
+                        <i class="ri-group-line"></i>
+                      </div>
+                      <div>
+                        <p class="stat-number">{{ event.total_attendance || 0 }}</p>
+                        <p class="stat-text">Attended</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Empty State -->
+          <div
+            *ngIf="todayEvents.length === 0 && upcomingEvents.length === 0 && recentEvents.length === 0"
+            class="events-grid"
+          >
+            <div class="empty-state">
+              <i class="ri-calendar-event-line"></i>
+              <h3>No Events Found</h3>
+              <p>There are no events available for check-in at the moment.</p>
+              <button
+                *ngIf="canCreateEvent"
+                class="btn-primary"
+                (click)="createEvent()"
+              >
+                <i class="ri-add-line"></i>
+                Create Your First Event
+              </button>
+              <button
+                *ngIf="!canCreateEvent"
+                class="btn-secondary"
+                routerLink="/main/attendance"
+              >
+                View All Events
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

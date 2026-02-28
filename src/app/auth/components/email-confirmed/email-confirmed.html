@@ -1,0 +1,80 @@
+<!-- src/app/features/auth/components/email-confirmed/email-confirmed.component.html -->
+<div class="email-confirmed-container">
+  <div class="email-confirmed-card">
+    <!-- Success Icon -->
+    <div class="success-icon-wrapper">
+      <div class="success-icon">
+        <i class="ri-mail-check-line"></i>
+      </div>
+      <div class="success-checkmark">
+        <i class="ri-checkbox-circle-fill"></i>
+      </div>
+    </div>
+
+    <!-- Header -->
+    <div class="confirmation-header">
+      <h1>Email Confirmed!</h1>
+      <p class="subtitle">Your email has been successfully verified</p>
+    </div>
+
+    <!-- Info Card -->
+    <div class="info-card">
+      <div class="info-header">
+        <i class="ri-information-line"></i>
+        <span>What happens next?</span>
+      </div>
+
+      <div class="info-steps">
+        <div class="step-item">
+          <div class="step-icon completed">
+            <i class="ri-mail-check-line"></i>
+          </div>
+          <div class="step-content">
+            <h3>Email Verified</h3>
+            <p>Your email address has been confirmed</p>
+          </div>
+        </div>
+
+        <div class="step-divider"></div>
+
+        <div class="step-item">
+          <div class="step-icon pending">
+            <i class="ri-shield-user-line"></i>
+          </div>
+          <div class="step-content">
+            <h3>Admin Review</h3>
+            <p>Our team is reviewing your signup request</p>
+          </div>
+        </div>
+
+        <div class="step-divider"></div>
+
+        <div class="step-item">
+          <div class="step-icon pending">
+            <i class="ri-checkbox-circle-line"></i>
+          </div>
+          <div class="step-content">
+            <h3>Account Approval</h3>
+            <p>You'll receive an email when approved</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Action Button -->
+    <button class="btn-primary" (click)="goToSignIn()">
+      <i class="ri-login-box-line"></i>
+      Go to Sign In
+    </button>
+
+    <!-- Countdown -->
+    <p class="countdown-text">
+      Redirecting to sign in page in {{ countdown }} second{{ countdown !== 1 ? 's' : '' }}...
+    </p>
+
+    <!-- Support Link -->
+    <p class="support-text">
+      Need help? <a href="mailto:support@churchman.app">Contact Support</a>
+    </p>
+  </div>
+</div>

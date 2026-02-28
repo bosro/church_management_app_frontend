@@ -4,11 +4,15 @@
     <!-- Header -->
     <div class="signup-header">
       <h1>Welcome to Churchman.</h1>
-      <h2>Sign Up to get started.</h2>
+      <h2>
+        {{ currentStep === 1 ? 'Sign Up to get started.' :
+           currentStep === 2 ? 'Complete Your Registration' :
+           'Registration Submitted!' }}
+      </h2>
       <p class="subtitle">
         {{ currentStep === 1 ? 'Enter your details to proceed further' :
            currentStep === 2 ? 'Enter your details to proceed further' :
-           'Enter the OTP sent to your mail to complete the registration..' }}
+           'Check your email to complete the process' }}
       </p>
     </div>
 
@@ -16,6 +20,12 @@
     <div *ngIf="errorMessage" class="error-alert">
       <i class="ri-error-warning-line"></i>
       <span>{{ errorMessage }}</span>
+    </div>
+
+    <!-- Success Alert -->
+    <div *ngIf="successMessage && currentStep === 3" class="success-alert">
+      <i class="ri-checkbox-circle-line"></i>
+      <span>{{ successMessage }}</span>
     </div>
 
     <!-- Step 1: Basic Information -->
@@ -85,7 +95,7 @@
 
       <!-- Position -->
       <div class="form-group">
-        <label for="position">Position in Chuch</label>
+        <label for="position">Position in Church</label>
         <div class="input-wrapper select-wrapper">
           <select
             id="position"
@@ -279,18 +289,59 @@
           (click)="nextStep()"
           [disabled]="loading"
         >
-          <span *ngIf="!loading">Next</span>
+          <span *ngIf="!loading">Submit</span>
           <span *ngIf="loading">Creating Account...</span>
         </button>
       </div>
     </form>
 
-    <!-- Step 3: OTP Verification -->
-    <div *ngIf="currentStep === 3" class="otp-step">
-      <app-otp-verification
-        [email]="signupForm.get('email')?.value"
-        (verified)="onOtpVerified()"
-      ></app-otp-verification>
+    <!-- Step 3: Success Message -->
+    <div *ngIf="currentStep === 3" class="success-step">
+      <div class="success-icon">
+        <i class="ri-mail-send-line"></i>
+      </div>
+
+      <h3>Check Your Email!</h3>
+
+      <p class="success-description">
+        We've sent a confirmation link to <strong>{{ signupForm.get('email')?.value }}</strong>
+      </p>
+
+      <p class="success-description">
+        Click the link in the email to verify your account. After verification, an administrator will review your signup request and you'll receive another email once approved.
+      </p>
+
+      <div class="success-steps">
+        <div class="step-item">
+          <div class="step-number">1</div>
+          <div class="step-text">
+            <strong>Verify Email</strong>
+            <p>Click the link we sent you</p>
+          </div>
+        </div>
+        <div class="step-item">
+          <div class="step-number">2</div>
+          <div class="step-text">
+            <strong>Admin Review</strong>
+            <p>We'll review your request</p>
+          </div>
+        </div>
+        <div class="step-item">
+          <div class="step-number">3</div>
+          <div class="step-text">
+            <strong>Get Approved</strong>
+            <p>Receive approval email</p>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-primary" (click)="goToSignIn()">
+        Go to Sign In
+      </button>
+
+      <p class="resend-note">
+        Didn't receive the email? Check your spam folder or contact support.
+      </p>
     </div>
   </div>
 </div>

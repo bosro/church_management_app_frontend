@@ -126,7 +126,7 @@ const routes: Routes = [
 ];
 
 @NgModule({
-  declarations: [Features],
+  declarations: [Features,],
   imports: [CommonModule, RouterModule.forChild(routes)],
 })
 export class FeaturesModule {}

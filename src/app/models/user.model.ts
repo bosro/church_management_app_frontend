@@ -1,5 +1,5 @@
 // src/app/models/user.model.ts
-export type UserRole = 'super_admin' | 'church_admin' | 'pastor' | 'finance_officer' | 'group_leader' | 'member';
+export type UserRole = 'super_admin' | 'church_admin' | 'pastor' | 'finance_officer' | 'ministry_leader' | 'group_leader' | 'elder' | 'member';
 
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
 
@@ -12,12 +12,16 @@ export interface User {
   role: UserRole;
   church_id?: string;
   branch_id?: string;
-  is_active: boolean;
 
-  // Approval fields
-  approval_status?: ApprovalStatus;
+  // Status fields
+  is_active: boolean;
+  approval_status: ApprovalStatus;
   approved_by?: string;
   approved_at?: string;
+
+  // Email verification
+  email_verified: boolean;
+  email_verified_at?: string;
 
   created_at: string;
   updated_at: string;
@@ -40,7 +44,6 @@ export interface SignUpData {
   how_heard: string;
 }
 
-// Signup Request Model
 export interface SignupRequest {
   id: string;
   user_id: string;

@@ -304,3 +304,144 @@
     }
   }
 }
+
+
+// Add to signup.component.scss
+
+.success-alert {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  background: #D1FAE5;
+  border: 1px solid #10B981;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  animation: slideDown 0.3s ease;
+
+  i {
+    font-size: 1.25rem;
+    color: #059669;
+  }
+
+  span {
+    font-size: 0.875rem;
+    color: #065F46;
+  }
+}
+
+.success-step {
+  text-align: center;
+  padding: 2rem 0;
+  animation: fadeIn 0.4s ease;
+
+  .success-icon {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 1.5rem;
+    background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    i {
+      font-size: 2.5rem;
+      color: white;
+    }
+  }
+
+  h3 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #111827;
+    margin: 0 0 1rem 0;
+  }
+
+  .success-description {
+    font-size: 0.9375rem;
+    color: #6B7280;
+    margin: 0 0 1rem 0;
+    line-height: 1.6;
+
+    strong {
+      color: #374151;
+      font-weight: 600;
+    }
+  }
+
+  .success-steps {
+    margin: 2rem 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+
+    .step-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      text-align: left;
+      padding: 1rem;
+      background: #F9FAFB;
+      border-radius: 8px;
+
+      .step-number {
+        width: 32px;
+        height: 32px;
+        background: #5B21B6;
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 0.875rem;
+        flex-shrink: 0;
+      }
+
+      .step-text {
+        flex: 1;
+
+        strong {
+          display: block;
+          font-size: 0.9375rem;
+          color: #111827;
+          margin-bottom: 0.25rem;
+        }
+
+        p {
+          font-size: 0.8125rem;
+          color: #6B7280;
+          margin: 0;
+        }
+      }
+    }
+  }
+
+  .btn-primary {
+    width: 100%;
+    padding: 0.875rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 700;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'Nunito Sans', sans-serif;
+    background: #5B21B6;
+    color: white;
+    margin-top: 1rem;
+
+    &:hover {
+      background: #6D28D9;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(91, 33, 182, 0.3);
+    }
+  }
+
+  .resend-note {
+    font-size: 0.8125rem;
+    color: #9CA3AF;
+    margin-top: 1.5rem;
+  }
+}

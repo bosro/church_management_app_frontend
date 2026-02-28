@@ -6,7 +6,7 @@ import { ForgotPassword } from './components/forgot-password/forgot-password';
 import { Signin } from './components/signin/signin';
 import { Signup } from './components/signup/signup';
 import { AuthLayout } from './components/auth-layout/auth-layout';
-
+import { EmailConfirmed } from './components/email-confirmed/email-confirmed';
 
 const routes: Routes = [
   {
@@ -17,13 +17,18 @@ const routes: Routes = [
       { path: 'signin', component: Signin },
       { path: 'signup', component: Signup },
       { path: 'otp-verification', component: OtpVerification },
-      { path: 'forgot-password', component: ForgotPassword }
-    ]
-  }
+      { path: 'forgot-password', component: ForgotPassword },
+      {
+        path: 'email-confirmed',
+        component: EmailConfirmed,
+            data: { title: 'Email Confirmed' }
+      },
+    ],
+  },
 ];
 
 @NgModule({
   imports: [RouterModule.forChild(routes)],
-  exports: [RouterModule]
+  exports: [RouterModule],
 })
-export class AuthRoutingModule { }
+export class AuthRoutingModule {}

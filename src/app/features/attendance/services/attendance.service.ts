@@ -13,7 +13,7 @@ import {
   AttendanceReportData,
   BulkCheckInResult,
   VisitorCheckInData,
-  CheckInMethod
+  CheckInMethod,
 } from '../../../models/attendance.model';
 
 @Injectable({
@@ -33,12 +33,24 @@ export class AttendanceService {
   }
 
   canViewAttendance(): boolean {
-    const roles = ['super_admin', 'church_admin', 'pastor', 'ministry_leader', 'secretary'];
+    const roles = [
+      'super_admin',
+      'church_admin',
+      'pastor',
+      'ministry_leader',
+      'secretary',
+    ];
     return this.authService.hasRole(roles);
   }
 
   canMarkAttendance(): boolean {
-    const roles = ['super_admin', 'church_admin', 'pastor', 'ministry_leader', 'usher'];
+    const roles = [
+      'super_admin',
+      'church_admin',
+      'pastor',
+      'ministry_leader',
+      'usher',
+    ];
     return this.authService.hasRole(roles);
   }
 
@@ -51,7 +63,7 @@ export class AttendanceService {
       eventType?: AttendanceEventType;
       startDate?: string;
       endDate?: string;
-    }
+    },
   ): Observable<{ data: AttendanceEvent[]; count: number }> {
     const churchId = this.authService.getChurchId();
     const offset = (page - 1) * pageSize;
@@ -81,12 +93,12 @@ export class AttendanceService {
         if (error) throw new Error(error.message);
 
         return { data: data as AttendanceEvent[], count: count || 0 };
-      })()
+      })(),
     ).pipe(
-      catchError(err => {
+      catchError((err) => {
         console.error('Error loading attendance events:', err);
         return throwError(() => err);
-      })
+      }),
     );
   }
 
@@ -99,31 +111,29 @@ export class AttendanceService {
         .select('*')
         .eq('id', eventId)
         .eq('church_id', churchId)
-        .single()
+        .single(),
     ).pipe(
       map(({ data, error }) => {
         if (error) throw new Error(error.message);
         if (!data) throw new Error('Event not found');
         return data as AttendanceEvent;
       }),
-      catchError(err => {
+      catchError((err) => {
         console.error('Error loading event:', err);
         return throwError(() => err);
-      })
+      }),
     );
   }
 
-  createAttendanceEvent(
-    eventData: {
-      event_type: AttendanceEventType;
-      event_name: string;
-      event_date: string;
-      event_time?: string;
-      location?: string;
-      expected_attendance?: number;
-      notes?: string;
-    }
-  ): Observable<AttendanceEvent> {
+  createAttendanceEvent(eventData: {
+    event_type: AttendanceEventType;
+    event_name: string;
+    event_date: string;
+    event_time?: string;
+    location?: string;
+    expected_attendance?: number;
+    notes?: string;
+  }): Observable<AttendanceEvent> {
     const churchId = this.authService.getChurchId();
     const userId = this.authService.getUserId();
 
@@ -144,24 +154,25 @@ export class AttendanceService {
         expected_attendance: eventData.expected_attendance || null,
         notes: eventData.notes?.trim() || null,
         total_attendance: 0,
-        created_by: userId
-      } as any)
+        created_by: userId,
+      } as any),
     ).pipe(
       map(({ data, error }) => {
         if (error) throw new Error(error.message);
-        if (!data || data.length === 0) throw new Error('Failed to create event');
+        if (!data || data.length === 0)
+          throw new Error('Failed to create event');
         return data[0];
       }),
-      catchError(err => {
+      catchError((err) => {
         console.error('Error creating event:', err);
         return throwError(() => err);
-      })
+      }),
     );
   }
 
   updateAttendanceEvent(
     eventId: string,
-    eventData: Partial<AttendanceEvent>
+    eventData: Partial<AttendanceEvent>,
   ): Observable<AttendanceEvent> {
     const churchId = this.authService.getChurchId();
 
@@ -181,21 +192,26 @@ export class AttendanceService {
 
         const updateData = {
           ...eventData,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         };
 
-        return this.supabase.update<AttendanceEvent>('attendance_events', eventId, updateData);
-      })()
+        return this.supabase.update<AttendanceEvent>(
+          'attendance_events',
+          eventId,
+          updateData,
+        );
+      })(),
     ).pipe(
       map(({ data, error }) => {
         if (error) throw new Error(error.message);
-        if (!data || data.length === 0) throw new Error('Failed to update event');
+        if (!data || data.length === 0)
+          throw new Error('Failed to update event');
         return data[0];
       }),
-      catchError(err => {
+      catchError((err) => {
         console.error('Error updating event:', err);
         return throwError(() => err);
-      })
+      }),
     );
   }
 
@@ -218,19 +234,21 @@ export class AttendanceService {
 
         // Warn if event has attendance records
         if (existing.total_attendance > 0) {
-          console.warn(`Deleting event with ${existing.total_attendance} attendance records`);
+          console.warn(
+            `Deleting event with ${existing.total_attendance} attendance records`,
+          );
         }
 
         return this.supabase.delete('attendance_events', eventId);
-      })()
+      })(),
     ).pipe(
       map(({ error }) => {
         if (error) throw new Error(error.message);
       }),
-      catchError(err => {
+      catchError((err) => {
         console.error('Error deleting event:', err);
         return throwError(() => err);
-      })
+      }),
     );
   }
 
@@ -240,17 +258,19 @@ export class AttendanceService {
     eventId: string,
     filters?: {
       memberType?: 'member' | 'visitor';
-    }
+    },
   ): Observable<AttendanceRecord[]> {
     return from(
       (async () => {
         let query = this.supabase.client
           .from('attendance_records')
-          .select(`
+          .select(
+            `
             *,
             member:members(id, first_name, last_name, middle_name, photo_url, member_number),
             visitor:visitors(id, first_name, last_name)
-          `)
+          `,
+          )
           .eq('attendance_event_id', eventId);
 
         if (filters?.memberType === 'member') {
@@ -259,24 +279,26 @@ export class AttendanceService {
           query = query.not('visitor_id', 'is', null);
         }
 
-        const { data, error } = await query.order('checked_in_at', { ascending: false });
+        const { data, error } = await query.order('checked_in_at', {
+          ascending: false,
+        });
 
         if (error) throw new Error(error.message);
 
         return data as AttendanceRecord[];
-      })()
+      })(),
     ).pipe(
-      catchError(err => {
+      catchError((err) => {
         console.error('Error loading attendance records:', err);
         return throwError(() => err);
-      })
+      }),
     );
   }
 
   checkInMember(
     eventId: string,
     memberId: string,
-    method: CheckInMethod = 'manual'
+    method: CheckInMethod = 'manual',
   ): Observable<AttendanceRecord> {
     const userId = this.authService.getUserId();
     const churchId = this.authService.getChurchId();
@@ -327,8 +349,8 @@ export class AttendanceService {
             member_id: memberId,
             checked_in_at: new Date().toISOString(),
             checked_in_by: userId,
-            check_in_method: method
-          } as any
+            check_in_method: method,
+          } as any,
         );
 
         if (error) throw new Error(error.message);
@@ -337,18 +359,18 @@ export class AttendanceService {
         await this.updateEventAttendanceCount(eventId);
 
         return data![0];
-      })()
+      })(),
     ).pipe(
-      catchError(err => {
+      catchError((err) => {
         console.error('Check-in error:', err);
         return throwError(() => err);
-      })
+      }),
     );
   }
 
   checkInVisitor(
     eventId: string,
-    visitorData: VisitorCheckInData
+    visitorData: VisitorCheckInData,
   ): Observable<AttendanceRecord> {
     const churchId = this.authService.getChurchId();
     const userId = this.authService.getUserId();
@@ -395,13 +417,12 @@ export class AttendanceService {
           // Update existing visitor
           await this.supabase.update('visitors', visitor.id, {
             last_visit_date: new Date().toISOString().split('T')[0],
-            visit_count: visitor.visit_count + 1
+            visit_count: visitor.visit_count + 1,
           });
         } else {
           // Create new visitor
-          const { data: newVisitor, error: visitorError } = await this.supabase.insert<Visitor>(
-            'visitors',
-            {
+          const { data: newVisitor, error: visitorError } =
+            await this.supabase.insert<Visitor>('visitors', {
               church_id: churchId,
               first_name: visitorData.first_name.trim(),
               last_name: visitorData.last_name.trim(),
@@ -413,25 +434,22 @@ export class AttendanceService {
               first_visit_date: new Date().toISOString().split('T')[0],
               last_visit_date: new Date().toISOString().split('T')[0],
               visit_count: 1,
-              is_converted_to_member: false
-            } as any
-          );
+              is_converted_to_member: false,
+            } as any);
 
           if (visitorError) throw new Error(visitorError.message);
           visitor = newVisitor![0];
         }
 
         // Create attendance record
-        const { data: attendanceData, error: attendanceError } = await this.supabase.insert<AttendanceRecord>(
-          'attendance_records',
-          {
+        const { data: attendanceData, error: attendanceError } =
+          await this.supabase.insert<AttendanceRecord>('attendance_records', {
             attendance_event_id: eventId,
             visitor_id: visitor!.id,
             checked_in_at: new Date().toISOString(),
             checked_in_by: userId,
-            check_in_method: 'manual'
-          } as any
-        );
+            check_in_method: 'manual',
+          } as any);
 
         if (attendanceError) throw new Error(attendanceError.message);
 
@@ -439,18 +457,18 @@ export class AttendanceService {
         await this.updateEventAttendanceCount(eventId);
 
         return attendanceData![0];
-      })()
+      })(),
     ).pipe(
-      catchError(err => {
+      catchError((err) => {
         console.error('Visitor check-in error:', err);
         return throwError(() => err);
-      })
+      }),
     );
   }
 
   bulkCheckIn(
     eventId: string,
-    memberIds: string[]
+    memberIds: string[],
   ): Observable<BulkCheckInResult> {
     if (!memberIds || memberIds.length === 0) {
       return throwError(() => new Error('No members selected'));
@@ -473,12 +491,12 @@ export class AttendanceService {
         }
 
         return { success, errors, failed_members };
-      })()
+      })(),
     ).pipe(
-      catchError(err => {
+      catchError((err) => {
         console.error('Bulk check-in error:', err);
         return throwError(() => err);
-      })
+      }),
     );
   }
 
@@ -499,17 +517,20 @@ export class AttendanceService {
           throw new Error('Event not found or access denied');
         }
 
-        const { error } = await this.supabase.delete('attendance_records', recordId);
+        const { error } = await this.supabase.delete(
+          'attendance_records',
+          recordId,
+        );
         if (error) throw new Error(error.message);
 
         // Update event total attendance
         await this.updateEventAttendanceCount(eventId);
-      })()
+      })(),
     ).pipe(
-      catchError(err => {
+      catchError((err) => {
         console.error('Error removing attendance record:', err);
         return throwError(() => err);
-      })
+      }),
     );
   }
 
@@ -520,7 +541,7 @@ export class AttendanceService {
       .eq('attendance_event_id', eventId);
 
     await this.supabase.update('attendance_events', eventId, {
-      total_attendance: count || 0
+      total_attendance: count || 0,
     });
   }
 
@@ -543,11 +564,12 @@ export class AttendanceService {
           .select('total_attendance')
           .eq('church_id', churchId);
 
-        const attendances = events?.map(e => e.total_attendance) || [];
+        const attendances = events?.map((e) => e.total_attendance) || [];
         const totalAttendance = attendances.reduce((sum, a) => sum + a, 0);
-        const avgAttendance = events && events.length > 0
-          ? Math.round(totalAttendance / events.length)
-          : 0;
+        const avgAttendance =
+          events && events.length > 0
+            ? Math.round(totalAttendance / events.length)
+            : 0;
 
         // Visitors
         const { count: totalVisitors } = await this.supabase.client
@@ -565,24 +587,26 @@ export class AttendanceService {
           total_events: totalEvents || 0,
           total_attendance: totalAttendance,
           avg_attendance: avgAttendance,
-          highest_attendance: attendances.length > 0 ? Math.max(...attendances) : 0,
-          lowest_attendance: attendances.length > 0 ? Math.min(...attendances) : 0,
+          highest_attendance:
+            attendances.length > 0 ? Math.max(...attendances) : 0,
+          lowest_attendance:
+            attendances.length > 0 ? Math.min(...attendances) : 0,
           total_visitors: totalVisitors || 0,
-          converted_visitors: convertedVisitors || 0
+          converted_visitors: convertedVisitors || 0,
         };
-      })()
+      })(),
     ).pipe(
-      catchError(err => {
+      catchError((err) => {
         console.error('Error loading statistics:', err);
         return throwError(() => err);
-      })
+      }),
     );
   }
 
   getAttendanceReport(
     startDate: string,
     endDate: string,
-    serviceType?: string
+    serviceType?: string,
   ): Observable<AttendanceReportData[]> {
     const churchId = this.authService.getChurchId();
 
@@ -590,13 +614,15 @@ export class AttendanceService {
       (async () => {
         let query = this.supabase.client
           .from('attendance_events')
-          .select(`
+          .select(
+            `
             id,
             event_type,
             event_date,
             expected_attendance,
             total_attendance
-          `)
+          `,
+          )
           .eq('church_id', churchId)
           .gte('event_date', startDate)
           .lte('event_date', endDate)
@@ -611,13 +637,15 @@ export class AttendanceService {
         if (error) throw new Error(error.message);
 
         // Transform to report format
-        const reports: AttendanceReportData[] = (events || []).map(event => {
-          const totalMembers = event.expected_attendance || event.total_attendance;
+        const reports: AttendanceReportData[] = (events || []).map((event) => {
+          const totalMembers =
+            event.expected_attendance || event.total_attendance;
           const totalPresent = event.total_attendance;
           const totalAbsent = Math.max(0, totalMembers - totalPresent);
-          const attendanceRate = totalMembers > 0
-            ? Math.round((totalPresent / totalMembers) * 100)
-            : 0;
+          const attendanceRate =
+            totalMembers > 0
+              ? Math.round((totalPresent / totalMembers) * 100)
+              : 0;
 
           return {
             date: event.event_date,
@@ -625,17 +653,17 @@ export class AttendanceService {
             total_present: totalPresent,
             total_absent: totalAbsent,
             total_members: totalMembers,
-            attendance_rate: attendanceRate
+            attendance_rate: attendanceRate,
           };
         });
 
         return reports;
-      })()
+      })(),
     ).pipe(
-      catchError(err => {
+      catchError((err) => {
         console.error('Error loading report:', err);
         return throwError(() => err);
-      })
+      }),
     );
   }
 
@@ -643,7 +671,7 @@ export class AttendanceService {
 
   getVisitors(
     page: number = 1,
-    pageSize: number = 20
+    pageSize: number = 20,
   ): Observable<{ data: Visitor[]; count: number }> {
     const churchId = this.authService.getChurchId();
     const offset = (page - 1) * pageSize;
@@ -660,29 +688,32 @@ export class AttendanceService {
         if (error) throw new Error(error.message);
 
         return { data: data as Visitor[], count: count || 0 };
-      })()
+      })(),
     ).pipe(
-      catchError(err => {
+      catchError((err) => {
         console.error('Error loading visitors:', err);
         return throwError(() => err);
-      })
+      }),
     );
   }
 
-  convertVisitorToMember(visitorId: string, memberId: string): Observable<void> {
+  convertVisitorToMember(
+    visitorId: string,
+    memberId: string,
+  ): Observable<void> {
     return from(
       this.supabase.update<Visitor>('visitors', visitorId, {
         is_converted_to_member: true,
-        member_id: memberId
-      })
+        member_id: memberId,
+      }),
     ).pipe(
       map(({ error }) => {
         if (error) throw new Error(error.message);
       }),
-      catchError(err => {
+      catchError((err) => {
         console.error('Error converting visitor:', err);
         return throwError(() => err);
-      })
+      }),
     );
   }
 
@@ -693,8 +724,13 @@ export class AttendanceService {
     return `${baseUrl}/attendance/qr-checkin/${eventId}`;
   }
 
-  verifyQRCheckIn(eventId: string, memberId: string): Observable<AttendanceRecord> {
-    return this.checkInMember(eventId, memberId, 'qr_code');
+  // Update the verifyQRCheckIn to use the public method
+  verifyQRCheckIn(
+    eventId: string,
+    memberId: string,
+  ): Observable<AttendanceRecord> {
+    // Use public method instead of authenticated check-in
+    return this.publicQRCheckIn(eventId, memberId);
   }
 
   // ==================== EXPORT ====================
@@ -707,15 +743,15 @@ export class AttendanceService {
           'Type',
           'Member Number',
           'Check-in Time',
-          'Check-in Method'
+          'Check-in Method',
         ];
 
         const rows = records.map((record) => {
           const name = record.member
             ? `${record.member.first_name} ${record.member.last_name}`
             : record.visitor
-            ? `${record.visitor.first_name} ${record.visitor.last_name}`
-            : 'Unknown';
+              ? `${record.visitor.first_name} ${record.visitor.last_name}`
+              : 'Unknown';
 
           const type = record.member ? 'Member' : 'Visitor';
           const memberNumber = record.member?.member_number || 'N/A';
@@ -727,15 +763,15 @@ export class AttendanceService {
 
         const csv = [
           headers.join(','),
-          ...rows.map((row) => row.join(','))
+          ...rows.map((row) => row.join(',')),
         ].join('\n');
 
         return new Blob([csv], { type: 'text/csv' });
       }),
-      catchError(err => {
+      catchError((err) => {
         console.error('Export error:', err);
         return throwError(() => err);
-      })
+      }),
     );
   }
 
@@ -743,27 +779,135 @@ export class AttendanceService {
 
   getMemberAttendanceHistory(
     memberId: string,
-    limit: number = 50
+    limit: number = 50,
   ): Observable<AttendanceRecord[]> {
     return from(
       this.supabase.client
         .from('attendance_records')
-        .select(`
+        .select(
+          `
           *,
           event:attendance_events(id, event_name, event_type, event_date)
-        `)
+        `,
+        )
         .eq('member_id', memberId)
         .order('checked_in_at', { ascending: false })
-        .limit(limit)
+        .limit(limit),
     ).pipe(
       map(({ data, error }) => {
         if (error) throw new Error(error.message);
         return data as any[];
       }),
-      catchError(err => {
+      catchError((err) => {
         console.error('Error loading member history:', err);
         return throwError(() => err);
-      })
+      }),
+    );
+  }
+
+  publicQRCheckIn(
+    eventId: string,
+    memberId: string,
+  ): Observable<AttendanceRecord> {
+    return from(
+      (async () => {
+        // NO church_id check - this is public
+        // Verify event exists
+        const { data: event } = await this.supabase.client
+          .from('attendance_events')
+          .select('id, church_id')
+          .eq('id', eventId)
+          .single();
+
+        if (!event) {
+          throw new Error('Event not found');
+        }
+
+        // Check if already checked in
+        const { data: existing } = await this.supabase.client
+          .from('attendance_records')
+          .select('id')
+          .eq('attendance_event_id', eventId)
+          .eq('member_id', memberId)
+          .maybeSingle();
+
+        if (existing) {
+          throw new Error('You have already checked in for this event');
+        }
+
+        // Verify member exists and belongs to same church as event
+        const { data: member } = await this.supabase.client
+          .from('members')
+          .select('id, church_id')
+          .eq('id', memberId)
+          .eq('church_id', event.church_id)
+          .single();
+
+        if (!member) {
+          throw new Error('Member not found');
+        }
+
+        // Create attendance record (NO userId required)
+        const { data, error } = await this.supabase.insert<AttendanceRecord>(
+          'attendance_records',
+          {
+            attendance_event_id: eventId,
+            member_id: memberId,
+            checked_in_at: new Date().toISOString(),
+            checked_in_by: null, // ✅ No user - this is self-service
+            check_in_method: 'qr_code', // ✅ Important: Must be qr_code or self_service
+          } as any,
+        );
+
+        if (error) throw new Error(error.message);
+
+        // Update event total attendance
+        await this.updatePublicEventAttendanceCount(eventId);
+
+        return data![0];
+      })(),
+    ).pipe(
+      catchError((err) => {
+        console.error('Public QR check-in error:', err);
+        return throwError(() => err);
+      }),
+    );
+  }
+
+  // Add this helper method for public attendance count updates
+  private async updatePublicEventAttendanceCount(
+    eventId: string,
+  ): Promise<void> {
+    const { count } = await this.supabase.client
+      .from('attendance_records')
+      .select('*', { count: 'exact', head: true })
+      .eq('attendance_event_id', eventId);
+
+    // Use public update (no auth required)
+    await this.supabase.client
+      .from('attendance_events')
+      .update({ total_attendance: count || 0 })
+      .eq('id', eventId);
+  }
+
+  // Add public method to get event (no auth required)
+  publicGetEvent(eventId: string): Observable<AttendanceEvent> {
+    return from(
+      this.supabase.client
+        .from('attendance_events')
+        .select('*')
+        .eq('id', eventId)
+        .single(),
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw new Error(error.message);
+        if (!data) throw new Error('Event not found');
+        return data as AttendanceEvent;
+      }),
+      catchError((err) => {
+        console.error('Error loading event:', err);
+        return throwError(() => err);
+      }),
     );
   }
 }

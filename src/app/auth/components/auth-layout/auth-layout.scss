@@ -1,4 +1,3 @@
-// src/app/features/auth/components/auth-layout/auth-layout.component.scss
 .auth-layout {
   display: flex;
   min-height: 100vh;
@@ -28,24 +27,14 @@
     .logo-container {
       position: relative;
       z-index: 1;
-    }
+      animation: pulse 2s ease-in-out infinite;
 
-    .logo {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-
-      .logo-icon {
-        font-size: 3rem;
-        color: #EC4899;
-        animation: pulse 2s ease-in-out infinite;
-      }
-
-      .logo-text {
-        font-size: 2.5rem;
-        font-weight: 800;
-        color: white;
-        letter-spacing: -0.02em;
+      .logo {
+        height: 60px;
+        width: auto;
+        max-width: 300px;
+        display: block;
+        filter: brightness(0) invert(1); // Makes logo white for dark background
       }
     }
   }
@@ -74,7 +63,7 @@
       transform: scale(1);
     }
     50% {
-      transform: scale(1.1);
+      transform: scale(1.05);
     }
   }
 
@@ -82,6 +71,11 @@
   @media (max-width: 1024px) {
     .auth-left {
       flex: 0 0 40%;
+
+      .logo-container .logo {
+        height: 50px;
+        max-width: 250px;
+      }
     }
     .auth-right {
       flex: 0 0 60%;
@@ -95,13 +89,9 @@
       flex: 0 0 auto;
       min-height: 200px;
 
-      .logo {
-        .logo-icon {
-          font-size: 2rem;
-        }
-        .logo-text {
-          font-size: 1.75rem;
-        }
+      .logo-container .logo {
+        height: 40px;
+        max-width: 200px;
       }
     }
 

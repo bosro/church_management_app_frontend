@@ -1,0 +1,367 @@
+// src/app/features/auth/components/email-confirmed/email-confirmed.component.scss
+.email-confirmed-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 2rem;
+  animation: gradientShift 10s ease infinite;
+  background-size: 200% 200%;
+}
+
+.email-confirmed-card {
+  background: white;
+  border-radius: 16px;
+  padding: 3rem;
+  max-width: 560px;
+  width: 100%;
+  text-align: center;
+  animation: slideUp 0.5s ease;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.success-icon-wrapper {
+  position: relative;
+  margin: 0 auto 2rem;
+  width: 100px;
+  height: 100px;
+
+  .success-icon {
+    width: 100px;
+    height: 100px;
+    background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: scaleIn 0.5s ease 0.2s both;
+
+    i {
+      font-size: 3rem;
+      color: white;
+    }
+  }
+
+  .success-checkmark {
+    position: absolute;
+    bottom: -5px;
+    right: -5px;
+    width: 40px;
+    height: 40px;
+    background: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    animation: bounceIn 0.6s ease 0.5s both;
+
+    i {
+      font-size: 1.5rem;
+      color: #10B981;
+    }
+  }
+}
+
+.confirmation-header {
+  margin-bottom: 2rem;
+
+  h1 {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #111827;
+    margin: 0 0 0.5rem 0;
+    animation: fadeIn 0.5s ease 0.3s both;
+  }
+
+  .subtitle {
+    font-size: 1rem;
+    color: #6B7280;
+    margin: 0;
+    animation: fadeIn 0.5s ease 0.4s both;
+  }
+}
+
+.info-card {
+  background: #F9FAFB;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  text-align: left;
+  animation: fadeIn 0.5s ease 0.5s both;
+
+  .info-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #E5E7EB;
+
+    i {
+      font-size: 1.25rem;
+      color: #5B21B6;
+    }
+
+    span {
+      font-size: 0.9375rem;
+      font-weight: 700;
+      color: #374151;
+    }
+  }
+
+  .info-steps {
+    .step-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+
+      .step-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        transition: all 0.3s;
+
+        i {
+          font-size: 1.5rem;
+        }
+
+        &.completed {
+          background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+
+          i {
+            color: white;
+          }
+        }
+
+        &.pending {
+          background: #E5E7EB;
+
+          i {
+            color: #9CA3AF;
+          }
+        }
+      }
+
+      .step-content {
+        flex: 1;
+        padding-top: 0.25rem;
+
+        h3 {
+          font-size: 0.9375rem;
+          font-weight: 700;
+          color: #111827;
+          margin: 0 0 0.25rem 0;
+        }
+
+        p {
+          font-size: 0.8125rem;
+          color: #6B7280;
+          margin: 0;
+          line-height: 1.5;
+        }
+      }
+    }
+
+    .step-divider {
+      width: 2px;
+      height: 24px;
+      background: #E5E7EB;
+      margin: 0.5rem 0 0.5rem 23px;
+    }
+  }
+}
+
+.btn-primary {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 700;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'Nunito Sans', sans-serif;
+  background: #5B21B6;
+  color: white;
+  margin-bottom: 1rem;
+  animation: fadeIn 0.5s ease 0.6s both;
+
+  i {
+    font-size: 1.125rem;
+  }
+
+  &:hover {
+    background: #6D28D9;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(91, 33, 182, 0.3);
+  }
+}
+
+.countdown-text {
+  font-size: 0.8125rem;
+  color: #9CA3AF;
+  margin: 0 0 1rem 0;
+  animation: fadeIn 0.5s ease 0.7s both;
+}
+
+.support-text {
+  font-size: 0.875rem;
+  color: #6B7280;
+  margin: 0;
+  animation: fadeIn 0.5s ease 0.8s both;
+
+  a {
+    color: #5B21B6;
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.2s;
+
+    &:hover {
+      color: #6D28D9;
+      text-decoration: underline;
+    }
+  }
+}
+
+// Animations
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes bounceIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Responsive
+@media (max-width: 640px) {
+  .email-confirmed-container {
+    padding: 1rem;
+  }
+
+  .email-confirmed-card {
+    padding: 2rem 1.5rem;
+  }
+
+  .success-icon-wrapper {
+    width: 80px;
+    height: 80px;
+
+    .success-icon {
+      width: 80px;
+      height: 80px;
+
+      i {
+        font-size: 2.5rem;
+      }
+    }
+
+    .success-checkmark {
+      width: 32px;
+      height: 32px;
+
+      i {
+        font-size: 1.25rem;
+      }
+    }
+  }
+
+  .confirmation-header {
+    h1 {
+      font-size: 1.5rem;
+    }
+
+    .subtitle {
+      font-size: 0.9375rem;
+    }
+  }
+
+  .info-card {
+    padding: 1.25rem;
+
+    .step-item {
+      .step-icon {
+        width: 40px;
+        height: 40px;
+
+        i {
+          font-size: 1.25rem;
+        }
+      }
+
+      .step-content {
+        h3 {
+          font-size: 0.875rem;
+        }
+
+        p {
+          font-size: 0.75rem;
+        }
+      }
+    }
+
+    .step-divider {
+      margin-left: 19px;
+    }
+  }
+}

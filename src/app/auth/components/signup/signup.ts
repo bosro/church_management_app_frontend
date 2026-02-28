@@ -17,6 +17,7 @@ export class Signup implements OnInit {
   signupForm!: FormGroup;
   loading = false;
   errorMessage = '';
+  successMessage = '';
   showPassword = false;
   showConfirmPassword = false;
 
@@ -111,6 +112,7 @@ export class Signup implements OnInit {
 
       if (isValid) {
         this.currentStep++;
+        this.errorMessage = '';
       }
     } else if (this.currentStep === 2) {
       // Validate step 2 fields
@@ -140,7 +142,8 @@ export class Signup implements OnInit {
   previousStep(): void {
     if (this.currentStep > 1) {
       this.currentStep--;
-      this.errorMessage = ''; // Clear errors when going back
+      this.errorMessage = '';
+      this.successMessage = '';
     }
   }
 
@@ -151,6 +154,7 @@ export class Signup implements OnInit {
 
     this.loading = true;
     this.errorMessage = '';
+    this.successMessage = '';
 
     const signupData = {
       email: this.signupForm.value.email,
@@ -167,15 +171,14 @@ export class Signup implements OnInit {
     this.authService.signUp(signupData).subscribe({
       next: (response) => {
         console.log('Signup successful:', response);
-        // Move to OTP verification step
-        this.currentStep = 3;
         this.loading = false;
+        this.currentStep = 3; // Success step
+        this.successMessage = response.message || 'Account created successfully! Please check your email to confirm your account.';
       },
       error: (error) => {
         this.loading = false;
         console.error('Signup error:', error);
 
-        // More detailed error messages
         if (error.message?.includes('User already registered')) {
           this.errorMessage = 'This email is already registered. Please sign in instead.';
         } else if (error.message?.includes('Database error')) {
@@ -185,18 +188,12 @@ export class Signup implements OnInit {
         } else {
           this.errorMessage = error.message || 'Registration failed. Please try again.';
         }
-
-        // Go back to step 2 to show error
-        if (this.currentStep === 3) {
-          this.currentStep = 2;
-        }
       }
     });
   }
 
-  onOtpVerified(): void {
-    // Navigate to dashboard after OTP verification
-    this.router.navigate(['main/dashboard']);
+  goToSignIn(): void {
+    this.router.navigate(['/auth/signin']);
   }
 
   getErrorMessage(fieldName: string): string {

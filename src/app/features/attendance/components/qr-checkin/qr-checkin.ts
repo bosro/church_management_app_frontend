@@ -3,10 +3,18 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormControl } from '@angular/forms';
 import { Subject } from 'rxjs';
-import { takeUntil, debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
+import {
+  takeUntil,
+  debounceTime,
+  distinctUntilChanged,
+  switchMap,
+} from 'rxjs/operators';
 import { AttendanceService } from '../../services/attendance.service';
-import { MemberService } from '../../../members/services/member.service';
-import { AttendanceEvent, AttendanceRecord } from '../../../../models/attendance.model';
+import { MemberService } from '../../../members/services/member.service'; // ✅ Import MemberService
+import {
+  AttendanceEvent,
+  AttendanceRecord,
+} from '../../../../models/attendance.model';
 import { Member } from '../../../../models/member.model';
 
 @Component({
@@ -38,7 +46,7 @@ export class QrCheckin implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private router: Router,
     private attendanceService: AttendanceService,
-    private membersService: MemberService
+    private memberService: MemberService, // ✅ Inject MemberService
   ) {}
 
   ngOnInit(): void {
@@ -57,17 +65,18 @@ export class QrCheckin implements OnInit, OnDestroy {
   }
 
   private loadEvent(): void {
+    // ✅ Use public method - no auth required
     this.attendanceService
-      .getAttendanceEventById(this.eventId)
+      .publicGetEvent(this.eventId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (event) => {
           this.event = event;
         },
         error: (error) => {
-          this.errorMessage = 'Event not found or you do not have access';
+          this.errorMessage = 'Event not found';
           console.error('Load event error:', error);
-        }
+        },
       });
   }
 
@@ -76,15 +85,26 @@ export class QrCheckin implements OnInit, OnDestroy {
       .pipe(
         debounceTime(300),
         distinctUntilChanged(),
-        switchMap(query => {
+        switchMap((query) => {
           if (!query || query.length < 2) {
             this.searchResults = [];
             return [];
           }
+
+          if (!this.event) {
+            return [];
+          }
+
           this.searching = true;
-          return this.membersService.searchMembers(query);
+
+          // ✅ Use MemberService public search method
+          return this.memberService.searchMembersPublic(
+            this.event.church_id,
+            query,
+            10,
+          );
         }),
-        takeUntil(this.destroy$)
+        takeUntil(this.destroy$),
       )
       .subscribe({
         next: (members) => {
@@ -94,7 +114,8 @@ export class QrCheckin implements OnInit, OnDestroy {
         error: (error) => {
           console.error('Search error:', error);
           this.searching = false;
-        }
+          this.searchResults = [];
+        },
       });
   }
 
@@ -103,6 +124,7 @@ export class QrCheckin implements OnInit, OnDestroy {
     this.errorMessage = '';
     this.successMessage = '';
 
+    // ✅ Use public check-in method
     this.attendanceService
       .verifyQRCheckIn(this.eventId, memberId)
       .pipe(takeUntil(this.destroy$))
@@ -113,17 +135,26 @@ export class QrCheckin implements OnInit, OnDestroy {
           this.currentTime = new Date();
           this.successMessage = 'Successfully checked in!';
 
-          // Load member details
-          this.membersService
-            .getMemberById(memberId)
+          // ✅ Load member details using public method
+          this.memberService
+            .getMemberByIdPublic(memberId)
             .pipe(takeUntil(this.destroy$))
             .subscribe({
               next: (member) => {
-                this.checkedInMember = member;
+                if (member) {
+                  this.checkedInMember = member;
+                }
               },
               error: (error) => {
                 console.error('Error loading member:', error);
-              }
+                // Try to find in search results
+                const foundMember = this.searchResults.find(
+                  (m) => m.id === memberId,
+                );
+                if (foundMember) {
+                  this.checkedInMember = foundMember;
+                }
+              },
             });
 
           // Reset after 3 seconds
@@ -133,9 +164,11 @@ export class QrCheckin implements OnInit, OnDestroy {
         },
         error: (error) => {
           this.loading = false;
-          this.errorMessage = error.message || 'Check-in failed. You may have already checked in.';
+          this.errorMessage =
+            error.message ||
+            'Check-in failed. You may have already checked in.';
           console.error('QR check-in error:', error);
-        }
+        },
       });
   }
 
@@ -149,7 +182,11 @@ export class QrCheckin implements OnInit, OnDestroy {
   }
 
   getMemberFullName(member: Member): string {
-    const parts = [member.first_name, member.middle_name, member.last_name].filter(Boolean);
+    const parts = [
+      member.first_name,
+      member.middle_name,
+      member.last_name,
+    ].filter(Boolean);
     return parts.join(' ');
   }
 
