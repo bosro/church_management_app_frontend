@@ -58,7 +58,7 @@
   background: white;
   border-radius: 20px;
   padding: 2rem;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  //box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   animation: slideUp 0.5s ease;
 }
 
@@ -231,7 +231,7 @@
     &:hover {
       background: #6d28d9;
       transform: translateY(-2px);
-      box-shadow: 0 8px 20px rgba(91, 33, 182, 0.3);
+      //box-shadow: 0 8px 20px rgba(91, 33, 182, 0.3);
     }
   }
 }
@@ -295,7 +295,7 @@
         outline: none;
         border-color: #5b21b6;
         background: white;
-        box-shadow: 0 0 0 4px rgba(91, 33, 182, 0.1);
+        //box-shadow: 0 0 0 4px rgba(91, 33, 182, 0.1);
       }
     }
 

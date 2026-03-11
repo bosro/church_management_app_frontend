@@ -87,7 +87,7 @@
       &:hover {
         background: #6D28D9;
         transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(91, 33, 182, 0.3);
+        //box-shadow: 0 4px 12px rgba(91, 33, 182, 0.3);
       }
     }
 
@@ -118,11 +118,11 @@
     display: flex;
     align-items: center;
     gap: 1rem;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    //box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     transition: all 0.2s;
 
     &:hover {
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+      //box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
       transform: translateY(-2px);
     }
 
@@ -164,7 +164,7 @@
   background: white;
   border-radius: 12px;
   padding: 1.25rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  //box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   margin-bottom: 1.5rem;
 
   .filters-form {
@@ -207,7 +207,7 @@
           outline: none;
           border-color: #5B21B6;
           background: white;
-          box-shadow: 0 0 0 3px rgba(91, 33, 182, 0.1);
+          //box-shadow: 0 0 0 3px rgba(91, 33, 182, 0.1);
         }
       }
 
@@ -231,7 +231,7 @@
           outline: none;
           border-color: #5B21B6;
           background-color: white;
-          box-shadow: 0 0 0 3px rgba(91, 33, 182, 0.1);
+          //box-shadow: 0 0 0 3px rgba(91, 33, 182, 0.1);
         }
       }
     }
@@ -302,7 +302,7 @@
 .members-table-card {
   background: white;
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  //box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   overflow: hidden;
 
   .table-wrapper {
@@ -391,7 +391,7 @@
           &:hover {
             background: #6D28D9;
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(91, 33, 182, 0.3);
+            //box-shadow: 0 4px 12px rgba(91, 33, 182, 0.3);
           }
         }
       }
@@ -603,12 +603,12 @@
     background: white;
     border-radius: 12px;
     padding: 1.5rem;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    //box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     cursor: pointer;
     transition: all 0.2s;
 
     &:hover {
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+      //box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
       transform: translateY(-2px);
     }
 
@@ -761,7 +761,7 @@
       &:hover {
         background: #6D28D9;
         transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(91, 33, 182, 0.3);
+        //box-shadow: 0 4px 12px rgba(91, 33, 182, 0.3);
       }
     }
   }
@@ -832,5 +832,129 @@
       width: 100%;
       justify-content: center;
     }
+  }
+}
+
+
+
+// Birthday Notice Alert
+.birthday-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.125rem 1.5rem;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border: 2px solid #fbbf24;
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+  //box-shadow: 0 4px 12px rgba(251, 191, 36, 0.2);
+  animation: slideDown 0.3s ease;
+
+  @media (max-width: 640px) {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 1rem 1.25rem;
+  }
+
+  .notice-content {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex: 1;
+
+    .notice-icon {
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: white;
+      border-radius: 12px;
+      flex-shrink: 0;
+      //box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+      @media (max-width: 640px) {
+        width: 40px;
+        height: 40px;
+      }
+
+      i {
+        font-size: 1.5rem;
+        color: #f59e0b;
+
+        @media (max-width: 640px) {
+          font-size: 1.25rem;
+        }
+      }
+    }
+
+    .notice-text {
+      flex: 1;
+
+      .notice-title {
+        font-size: 0.9375rem;
+        font-weight: 700;
+        color: #92400e;
+        margin: 0 0 0.25rem 0;
+      }
+
+      .notice-message {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #b45309;
+        margin: 0;
+
+        @media (max-width: 640px) {
+          font-size: 0.8125rem;
+        }
+      }
+    }
+  }
+
+  .notice-close {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+    //box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+
+    @media (max-width: 640px) {
+      align-self: flex-end;
+      width: 32px;
+      height: 32px;
+    }
+
+    i {
+      font-size: 1.125rem;
+      color: #92400e;
+    }
+
+    &:hover {
+      background: #fee2e2;
+      transform: scale(1.05);
+
+      i {
+        color: #dc2626;
+      }
+    }
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

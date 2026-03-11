@@ -5,13 +5,14 @@ import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { AuthGuard } from './core/guards/auth-guard';
 import { Unauthorized } from './shared/components/unauthorized/unauthorized';
+import { MemberRegistration } from './features/public/member-registration/member-registration';
 
 const routes: Routes = [
   // Default: redirect to auth
   {
     path: '',
     redirectTo: 'main',
-    pathMatch: 'full'
+    pathMatch: 'full',
   },
   // Auth routes (login, signup, etc.)
   {
@@ -23,16 +24,20 @@ const routes: Routes = [
     path: 'main',
     loadChildren: () =>
       import('./features/features-module').then((m) => m.FeaturesModule),
-    canActivate: [AuthGuard]
+    canActivate: [AuthGuard],
   },
-    {
+  {
+    path: 'register/:token',
+    component: MemberRegistration,
+  },
+  {
     path: 'unauthorized',
-   component: Unauthorized,
+    component: Unauthorized,
   },
   // Catch-all: redirect to auth instead of creating a loop
   {
     path: '**',
-    redirectTo: 'main'
+    redirectTo: 'main',
   },
 ];
 

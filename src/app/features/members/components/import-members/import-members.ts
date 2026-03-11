@@ -1,5 +1,5 @@
 // src/app/features/members/components/import-members/import-members.component.ts
-import { Component, OnDestroy } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
@@ -18,7 +18,7 @@ interface ImportResults {
   templateUrl: './import-members.html',
   styleUrl: './import-members.scss',
 })
-export class ImportMembers implements OnDestroy {
+export class ImportMembers implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   selectedFile: File | null = null;
@@ -36,8 +36,10 @@ export class ImportMembers implements OnDestroy {
   constructor(
     private memberService: MemberService,
     private authService: AuthService,
-    private router: Router
-  ) {
+    private router: Router,
+  ) {}
+
+  ngOnInit(): void {
     this.checkPermissions();
   }
 
@@ -92,21 +94,21 @@ export class ImportMembers implements OnDestroy {
 
     if (!validExtensions.includes(fileExtension)) {
       this.errorMessage = 'Please select a CSV file (.csv)';
-      setTimeout(() => this.errorMessage = '', 3000);
+      setTimeout(() => (this.errorMessage = ''), 3000);
       return;
     }
 
     // Validate file size (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
       this.errorMessage = 'File size must be less than 10MB';
-      setTimeout(() => this.errorMessage = '', 3000);
+      setTimeout(() => (this.errorMessage = ''), 3000);
       return;
     }
 
     // Validate file is not empty
     if (file.size === 0) {
       this.errorMessage = 'The selected file is empty';
-      setTimeout(() => this.errorMessage = '', 3000);
+      setTimeout(() => (this.errorMessage = ''), 3000);
       return;
     }
 
@@ -138,7 +140,8 @@ export class ImportMembers implements OnDestroy {
       }
     }, 200);
 
-    this.memberService.importMembersFromCSV(this.selectedFile)
+    this.memberService
+      .importMembersFromCSV(this.selectedFile)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (results) => {
@@ -149,7 +152,7 @@ export class ImportMembers implements OnDestroy {
           this.importResults = {
             success: results.success,
             failed: results.failed,
-            errors: results.errors.map(e => `Row ${e.row}: ${e.error}`)
+            errors: results.errors.map((e) => `Row ${e.row}: ${e.error}`),
           };
 
           if (results.success > 0) {
@@ -164,20 +167,36 @@ export class ImportMembers implements OnDestroy {
           clearInterval(progressInterval);
           this.uploading = false;
           this.uploadProgress = 0;
-          this.errorMessage = error.message || 'Failed to import members. Please check your file format and try again.';
-        }
+          this.errorMessage =
+            error.message ||
+            'Failed to import members. Please check your file format and try again.';
+        },
       });
   }
 
   downloadTemplate(): void {
     const headers = [
-      'First Name*', 'Last Name*', 'Email', 'Phone', 'Gender',
-      'Date of Birth (YYYY-MM-DD)', 'Address', 'City', 'Join Date* (YYYY-MM-DD)'
+      'First Name*',
+      'Last Name*',
+      'Email',
+      'Phone',
+      'Gender',
+      'Date of Birth (YYYY-MM-DD)',
+      'Address',
+      'City',
+      'Join Date* (YYYY-MM-DD)',
     ];
 
     const sampleRow = [
-      'John', 'Doe', 'john.doe@example.com', '0201234567', 'male',
-      '1990-01-15', '123 Main St', 'Accra', '2024-01-01'
+      'John',
+      'Doe',
+      'john.doe@example.com',
+      '0201234567',
+      'male',
+      '1990-01-15',
+      '123 Main St',
+      'Accra',
+      '2024-01-01',
     ];
 
     const instructionRows = [
@@ -187,13 +206,13 @@ export class ImportMembers implements OnDestroy {
       '# 3. Phone numbers should be 10 digits (e.g., 0201234567)',
       '# 4. Gender should be: male, female, or other',
       '# 5. Remove these instruction rows before importing',
-      '#'
+      '#',
     ];
 
     const csv = [
       ...instructionRows,
       headers.join(','),
-      sampleRow.join(',')
+      sampleRow.join(','),
     ].join('\n');
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -219,5 +238,11 @@ export class ImportMembers implements OnDestroy {
 
   goToMembers(): void {
     this.router.navigate(['main/members']);
+  }
+
+  formatFileSize(bytes: number): string {
+    if (bytes < 1024) return bytes + ' bytes';
+    else if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+    else return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
   }
 }

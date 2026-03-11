@@ -1,0 +1,242 @@
+<!-- src/app/features/public/member-registration/member-registration.component.html -->
+<div class="registration-page">
+  <div class="registration-container">
+    <!-- Logo/Header -->
+    <div class="registration-header">
+      <div class="logo">
+        <i class="ri-church-line"></i>
+        <h1>Member Registration</h1>
+      </div>
+      <p class="subtitle">Please fill in your information to complete registration</p>
+    </div>
+
+    <!-- Validating Link -->
+    <div *ngIf="validatingLink" class="loading-container">
+      <div class="spinner"></div>
+      <p>Validating registration link...</p>
+    </div>
+
+    <!-- Invalid Link -->
+    <div *ngIf="!validatingLink && !linkValid" class="error-container">
+      <i class="ri-error-warning-line"></i>
+      <h3>Invalid Registration Link</h3>
+      <p>{{ errorMessage }}</p>
+      <p class="help-text">Please contact your church administrator for a valid registration link.</p>
+    </div>
+
+    <!-- Registration Form -->
+    <div *ngIf="!validatingLink && linkValid" class="registration-content">
+      <!-- Success Message -->
+      <div *ngIf="successMessage" class="success-alert">
+        <i class="ri-checkbox-circle-line"></i>
+        <span>{{ successMessage }}</span>
+      </div>
+
+      <!-- Error Message -->
+      <div *ngIf="errorMessage" class="error-alert">
+        <i class="ri-error-warning-line"></i>
+        <span>{{ errorMessage }}</span>
+      </div>
+
+      <form [formGroup]="registrationForm" (ngSubmit)="onSubmit()" class="registration-form">
+        <!-- Basic Information -->
+        <div class="form-section">
+          <h2>Basic Information</h2>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="first_name">First Name <span class="required">*</span></label>
+              <input
+                id="first_name"
+                type="text"
+                formControlName="first_name"
+                placeholder="Enter your first name"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="middle_name">Middle Name</label>
+              <input
+                id="middle_name"
+                type="text"
+                formControlName="middle_name"
+                placeholder="Enter your middle name (optional)"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="last_name">Last Name <span class="required">*</span></label>
+              <input
+                id="last_name"
+                type="text"
+                formControlName="last_name"
+                placeholder="Enter your last name"
+              />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="date_of_birth">Date of Birth</label>
+              <input
+                id="date_of_birth"
+                type="date"
+                formControlName="date_of_birth"
+                [max]="today"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="gender">Gender</label>
+              <select id="gender" formControlName="gender">
+                <option value="">Select gender</option>
+                <option *ngFor="let option of genderOptions" [value]="option.value">
+                  {{ option.label }}
+                </option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="marital_status">Marital Status</label>
+              <select id="marital_status" formControlName="marital_status">
+                <option value="">Select status</option>
+                <option *ngFor="let option of maritalStatusOptions" [value]="option.value">
+                  {{ option.label }}
+                </option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Contact Information -->
+        <div class="form-section">
+          <h2>Contact Information</h2>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="phone_primary">Primary Phone <span class="required">*</span></label>
+              <input
+                id="phone_primary"
+                type="tel"
+                formControlName="phone_primary"
+                placeholder="0XXXXXXXXX"
+                maxlength="10"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="phone_secondary">Secondary Phone</label>
+              <input
+                id="phone_secondary"
+                type="tel"
+                formControlName="phone_secondary"
+                placeholder="0XXXXXXXXX (optional)"
+                maxlength="10"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="email">Email</label>
+              <input
+                id="email"
+                type="email"
+                formControlName="email"
+                placeholder="email@example.com"
+              />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group full-width">
+              <label for="address">Address</label>
+              <input
+                id="address"
+                type="text"
+                formControlName="address"
+                placeholder="Enter your residential address"
+              />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="city">City</label>
+              <input
+                id="city"
+                type="text"
+                formControlName="city"
+                placeholder="Enter your city"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="occupation">Occupation</label>
+              <input
+                id="occupation"
+                type="text"
+                formControlName="occupation"
+                placeholder="Enter your occupation"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Emergency Contact -->
+        <div class="form-section">
+          <h2>Emergency Contact</h2>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="emergency_contact_name">Contact Name</label>
+              <input
+                id="emergency_contact_name"
+                type="text"
+                formControlName="emergency_contact_name"
+                placeholder="Enter emergency contact name"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="emergency_contact_phone">Contact Phone</label>
+              <input
+                id="emergency_contact_phone"
+                type="tel"
+                formControlName="emergency_contact_phone"
+                placeholder="0XXXXXXXXX"
+                maxlength="10"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="emergency_contact_relationship">Relationship</label>
+              <input
+                id="emergency_contact_relationship"
+                type="text"
+                formControlName="emergency_contact_relationship"
+                placeholder="e.g., Spouse, Parent, Sibling"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Submit -->
+        <div class="form-actions">
+          <button
+            type="submit"
+            class="btn-submit"
+            [disabled]="loading || registrationForm.invalid"
+          >
+            <i *ngIf="!loading" class="ri-send-plane-fill"></i>
+            <i *ngIf="loading" class="ri-loader-4-line spin"></i>
+            {{ loading ? 'Submitting...' : 'Complete Registration' }}
+          </button>
+        </div>
+
+        <p class="form-note">
+          <i class="ri-information-line"></i>
+          Fields marked with <span class="required">*</span> are required
+        </p>
+      </form>
+    </div>
+  </div>
+</div>

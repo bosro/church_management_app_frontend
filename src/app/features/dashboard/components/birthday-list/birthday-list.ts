@@ -1,5 +1,11 @@
 // src/app/features/dashboard/components/birthday-list/birthday-list.component.ts
-import { Component, Input, Output, EventEmitter, OnChanges } from '@angular/core';
+import {
+  Component,
+  Input,
+  Output,
+  EventEmitter,
+  OnChanges,
+} from '@angular/core';
 
 interface Birthday {
   id: string;
@@ -8,7 +14,7 @@ interface Birthday {
   date: string;
   age: number;
   phone: string;
-  status: 'Today' | 'Tomorrow' | 'Passed';
+  status: 'Today' | 'Tomorrow' | 'Upcoming'; // ✅ FIXED: Changed 'Passed' to 'Upcoming'
   avatar?: string;
 }
 
@@ -36,7 +42,7 @@ export class BirthdayList implements OnChanges {
     { value: 8, label: 'September' },
     { value: 9, label: 'October' },
     { value: 10, label: 'November' },
-    { value: 11, label: 'December' }
+    { value: 11, label: 'December' },
   ];
 
   filteredBirthdays: Birthday[] = [];
@@ -56,7 +62,7 @@ export class BirthdayList implements OnChanges {
       this.filteredBirthdays = this.birthdays;
     } else {
       // Filter by selected month
-      this.filteredBirthdays = this.birthdays.filter(b => {
+      this.filteredBirthdays = this.birthdays.filter((b) => {
         const birthDate = new Date(b.date);
         return birthDate.getMonth() === this.selectedMonth;
       });
@@ -77,6 +83,8 @@ export class BirthdayList implements OnChanges {
         return 'badge-today';
       case 'Tomorrow':
         return 'badge-tomorrow';
+      case 'Upcoming': // ✅ FIXED: Changed from default to explicit 'Upcoming'
+        return 'badge-upcoming';
       default:
         return 'badge-upcoming';
     }
@@ -94,7 +102,7 @@ export class BirthdayList implements OnChanges {
   getInitials(name: string): string {
     return name
       .split(' ')
-      .map(n => n[0])
+      .map((n) => n[0])
       .join('')
       .substring(0, 2)
       .toUpperCase();
@@ -102,7 +110,20 @@ export class BirthdayList implements OnChanges {
 
   formatDate(dateString: string): string {
     const date = new Date(dateString);
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
     return `${months[date.getMonth()]} ${date.getDate()}`;
   }
 }

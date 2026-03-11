@@ -15,7 +15,7 @@ interface UpcomingBirthday {
   date: string;
   age: number;
   phone: string;
-  status: 'Today' | 'Tomorrow' | 'Passed';
+  status: 'Today' | 'Tomorrow' | 'Upcoming'; // ← Changed from 'Passed' to 'Upcoming'
   avatar?: string;
 }
 
@@ -76,9 +76,9 @@ export class Overview implements OnInit, OnDestroy {
     this.authService.currentProfile$
       .pipe(
         takeUntil(this.destroy$),
-        filter(profile => profile !== null) // Only proceed when profile is loaded
+        filter((profile) => profile !== null), // Only proceed when profile is loaded
       )
-      .subscribe(profile => {
+      .subscribe((profile) => {
         this.churchId = profile?.church_id;
         this.userRole = profile?.role;
 
@@ -88,7 +88,8 @@ export class Overview implements OnInit, OnDestroy {
           this.loadDashboardData();
         } else {
           this.hasError = true;
-          this.errorMessage = 'No church assigned to your account. Please contact administrator.';
+          this.errorMessage =
+            'No church assigned to your account. Please contact administrator.';
           this.loading = false;
         }
       });
@@ -98,7 +99,6 @@ export class Overview implements OnInit, OnDestroy {
     this.destroy$.next();
     this.destroy$.complete();
   }
-
 
   private setPermissions(): void {
     const adminRoles = ['super_admin', 'church_admin', 'pastor'];
@@ -184,16 +184,22 @@ export class Overview implements OnInit, OnDestroy {
 
     if (data) {
       this.upcomingBirthdays = data.map((birthday: any) => {
+        // ✅ FIXED: Normalize all dates to midnight for accurate comparison
         const celebrationDate = new Date(birthday.celebration_date);
+        celebrationDate.setHours(0, 0, 0, 0);
+
         const todayDate = new Date();
         todayDate.setHours(0, 0, 0, 0);
+
         const tomorrow = new Date(todayDate);
         tomorrow.setDate(tomorrow.getDate() + 1);
 
-        let status: 'Today' | 'Tomorrow' | 'Passed' = 'Passed';
-        if (celebrationDate.toDateString() === todayDate.toDateString()) {
+        // ✅ FIXED: Determine status - default to 'Passed' for dates before today
+        let status: 'Today' | 'Tomorrow' | 'Upcoming' = 'Upcoming';
+
+        if (celebrationDate.getTime() === todayDate.getTime()) {
           status = 'Today';
-        } else if (celebrationDate.toDateString() === tomorrow.toDateString()) {
+        } else if (celebrationDate.getTime() === tomorrow.getTime()) {
           status = 'Tomorrow';
         }
 
@@ -202,7 +208,7 @@ export class Overview implements OnInit, OnDestroy {
           name: `${birthday.first_name} ${birthday.last_name}`,
           location: birthday.city || birthday.address || 'Not specified',
           date: this.formatDate(birthday.next_birthday),
-          age: birthday.age + 1, // Next age
+          age: birthday.age + 1,
           phone: birthday.phone_primary || '',
           status: status,
           avatar: undefined,

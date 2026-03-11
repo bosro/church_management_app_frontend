@@ -337,12 +337,20 @@ export class AddMember implements OnInit, OnDestroy {
   }
 
   private scrollToFirstError(): void {
-    const firstError = document.querySelector('.error');
+    const firstError = document.querySelector('.error-message');
     if (firstError) {
       firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   }
+
   get today(): string {
     return new Date().toISOString().split('T')[0];
+  }
+
+  // Helper for file size display
+  formatFileSize(bytes: number): string {
+    if (bytes < 1024) return bytes + ' bytes';
+    else if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+    else return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
   }
 }

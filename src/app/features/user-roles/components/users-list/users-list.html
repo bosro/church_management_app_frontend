@@ -57,15 +57,16 @@
           >
             <div class="card-header">
               <div class="user-avatar">
-                <img
-                  *ngIf="user.avatar_url"
-                  [src]="user.avatar_url"
-                  [alt]="user.full_name"
-                />
-                <div *ngIf="!user.avatar_url" class="avatar-placeholder">
-                  {{ user.full_name.charAt(0).toUpperCase() }}
-                </div>
-              </div>
+  <img
+    *ngIf="user.avatar_url"
+    [src]="user.avatar_url"
+    [alt]="user.full_name"
+    (error)="user.avatar_url = null"
+  />
+  <div *ngIf="!user.avatar_url" class="avatar-placeholder">
+    {{ user.full_name.charAt(0).toUpperCase() }}
+  </div>
+</div>
               <div class="user-info">
                 <h3>{{ user.full_name }}</h3>
                 <p class="user-email">

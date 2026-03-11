@@ -31,7 +31,7 @@ export class MemberDetail implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private router: Router,
     private memberService: MemberService,
-    private authService: AuthService
+    private authService: AuthService,
   ) {}
 
   ngOnInit(): void {
@@ -62,7 +62,8 @@ export class MemberDetail implements OnInit, OnDestroy {
     this.loading = true;
     this.errorMessage = '';
 
-    this.memberService.getMemberById(memberId)
+    this.memberService
+      .getMemberById(memberId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (member) => {
@@ -72,7 +73,7 @@ export class MemberDetail implements OnInit, OnDestroy {
         error: (error) => {
           this.errorMessage = error.message || 'Failed to load member details';
           this.loading = false;
-        }
+        },
       });
   }
 
@@ -82,7 +83,8 @@ export class MemberDetail implements OnInit, OnDestroy {
 
   editMember(): void {
     if (!this.canEditMember) {
-      alert('You do not have permission to edit members');
+      this.errorMessage = 'You do not have permission to edit members';
+      setTimeout(() => (this.errorMessage = ''), 3000);
       return;
     }
 
@@ -93,7 +95,8 @@ export class MemberDetail implements OnInit, OnDestroy {
 
   deleteMember(): void {
     if (!this.canDeleteMember) {
-      alert('You do not have permission to delete members');
+      this.errorMessage = 'You do not have permission to delete members';
+      setTimeout(() => (this.errorMessage = ''), 3000);
       return;
     }
 
@@ -102,7 +105,8 @@ export class MemberDetail implements OnInit, OnDestroy {
     const confirmMessage = `Are you sure you want to deactivate ${this.getMemberFullName()}? This action can be reversed by reactivating the member later.`;
 
     if (confirm(confirmMessage)) {
-      this.memberService.deleteMember(this.member.id)
+      this.memberService
+        .deleteMember(this.member.id)
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: () => {
@@ -110,7 +114,7 @@ export class MemberDetail implements OnInit, OnDestroy {
           },
           error: (error) => {
             this.errorMessage = error.message || 'Failed to delete member';
-          }
+          },
         });
     }
   }
@@ -165,7 +169,10 @@ export class MemberDetail implements OnInit, OnDestroy {
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
 
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    if (
+      monthDiff < 0 ||
+      (monthDiff === 0 && today.getDate() < birthDate.getDate())
+    ) {
       age--;
     }
 
@@ -176,10 +183,10 @@ export class MemberDetail implements OnInit, OnDestroy {
     if (!this.member) return '';
 
     const statusMap: Record<string, string> = {
-      'active': 'status-active',
-      'inactive': 'status-inactive',
-      'transferred': 'status-transferred',
-      'deceased': 'status-deceased'
+      active: 'status-active',
+      inactive: 'status-inactive',
+      transferred: 'status-transferred',
+      deceased: 'status-deceased',
     };
 
     return statusMap[this.member.membership_status] || '';

@@ -80,7 +80,7 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
       outline: none;
       border-color: #5B21B6;
       background: white;
-      box-shadow: 0 0 0 3px rgba(91, 33, 182, 0.1);
+      //box-shadow: 0 0 0 3px rgba(91, 33, 182, 0.1);
     }
 
     .input-field:disabled {

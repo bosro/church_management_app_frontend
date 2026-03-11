@@ -15,12 +15,12 @@
 
   /* Smooth transition for mobile open/close */
   transition: transform 0.3s ease;
-  box-shadow: none;
+  //box-shadow: none;
 
   @media (max-width: 768px) {
     /* On mobile, sidebar is hidden off-screen by default */
     transform: translateX(-100%);
-    box-shadow: 2px 0 16px rgba(0, 0, 0, 0.12);
+    //box-shadow: 2px 0 16px rgba(0, 0, 0, 0.12);
     z-index: 1000;
 
     &.mobile-open {
@@ -236,3 +236,8 @@
     color: #DC2626;
   }
 }
+
+
+
+
+

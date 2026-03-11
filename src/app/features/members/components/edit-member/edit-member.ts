@@ -34,18 +34,24 @@ export class EditMember implements OnInit, OnDestroy {
   genderOptions = [
     { value: 'male', label: 'Male' },
     { value: 'female', label: 'Female' },
-    { value: 'other', label: 'Other' }
+    { value: 'other', label: 'Other' },
   ];
 
   maritalStatusOptions = [
     { value: 'single', label: 'Single' },
     { value: 'married', label: 'Married' },
     { value: 'divorced', label: 'Divorced' },
-    { value: 'widowed', label: 'Widowed' }
+    { value: 'widowed', label: 'Widowed' },
   ];
 
   educationLevels = [
-    'Primary', 'Secondary', 'Diploma', 'Bachelors', 'Masters', 'PhD', 'Other'
+    'Primary',
+    'Secondary',
+    'Diploma',
+    'Bachelors',
+    'Masters',
+    'PhD',
+    'Other',
   ];
 
   // Permissions
@@ -56,7 +62,7 @@ export class EditMember implements OnInit, OnDestroy {
     private memberService: MemberService,
     private authService: AuthService,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
   ) {}
 
   ngOnInit(): void {
@@ -88,9 +94,23 @@ export class EditMember implements OnInit, OnDestroy {
 
   private initForm(): void {
     this.memberForm = this.fb.group({
-      first_name: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(50)]],
+      first_name: [
+        '',
+        [
+          Validators.required,
+          Validators.minLength(2),
+          Validators.maxLength(50),
+        ],
+      ],
       middle_name: ['', [Validators.maxLength(50)]],
-      last_name: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(50)]],
+      last_name: [
+        '',
+        [
+          Validators.required,
+          Validators.minLength(2),
+          Validators.maxLength(50),
+        ],
+      ],
       date_of_birth: [''],
       gender: [''],
       marital_status: [''],
@@ -110,14 +130,15 @@ export class EditMember implements OnInit, OnDestroy {
       join_date: ['', [Validators.required]],
       is_new_convert: [false],
       is_visitor: [false],
-      notes: ['', [Validators.maxLength(500)]]
+      notes: ['', [Validators.maxLength(500)]],
     });
   }
 
   private loadMember(): void {
     this.loadingMember = true;
 
-    this.memberService.getMemberById(this.memberId)
+    this.memberService
+      .getMemberById(this.memberId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (member) => {
@@ -131,7 +152,7 @@ export class EditMember implements OnInit, OnDestroy {
         error: (error) => {
           this.errorMessage = error.message || 'Failed to load member details';
           this.loadingMember = false;
-        }
+        },
       });
   }
 
@@ -153,13 +174,14 @@ export class EditMember implements OnInit, OnDestroy {
       education_level: member.education_level || '',
       emergency_contact_name: member.emergency_contact_name || '',
       emergency_contact_phone: member.emergency_contact_phone || '',
-      emergency_contact_relationship: member.emergency_contact_relationship || '',
+      emergency_contact_relationship:
+        member.emergency_contact_relationship || '',
       baptism_date: member.baptism_date || '',
       baptism_location: member.baptism_location || '',
       join_date: member.join_date || '',
       is_new_convert: member.is_new_convert || false,
       is_visitor: member.is_visitor || false,
-      notes: member.notes || ''
+      notes: member.notes || '',
     });
   }
 
@@ -170,13 +192,13 @@ export class EditMember implements OnInit, OnDestroy {
 
       if (!file.type.startsWith('image/')) {
         this.errorMessage = 'Please select a valid image file (JPEG, PNG, GIF)';
-        setTimeout(() => this.errorMessage = '', 3000);
+        setTimeout(() => (this.errorMessage = ''), 3000);
         return;
       }
 
       if (file.size > 5 * 1024 * 1024) {
         this.errorMessage = 'Image size must be less than 5MB';
-        setTimeout(() => this.errorMessage = '', 3000);
+        setTimeout(() => (this.errorMessage = ''), 3000);
         return;
       }
 
@@ -210,7 +232,8 @@ export class EditMember implements OnInit, OnDestroy {
 
     const memberData = this.prepareMemberData();
 
-    this.memberService.updateMember(this.memberId, memberData)
+    this.memberService
+      .updateMember(this.memberId, memberData)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (member) => {
@@ -222,9 +245,10 @@ export class EditMember implements OnInit, OnDestroy {
         },
         error: (error) => {
           this.loading = false;
-          this.errorMessage = error.message || 'Failed to update member. Please try again.';
+          this.errorMessage =
+            error.message || 'Failed to update member. Please try again.';
           this.scrollToTop();
-        }
+        },
       });
   }
 
@@ -232,7 +256,7 @@ export class EditMember implements OnInit, OnDestroy {
     const formValue = this.memberForm.value;
 
     const memberData: any = {};
-    Object.keys(formValue).forEach(key => {
+    Object.keys(formValue).forEach((key) => {
       const value = formValue[key];
       if (value !== '' && value !== null) {
         memberData[key] = value;
@@ -247,11 +271,13 @@ export class EditMember implements OnInit, OnDestroy {
 
     this.uploadingPhoto = true;
 
-    this.memberService.uploadMemberPhoto(memberId, this.selectedPhoto)
+    this.memberService
+      .uploadMemberPhoto(memberId, this.selectedPhoto)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (photoUrl) => {
-          this.memberService.updateMember(memberId, { photo_url: photoUrl })
+          this.memberService
+            .updateMember(memberId, { photo_url: photoUrl })
             .pipe(takeUntil(this.destroy$))
             .subscribe({
               next: () => {
@@ -262,14 +288,14 @@ export class EditMember implements OnInit, OnDestroy {
                 console.error('Error updating photo URL:', error);
                 this.uploadingPhoto = false;
                 this.showSuccessAndRedirect(memberId);
-              }
+              },
             });
         },
         error: (error) => {
           console.error('Error uploading photo:', error);
           this.uploadingPhoto = false;
           this.showSuccessAndRedirect(memberId);
-        }
+        },
       });
   }
 
@@ -285,7 +311,9 @@ export class EditMember implements OnInit, OnDestroy {
 
   cancel(): void {
     if (this.memberForm.dirty) {
-      if (confirm('You have unsaved changes. Are you sure you want to leave?')) {
+      if (
+        confirm('You have unsaved changes. Are you sure you want to leave?')
+      ) {
         this.router.navigate(['main/members', this.memberId]);
       }
     } else {
@@ -294,7 +322,7 @@ export class EditMember implements OnInit, OnDestroy {
   }
 
   private markFormGroupTouched(formGroup: FormGroup): void {
-    Object.keys(formGroup.controls).forEach(key => {
+    Object.keys(formGroup.controls).forEach((key) => {
       const control = formGroup.get(key);
       control?.markAsTouched();
 
@@ -339,13 +367,19 @@ export class EditMember implements OnInit, OnDestroy {
   }
 
   private scrollToFirstError(): void {
-    const firstError = document.querySelector('.error');
+    const firstError = document.querySelector('.error-message');
     if (firstError) {
       firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   }
 
   get today(): string {
-  return new Date().toISOString().split('T')[0];
-}
+    return new Date().toISOString().split('T')[0];
+  }
+
+  formatFileSize(bytes: number): string {
+    if (bytes < 1024) return bytes + ' bytes';
+    else if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+    else return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+  }
 }

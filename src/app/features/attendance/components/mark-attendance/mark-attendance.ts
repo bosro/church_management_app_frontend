@@ -16,7 +16,6 @@ import {
   AttendanceRecord,
 } from '../../../../models/attendance.model';
 import { Member } from '../../../../models/member.model';
-import { QrCodeComponent } from 'ng-qrcode';
 
 @Component({
   selector: 'app-mark-attendance',

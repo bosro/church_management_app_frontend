@@ -10,33 +10,31 @@
         <!-- Page Header -->
         <div class="page-header">
           <div class="header-left">
+
             <h1>Members</h1>
             <p class="subtitle">Manage your church members</p>
           </div>
+          <!-- In the page header actions section -->
           <div class="header-actions">
-            <button
-              class="btn-secondary"
-              (click)="importMembers()"
-              [disabled]="!canImportExport"
-              *ngIf="canImportExport"
-            >
+            <button class="btn-secondary" (click)="navigateToRegistrationLinks()" [disabled]="!canImportExport"
+              *ngIf="canImportExport">
+              <i class="ri-links-line"></i>
+              <span class="desktop-only">Registration Links</span>
+            </button>
+
+            <button class="btn-secondary" (click)="importMembers()" [disabled]="!canImportExport"
+              *ngIf="canImportExport">
               <i class="ri-upload-line"></i>
               <span class="desktop-only">Import</span>
             </button>
-            <button
-              class="btn-secondary"
-              (click)="exportMembers()"
-              [disabled]="!canImportExport"
-              *ngIf="canImportExport"
-            >
+
+            <button class="btn-secondary" (click)="exportMembers()" [disabled]="!canImportExport"
+              *ngIf="canImportExport">
               <i class="ri-download-line"></i>
               <span class="desktop-only">Export</span>
             </button>
-            <button
-              class="btn-primary"
-              (click)="addMember()"
-              [disabled]="!canAddMember"
-            >
+
+            <button class="btn-primary" (click)="addMember()" [disabled]="!canAddMember">
               <i class="ri-user-add-line"></i>
               <span class="desktop-only">Add Member</span>
             </button>
@@ -48,6 +46,25 @@
           <i class="ri-error-warning-line"></i>
           <span>{{ error }}</span>
           <button class="close-btn" (click)="error = ''">
+            <i class="ri-close-line"></i>
+          </button>
+        </div>
+
+
+        <!-- Birthday Notice - ADD THIS ENTIRE SECTION -->
+        <div *ngIf="showBirthdayNotice" class="birthday-notice">
+          <div class="notice-content">
+            <div class="notice-icon">
+              <i class="ri-cake-2-line"></i>
+            </div>
+            <div class="notice-text">
+              <p class="notice-title">Upcoming Birthdays </p>
+              <p class="notice-message">
+                Showing {{ filteredMemberCount }} member(s) with birthdays in the next 30 days
+              </p>
+            </div>
+          </div>
+          <button class="notice-close" (click)="closeBirthdayNotice()" title="Dismiss">
             <i class="ri-close-line"></i>
           </button>
         </div>
@@ -101,17 +118,10 @@
             <!-- Search -->
             <div class="filter-group search-group">
               <i class="ri-search-line search-icon"></i>
-              <input
-                type="text"
-                formControlName="search"
-                placeholder="Search members by name, email, or phone..."
-                class="search-input"
-              />
-              <i
-                *ngIf="filterForm.get('search')?.value"
-                class="ri-close-line clear-search"
-                (click)="filterForm.get('search')?.setValue('')"
-              ></i>
+              <input type="text" formControlName="search" placeholder="Search members by name, email, or phone..."
+                class="search-input" />
+              <i *ngIf="filterForm.get('search')?.value" class="ri-close-line clear-search"
+                (click)="filterForm.get('search')?.setValue('')"></i>
             </div>
 
             <!-- Gender Filter -->
@@ -136,24 +146,15 @@
             </div>
 
             <!-- Clear Filters -->
-            <button
-              type="button"
-              class="btn-clear"
-              (click)="clearFilters()"
-              *ngIf="filterForm.dirty"
-              title="Clear all filters"
-            >
+            <button type="button" class="btn-clear" (click)="clearFilters()" *ngIf="filterForm.dirty"
+              title="Clear all filters">
               <i class="ri-close-line"></i>
               <span class="desktop-only">Clear</span>
             </button>
 
             <!-- View Toggle -->
-            <button
-              type="button"
-              class="btn-icon"
-              (click)="toggleViewMode()"
-              [title]="viewMode === 'list' ? 'Switch to grid view' : 'Switch to list view'"
-            >
+            <button type="button" class="btn-icon" (click)="toggleViewMode()"
+              [title]="viewMode === 'list' ? 'Switch to grid view' : 'Switch to list view'">
               <i [class]="viewMode === 'list' ? 'ri-grid-line' : 'ri-list-check'"></i>
             </button>
           </form>
@@ -182,15 +183,12 @@
                 </tr>
               </thead>
               <tbody>
-                <tr
-                  *ngFor="let member of members"
-                  class="member-row"
-                  (click)="viewMember(member.id)"
-                >
+                <tr *ngFor="let member of members" class="member-row" (click)="viewMember(member.id)">
                   <td>
                     <div class="member-cell">
                       <div class="member-avatar">
-                        <img *ngIf="member.photo_url" [src]="member.photo_url" [alt]="getMemberFullName(member)" />
+                        <img *ngIf="member.photo_url" [src]="member.photo_url" [alt]="getMemberFullName(member)"
+                          (error)="member.photo_url = undefined" />
                         <div *ngIf="!member.photo_url" class="avatar-placeholder">
                           {{ getMemberInitials(member) }}
                         </div>
@@ -233,22 +231,12 @@
                   </td>
                   <td>
                     <div class="action-buttons">
-                      <button
-                        class="btn-icon-small"
-                        (click)="editMember(member.id, $event)"
-                        title="Edit"
-                        [disabled]="!canEditMember"
-                        *ngIf="canEditMember"
-                      >
+                      <button class="btn-icon-small" (click)="editMember(member.id, $event)" title="Edit"
+                        [disabled]="!canEditMember" *ngIf="canEditMember">
                         <i class="ri-edit-line"></i>
                       </button>
-                      <button
-                        class="btn-icon-small btn-danger"
-                        (click)="deleteMember(member.id, $event)"
-                        title="Delete"
-                        [disabled]="!canDeleteMember"
-                        *ngIf="canDeleteMember"
-                      >
+                      <button class="btn-icon-small btn-danger" (click)="deleteMember(member.id, $event)" title="Delete"
+                        [disabled]="!canDeleteMember" *ngIf="canDeleteMember">
                         <i class="ri-delete-bin-line"></i>
                       </button>
                     </div>
@@ -261,11 +249,7 @@
                     <i class="ri-user-line"></i>
                     <p>No members found</p>
                     <p class="empty-hint">Try adjusting your filters or add your first member</p>
-                    <button
-                      class="btn-primary-small"
-                      (click)="addMember()"
-                      *ngIf="canAddMember"
-                    >
+                    <button class="btn-primary-small" (click)="addMember()" *ngIf="canAddMember">
                       <i class="ri-user-add-line"></i>
                       Add Your First Member
                     </button>
@@ -277,11 +261,7 @@
 
           <!-- Pagination -->
           <div class="pagination" *ngIf="totalPages > 1">
-            <button
-              class="pagination-btn"
-              [disabled]="currentPage === 1"
-              (click)="previousPage()"
-            >
+            <button class="pagination-btn" [disabled]="currentPage === 1" (click)="previousPage()">
               <i class="ri-arrow-left-s-line"></i>
               <span class="desktop-only">Previous</span>
             </button>
@@ -293,11 +273,7 @@
               </span>
             </div>
 
-            <button
-              class="pagination-btn"
-              [disabled]="currentPage === totalPages"
-              (click)="nextPage()"
-            >
+            <button class="pagination-btn" [disabled]="currentPage === totalPages" (click)="nextPage()">
               <span class="desktop-only">Next</span>
               <i class="ri-arrow-right-s-line"></i>
             </button>
@@ -306,14 +282,11 @@
 
         <!-- Members Grid View -->
         <div *ngIf="!loading && viewMode === 'grid'" class="members-grid">
-          <div
-            *ngFor="let member of members"
-            class="member-card"
-            (click)="viewMember(member.id)"
-          >
+          <div *ngFor="let member of members" class="member-card" (click)="viewMember(member.id)">
             <div class="card-header">
               <div class="member-avatar-large">
-                <img *ngIf="member.photo_url" [src]="member.photo_url" [alt]="getMemberFullName(member)" />
+                <img *ngIf="member.photo_url" [src]="member.photo_url" [alt]="getMemberFullName(member)"
+                  (error)="member.photo_url = undefined" />
                 <div *ngIf="!member.photo_url" class="avatar-placeholder-large">
                   {{ getMemberInitials(member) }}
                 </div>
@@ -344,21 +317,13 @@
             </div>
 
             <div class="card-footer">
-              <button
-                class="btn-card"
-                (click)="editMember(member.id, $event)"
-                [disabled]="!canEditMember"
-                *ngIf="canEditMember"
-              >
+              <button class="btn-card" (click)="editMember(member.id, $event)" [disabled]="!canEditMember"
+                *ngIf="canEditMember">
                 <i class="ri-edit-line"></i>
                 Edit
               </button>
-              <button
-                class="btn-card btn-danger"
-                (click)="deleteMember(member.id, $event)"
-                [disabled]="!canDeleteMember"
-                *ngIf="canDeleteMember"
-              >
+              <button class="btn-card btn-danger" (click)="deleteMember(member.id, $event)"
+                [disabled]="!canDeleteMember" *ngIf="canDeleteMember">
                 <i class="ri-delete-bin-line"></i>
                 Delete
               </button>
@@ -370,11 +335,7 @@
             <i class="ri-user-line"></i>
             <p>No members found</p>
             <p class="empty-hint">Try adjusting your filters or add your first member</p>
-            <button
-              class="btn-primary"
-              (click)="addMember()"
-              *ngIf="canAddMember"
-            >
+            <button class="btn-primary" (click)="addMember()" *ngIf="canAddMember">
               <i class="ri-user-add-line"></i>
               Add Your First Member
             </button>
@@ -384,5 +345,3 @@
     </div>
   </div>
 </div>
-
-

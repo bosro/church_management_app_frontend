@@ -48,7 +48,7 @@ select:focus,
 textarea:focus {
   outline: none;
   border-color: #5B21B6 !important;
-  box-shadow: 0 0 0 3px rgba(91, 33, 182, 0.1);
+  //box-shadow: 0 0 0 3px rgba(91, 33, 182, 0.1);
 }
 
 /* Button Transitions */
@@ -58,14 +58,14 @@ button {
 
 button:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  //box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 /* Card Styles */
 .card {
   background: white;
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  //box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   padding: 24px;
 }
 

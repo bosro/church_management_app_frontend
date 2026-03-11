@@ -73,7 +73,7 @@
       background: #5b21b6;
       border-color: #5b21b6;
       color: white;
-      box-shadow: 0 4px 12px rgba(91, 33, 182, 0.3);
+      //box-shadow: 0 4px 12px rgba(91, 33, 182, 0.3);
     }
   }
 
@@ -188,7 +188,7 @@
   background: white;
   border-radius: 12px;
   padding: 2rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  //box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 
   .form-section {
     padding-bottom: 2rem;
@@ -244,7 +244,7 @@
           outline: none;
           border-color: #5b21b6;
           background: white;
-          box-shadow: 0 0 0 3px rgba(91, 33, 182, 0.1);
+          //box-shadow: 0 0 0 3px rgba(91, 33, 182, 0.1);
         }
       }
 
@@ -454,7 +454,7 @@
         outline: none;
         border-color: #5b21b6;
         background: white;
-        box-shadow: 0 0 0 3px rgba(91, 33, 182, 0.1);
+        //box-shadow: 0 0 0 3px rgba(91, 33, 182, 0.1);
       }
 
       &.error {
@@ -462,7 +462,7 @@
         background: #fef2f2;
 
         &:focus {
-          box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+          //box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
         }
       }
     }
@@ -526,7 +526,7 @@
       &:hover:not(:disabled) {
         background: #6d28d9;
         transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(91, 33, 182, 0.3);
+        //box-shadow: 0 4px 12px rgba(91, 33, 182, 0.3);
       }
     }
 

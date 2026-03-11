@@ -4,6 +4,8 @@ import { RouterModule, Routes } from '@angular/router';
 import { AuthGuard } from '../core/guards/auth-guard';
 import { RoleGuard } from '../core/guards/role-guard';
 import { Features } from './features/features';
+import { MemberRegistration } from './public/member-registration/member-registration';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 
 const routes: Routes = [
   {
@@ -126,7 +128,7 @@ const routes: Routes = [
 ];
 
 @NgModule({
-  declarations: [Features,],
-  imports: [CommonModule, RouterModule.forChild(routes)],
+  declarations: [Features, MemberRegistration,],
+  imports: [CommonModule, RouterModule.forChild(routes), ReactiveFormsModule],
 })
 export class FeaturesModule {}

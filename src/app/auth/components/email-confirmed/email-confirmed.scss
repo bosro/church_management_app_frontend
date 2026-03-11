@@ -18,7 +18,7 @@
   width: 100%;
   text-align: center;
   animation: slideUp 0.5s ease;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  // //box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 }
 
 .success-icon-wrapper {
@@ -54,7 +54,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    //box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     animation: bounceIn 0.6s ease 0.5s both;
 
     i {
@@ -203,7 +203,7 @@
   &:hover {
     background: #6D28D9;
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(91, 33, 182, 0.3);
+    //box-shadow: 0 4px 12px rgba(91, 33, 182, 0.3);
   }
 }
 

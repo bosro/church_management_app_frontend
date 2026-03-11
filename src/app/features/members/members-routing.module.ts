@@ -6,12 +6,17 @@ import { AddMember } from './components/add-member/add-member';
 import { EditMember } from './components/edit-member/edit-member';
 import { ImportMembers } from './components/import-members/import-members';
 import { MemberDetail } from './components/member-detail/member-detail';
+import { RegistrationLinks } from './components/registration-links/registration-links';
 
 
 const routes: Routes = [
   { path: '', component: MemberList },
   { path: 'add', component: AddMember },
   { path: 'import', component: ImportMembers },
+  {
+    path: 'registration-links', 
+    component: RegistrationLinks,
+  },
   { path: ':id', component: MemberDetail },
   { path: ':id/edit', component: EditMember }
 ];

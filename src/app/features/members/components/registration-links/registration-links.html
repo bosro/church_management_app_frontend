@@ -1,0 +1,204 @@
+<!-- src/app/features/members/components/registration-links/registration-links.component.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+
+  <div class="dashboard-content">
+    <app-header></app-header>
+
+    <div class="dashboard-body">
+      <div class="links-container">
+        <!-- Page Header -->
+        <div class="page-header">
+          <div class="header-left">
+            <button class="back-btn" (click)="goBack()">
+              <i class="ri-arrow-left-line"></i>
+            </button>
+            <div>
+              <h1>Registration Links</h1>
+              <p class="subtitle">Create shareable links for member self-registration</p>
+            </div>
+          </div>
+          <button class="btn-primary" (click)="openCreateModal()">
+            <i class="ri-add-line"></i>
+            Create Link
+          </button>
+        </div>
+
+        <!-- Success Message -->
+        <div *ngIf="successMessage" class="success-alert">
+          <i class="ri-checkbox-circle-line"></i>
+          <span>{{ successMessage }}</span>
+        </div>
+
+        <!-- Error Message -->
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i>
+          <span>{{ errorMessage }}</span>
+        </div>
+
+        <!-- Loading State -->
+        <div *ngIf="loading && links.length === 0" class="loading-container">
+          <div class="spinner"></div>
+          <p>Loading registration links...</p>
+        </div>
+
+        <!-- Links List -->
+        <div *ngIf="!loading || links.length > 0" class="links-list">
+          <div *ngFor="let link of links" class="link-card">
+            <div class="link-header">
+              <div class="link-info">
+                <h3>Registration Link</h3>
+                <p class="link-token">{{ link.link_token.substring(0, 16) }}...</p>
+              </div>
+              <span class="status-badge" [ngClass]="getStatusClass(link)">
+                {{ getLinkStatus(link) }}
+              </span>
+            </div>
+
+            <div class="link-details">
+              <div class="detail-row">
+                <i class="ri-time-line"></i>
+                <span class="detail-label">Expires:</span>
+                <span class="detail-value">{{ formatDate(link.expires_at) }}</span>
+              </div>
+              <div class="detail-row">
+                <i class="ri-user-line"></i>
+                <span class="detail-label">Uses:</span>
+                <span class="detail-value">
+                  {{ link.current_uses }} {{ link.max_uses ? '/ ' + link.max_uses : '/ ∞' }}
+                </span>
+              </div>
+              <div class="detail-row">
+                <i class="ri-calendar-line"></i>
+                <span class="detail-label">Created:</span>
+                <span class="detail-value">{{ formatDate(link.created_at) }}</span>
+              </div>
+            </div>
+
+            <div class="link-actions">
+              <button class="btn-action btn-copy" (click)="copyLink(link)"
+                [disabled]="!link.is_active || isExpired(link) || isMaxedOut(link)">
+                <i class="ri-file-copy-line"></i>
+                Copy Link
+              </button>
+              <button class="btn-action btn-qr" (click)="showQRCode(link)"
+                [disabled]="!link.is_active || isExpired(link) || isMaxedOut(link)">
+                <i class="ri-qr-code-line"></i>
+                QR Code
+              </button>
+              <button class="btn-action btn-danger" (click)="deactivateLink(link.id)" [disabled]="!link.is_active">
+                <i class="ri-close-line"></i>
+                Deactivate
+              </button>
+            </div>
+          </div>
+
+          <!-- Empty State -->
+          <div *ngIf="links.length === 0" class="empty-state">
+            <i class="ri-link-line"></i>
+            <h3>No Registration Links</h3>
+            <p>Create a registration link to allow members to register themselves</p>
+            <button class="btn-primary" (click)="openCreateModal()">
+              <i class="ri-add-line"></i>
+              Create Your First Link
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Create Link Modal -->
+<div *ngIf="showCreateModal" class="modal-overlay" (click)="closeCreateModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>Create Registration Link</h2>
+      <button class="close-btn" (click)="closeCreateModal()">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <div class="form-group">
+        <label for="expiresIn">Link Expiration (hours)</label>
+        <input id="expiresIn" type="number" [(ngModel)]="expiresInHours" min="1" max="720" placeholder="24" />
+        <p class="help-text">How long should this link remain valid? (1-720 hours / 30 days)</p>
+      </div>
+
+      <div class="form-group">
+        <label for="maxUses">Maximum Uses (optional)</label>
+        <input id="maxUses" type="number" [(ngModel)]="maxUses" min="1" placeholder="Unlimited" />
+        <p class="help-text">Leave empty for unlimited uses</p>
+      </div>
+
+      <div *ngIf="errorMessage" class="error-message">
+        <i class="ri-error-warning-line"></i>
+        {{ errorMessage }}
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-secondary" (click)="closeCreateModal()">Cancel</button>
+      <button class="btn-primary" (click)="createLink()" [disabled]="loading">
+        <i *ngIf="!loading" class="ri-add-line"></i>
+        <i *ngIf="loading" class="ri-loader-4-line spin"></i>
+        {{ loading ? 'Creating...' : 'Create Link' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- QR Code Modal -->
+<div class="modal-overlay" *ngIf="showQRModal" (click)="closeQRModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>
+        <i class="ri-qr-code-line"></i>
+        Registration QR Code
+      </h2>
+      <button class="close-btn" (click)="closeQRModal()">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <div class="qr-container">
+        <!-- Use ng-qrcode component with CORRECT properties -->
+        <qr-code [value]="qrCodeValue" [size]="300" [errorCorrectionLevel]="'M'" [darkColor]="'#000000FF'"
+          [lightColor]="'#FFFFFFFF'"></qr-code>
+      </div>
+
+      <div class="qr-info">
+        <p class="qr-label">Scan this QR code to register</p>
+        <div class="link-display">
+          <input type="text" [value]="qrCodeValue" readonly class="link-input" />
+          <button class="btn-copy" (click)="copyToClipboard(qrCodeValue)" title="Copy link">
+            <i class="ri-file-copy-line"></i>
+          </button>
+        </div>
+
+        <div class="qr-details" *ngIf="selectedLinkForQR">
+          <div class="detail-row">
+            <span class="label">Expires:</span>
+            <span class="value">{{ selectedLinkForQR.expires_at | date:'medium' }}</span>
+          </div>
+          <div class="detail-row" *ngIf="selectedLinkForQR.max_uses">
+            <span class="label">Max Uses:</span>
+            <span class="value">{{ selectedLinkForQR.current_uses || 0 }} / {{ selectedLinkForQR.max_uses }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-secondary" (click)="closeQRModal()">
+        Close
+      </button>
+      <button class="btn-primary" (click)="downloadQRCode()">
+        <i class="ri-download-line"></i>
+        Download QR Code
+      </button>
+    </div>
+  </div>
+</div>

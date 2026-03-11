@@ -32,21 +32,11 @@
             <span class="desktop-only">Back</span>
           </button>
           <div class="header-actions">
-            <button
-              class="btn-secondary"
-              (click)="editMember()"
-              [disabled]="!canEditMember"
-              *ngIf="canEditMember"
-            >
+            <button class="btn-secondary" (click)="editMember()" [disabled]="!canEditMember" *ngIf="canEditMember">
               <i class="ri-edit-line"></i>
               <span class="desktop-only">Edit</span>
             </button>
-            <button
-              class="btn-danger"
-              (click)="deleteMember()"
-              [disabled]="!canDeleteMember"
-              *ngIf="canDeleteMember"
-            >
+            <button class="btn-danger" (click)="deleteMember()" [disabled]="!canDeleteMember" *ngIf="canDeleteMember">
               <i class="ri-delete-bin-line"></i>
               <span class="desktop-only">Delete</span>
             </button>
@@ -57,7 +47,8 @@
         <div class="profile-card">
           <div class="profile-header">
             <div class="profile-avatar">
-              <img *ngIf="member.photo_url" [src]="member.photo_url" [alt]="getMemberFullName()" />
+              <img *ngIf="member.photo_url" [src]="member.photo_url" [alt]="getMemberFullName()"
+                (error)="member.photo_url = undefined" />
               <div *ngIf="!member.photo_url" class="avatar-placeholder">
                 {{ getMemberInitials() }}
               </div>
@@ -122,35 +113,19 @@
         <!-- Tabs -->
         <div class="tabs-container">
           <div class="tabs">
-            <button
-              class="tab"
-              [class.active]="activeTab === 'overview'"
-              (click)="setActiveTab('overview')"
-            >
+            <button class="tab" [class.active]="activeTab === 'overview'" (click)="setActiveTab('overview')">
               <i class="ri-file-list-line"></i>
               Overview
             </button>
-            <button
-              class="tab"
-              [class.active]="activeTab === 'attendance'"
-              (click)="setActiveTab('attendance')"
-            >
+            <button class="tab" [class.active]="activeTab === 'attendance'" (click)="setActiveTab('attendance')">
               <i class="ri-calendar-check-line"></i>
               Attendance
             </button>
-            <button
-              class="tab"
-              [class.active]="activeTab === 'giving'"
-              (click)="setActiveTab('giving')"
-            >
+            <button class="tab" [class.active]="activeTab === 'giving'" (click)="setActiveTab('giving')">
               <i class="ri-money-dollar-circle-line"></i>
               Giving
             </button>
-            <button
-              class="tab"
-              [class.active]="activeTab === 'ministries'"
-              (click)="setActiveTab('ministries')"
-            >
+            <button class="tab" [class.active]="activeTab === 'ministries'" (click)="setActiveTab('ministries')">
               <i class="ri-team-line"></i>
               Ministries
             </button>
@@ -216,7 +191,9 @@
                   </div>
 
                   <!-- Empty State -->
-                  <div *ngIf="!member.phone_primary && !member.phone_secondary && !member.email && !member.address && !member.city" class="empty-info">
+                  <div
+                    *ngIf="!member.phone_primary && !member.phone_secondary && !member.email && !member.address && !member.city"
+                    class="empty-info">
                     <i class="ri-information-line"></i>
                     <p>No contact information available</p>
                   </div>
@@ -271,7 +248,9 @@
                   </div>
 
                   <!-- Empty State -->
-                  <div *ngIf="!member.date_of_birth && !member.marital_status && !member.occupation && !member.employer && !member.education_level" class="empty-info">
+                  <div
+                    *ngIf="!member.date_of_birth && !member.marital_status && !member.occupation && !member.employer && !member.education_level"
+                    class="empty-info">
                     <i class="ri-information-line"></i>
                     <p>No personal information available</p>
                   </div>
@@ -298,7 +277,8 @@
                     <div>
                       <p class="info-label">Contact Phone</p>
                       <p class="info-value">
-                        <a href="tel:{{ member.emergency_contact_phone }}">{{ formatPhoneNumber(member.emergency_contact_phone) }}</a>
+                        <a href="tel:{{ member.emergency_contact_phone }}">{{
+                          formatPhoneNumber(member.emergency_contact_phone) }}</a>
                       </p>
                     </div>
                   </div>

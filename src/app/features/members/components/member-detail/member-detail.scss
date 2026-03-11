@@ -152,7 +152,7 @@
   background: white;
   border-radius: 12px;
   padding: 2rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  //box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   margin-bottom: 1.5rem;
 
   .profile-header {
@@ -292,7 +292,7 @@
 .tabs-container {
   background: white;
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  //box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   margin-bottom: 1.5rem;
   overflow-x: auto;
 
@@ -355,7 +355,7 @@
     background: white;
     border-radius: 12px;
     padding: 1.75rem;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    //box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 
     h3 {
       font-size: 1.125rem;
@@ -445,7 +445,7 @@
   text-align: center;
   background: white;
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  //box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 
   i {
     font-size: 4rem;
@@ -520,3 +520,5 @@
     }
   }
 }
+
+

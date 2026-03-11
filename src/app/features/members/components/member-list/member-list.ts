@@ -1,12 +1,16 @@
 // src/app/features/members/components/member-list/member-list.component.ts
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { FormBuilder, FormGroup } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { takeUntil, debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { MemberService } from '../../services/member.service';
 import { AuthService } from '../../../../core/services/auth';
-import { Member, MemberSearchFilters, MemberStatistics } from '../../../../models/member.model';
+import {
+  Member,
+  MemberSearchFilters,
+  MemberStatistics,
+} from '../../../../models/member.model';
 
 @Component({
   selector: 'app-member-list',
@@ -36,6 +40,7 @@ export class MemberList implements OnInit, OnDestroy {
 
   // Statistics
   statistics: MemberStatistics | null = null;
+  loadingStats = false;
 
   // Permissions
   canAddMember = false;
@@ -43,17 +48,33 @@ export class MemberList implements OnInit, OnDestroy {
   canDeleteMember = false;
   canImportExport = false;
 
+  // Birthday notice
+  showBirthdayNotice = false;
+  filteredMemberCount = 0;
+
   constructor(
     private memberService: MemberService,
     private authService: AuthService,
     private router: Router,
-    private fb: FormBuilder
+    private route: ActivatedRoute,
+    private fb: FormBuilder,
   ) {}
 
   ngOnInit(): void {
     this.setPermissions();
     this.initFilterForm();
-    this.loadMembers();
+
+    // Check for birthday filter from query params
+    this.route.queryParams
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((params) => {
+        if (params['filter'] === 'birthdays') {
+          this.filterByUpcomingBirthdays();
+        } else {
+          this.loadMembers();
+        }
+      });
+
     this.loadStatistics();
     this.setupFilterListener();
 
@@ -75,8 +96,14 @@ export class MemberList implements OnInit, OnDestroy {
 
     this.canAddMember = this.authService.hasRole(adminRoles);
     this.canEditMember = this.authService.hasRole(editRoles);
-    this.canDeleteMember = this.authService.hasRole(['super_admin', 'church_admin']);
-    this.canImportExport = this.authService.hasRole(['super_admin', 'church_admin']);
+    this.canDeleteMember = this.authService.hasRole([
+      'super_admin',
+      'church_admin',
+    ]);
+    this.canImportExport = this.authService.hasRole([
+      'super_admin',
+      'church_admin',
+    ]);
   }
 
   private initFilterForm(): void {
@@ -85,35 +112,68 @@ export class MemberList implements OnInit, OnDestroy {
       gender: [''],
       status: [''],
       branch: [''],
-      ministry: ['']
+      ministry: [''],
     });
   }
 
   private setupFilterListener(): void {
     this.filterForm.valueChanges
-      .pipe(
-        debounceTime(500),
-        distinctUntilChanged(),
-        takeUntil(this.destroy$)
-      )
-      .subscribe(values => {
+      .pipe(debounceTime(500), distinctUntilChanged(), takeUntil(this.destroy$))
+      .subscribe((values) => {
         this.filters = {
           search_term: values.search || undefined,
           gender_filter: values.gender || undefined,
           status_filter: values.status || undefined,
           branch_filter: values.branch || undefined,
-          ministry_filter: values.ministry || undefined
+          ministry_filter: values.ministry || undefined,
         };
         this.currentPage = 1;
         this.loadMembers();
       });
   }
 
-  loadMembers(): void {
+  private filterByUpcomingBirthdays(): void {
     this.loading = true;
     this.error = '';
 
-    this.memberService.getMembers(this.filters, this.currentPage, this.pageSize)
+    const today = new Date();
+    const thirtyDaysLater = new Date();
+    thirtyDaysLater.setDate(today.getDate() + 30);
+
+    this.memberService
+      .getMembersByBirthdayRange(
+        today.toISOString().split('T')[0],
+        thirtyDaysLater.toISOString().split('T')[0],
+      )
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (members) => {
+          this.members = members;
+          this.totalMembers = members.length;
+          this.totalPages = 1;
+          this.loading = false;
+
+          // ✅ FIXED: Update birthday notice count and show it
+          this.filteredMemberCount = members.length;
+          this.showBirthdayNotice = true;
+          // ✅ REMOVED: The error message that was creating the unstyled notice
+        },
+        error: (error) => {
+          this.error =
+            error.message || 'Failed to load members with upcoming birthdays';
+          this.loading = false;
+          console.error('Error loading birthday members:', error);
+        },
+      });
+  }
+
+  loadMembers(): void {
+    this.loading = true;
+    this.error = '';
+    this.showBirthdayNotice = false; // ✅ Hide birthday notice when loading regular members
+
+    this.memberService
+      .getMembers(this.filters, this.currentPage, this.pageSize)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: ({ data, count }) => {
@@ -126,20 +186,35 @@ export class MemberList implements OnInit, OnDestroy {
           this.error = error.message || 'Failed to load members';
           this.loading = false;
           console.error('Error loading members:', error);
-        }
+        },
       });
   }
 
   loadStatistics(): void {
-    this.memberService.getMemberStatistics()
+    this.loadingStats = true;
+
+    this.memberService
+      .getMemberStatistics()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (stats) => {
           this.statistics = stats;
+          this.loadingStats = false;
+          console.log('Statistics loaded:', stats);
         },
         error: (error) => {
           console.error('Error loading statistics:', error);
-        }
+          this.loadingStats = false;
+          this.statistics = {
+            total_members: 0,
+            active_members: 0,
+            inactive_members: 0,
+            new_members_this_month: 0,
+            new_members_this_year: 0,
+            male_members: 0,
+            female_members: 0,
+          };
+        },
       });
   }
 
@@ -150,7 +225,8 @@ export class MemberList implements OnInit, OnDestroy {
 
   addMember(): void {
     if (!this.canAddMember) {
-      alert('You do not have permission to add members');
+      this.error = 'You do not have permission to add members';
+      setTimeout(() => (this.error = ''), 3000);
       return;
     }
     this.router.navigate(['main/members/add']);
@@ -159,7 +235,8 @@ export class MemberList implements OnInit, OnDestroy {
   editMember(memberId: string, event: Event): void {
     event.stopPropagation();
     if (!this.canEditMember) {
-      alert('You do not have permission to edit members');
+      this.error = 'You do not have permission to edit members';
+      setTimeout(() => (this.error = ''), 3000);
       return;
     }
     this.router.navigate(['main/members', memberId, 'edit']);
@@ -167,7 +244,8 @@ export class MemberList implements OnInit, OnDestroy {
 
   importMembers(): void {
     if (!this.canImportExport) {
-      alert('You do not have permission to import members');
+      this.error = 'You do not have permission to import members';
+      setTimeout(() => (this.error = ''), 3000);
       return;
     }
     this.router.navigate(['main/members/import']);
@@ -205,27 +283,39 @@ export class MemberList implements OnInit, OnDestroy {
   // Export
   exportMembers(): void {
     if (!this.canImportExport) {
-      alert('You do not have permission to export members');
+      this.error = 'You do not have permission to export members';
+      setTimeout(() => (this.error = ''), 3000);
       return;
     }
 
-    this.memberService.exportMembersToCSV(this.filters)
+    this.loading = true;
+
+    this.memberService
+      .exportMembersToCSV(this.filters)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (blob) => {
+          this.loading = false;
+
           const url = window.URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
-          a.download = `members_${new Date().toISOString().split('T')[0]}.csv`;
+          a.download = `members_export_${new Date().toISOString().split('T')[0]}.csv`;
           document.body.appendChild(a);
           a.click();
+
           document.body.removeChild(a);
           window.URL.revokeObjectURL(url);
+
+          this.error = '';
+          console.log('Export successful');
         },
         error: (error) => {
-          alert('Failed to export members: ' + error.message);
+          this.loading = false;
+          this.error =
+            'Failed to export members: ' + (error.message || 'Unknown error');
           console.error('Error exporting members:', error);
-        }
+        },
       });
   }
 
@@ -234,12 +324,18 @@ export class MemberList implements OnInit, OnDestroy {
     event.stopPropagation();
 
     if (!this.canDeleteMember) {
-      alert('You do not have permission to delete members');
+      this.error = 'You do not have permission to delete members';
+      setTimeout(() => (this.error = ''), 3000);
       return;
     }
 
-    if (confirm('Are you sure you want to deactivate this member? This action can be reversed by reactivating the member later.')) {
-      this.memberService.deleteMember(memberId)
+    if (
+      confirm(
+        'Are you sure you want to deactivate this member? This action can be reversed by reactivating the member later.',
+      )
+    ) {
+      this.memberService
+        .deleteMember(memberId)
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: () => {
@@ -247,9 +343,10 @@ export class MemberList implements OnInit, OnDestroy {
             this.loadStatistics();
           },
           error: (error) => {
-            alert('Failed to delete member: ' + error.message);
+            this.error =
+              'Failed to delete member: ' + (error.message || 'Unknown error');
             console.error('Error deleting member:', error);
-          }
+          },
         });
     }
   }
@@ -267,7 +364,7 @@ export class MemberList implements OnInit, OnDestroy {
       gender: '',
       status: '',
       branch: '',
-      ministry: ''
+      ministry: '',
     });
     this.filters = {};
     this.currentPage = 1;
@@ -284,10 +381,10 @@ export class MemberList implements OnInit, OnDestroy {
 
   getStatusClass(status: string): string {
     const statusMap: Record<string, string> = {
-      'active': 'status-active',
-      'inactive': 'status-inactive',
-      'transferred': 'status-transferred',
-      'deceased': 'status-deceased'
+      active: 'status-active',
+      inactive: 'status-inactive',
+      transferred: 'status-transferred',
+      deceased: 'status-deceased',
     };
     return statusMap[status] || '';
   }
@@ -298,12 +395,28 @@ export class MemberList implements OnInit, OnDestroy {
     const birthDate = new Date(dateOfBirth);
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    if (
+      monthDiff < 0 ||
+      (monthDiff === 0 && today.getDate() < birthDate.getDate())
+    ) {
       age--;
     }
     return age;
   }
+
+  navigateToRegistrationLinks(): void {
+    if (!this.canImportExport) {
+      this.error = 'You do not have permission to manage registration links';
+      setTimeout(() => (this.error = ''), 3000);
+      return;
+    }
+    this.router.navigate(['main/members/registration-links']);
+  }
+
+  // ✅ FIXED: Close birthday notice
+  closeBirthdayNotice(): void {
+    this.showBirthdayNotice = false;
+    // Optionally navigate back to all members
+    this.router.navigate(['main/members']);
+  }
 }
-
-
-

@@ -77,7 +77,7 @@
 
   &:focus {
     border-color: #7C3AED;
-    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+    //box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
   }
 
   &::placeholder {
@@ -245,7 +245,7 @@
   background: white;
   border: 1px solid #E5E7EB;
   border-radius: 8px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  //box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   padding: 8px;
   z-index: 1000;
 

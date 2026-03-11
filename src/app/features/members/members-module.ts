@@ -9,8 +9,8 @@ import { MembersRoutingModule } from './members-routing.module';
 import { ReactiveFormsModule } from '@angular/forms';
 import { SharedModule } from '../../shared/shared-module';
 import { EditMember } from './components/edit-member/edit-member';
-
-
+import { RegistrationLinks } from './components/registration-links/registration-links';
+import { QrCodeComponent } from 'ng-qrcode';
 
 @NgModule({
   declarations: [
@@ -19,16 +19,15 @@ import { EditMember } from './components/edit-member/edit-member';
     AddMember,
     ImportMembers,
     MemberProfile,
-    EditMember
+    EditMember,
+    RegistrationLinks,
   ],
   imports: [
-      CommonModule,
+    CommonModule,
     ReactiveFormsModule,
     SharedModule,
-    MembersRoutingModule
-  ]
+    MembersRoutingModule,
+    QrCodeComponent,
+  ],
 })
-export class MembersModule { }
-
-
-
+export class MembersModule {}

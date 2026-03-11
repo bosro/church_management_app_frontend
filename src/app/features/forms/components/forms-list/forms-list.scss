@@ -80,7 +80,7 @@
     &:hover {
       background: #6D28D9;
       transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(91, 33, 182, 0.3);
+      //box-shadow: 0 4px 12px rgba(91, 33, 182, 0.3);
     }
   }
 }
@@ -147,12 +147,12 @@
     background: white;
     border-radius: 12px;
     padding: 1.5rem;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    //box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     cursor: pointer;
     transition: all 0.2s;
 
     &:hover {
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+      //box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
       transform: translateY(-2px);
     }
 
@@ -287,7 +287,7 @@
     text-align: center;
     background: white;
     border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    //box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 
     i {
       font-size: 4rem;
@@ -325,7 +325,7 @@
       &:hover {
         background: #6D28D9;
         transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(91, 33, 182, 0.3);
+        //box-shadow: 0 4px 12px rgba(91, 33, 182, 0.3);
       }
     }
   }
@@ -338,7 +338,7 @@
   padding: 1.25rem;
   background: white;
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  //box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 
   .pagination-btn {
     display: flex;
