@@ -6,29 +6,28 @@ import { RouterModule, Routes } from '@angular/router';
 import { RoleGuard } from '../../core/guards/role-guard';
 import { Users } from './users/users/users';
 import { Churches } from './churches/churches';
+import { SharedModule } from '../../shared/shared-module';
+import { AdminLayout } from './admin-layout/admin-layout';
 
 
 const routes: Routes = [
   {
     path: '',
+    component: AdminLayout, // ✅ Wrap in layout
+    canActivate: [RoleGuard],
+    data: { roles: ['super_admin'] },
     children: [
       {
         path: 'signup-requests',
-        component: SignupRequests,
-        canActivate: [RoleGuard],
-        data: { roles: ['super_admin'] }
+        component: SignupRequests
       },
       {
         path: 'users',
-        component: Users,
-        canActivate: [RoleGuard],
-        data: { roles: ['super_admin'] }
+        component: Users
       },
       {
         path: 'churches',
-        component: Churches,
-        canActivate: [RoleGuard],
-        data: { roles: ['super_admin'] }
+        component: Churches
       },
       {
         path: '',
@@ -44,12 +43,15 @@ const routes: Routes = [
   declarations: [
     SignupRequests,
     Users,
-    Churches
+    Churches,
+    AdminLayout,
+    AdminLayout
   ],
   imports: [
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
+    SharedModule,
     RouterModule.forChild(routes)
   ]
 })

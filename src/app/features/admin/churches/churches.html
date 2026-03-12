@@ -1,1 +1,270 @@
-<p>churches works!</p>
+<div class="churches-container">
+  <!-- Header -->
+  <div class="page-header">
+    <div class="header-content">
+      <h1>All Churches</h1>
+      <p class="subtitle">Manage churches across the platform</p>
+    </div>
+    <button class="btn btn-primary" (click)="openCreateModal()">
+      <i class="ri-add-line"></i>
+      Add Church
+    </button>
+  </div>
+
+  <!-- Alerts -->
+  <div *ngIf="successMessage" class="alert alert-success">
+    <i class="ri-checkbox-circle-line"></i>
+    <span>{{ successMessage }}</span>
+  </div>
+
+  <div *ngIf="errorMessage" class="alert alert-error">
+    <i class="ri-error-warning-line"></i>
+    <span>{{ errorMessage }}</span>
+  </div>
+
+  <!-- Search -->
+  <div class="search-section">
+    <div class="search-box">
+      <i class="ri-search-line"></i>
+      <input
+        type="text"
+        placeholder="Search churches..."
+        [(ngModel)]="searchTerm"
+        (input)="onSearchChange()"
+      />
+    </div>
+  </div>
+
+  <!-- Churches Grid -->
+  <div class="churches-grid" *ngIf="!loading">
+    <div *ngIf="filteredChurches.length === 0" class="empty-state">
+      <i class="ri-building-line"></i>
+      <h3>No churches found</h3>
+      <p>Try adjusting your search or create a new church</p>
+    </div>
+
+    <div class="church-card" *ngFor="let church of filteredChurches">
+      <div class="church-header">
+        <div class="church-icon">
+          <i class="ri-building-line"></i>
+        </div>
+        <div class="church-info">
+          <h3>{{ church.name }}</h3>
+          <p class="location">
+            <i class="ri-map-pin-line"></i>
+            {{ church.location || church.city || 'Location not set' }}
+          </p>
+        </div>
+        <span class="status-badge" [class.active]="church.is_active" [class.inactive]="!church.is_active">
+          {{ church.is_active ? 'Active' : 'Inactive' }}
+        </span>
+      </div>
+
+      <div class="church-details">
+        <div class="detail-item" *ngIf="church.size_category">
+          <span class="label">Size:</span>
+          <span class="value">{{ church.size_category }}</span>
+        </div>
+        <div class="detail-item" *ngIf="church.contact_email">
+          <span class="label">Email:</span>
+          <span class="value">{{ church.contact_email }}</span>
+        </div>
+        <div class="detail-item" *ngIf="church.contact_phone">
+          <span class="label">Phone:</span>
+          <span class="value">{{ church.contact_phone }}</span>
+        </div>
+        <div class="detail-item">
+          <span class="label">Created:</span>
+          <span class="value">{{ formatDate(church.created_at!) }}</span>
+        </div>
+      </div>
+
+      <div class="church-actions">
+        <button class="btn btn-secondary" (click)="openEditModal(church)">
+          <i class="ri-edit-line"></i>
+          Edit
+        </button>
+        <button class="btn btn-danger" (click)="deactivateChurch(church)" *ngIf="church.is_active">
+          <i class="ri-close-circle-line"></i>
+          Deactivate
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading-state" *ngIf="loading">
+    <div class="spinner"></div>
+    <p>Loading churches...</p>
+  </div>
+</div>
+
+<!-- Create Modal -->
+<div class="modal-overlay" *ngIf="showCreateModal" (click)="closeCreateModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>Create New Church</h2>
+      <button class="close-btn" (click)="closeCreateModal()">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <div class="form-group">
+        <label for="name">Church Name *</label>
+        <input
+          id="name"
+          type="text"
+          [(ngModel)]="churchForm.name"
+          class="form-control"
+          placeholder="Enter church name"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="location">Location *</label>
+        <input
+          id="location"
+          type="text"
+          [(ngModel)]="churchForm.location"
+          class="form-control"
+          placeholder="City, Country"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="size">Church Size</label>
+        <select id="size" [(ngModel)]="churchForm.size_category" class="form-control">
+          <option value="">Select size</option>
+          <option value="1-50">1-50 members</option>
+          <option value="51-200">51-200 members</option>
+          <option value="201-500">201-500 members</option>
+          <option value="501-1000">501-1000 members</option>
+          <option value="1000+">1000+ members</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="email">Contact Email</label>
+        <input
+          id="email"
+          type="email"
+          [(ngModel)]="churchForm.contact_email"
+          class="form-control"
+          placeholder="church@example.com"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="phone">Contact Phone</label>
+        <input
+          id="phone"
+          type="tel"
+          [(ngModel)]="churchForm.contact_phone"
+          class="form-control"
+          placeholder="+233 XX XXX XXXX"
+        />
+      </div>
+
+      <div *ngIf="errorMessage" class="alert alert-error">
+        <i class="ri-error-warning-line"></i>
+        <span>{{ errorMessage }}</span>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-secondary" (click)="closeCreateModal()" [disabled]="processing">
+        Cancel
+      </button>
+      <button class="btn btn-primary" (click)="createChurch()" [disabled]="processing">
+        <i class="ri-add-line"></i>
+        {{ processing ? 'Creating...' : 'Create Church' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal-overlay" *ngIf="showEditModal" (click)="closeEditModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>Edit Church</h2>
+      <button class="close-btn" (click)="closeEditModal()">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <div class="form-group">
+        <label for="edit-name">Church Name *</label>
+        <input
+          id="edit-name"
+          type="text"
+          [(ngModel)]="churchForm.name"
+          class="form-control"
+          placeholder="Enter church name"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="edit-location">Location *</label>
+        <input
+          id="edit-location"
+          type="text"
+          [(ngModel)]="churchForm.location"
+          class="form-control"
+          placeholder="City, Country"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="edit-size">Church Size</label>
+        <select id="edit-size" [(ngModel)]="churchForm.size_category" class="form-control">
+          <option value="">Select size</option>
+          <option value="1-50">1-50 members</option>
+          <option value="51-200">51-200 members</option>
+          <option value="201-500">201-500 members</option>
+          <option value="501-1000">501-1000 members</option>
+          <option value="1000+">1000+ members</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="edit-email">Contact Email</label>
+        <input
+          id="edit-email"
+          type="email"
+          [(ngModel)]="churchForm.contact_email"
+          class="form-control"
+          placeholder="church@example.com"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="edit-phone">Contact Phone</label>
+        <input
+          id="edit-phone"
+          type="tel"
+          [(ngModel)]="churchForm.contact_phone"
+          class="form-control"
+          placeholder="+233 XX XXX XXXX"
+        />
+      </div>
+
+      <div *ngIf="errorMessage" class="alert alert-error">
+        <i class="ri-error-warning-line"></i>
+        <span>{{ errorMessage }}</span>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-secondary" (click)="closeEditModal()" [disabled]="processing">
+        Cancel
+      </button>
+      <button class="btn btn-primary" (click)="updateChurch()" [disabled]="processing">
+        <i class="ri-save-line"></i>
+        {{ processing ? 'Updating...' : 'Update Church' }}
+      </button>
+    </div>
+  </div>
+</div>
