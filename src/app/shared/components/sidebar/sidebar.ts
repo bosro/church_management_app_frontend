@@ -14,6 +14,7 @@ interface MenuItem {
   roles?: string[];
   children?: MenuItem[];
   badge?: number;
+  excludeRoles?: string[]; // ✅ NEW: Roles to exclude
 }
 
 @Component({
@@ -33,7 +34,7 @@ export class Sidebar implements OnInit {
       route: '/main/dashboard',
       active: true,
     },
-    // ✅ NEW: Super Admin Section
+    // ✅ Super Admin Section - ONLY for super_admin
     {
       icon: 'ri-admin-line',
       label: 'System Admin',
@@ -63,67 +64,77 @@ export class Sidebar implements OnInit {
         },
       ],
     },
+    // ✅ Church Operations - EXCLUDE super_admin
     {
       icon: 'ri-group-line',
       label: 'Members',
       route: '/main/members',
       active: false,
-      roles: ['super_admin', 'church_admin', 'pastor', 'group_leader'],
+      roles: ['church_admin', 'pastor', 'group_leader'],
+      excludeRoles: ['super_admin'], // ✅ Hide from super_admin
     },
     {
       icon: 'ri-calendar-check-line',
       label: 'Attendance',
       route: '/main/attendance',
       active: false,
-      roles: ['super_admin', 'church_admin', 'pastor', 'group_leader'],
+      roles: ['church_admin', 'pastor', 'group_leader'],
+      excludeRoles: ['super_admin'], // ✅ Hide from super_admin
     },
     {
       icon: 'ri-money-dollar-circle-line',
       label: 'Finance',
       route: '/main/finance',
       active: false,
-      roles: ['super_admin', 'church_admin', 'finance_officer'],
+      roles: ['church_admin', 'finance_officer'],
+      excludeRoles: ['super_admin'], // ✅ Hide from super_admin
     },
     {
       icon: 'ri-team-line',
       label: 'Departments',
       route: '/main/ministries',
       active: false,
-      roles: ['super_admin', 'church_admin', 'pastor'],
+      roles: ['church_admin', 'pastor'],
+      excludeRoles: ['super_admin'], // ✅ Hide from super_admin
     },
     {
       icon: 'ri-building-2-line',
       label: 'Branches',
       route: '/main/branches',
       active: false,
-      roles: ['super_admin', 'church_admin'],
+      roles: ['church_admin'],
+      excludeRoles: ['super_admin'], // ✅ Hide from super_admin
     },
     {
       icon: 'ri-calendar-event-line',
       label: 'Events',
       route: '/main/events',
       active: false,
-      roles: ['super_admin', 'church_admin', 'pastor'],
+      roles: ['church_admin', 'pastor'],
+      excludeRoles: ['super_admin'], // ✅ Hide from super_admin
     },
     {
       icon: 'ri-chat-3-line',
       label: 'Communication',
       route: '/main/communications',
       active: false,
-      roles: ['super_admin', 'church_admin', 'pastor'],
+      roles: ['church_admin', 'pastor'],
+      excludeRoles: ['super_admin'], // ✅ Hide from super_admin
     },
     {
       icon: 'ri-shield-user-line',
       label: 'User Roles',
       route: '/main/user-roles',
       active: false,
-      roles: ['super_admin', 'church_admin'],
+      roles: ['church_admin'],
+      excludeRoles: ['super_admin'], // ✅ Hide from super_admin
     },
     {
       icon: 'ri-settings-3-line',
       label: 'Settings',
       route: '/main/settings',
       active: false,
+      roles: ['super_admin', 'church_admin', 'pastor', 'finance_officer'],
     },
   ];
 
@@ -186,6 +197,11 @@ export class Sidebar implements OnInit {
     }
 
     this.filteredMenuItems = this.menuItems.filter((item) => {
+      // ✅ Check if current role is excluded
+      if (item.excludeRoles && item.excludeRoles.includes(this.currentUser!.role)) {
+        return false;
+      }
+
       if (!item.roles || item.roles.length === 0) {
         return true;
       }
@@ -194,6 +210,10 @@ export class Sidebar implements OnInit {
       // Filter children too
       if (hasAccess && item.children) {
         item.children = item.children.filter(child => {
+          // ✅ Check exclusions for children
+          if (child.excludeRoles && child.excludeRoles.includes(this.currentUser!.role)) {
+            return false;
+          }
           if (!child.roles || child.roles.length === 0) {
             return true;
           }

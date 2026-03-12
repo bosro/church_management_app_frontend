@@ -65,35 +65,45 @@ export class Overview implements OnInit, OnDestroy {
   canCreateEvent = false;
   canRecordGiving = false;
 
+  isSuperAdmin = false;
+
   constructor(
     private supabase: SupabaseService,
     private authService: AuthService,
     private router: Router,
   ) {}
 
-  ngOnInit(): void {
-    // ✅ Wait for the profile to be loaded
-    this.authService.currentProfile$
-      .pipe(
-        takeUntil(this.destroy$),
-        filter((profile) => profile !== null), // Only proceed when profile is loaded
-      )
-      .subscribe((profile) => {
-        this.churchId = profile?.church_id;
-        this.userRole = profile?.role;
+ ngOnInit(): void {
+  // Check if super admin
+  this.authService.currentProfile$
+    .pipe(
+      takeUntil(this.destroy$),
+      filter((profile) => profile !== null),
+    )
+    .subscribe((profile) => {
+      this.isSuperAdmin = profile?.role === 'super_admin';
 
-        this.setPermissions();
+      // ✅ If super admin, redirect to admin dashboard
+      if (this.isSuperAdmin) {
+        this.router.navigate(['/main/admin/dashboard']);
+        return;
+      }
 
-        if (this.churchId) {
-          this.loadDashboardData();
-        } else {
-          this.hasError = true;
-          this.errorMessage =
-            'No church assigned to your account. Please contact administrator.';
-          this.loading = false;
-        }
-      });
-  }
+      this.churchId = profile?.church_id;
+      this.userRole = profile?.role;
+
+      this.setPermissions();
+
+      if (this.churchId) {
+        this.loadDashboardData();
+      } else {
+        this.hasError = true;
+        this.errorMessage =
+          'No church assigned to your account. Please contact administrator.';
+        this.loading = false;
+      }
+    });
+}
 
   ngOnDestroy(): void {
     this.destroy$.next();
@@ -392,3 +402,5 @@ export class Overview implements OnInit, OnDestroy {
     return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
   }
 }
+
+

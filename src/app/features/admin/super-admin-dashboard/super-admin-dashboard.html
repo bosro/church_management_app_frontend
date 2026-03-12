@@ -1,0 +1,149 @@
+<div class="super-admin-dashboard">
+  <div class="dashboard-header">
+    <div class="header-content">
+      <h1>Platform Overview</h1>
+      <p class="subtitle">Monitor and manage the entire platform</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-primary" (click)="navigateToSignupRequests()">
+        <i class="ri-user-add-line"></i>
+        Review Signups
+        <span class="badge" *ngIf="stats.pending_signups > 0">{{ stats.pending_signups }}</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="loading-state">
+    <div class="spinner"></div>
+    <p>Loading platform data...</p>
+  </div>
+
+  <!-- Dashboard Content -->
+  <div *ngIf="!loading" class="dashboard-content">
+    <!-- Stats Grid -->
+    <div class="stats-grid">
+      <div class="stat-card" (click)="navigateToChurches()">
+        <div class="stat-icon" style="background: #EDE9FE;">
+          <i class="ri-building-line" style="color: #7C3AED;"></i>
+        </div>
+        <div class="stat-details">
+          <h3>Total Churches</h3>
+          <p class="stat-value">{{ stats.total_churches }}</p>
+          <p class="stat-meta">{{ stats.active_churches }} active</p>
+        </div>
+      </div>
+
+      <div class="stat-card" (click)="navigateToUsers()">
+        <div class="stat-icon" style="background: #D1FAE5;">
+          <i class="ri-team-line" style="color: #10B981;"></i>
+        </div>
+        <div class="stat-details">
+          <h3>Total Users</h3>
+          <p class="stat-value">{{ stats.total_users }}</p>
+          <p class="stat-meta">{{ stats.active_users }} active</p>
+        </div>
+      </div>
+
+      <div class="stat-card" (click)="navigateToSignupRequests()">
+        <div class="stat-icon" style="background: #FEF3C7;">
+          <i class="ri-user-add-line" style="color: #F59E0B;"></i>
+        </div>
+        <div class="stat-details">
+          <h3>Pending Signups</h3>
+          <p class="stat-value">{{ stats.pending_signups }}</p>
+          <p class="stat-meta">{{ stats.signups_this_week }} this week</p>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon" style="background: #DBEAFE;">
+          <i class="ri-line-chart-line" style="color: #3B82F6;"></i>
+        </div>
+        <div class="stat-details">
+          <h3>Monthly Signups</h3>
+          <p class="stat-value">{{ stats.signups_this_month }}</p>
+          <p class="stat-meta">Last 30 days</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Grid -->
+    <div class="main-grid">
+      <!-- Recent Activity -->
+      <div class="activity-section">
+        <div class="section-header">
+          <h2>Recent Activity</h2>
+        </div>
+
+        <div class="activity-list" *ngIf="recentActivity.length > 0">
+          <div class="activity-item" *ngFor="let activity of recentActivity">
+            <div class="activity-icon" [style.background]="activity.color + '20'">
+              <i [class]="activity.icon" [style.color]="activity.color"></i>
+            </div>
+            <div class="activity-details">
+              <p class="activity-description">{{ activity.description }}</p>
+              <p class="activity-time">{{ formatDate(activity.timestamp) }}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="empty-state" *ngIf="recentActivity.length === 0">
+          <i class="ri-history-line"></i>
+          <p>No recent activity</p>
+        </div>
+      </div>
+
+      <!-- Top Churches -->
+      <div class="churches-section">
+        <div class="section-header">
+          <h2>Active Churches</h2>
+          <button class="btn-link" (click)="navigateToChurches()">
+            View All
+            <i class="ri-arrow-right-line"></i>
+          </button>
+        </div>
+
+        <div class="churches-list" *ngIf="topChurches.length > 0">
+          <div class="church-item" *ngFor="let church of topChurches">
+            <div class="church-icon">
+              <i class="ri-building-line"></i>
+            </div>
+            <div class="church-details">
+              <h3>{{ church.name }}</h3>
+              <p class="church-location">
+                <i class="ri-map-pin-line"></i>
+                {{ church.location || church.city || 'Location not set' }}
+              </p>
+            </div>
+            <span class="church-badge active">Active</span>
+          </div>
+        </div>
+
+        <div class="empty-state" *ngIf="topChurches.length === 0">
+          <i class="ri-building-line"></i>
+          <p>No active churches</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Links -->
+    <div class="quick-links">
+      <h2>Quick Actions</h2>
+      <div class="links-grid">
+        <button class="link-card" (click)="navigateToSignupRequests()">
+          <i class="ri-user-add-line"></i>
+          <span>Review Signup Requests</span>
+        </button>
+        <button class="link-card" (click)="navigateToUsers()">
+          <i class="ri-team-line"></i>
+          <span>Manage Users</span>
+        </button>
+        <button class="link-card" (click)="navigateToChurches()">
+          <i class="ri-building-line"></i>
+          <span>Manage Churches</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

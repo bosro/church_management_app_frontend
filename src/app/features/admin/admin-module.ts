@@ -8,15 +8,20 @@ import { Users } from './users/users/users';
 import { Churches } from './churches/churches';
 import { SharedModule } from '../../shared/shared-module';
 import { AdminLayout } from './admin-layout/admin-layout';
+import { SuperAdminDashboard } from './super-admin-dashboard/super-admin-dashboard';
 
 
 const routes: Routes = [
   {
     path: '',
-    component: AdminLayout, // ✅ Wrap in layout
+    component: AdminLayout,
     canActivate: [RoleGuard],
     data: { roles: ['super_admin'] },
     children: [
+      {
+        path: 'dashboard', // ✅ NEW
+        component: SuperAdminDashboard
+      },
       {
         path: 'signup-requests',
         component: SignupRequests
@@ -31,7 +36,7 @@ const routes: Routes = [
       },
       {
         path: '',
-        redirectTo: 'signup-requests',
+        redirectTo: 'dashboard', // ✅ Changed from signup-requests
         pathMatch: 'full'
       }
     ]
@@ -45,7 +50,8 @@ const routes: Routes = [
     Users,
     Churches,
     AdminLayout,
-    AdminLayout
+    AdminLayout,
+    SuperAdminDashboard
   ],
   imports: [
     CommonModule,
