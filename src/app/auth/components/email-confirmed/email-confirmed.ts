@@ -41,3 +41,5 @@ export class EmailConfirmed implements OnInit, OnDestroy {
     this.router.navigate(['/auth/signin']);
   }
 }
+
+
