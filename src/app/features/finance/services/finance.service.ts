@@ -662,6 +662,12 @@ export class FinanceService {
     ).pipe(
       map(({ data, error }) => {
         if (error) throw new Error(error.message);
+
+        // FIX: The RPC returns an array with one object, extract it
+        if (Array.isArray(data) && data.length > 0) {
+          return data[0] as GivingStatistics;
+        }
+
         return data as GivingStatistics;
       }),
       catchError((err) => throwError(() => err)),
@@ -698,11 +704,15 @@ export class FinanceService {
     ).pipe(
       map(({ data, error }) => {
         if (error) throw new Error(error.message);
+
+        // This already returns an array, so it's fine
         return (data || []) as TopGiver[];
       }),
       catchError((err) => throwError(() => err)),
     );
   }
+
+  
 
   getMemberGivingHistory(
     memberId: string,
