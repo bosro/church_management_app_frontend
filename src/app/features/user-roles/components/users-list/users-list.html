@@ -13,11 +13,7 @@
             <h1>User Roles & Permissions</h1>
             <p class="subtitle">Manage user access and permissions</p>
           </div>
-          <button
-            class="btn-primary"
-            (click)="viewRoleTemplates()"
-            [disabled]="!canManageRoles"
-          >
+          <button class="btn-primary" (click)="viewRoleTemplates()" [disabled]="!canManageRoles">
             <i class="ri-shield-user-line"></i>
             <span class="desktop-only">Role Templates</span>
           </button>
@@ -49,24 +45,16 @@
 
         <!-- Users List -->
         <div *ngIf="!loading" class="users-list">
-          <div
-            *ngFor="let user of users"
-            class="user-card"
-            [class.disabled]="!canManagePermissions"
-            (click)="managePermissions(user.id)"
-          >
+          <div *ngFor="let user of users" class="user-card" [class.disabled]="!canManagePermissions"
+            (click)="managePermissions(user.id)">
             <div class="card-header">
               <div class="user-avatar">
-  <img
-    *ngIf="user.avatar_url"
-    [src]="user.avatar_url"
-    [alt]="user.full_name"
-    (error)="user.avatar_url = null"
-  />
-  <div *ngIf="!user.avatar_url" class="avatar-placeholder">
-    {{ user.full_name.charAt(0).toUpperCase() }}
-  </div>
-</div>
+                <img *ngIf="user.avatar_url" [src]="user.avatar_url" [alt]="user.full_name"
+                  (error)="user.avatar_url = null" />
+                <div *ngIf="!user.avatar_url" class="avatar-placeholder">
+                  {{ user.full_name.charAt(0).toUpperCase() }}
+                </div>
+              </div>
               <div class="user-info">
                 <h3>{{ user.full_name }}</h3>
                 <p class="user-email">
@@ -87,11 +75,8 @@
             </div>
 
             <div class="card-footer">
-              <button
-                class="btn-manage"
-                [disabled]="!canManagePermissions"
-                (click)="managePermissions(user.id); $event.stopPropagation()"
-              >
+              <button class="btn-manage" [disabled]="!canManagePermissions"
+                (click)="managePermissions(user.id); $event.stopPropagation()">
                 <i class="ri-settings-3-line"></i>
                 <span>Manage Permissions</span>
               </button>
@@ -109,11 +94,7 @@
 
         <!-- Pagination -->
         <div class="pagination" *ngIf="totalPages > 1 && !loading">
-          <button
-            class="pagination-btn"
-            [disabled]="currentPage === 1"
-            (click)="previousPage()"
-          >
+          <button class="pagination-btn" [disabled]="currentPage === 1" (click)="previousPage()">
             <i class="ri-arrow-left-s-line"></i>
             <span class="desktop-only">Previous</span>
           </button>
@@ -125,11 +106,7 @@
             </span>
           </div>
 
-          <button
-            class="pagination-btn"
-            [disabled]="currentPage === totalPages"
-            (click)="nextPage()"
-          >
+          <button class="pagination-btn" [disabled]="currentPage === totalPages" (click)="nextPage()">
             <span class="desktop-only">Next</span>
             <i class="ri-arrow-right-s-line"></i>
           </button>

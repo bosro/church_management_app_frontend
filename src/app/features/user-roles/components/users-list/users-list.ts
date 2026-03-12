@@ -84,7 +84,7 @@ export class UsersList implements OnInit, OnDestroy {
       return;
     }
 
-    this.router.navigate(['main/user-roles', userId, 'permissions']);
+    this.router.navigate(['main/user-roles/manage-permission', userId, 'permissions']);
   }
 
   viewRoleTemplates(): void {

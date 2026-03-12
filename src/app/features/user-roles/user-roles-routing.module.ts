@@ -8,7 +8,7 @@ import { RoleTemplates } from './components/role-templates/role-templates';
 const routes: Routes = [
   { path: '', component: UsersList },
   { path: 'manage-permission', component: ManagePermissions },
-  { path: 'role-template', component: RoleTemplates },
+  { path: 'templates', component: RoleTemplates },
 ];
 
 @NgModule({
