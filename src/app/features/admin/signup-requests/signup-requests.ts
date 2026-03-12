@@ -1,4 +1,3 @@
-
 import { Component, OnInit } from '@angular/core';
 import { AuthService } from '../../../core/services/auth';
 import { SignupRequest } from '../../../models/user.model';
@@ -29,14 +28,29 @@ export class SignupRequests implements OnInit {
   successMessage = '';
 
   statusOptions = [
-    { value: 'pending', label: 'Pending', icon: 'ri-time-line', color: '#F59E0B' },
-    { value: 'approved', label: 'Approved', icon: 'ri-checkbox-circle-line', color: '#10B981' },
-    { value: 'rejected', label: 'Rejected', icon: 'ri-close-circle-line', color: '#EF4444' }
+    {
+      value: 'pending',
+      label: 'Pending',
+      icon: 'ri-time-line',
+      color: '#F59E0B',
+    },
+    {
+      value: 'approved',
+      label: 'Approved',
+      icon: 'ri-checkbox-circle-line',
+      color: '#10B981',
+    },
+    {
+      value: 'rejected',
+      label: 'Rejected',
+      icon: 'ri-close-circle-line',
+      color: '#EF4444',
+    },
   ];
 
   constructor(
     private adminService: AdminService,
-    private authService: AuthService
+    private authService: AuthService,
   ) {}
 
   ngOnInit(): void {
@@ -48,7 +62,8 @@ export class SignupRequests implements OnInit {
     this.loading = true;
     this.errorMessage = '';
 
-    const status = this.selectedStatus === 'all' ? undefined : this.selectedStatus;
+    const status =
+      this.selectedStatus === 'all' ? undefined : this.selectedStatus;
 
     this.adminService.getSignupRequests(status).subscribe({
       next: (data) => {
@@ -58,18 +73,18 @@ export class SignupRequests implements OnInit {
       error: (error) => {
         this.errorMessage = error.message || 'Failed to load requests';
         this.loading = false;
-      }
+      },
     });
   }
 
   loadChurches(): void {
     this.adminService.getAllChurches().subscribe({
       next: (data) => {
-        this.churches = data.filter(c => c.is_active);
+        this.churches = data.filter((c) => c.is_active);
       },
       error: (error) => {
         console.error('Failed to load churches:', error);
-      }
+      },
     });
   }
 
@@ -112,25 +127,27 @@ export class SignupRequests implements OnInit {
 
     const adminId = this.authService.getUserId();
 
-    this.adminService.approveSignupRequest(
-      this.selectedRequest.id,
-      this.selectedChurchId || undefined,
-      adminId
-    ).subscribe({
-      next: (response) => {
-        this.successMessage = 'Signup request approved successfully!';
-        this.processing = false;
-        this.closeApprovalModal();
-        this.loadRequests();
+    this.adminService
+      .approveSignupRequest(
+        this.selectedRequest.id,
+        this.selectedChurchId || undefined,
+        adminId,
+      )
+      .subscribe({
+        next: (response) => {
+          this.successMessage = 'Signup request approved successfully!';
+          this.processing = false;
+          this.closeApprovalModal();
+          this.loadRequests();
 
-        // Clear success message after 3 seconds
-        setTimeout(() => this.successMessage = '', 3000);
-      },
-      error: (error) => {
-        this.errorMessage = error.message || 'Failed to approve request';
-        this.processing = false;
-      }
-    });
+          // Clear success message after 3 seconds
+          setTimeout(() => (this.successMessage = ''), 3000);
+        },
+        error: (error) => {
+          this.errorMessage = error.message || 'Failed to approve request';
+          this.processing = false;
+        },
+      });
   }
 
   rejectRequest(): void {
@@ -141,31 +158,33 @@ export class SignupRequests implements OnInit {
 
     const adminId = this.authService.getUserId();
 
-    this.adminService.rejectSignupRequest(
-      this.selectedRequest.id,
-      this.rejectionReason,
-      adminId
-    ).subscribe({
-      next: (response) => {
-        this.successMessage = 'Signup request rejected';
-        this.processing = false;
-        this.closeRejectionModal();
-        this.loadRequests();
+    this.adminService
+      .rejectSignupRequest(
+        this.selectedRequest.id,
+        this.rejectionReason,
+        adminId,
+      )
+      .subscribe({
+        next: (response) => {
+          this.successMessage = 'Signup request rejected';
+          this.processing = false;
+          this.closeRejectionModal();
+          this.loadRequests();
 
-        setTimeout(() => this.successMessage = '', 3000);
-      },
-      error: (error) => {
-        this.errorMessage = error.message || 'Failed to reject request';
-        this.processing = false;
-      }
-    });
+          setTimeout(() => (this.successMessage = ''), 3000);
+        },
+        error: (error) => {
+          this.errorMessage = error.message || 'Failed to reject request';
+          this.processing = false;
+        },
+      });
   }
 
   getStatusBadgeClass(status: string): string {
     const statusMap: { [key: string]: string } = {
       pending: 'badge-warning',
       approved: 'badge-success',
-      rejected: 'badge-danger'
+      rejected: 'badge-danger',
     };
     return statusMap[status] || 'badge-secondary';
   }
@@ -174,7 +193,7 @@ export class SignupRequests implements OnInit {
     return new Date(date).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
     });
   }
 
@@ -184,8 +203,12 @@ export class SignupRequests implements OnInit {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     });
+  }
+
+  getStatusCount(status: string): number {
+    return this.requests.filter((r) => r.status === status).length;
   }
 
   getRoleBadge(position: string): string {
@@ -195,7 +218,7 @@ export class SignupRequests implements OnInit {
       church_administrator: 'Admin',
       worship_leader: 'Ministry Leader',
       youth_pastor: 'Ministry Leader',
-      elder: 'Elder'
+      elder: 'Elder',
     };
     return roleMap[position] || 'Member';
   }

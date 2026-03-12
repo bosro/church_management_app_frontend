@@ -11,11 +11,11 @@
         <span class="stat-label">Total Users</span>
       </div>
       <div class="stat-card">
-        <span class="stat-value">{{ users.filter(u => u.is_active).length }}</span>
+       <span class="stat-value">{{ activeUsersCount }}</span>
         <span class="stat-label">Active</span>
       </div>
       <div class="stat-card">
-        <span class="stat-value">{{ users.filter(u => !u.is_active).length }}</span>
+       <span class="stat-value">{{ inactiveUsersCount }}</span>
         <span class="stat-label">Inactive</span>
       </div>
     </div>

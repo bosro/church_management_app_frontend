@@ -1,4 +1,3 @@
-
 import { Component, OnInit } from '@angular/core';
 import { AdminService, UserWithChurch } from '../../services/admin.service';
 import { AuthService } from '../../../../core/services/auth';
@@ -29,18 +28,18 @@ export class Users implements OnInit {
     { value: 'ministry_leader', label: 'Ministry Leader' },
     { value: 'group_leader', label: 'Group Leader' },
     { value: 'elder', label: 'Elder' },
-    { value: 'member', label: 'Member' }
+    { value: 'member', label: 'Member' },
   ];
 
   statusOptions = [
     { value: 'all', label: 'All Status' },
     { value: 'active', label: 'Active' },
-    { value: 'inactive', label: 'Inactive' }
+    { value: 'inactive', label: 'Inactive' },
   ];
 
   constructor(
     private adminService: AdminService,
-    private authService: AuthService
+    private authService: AuthService,
   ) {}
 
   ngOnInit(): void {
@@ -60,19 +59,22 @@ export class Users implements OnInit {
       error: (error) => {
         this.errorMessage = error.message || 'Failed to load users';
         this.loading = false;
-      }
+      },
     });
   }
 
   applyFilters(): void {
-    this.filteredUsers = this.users.filter(user => {
-      const matchesSearch = !this.searchTerm ||
+    this.filteredUsers = this.users.filter((user) => {
+      const matchesSearch =
+        !this.searchTerm ||
         user.full_name.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
         user.email.toLowerCase().includes(this.searchTerm.toLowerCase());
 
-      const matchesRole = this.selectedRole === 'all' || user.role === this.selectedRole;
+      const matchesRole =
+        this.selectedRole === 'all' || user.role === this.selectedRole;
 
-      const matchesStatus = this.selectedStatus === 'all' ||
+      const matchesStatus =
+        this.selectedStatus === 'all' ||
         (this.selectedStatus === 'active' && user.is_active) ||
         (this.selectedStatus === 'inactive' && !user.is_active);
 
@@ -99,12 +101,12 @@ export class Users implements OnInit {
       next: () => {
         user.is_active = newStatus;
         this.successMessage = `User ${newStatus ? 'activated' : 'deactivated'} successfully`;
-        setTimeout(() => this.successMessage = '', 3000);
+        setTimeout(() => (this.successMessage = ''), 3000);
       },
       error: (error) => {
         this.errorMessage = error.message || 'Failed to update user status';
-        setTimeout(() => this.errorMessage = '', 3000);
-      }
+        setTimeout(() => (this.errorMessage = ''), 3000);
+      },
     });
   }
 
@@ -117,7 +119,7 @@ export class Users implements OnInit {
       ministry_leader: 'badge-ministry',
       group_leader: 'badge-group',
       elder: 'badge-elder',
-      member: 'badge-member'
+      member: 'badge-member',
     };
     return roleMap[role] || 'badge-default';
   }
@@ -126,7 +128,15 @@ export class Users implements OnInit {
     return new Date(date).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
     });
+  }
+
+  get activeUsersCount(): number {
+    return this.users.filter((u) => u.is_active).length;
+  }
+
+  get inactiveUsersCount(): number {
+    return this.users.filter((u) => !u.is_active).length;
   }
 }

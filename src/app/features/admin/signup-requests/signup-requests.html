@@ -29,7 +29,7 @@
       <i [class]="status.icon" [style.color]="status.color"></i>
       <span>{{ status.label }}</span>
       <span class="count">
-        {{ requests.filter(r => r.status === status.value).length }}
+       {{ getStatusCount(status.value) }}
       </span>
     </button>
   </div>
