@@ -12,15 +12,45 @@
   <!-- Navigation Menu -->
   <nav class="sidebar-nav">
     <ul class="menu-list">
-      <li
-        *ngFor="let item of filteredMenuItems"
-        class="menu-item"
-        [class.active]="item.active"
-        (click)="navigate(item.route)"
-      >
-        <i [class]="item.icon"></i>
-        <span>{{ item.label }}</span>
-      </li>
+      <ng-container *ngFor="let item of filteredMenuItems">
+        <!-- Menu item with children (expandable) -->
+        <li *ngIf="item.children && item.children.length > 0" class="menu-item-group">
+          <div
+            class="menu-item"
+            [class.active]="item.active"
+            (click)="toggleSubmenu(item)"
+          >
+            <i [class]="item.icon"></i>
+            <span class="menu-label">{{ item.label }}</span>
+            <i class="ri-arrow-down-s-line submenu-arrow" [class.expanded]="isExpanded(item)"></i>
+          </div>
+
+          <!-- Submenu -->
+          <ul class="submenu" [class.expanded]="isExpanded(item)">
+            <li
+              *ngFor="let child of item.children"
+              class="submenu-item"
+              [class.active]="child.active"
+              (click)="navigate(child.route!)"
+            >
+              <i [class]="child.icon"></i>
+              <span>{{ child.label }}</span>
+              <span class="badge" *ngIf="child.badge">{{ child.badge }}</span>
+            </li>
+          </ul>
+        </li>
+
+        <!-- Regular menu item (no children) -->
+        <li
+          *ngIf="!item.children || item.children.length === 0"
+          class="menu-item"
+          [class.active]="item.active"
+          (click)="navigate(item.route!)"
+        >
+          <i [class]="item.icon"></i>
+          <span>{{ item.label }}</span>
+        </li>
+      </ng-container>
     </ul>
   </nav>
 
@@ -39,7 +69,7 @@
       </div>
       <div class="user-info">
         <p class="user-name">{{ currentUser.full_name }}</p>
-        <p class="user-role">{{ currentUser.role | titlecase }}</p>
+        <p class="user-role">{{ currentUser.role.replace('_', ' ') | titlecase }}</p>
       </div>
     </div>
 
@@ -50,6 +80,3 @@
     </button>
   </div>
 </div>
-
-
-

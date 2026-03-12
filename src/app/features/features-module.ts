@@ -32,6 +32,14 @@ const routes: Routes = [
         loadChildren: () =>
           import('./members/members-module').then((m) => m.MembersModule),
       },
+
+          {
+        path: 'admin',
+        canActivate: [RoleGuard],
+        data: { roles: ['super_admin'] },
+        loadChildren: () =>
+          import('./admin/admin-module').then((m) => m.AdminModule),
+      },
       {
         path: 'attendance',
         canActivate: [RoleGuard],

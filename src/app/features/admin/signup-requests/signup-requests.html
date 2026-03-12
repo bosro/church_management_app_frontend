@@ -1,0 +1,242 @@
+<div class="signup-requests-container">
+  <!-- Header -->
+  <div class="page-header">
+    <div class="header-content">
+      <h1>Signup Requests</h1>
+      <p class="subtitle">Review and approve new user registrations</p>
+    </div>
+  </div>
+
+  <!-- Success/Error Alerts -->
+  <div *ngIf="successMessage" class="alert alert-success">
+    <i class="ri-checkbox-circle-line"></i>
+    <span>{{ successMessage }}</span>
+  </div>
+
+  <div *ngIf="errorMessage" class="alert alert-error">
+    <i class="ri-error-warning-line"></i>
+    <span>{{ errorMessage }}</span>
+  </div>
+
+  <!-- Status Filter Tabs -->
+  <div class="status-tabs">
+    <button
+      *ngFor="let status of statusOptions"
+      class="status-tab"
+      [class.active]="selectedStatus === status.value"
+      (click)="filterByStatus(status.value)"
+    >
+      <i [class]="status.icon" [style.color]="status.color"></i>
+      <span>{{ status.label }}</span>
+      <span class="count">
+        {{ requests.filter(r => r.status === status.value).length }}
+      </span>
+    </button>
+  </div>
+
+  <!-- Requests List -->
+  <div class="requests-list" *ngIf="!loading">
+    <div *ngIf="requests.length === 0" class="empty-state">
+      <i class="ri-inbox-line"></i>
+      <h3>No {{ selectedStatus }} requests</h3>
+      <p>There are no signup requests with {{ selectedStatus }} status at the moment.</p>
+    </div>
+
+    <div class="request-card" *ngFor="let request of requests">
+      <!-- Header -->
+      <div class="request-header">
+        <div class="request-info">
+          <div class="user-avatar">
+            {{ request.full_name.charAt(0).toUpperCase() }}
+          </div>
+          <div class="user-details">
+            <h3>{{ request.full_name }}</h3>
+            <p class="email">{{ request.email }}</p>
+          </div>
+        </div>
+        <span class="status-badge" [ngClass]="getStatusBadgeClass(request.status)">
+          {{ request.status }}
+        </span>
+      </div>
+
+      <!-- Details Grid -->
+      <div class="request-details">
+        <div class="detail-item">
+          <i class="ri-phone-line"></i>
+          <div>
+            <span class="label">Phone</span>
+            <span class="value">{{ request.phone || 'Not provided' }}</span>
+          </div>
+        </div>
+
+        <div class="detail-item">
+          <i class="ri-user-star-line"></i>
+          <div>
+            <span class="label">Position</span>
+            <span class="value">{{ request.position || 'Not specified' }}</span>
+            <span class="role-badge">{{ getRoleBadge(request.position || '') }}</span>
+          </div>
+        </div>
+
+        <div class="detail-item">
+          <i class="ri-building-line"></i>
+          <div>
+            <span class="label">Church Name</span>
+            <span class="value">{{ request.church_name || 'Not provided' }}</span>
+          </div>
+        </div>
+
+        <div class="detail-item">
+          <i class="ri-map-pin-line"></i>
+          <div>
+            <span class="label">Location</span>
+            <span class="value">{{ request.church_location || 'Not provided' }}</span>
+          </div>
+        </div>
+
+        <div class="detail-item">
+          <i class="ri-team-line"></i>
+          <div>
+            <span class="label">Church Size</span>
+            <span class="value">{{ request.church_size || 'Not specified' }}</span>
+          </div>
+        </div>
+
+        <div class="detail-item">
+          <i class="ri-calendar-line"></i>
+          <div>
+            <span class="label">Submitted</span>
+            <span class="value">{{ formatDate(request.created_at) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reviewed Info (for approved/rejected) -->
+      <div class="reviewed-info" *ngIf="request.status !== 'pending'">
+        <i class="ri-information-line"></i>
+        <span>
+          {{ request.status === 'approved' ? 'Approved' : 'Rejected' }}
+          on {{ formatDateTime(request.reviewed_at!) }}
+        </span>
+        <span *ngIf="request.rejection_reason" class="rejection-reason">
+          Reason: {{ request.rejection_reason }}
+        </span>
+      </div>
+
+      <!-- Actions (only for pending) -->
+      <div class="request-actions" *ngIf="request.status === 'pending'">
+        <button class="btn btn-success" (click)="openApprovalModal(request)">
+          <i class="ri-checkbox-circle-line"></i>
+          Approve
+        </button>
+        <button class="btn btn-danger" (click)="openRejectionModal(request)">
+          <i class="ri-close-circle-line"></i>
+          Reject
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading-state" *ngIf="loading">
+    <div class="spinner"></div>
+    <p>Loading requests...</p>
+  </div>
+</div>
+
+<!-- Approval Modal -->
+<div class="modal-overlay" *ngIf="showApprovalModal" (click)="closeApprovalModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>Approve Signup Request</h2>
+      <button class="close-btn" (click)="closeApprovalModal()">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <p class="modal-description">
+        You are approving <strong>{{ selectedRequest?.full_name }}</strong> to access the system.
+      </p>
+
+      <div class="form-group">
+        <label for="church-select">Assign to Church</label>
+        <select
+          id="church-select"
+          [(ngModel)]="selectedChurchId"
+          class="form-control"
+        >
+          <option value="">Create New Church</option>
+          <option *ngFor="let church of churches" [value]="church.id">
+            {{ church.name }} - {{ church.location }}
+          </option>
+        </select>
+        <small class="help-text">
+          Select an existing church or leave blank to create a new one based on the provided information.
+        </small>
+      </div>
+
+      <div *ngIf="errorMessage" class="alert alert-error">
+        <i class="ri-error-warning-line"></i>
+        <span>{{ errorMessage }}</span>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-secondary" (click)="closeApprovalModal()" [disabled]="processing">
+        Cancel
+      </button>
+      <button class="btn btn-success" (click)="approveRequest()" [disabled]="processing">
+        <i class="ri-checkbox-circle-line"></i>
+        {{ processing ? 'Approving...' : 'Approve Request' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Rejection Modal -->
+<div class="modal-overlay" *ngIf="showRejectionModal" (click)="closeRejectionModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>Reject Signup Request</h2>
+      <button class="close-btn" (click)="closeRejectionModal()">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <p class="modal-description">
+        You are rejecting <strong>{{ selectedRequest?.full_name }}</strong>'s signup request.
+      </p>
+
+      <div class="form-group">
+        <label for="rejection-reason">Reason for Rejection (Optional)</label>
+        <textarea
+          id="rejection-reason"
+          [(ngModel)]="rejectionReason"
+          class="form-control"
+          rows="4"
+          placeholder="Provide a reason for rejection..."
+        ></textarea>
+        <small class="help-text">
+          This reason will be stored for reference but won't be sent to the user automatically.
+        </small>
+      </div>
+
+      <div *ngIf="errorMessage" class="alert alert-error">
+        <i class="ri-error-warning-line"></i>
+        <span>{{ errorMessage }}</span>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-secondary" (click)="closeRejectionModal()" [disabled]="processing">
+        Cancel
+      </button>
+      <button class="btn btn-danger" (click)="rejectRequest()" [disabled]="processing">
+        <i class="ri-close-circle-line"></i>
+        {{ processing ? 'Rejecting...' : 'Reject Request' }}
+      </button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,134 @@
+<div class="users-container">
+  <!-- Header -->
+  <div class="page-header">
+    <div class="header-content">
+      <h1>All Users</h1>
+      <p class="subtitle">Manage users across all churches</p>
+    </div>
+    <div class="header-stats">
+      <div class="stat-card">
+        <span class="stat-value">{{ users.length }}</span>
+        <span class="stat-label">Total Users</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value">{{ users.filter(u => u.is_active).length }}</span>
+        <span class="stat-label">Active</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value">{{ users.filter(u => !u.is_active).length }}</span>
+        <span class="stat-label">Inactive</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alerts -->
+  <div *ngIf="successMessage" class="alert alert-success">
+    <i class="ri-checkbox-circle-line"></i>
+    <span>{{ successMessage }}</span>
+  </div>
+
+  <div *ngIf="errorMessage" class="alert alert-error">
+    <i class="ri-error-warning-line"></i>
+    <span>{{ errorMessage }}</span>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters-section">
+    <div class="search-box">
+      <i class="ri-search-line"></i>
+      <input
+        type="text"
+        placeholder="Search by name or email..."
+        [(ngModel)]="searchTerm"
+        (input)="onSearchChange()"
+      />
+    </div>
+
+    <div class="filter-group">
+      <select [(ngModel)]="selectedRole" (change)="onRoleChange()">
+        <option *ngFor="let role of roleOptions" [value]="role.value">
+          {{ role.label }}
+        </option>
+      </select>
+
+      <select [(ngModel)]="selectedStatus" (change)="onStatusChange()">
+        <option *ngFor="let status of statusOptions" [value]="status.value">
+          {{ status.label }}
+        </option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Users Table -->
+  <div class="users-table-container" *ngIf="!loading">
+    <div *ngIf="filteredUsers.length === 0" class="empty-state">
+      <i class="ri-user-line"></i>
+      <h3>No users found</h3>
+      <p>Try adjusting your filters or search terms</p>
+    </div>
+
+    <table class="users-table" *ngIf="filteredUsers.length > 0">
+      <thead>
+        <tr>
+          <th>User</th>
+          <th>Church</th>
+          <th>Role</th>
+          <th>Status</th>
+          <th>Joined</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let user of filteredUsers">
+          <td>
+            <div class="user-cell">
+              <div class="user-avatar">
+                {{ user.full_name.charAt(0).toUpperCase() }}
+              </div>
+              <div class="user-info">
+                <span class="user-name">{{ user.full_name }}</span>
+                <span class="user-email">{{ user.email }}</span>
+              </div>
+            </div>
+          </td>
+          <td>
+            <div class="church-cell">
+              <i class="ri-building-line"></i>
+              <span>{{ user.church?.name || 'No Church' }}</span>
+            </div>
+          </td>
+          <td>
+            <span class="role-badge" [ngClass]="getRoleBadgeClass(user.role)">
+              {{ user.role.replace('_', ' ') }}
+            </span>
+          </td>
+          <td>
+            <span class="status-badge" [class.active]="user.is_active" [class.inactive]="!user.is_active">
+              {{ user.is_active ? 'Active' : 'Inactive' }}
+            </span>
+          </td>
+          <td>{{ formatDate(user.created_at) }}</td>
+          <td>
+            <div class="action-buttons">
+              <button
+                class="btn-icon"
+                [class.btn-activate]="!user.is_active"
+                [class.btn-deactivate]="user.is_active"
+                (click)="toggleUserStatus(user)"
+                [title]="user.is_active ? 'Deactivate' : 'Activate'"
+              >
+                <i [class]="user.is_active ? 'ri-close-circle-line' : 'ri-checkbox-circle-line'"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading-state" *ngIf="loading">
+    <div class="spinner"></div>
+    <p>Loading users...</p>
+  </div>
+</div>

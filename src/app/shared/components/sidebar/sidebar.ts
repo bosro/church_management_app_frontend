@@ -9,9 +9,11 @@ import { SidebarService } from '../../../core/services/sidebar.service';
 interface MenuItem {
   icon: string;
   label: string;
-  route: string;
+  route?: string;
   active: boolean;
   roles?: string[];
+  children?: MenuItem[];
+  badge?: number;
 }
 
 @Component({
@@ -22,12 +24,44 @@ interface MenuItem {
 })
 export class Sidebar implements OnInit {
   currentUser: User | null = null;
+  isSuperAdmin = false;
+
   menuItems: MenuItem[] = [
     {
       icon: 'ri-pie-chart-line',
       label: 'Overview',
       route: '/main/dashboard',
       active: true,
+    },
+    // ✅ NEW: Super Admin Section
+    {
+      icon: 'ri-admin-line',
+      label: 'System Admin',
+      active: false,
+      roles: ['super_admin'],
+      children: [
+        {
+          icon: 'ri-user-add-line',
+          label: 'Signup Requests',
+          route: '/main/admin/signup-requests',
+          active: false,
+          roles: ['super_admin'],
+        },
+        {
+          icon: 'ri-team-line',
+          label: 'All Users',
+          route: '/main/admin/users',
+          active: false,
+          roles: ['super_admin'],
+        },
+        {
+          icon: 'ri-building-line',
+          label: 'All Churches',
+          route: '/main/admin/churches',
+          active: false,
+          roles: ['super_admin'],
+        },
+      ],
     },
     {
       icon: 'ri-group-line',
@@ -58,7 +92,7 @@ export class Sidebar implements OnInit {
       roles: ['super_admin', 'church_admin', 'pastor'],
     },
     {
-      icon: 'ri-building-line',
+      icon: 'ri-building-2-line',
       label: 'Branches',
       route: '/main/branches',
       active: false,
@@ -79,7 +113,7 @@ export class Sidebar implements OnInit {
       roles: ['super_admin', 'church_admin', 'pastor'],
     },
     {
-      icon: 'ri-admin-line',
+      icon: 'ri-shield-user-line',
       label: 'User Roles',
       route: '/main/user-roles',
       active: false,
@@ -94,6 +128,7 @@ export class Sidebar implements OnInit {
   ];
 
   filteredMenuItems: MenuItem[] = [];
+  expandedItems: Set<string> = new Set();
   isMobileMenuOpen = false;
   isMobile = false;
 
@@ -109,6 +144,7 @@ export class Sidebar implements OnInit {
     // Get current user
     this.authService.currentProfile$.subscribe((profile) => {
       this.currentUser = profile;
+      this.isSuperAdmin = profile?.role === 'super_admin';
       this.filterMenuByRole();
     });
 
@@ -153,14 +189,58 @@ export class Sidebar implements OnInit {
       if (!item.roles || item.roles.length === 0) {
         return true;
       }
-      return item.roles.includes(this.currentUser!.role);
+      const hasAccess = item.roles.includes(this.currentUser!.role);
+
+      // Filter children too
+      if (hasAccess && item.children) {
+        item.children = item.children.filter(child => {
+          if (!child.roles || child.roles.length === 0) {
+            return true;
+          }
+          return child.roles.includes(this.currentUser!.role);
+        });
+      }
+
+      return hasAccess;
     });
   }
 
   private updateActiveMenuItem(url: string): void {
     this.filteredMenuItems.forEach((item) => {
-      item.active = url.startsWith(item.route);
+      if (item.route) {
+        item.active = url.startsWith(item.route);
+      } else if (item.children) {
+        // Check if any child is active
+        const hasActiveChild = item.children.some(child =>
+          child.route && url.startsWith(child.route)
+        );
+        item.active = hasActiveChild;
+
+        // Auto-expand if has active child
+        if (hasActiveChild) {
+          this.expandedItems.add(item.label);
+        }
+
+        // Update children active state
+        item.children.forEach(child => {
+          if (child.route) {
+            child.active = url.startsWith(child.route);
+          }
+        });
+      }
     });
+  }
+
+  toggleSubmenu(item: MenuItem): void {
+    if (this.expandedItems.has(item.label)) {
+      this.expandedItems.delete(item.label);
+    } else {
+      this.expandedItems.add(item.label);
+    }
+  }
+
+  isExpanded(item: MenuItem): boolean {
+    return this.expandedItems.has(item.label);
   }
 
   navigate(route: string): void {
