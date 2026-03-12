@@ -200,7 +200,7 @@ export class MemberList implements OnInit, OnDestroy {
         next: (stats) => {
           this.statistics = stats;
           this.loadingStats = false;
-          console.log('Statistics loaded:', stats);
+          // console.log('Statistics loaded:', stats);
         },
         error: (error) => {
           console.error('Error loading statistics:', error);

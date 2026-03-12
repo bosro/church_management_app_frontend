@@ -27,6 +27,13 @@ export class FinanceOverview implements OnInit, OnDestroy {
   canViewFinance = false;
   canManageFinance = false;
 
+  // Chart data for giving trends
+  chartData = {
+    labels: [] as string[],
+    tithe: [] as number[],
+    offering: [] as number[],
+  };
+
   constructor(
     private financeService: FinanceService,
     private router: Router
@@ -67,6 +74,7 @@ export class FinanceOverview implements OnInit, OnDestroy {
       .subscribe({
         next: (stats) => {
           this.statistics = stats;
+          console.log('Finance stats loaded:', stats); // Debug log
           this.loading = false;
         },
         error: (error) => {
@@ -82,6 +90,7 @@ export class FinanceOverview implements OnInit, OnDestroy {
       .subscribe({
         next: ({ data }) => {
           this.recentTransactions = data;
+          console.log('Recent transactions loaded:', data.length); // Debug log
         },
         error: (error) => {
           console.error('Error loading transactions:', error);
@@ -94,23 +103,61 @@ export class FinanceOverview implements OnInit, OnDestroy {
       .subscribe({
         next: (givers) => {
           this.topGivers = givers;
+          console.log('Top givers loaded:', givers.length); // Debug log
         },
         error: (error) => {
           console.error('Error loading top givers:', error);
         }
       });
 
-    // Load giving trends
-    this.financeService.getGivingTrends(12)
+    // Load giving trends for chart
+    this.loadGivingTrendsChart();
+  }
+
+  private loadGivingTrendsChart(): void {
+    const currentYear = new Date().getFullYear();
+
+    // Load monthly data for current year
+    this.financeService.getMonthlyGivingData(this.selectedYear)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (trends) => {
-          this.givingTrends = trends;
+        next: (data) => {
+          this.prepareChartData(data);
+          console.log('Chart data prepared:', this.chartData); // Debug log
         },
         error: (error) => {
-          console.error('Error loading trends:', error);
+          console.error('Error loading chart data:', error);
+          // Set empty chart data
+          this.chartData = {
+            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+            tithe: Array(12).fill(0),
+            offering: Array(12).fill(0),
+          };
         }
       });
+  }
+
+  private prepareChartData(monthlyData: any[]): void {
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const tithe: number[] = Array(12).fill(0);
+    const offering: number[] = Array(12).fill(0);
+
+    monthlyData.forEach((item: any) => {
+      const monthIndex = item.month - 1; // months are 1-12
+      const categoryName = (item.category_name || '').toLowerCase();
+
+      if (categoryName.includes('tithe')) {
+        tithe[monthIndex] += item.total_amount || 0;
+      } else if (categoryName.includes('offering') || categoryName.includes('seed')) {
+        offering[monthIndex] += item.total_amount || 0;
+      }
+    });
+
+    this.chartData = {
+      labels: monthNames,
+      tithe,
+      offering,
+    };
   }
 
   onYearChange(): void {
@@ -146,6 +193,8 @@ export class FinanceOverview implements OnInit, OnDestroy {
     this.router.navigate(['main/finance/categories']);
   }
 
+
+  
   // Helper methods
   formatCurrency(amount: number, currency: string = 'GHS'): string {
     return new Intl.NumberFormat('en-GH', {

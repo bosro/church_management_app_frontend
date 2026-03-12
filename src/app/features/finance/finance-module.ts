@@ -11,6 +11,7 @@ import { FinanceOverview } from './components/finance-overview/finance-overview/
 import { CategoriesManagement } from './components/categories-management/categories-management/categories-management';
 import { CreatePledge } from './components/create-pledge/create-pledge/create-pledge';
 import { PledgeDetails } from './pledge-details/pledge-details';
+import { FinanceRevenueChart } from './components/finance-revenue-chart/finance-revenue-chart';
 
 
 
@@ -23,13 +24,17 @@ import { PledgeDetails } from './pledge-details/pledge-details';
     FinanceOverview,
     CreatePledge,
     CategoriesManagement,
-    PledgeDetails
+    PledgeDetails,
+    FinanceRevenueChart
   ],
   imports: [
       CommonModule,
     ReactiveFormsModule,
     SharedModule,
     FinanceRoutingModule
+  ],
+  exports: [
+    FinanceRevenueChart
   ]
 })
 export class FinanceModule { }

@@ -35,13 +35,13 @@
           </div>
         </div>
 
-         <!-- Error Message -->
+        <!-- Error Message -->
         <div *ngIf="errorMessage" class="error-alert">
           <i class="ri-error-warning-line"></i>
           <span>{{ errorMessage }}</span>
         </div>
 
-        
+
         <!-- Loading State -->
         <div *ngIf="loading" class="loading-container">
           <app-loading-spinner message="Loading financial data..."></app-loading-spinner>
@@ -96,6 +96,10 @@
             </div>
           </div>
 
+          <div class="chart-section">
+            <app-finance-revenue-chart [chartData]="chartData"></app-finance-revenue-chart>
+          </div>
+
           <!-- Main Content Grid -->
           <div class="content-grid">
             <!-- Left Column -->
@@ -111,17 +115,11 @@
                 </div>
 
                 <div class="transactions-list">
-                  <div
-                    *ngFor="let transaction of recentTransactions"
-                    class="transaction-item"
-                  >
+                  <div *ngFor="let transaction of recentTransactions" class="transaction-item">
                     <div class="transaction-info">
                       <div class="member-avatar-small">
-                        <img
-                          *ngIf="transaction.member?.photo_url"
-                          [src]="transaction.member.photo_url"
-                          [alt]="getMemberName(transaction)"
-                        />
+                        <img *ngIf="transaction.member?.photo_url" [src]="transaction.member.photo_url"
+                          [alt]="getMemberName(transaction)" />
                         <div *ngIf="!transaction.member?.photo_url" class="avatar-placeholder-small">
                           {{ getMemberInitials(transaction) }}
                         </div>

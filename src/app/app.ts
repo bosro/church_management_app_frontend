@@ -30,16 +30,16 @@ export class App implements OnInit {
     // ✅ NEW: Wait for auth to initialize
     this.supabase.authInitialized$.subscribe(initialized => {
       this.authInitialized = initialized;
-      console.log('Auth initialized:', initialized);
+      // console.log('Auth initialized:', initialized);
     });
 
     // Debug routing
     this.router.events.subscribe(event => {
       if (event instanceof NavigationStart) {
-        console.log('NavigationStart:', event.url);
+        // console.log('NavigationStart:', event.url);
       }
       if (event instanceof NavigationEnd) {
-        console.log('NavigationEnd:', event.url);
+        // console.log('NavigationEnd:', event.url);
         this.showLayout = !event.url.includes('/auth');
       }
     });
@@ -50,7 +50,7 @@ export class App implements OnInit {
       const hasCleared = sessionStorage.getItem('locks-cleared');
 
       if (!hasCleared) {
-        console.log('🔧 Clearing stuck Supabase locks...');
+        // console.log('🔧 Clearing stuck Supabase locks...');
 
         const keys = Object.keys(localStorage);
         keys.forEach(key => {
@@ -60,7 +60,7 @@ export class App implements OnInit {
         });
 
         sessionStorage.setItem('locks-cleared', 'true');
-        console.log('✅ Locks cleared successfully');
+        // console.log('✅ Locks cleared successfully');
       }
     } catch (error) {
       console.error('Error clearing locks:', error);

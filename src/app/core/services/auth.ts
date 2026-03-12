@@ -108,11 +108,11 @@ export class AuthService {
 
         const userProfile = profile[0];
 
-        console.log(
-          'Auth user email_confirmed_at:',
-          data.user?.email_confirmed_at,
-        );
-        console.log('User role:', userProfile.role);
+        // console.log(
+        //   'Auth user email_confirmed_at:',
+        //   data.user?.email_confirmed_at,
+        // );
+        // console.log('User role:', userProfile.role);
 
         // Check approval status FIRST
         const approvalStatus = userProfile.approval_status || 'pending';

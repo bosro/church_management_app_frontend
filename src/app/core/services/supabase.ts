@@ -75,7 +75,7 @@ export class SupabaseService {
 
       // Listen to auth changes
       this.supabase.auth.onAuthStateChange((event, session) => {
-        console.log('Auth state changed:', event);
+        // console.log('Auth state changed:', event);
         this.currentUserSubject.next(session?.user ?? null);
       });
     } catch (error) {
@@ -204,3 +204,5 @@ export class SupabaseService {
     }
   }
 }
+
+

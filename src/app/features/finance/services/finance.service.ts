@@ -810,4 +810,21 @@ export class FinanceService {
       }),
     );
   }
+
+  getMonthlyGivingData(year: number): Observable<any[]> {
+    return from(
+      this.supabase.client
+        .from('monthly_giving_summary')
+        .select('*')
+        .eq('church_id', this.churchId)
+        .eq('year', year)
+        .order('month', { ascending: true }),
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw new Error(error.message);
+        return data || [];
+      }),
+      catchError((err) => throwError(() => err)),
+    );
+  }
 }
