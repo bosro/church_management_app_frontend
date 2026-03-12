@@ -7,7 +7,7 @@ import { RoleTemplates } from './components/role-templates/role-templates';
 
 const routes: Routes = [
   { path: '', component: UsersList },
-  { path: 'manage-permission', component: ManagePermissions },
+  { path: 'manage-permission/:id/permissions', component: ManagePermissions },
   { path: 'templates', component: RoleTemplates },
 ];
 

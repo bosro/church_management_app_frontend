@@ -43,7 +43,9 @@ export class ManagePermissions implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.checkPermissions();
-    this.userId = this.route.snapshot.paramMap.get('id') || '';
+    this.route.paramMap.pipe(takeUntil(this.destroy$)).subscribe((params) => {
+      this.userId = params.get('id') || '';
+    });
 
     if (!this.userId) {
       this.router.navigate(['main/user-roles']);

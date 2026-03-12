@@ -8,7 +8,7 @@ import {
   RoleTemplate,
   Permission,
   RoleTemplateCreateInput,
-  RoleTemplateUpdateInput
+  RoleTemplateUpdateInput,
 } from '../../../../models/user-role.model';
 import { UserRolesService } from '../../services/user-roles';
 import { AuthService } from '../../../../core/services/auth';
@@ -45,7 +45,7 @@ export class RoleTemplates implements OnInit, OnDestroy {
     private fb: FormBuilder,
     private userRolesService: UserRolesService,
     private authService: AuthService,
-    private router: Router
+    private router: Router,
   ) {}
 
   ngOnInit(): void {
@@ -70,8 +70,15 @@ export class RoleTemplates implements OnInit, OnDestroy {
 
   private initForm(): void {
     this.templateForm = this.fb.group({
-      role_name: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(50)]],
-      description: ['', [Validators.maxLength(200)]]
+      role_name: [
+        '',
+        [
+          Validators.required,
+          Validators.minLength(3),
+          Validators.maxLength(50),
+        ],
+      ],
+      description: ['', [Validators.maxLength(200)]],
     });
   }
 
@@ -79,7 +86,8 @@ export class RoleTemplates implements OnInit, OnDestroy {
     this.loading = true;
     this.errorMessage = '';
 
-    this.userRolesService.getRoleTemplates()
+    this.userRolesService
+      .getRoleTemplates()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (templates) => {
@@ -90,13 +98,14 @@ export class RoleTemplates implements OnInit, OnDestroy {
           this.errorMessage = error.message || 'Failed to load role templates';
           this.loading = false;
           console.error('Error loading role templates:', error);
-        }
+        },
       });
   }
 
   private loadAvailablePermissions(): void {
     this.availablePermissions = this.userRolesService.getAvailablePermissions();
-    this.permissionsByCategory = this.userRolesService.getPermissionsByCategory();
+    this.permissionsByCategory =
+      this.userRolesService.getPermissionsByCategory();
   }
 
   // Modal Management
@@ -121,7 +130,7 @@ export class RoleTemplates implements OnInit, OnDestroy {
     this.showEditModal = true;
     this.templateForm.patchValue({
       role_name: template.role_name,
-      description: template.description || ''
+      description: template.description || '',
     });
     this.selectedPermissions = new Set(template.permissions || []);
     this.errorMessage = '';
@@ -150,19 +159,25 @@ export class RoleTemplates implements OnInit, OnDestroy {
     const categoryPermissions = this.permissionsByCategory[category];
     if (!categoryPermissions) return;
 
-    const allSelected = categoryPermissions.every(p => this.selectedPermissions.has(p.name));
+    const allSelected = categoryPermissions.every((p) =>
+      this.selectedPermissions.has(p.name),
+    );
 
     if (allSelected) {
-      categoryPermissions.forEach(p => this.selectedPermissions.delete(p.name));
+      categoryPermissions.forEach((p) =>
+        this.selectedPermissions.delete(p.name),
+      );
     } else {
-      categoryPermissions.forEach(p => this.selectedPermissions.add(p.name));
+      categoryPermissions.forEach((p) => this.selectedPermissions.add(p.name));
     }
   }
 
   isCategoryFullySelected(category: string): boolean {
     const categoryPermissions = this.permissionsByCategory[category];
     if (!categoryPermissions || categoryPermissions.length === 0) return false;
-    return categoryPermissions.every(p => this.selectedPermissions.has(p.name));
+    return categoryPermissions.every((p) =>
+      this.selectedPermissions.has(p.name),
+    );
   }
 
   // CRUD Operations
@@ -184,7 +199,7 @@ export class RoleTemplates implements OnInit, OnDestroy {
     const templateData: RoleTemplateCreateInput = {
       role_name: this.templateForm.value.role_name.trim(),
       description: this.templateForm.value.description?.trim() || undefined,
-      permissions: Array.from(this.selectedPermissions)
+      permissions: Array.from(this.selectedPermissions),
     };
 
     // Validate permissions
@@ -194,14 +209,16 @@ export class RoleTemplates implements OnInit, OnDestroy {
       return;
     }
 
-    this.userRolesService.createRoleTemplate(templateData)
+    this.userRolesService
+      .createRoleTemplate(templateData)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
           this.successMessage = 'Role template created successfully!';
           this.loadRoleTemplates();
-          this.closeCreateModal();
-          this.submitting = false;
+
+          this.submitting = false; // ✅ move this first
+          this.closeCreateModal(); // modal can now close
 
           setTimeout(() => {
             this.successMessage = '';
@@ -210,7 +227,7 @@ export class RoleTemplates implements OnInit, OnDestroy {
         error: (error) => {
           this.errorMessage = error.message || 'Failed to create role template';
           this.submitting = false;
-        }
+        },
       });
   }
 
@@ -237,7 +254,7 @@ export class RoleTemplates implements OnInit, OnDestroy {
     const templateData: RoleTemplateUpdateInput = {
       role_name: this.templateForm.value.role_name.trim(),
       description: this.templateForm.value.description?.trim() || undefined,
-      permissions: Array.from(this.selectedPermissions)
+      permissions: Array.from(this.selectedPermissions),
     };
 
     // Validate permissions
@@ -247,14 +264,16 @@ export class RoleTemplates implements OnInit, OnDestroy {
       return;
     }
 
-    this.userRolesService.updateRoleTemplate(this.selectedTemplate.id, templateData)
+    this.userRolesService
+      .updateRoleTemplate(this.selectedTemplate.id, templateData)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
           this.successMessage = 'Role template updated successfully!';
           this.loadRoleTemplates();
-          this.closeEditModal();
-          this.submitting = false;
+
+          this.submitting = false; // ✅ first
+          this.closeEditModal(); // modal can now close
 
           setTimeout(() => {
             this.successMessage = '';
@@ -263,20 +282,22 @@ export class RoleTemplates implements OnInit, OnDestroy {
         error: (error) => {
           this.errorMessage = error.message || 'Failed to update role template';
           this.submitting = false;
-        }
+        },
       });
   }
 
   deleteTemplate(templateId: string, event: Event): void {
     event.stopPropagation();
 
-    const confirmMessage = 'Are you sure you want to delete this role template? This action cannot be undone.';
+    const confirmMessage =
+      'Are you sure you want to delete this role template? This action cannot be undone.';
 
     if (!confirm(confirmMessage)) {
       return;
     }
 
-    this.userRolesService.deleteRoleTemplate(templateId)
+    this.userRolesService
+      .deleteRoleTemplate(templateId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
@@ -290,7 +311,7 @@ export class RoleTemplates implements OnInit, OnDestroy {
         error: (error) => {
           this.errorMessage = error.message || 'Failed to delete role template';
           console.error('Error deleting template:', error);
-        }
+        },
       });
   }
 
@@ -312,7 +333,7 @@ export class RoleTemplates implements OnInit, OnDestroy {
       branches: 'ri-building-line',
       sermons: 'ri-volume-up-line',
       settings: 'ri-settings-3-line',
-      users: 'ri-user-settings-line'
+      users: 'ri-user-settings-line',
     };
     return icons[category] || 'ri-shield-line';
   }
@@ -322,7 +343,7 @@ export class RoleTemplates implements OnInit, OnDestroy {
   }
 
   private markFormGroupTouched(formGroup: FormGroup): void {
-    Object.keys(formGroup.controls).forEach(key => {
+    Object.keys(formGroup.controls).forEach((key) => {
       const control = formGroup.get(key);
       control?.markAsTouched();
 
@@ -355,14 +376,13 @@ export class RoleTemplates implements OnInit, OnDestroy {
   }
 
   getSelectedCount(categoryKey: string): number {
-  const categoryPermissions = this.permissionsByCategory[categoryKey];
-  if (!categoryPermissions) return 0;
+    const categoryPermissions = this.permissionsByCategory[categoryKey];
+    if (!categoryPermissions) return 0;
 
-  return categoryPermissions.filter(p =>
-    this.selectedPermissions.has(p.name)
-  ).length;
-}
-
+    return categoryPermissions.filter((p) =>
+      this.selectedPermissions.has(p.name),
+    ).length;
+  }
 
   clearMessages(): void {
     this.errorMessage = '';
