@@ -20,29 +20,30 @@
 
   <!-- Status Filter Tabs -->
   <div class="status-tabs">
-    <button
-      *ngFor="let status of statusOptions"
-      class="status-tab"
-      [class.active]="selectedStatus === status.value"
-      (click)="filterByStatus(status.value)"
-    >
+    <button *ngFor="let status of statusOptions" class="status-tab" [class.active]="selectedStatus === status.value"
+      (click)="filterByStatus(status.value)">
       <i [class]="status.icon" [style.color]="status.color"></i>
       <span>{{ status.label }}</span>
-      <span class="count">
-       {{ getStatusCount(status.value) }}
+      <span class="count" *ngIf="status.value !== 'all'">
+        {{ getStatusCount(status.value) }}
+      </span>
+      <span class="count" *ngIf="status.value === 'all'">
+        {{ requests.length }}
       </span>
     </button>
   </div>
 
   <!-- Requests List -->
   <div class="requests-list" *ngIf="!loading">
-    <div *ngIf="requests.length === 0" class="empty-state">
+    <!-- Empty state -->
+    <div *ngIf="filteredRequests.length === 0" class="empty-state">
       <i class="ri-inbox-line"></i>
       <h3>No {{ selectedStatus }} requests</h3>
       <p>There are no signup requests with {{ selectedStatus }} status at the moment.</p>
     </div>
 
-    <div class="request-card" *ngFor="let request of requests">
+    <!-- Request cards - CHANGED from 'requests' to 'filteredRequests' -->
+    <div class="request-card" *ngFor="let request of filteredRequests">
       <!-- Header -->
       <div class="request-header">
         <div class="request-info">
@@ -161,11 +162,7 @@
 
       <div class="form-group">
         <label for="church-select">Assign to Church</label>
-        <select
-          id="church-select"
-          [(ngModel)]="selectedChurchId"
-          class="form-control"
-        >
+        <select id="church-select" [(ngModel)]="selectedChurchId" class="form-control">
           <option value="">Create New Church</option>
           <option *ngFor="let church of churches" [value]="church.id">
             {{ church.name }} - {{ church.location }}
@@ -211,13 +208,8 @@
 
       <div class="form-group">
         <label for="rejection-reason">Reason for Rejection (Optional)</label>
-        <textarea
-          id="rejection-reason"
-          [(ngModel)]="rejectionReason"
-          class="form-control"
-          rows="4"
-          placeholder="Provide a reason for rejection..."
-        ></textarea>
+        <textarea id="rejection-reason" [(ngModel)]="rejectionReason" class="form-control" rows="4"
+          placeholder="Provide a reason for rejection..."></textarea>
         <small class="help-text">
           This reason will be stored for reference but won't be sent to the user automatically.
         </small>

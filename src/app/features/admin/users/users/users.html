@@ -11,11 +11,11 @@
         <span class="stat-label">Total Users</span>
       </div>
       <div class="stat-card">
-       <span class="stat-value">{{ activeUsersCount }}</span>
+        <span class="stat-value">{{ activeUsersCount }}</span>
         <span class="stat-label">Active</span>
       </div>
       <div class="stat-card">
-       <span class="stat-value">{{ inactiveUsersCount }}</span>
+        <span class="stat-value">{{ inactiveUsersCount }}</span>
         <span class="stat-label">Inactive</span>
       </div>
     </div>
@@ -36,12 +36,7 @@
   <div class="filters-section">
     <div class="search-box">
       <i class="ri-search-line"></i>
-      <input
-        type="text"
-        placeholder="Search by name or email..."
-        [(ngModel)]="searchTerm"
-        (input)="onSearchChange()"
-      />
+      <input type="text" placeholder="Search by name or email..." [(ngModel)]="searchTerm" (input)="onSearchChange()" />
     </div>
 
     <div class="filter-group">
@@ -110,13 +105,13 @@
           <td>{{ formatDate(user.created_at) }}</td>
           <td>
             <div class="action-buttons">
-              <button
-                class="btn-icon"
-                [class.btn-activate]="!user.is_active"
-                [class.btn-deactivate]="user.is_active"
-                (click)="toggleUserStatus(user)"
-                [title]="user.is_active ? 'Deactivate' : 'Activate'"
-              >
+              <!-- ✅ NEW: Edit button -->
+              <button class="btn-icon btn-edit" (click)="openEditModal(user)" title="Edit User">
+                <i class="ri-edit-line"></i>
+              </button>
+
+              <button class="btn-icon" [class.btn-activate]="!user.is_active" [class.btn-deactivate]="user.is_active"
+                (click)="toggleUserStatus(user)" [title]="user.is_active ? 'Deactivate' : 'Activate'">
                 <i [class]="user.is_active ? 'ri-close-circle-line' : 'ri-checkbox-circle-line'"></i>
               </button>
             </div>
@@ -131,4 +126,100 @@
     <div class="spinner"></div>
     <p>Loading users...</p>
   </div>
+
+
+
+  <!-- Edit User Modal -->
+<div class="modal-overlay" *ngIf="showEditModal" (click)="closeEditModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>Edit User</h2>
+      <button class="close-btn" (click)="closeEditModal()">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+
+    <div class="modal-body" *ngIf="selectedUser">
+      <!-- User Info -->
+      <div class="user-info-section">
+        <div class="user-avatar-large">
+          {{ selectedUser.full_name.charAt(0).toUpperCase() }}
+        </div>
+        <div class="user-details-large">
+          <h3>{{ selectedUser.full_name }}</h3>
+          <p>{{ selectedUser.email }}</p>
+        </div>
+      </div>
+
+      <!-- Role Selection -->
+      <div class="form-group">
+        <label for="edit-role">User Role *</label>
+        <select
+          id="edit-role"
+          [(ngModel)]="editForm.role"
+          class="form-control"
+        >
+          <option
+            *ngFor="let role of roleOptions"
+            [value]="role.value"
+            [disabled]="role.value === 'all'"
+          >
+            {{ role.label }}
+          </option>
+        </select>
+        <small class="help-text">
+          Changing role will affect user's access permissions
+        </small>
+      </div>
+
+      <!-- Church Assignment -->
+      <div class="form-group">
+        <label for="edit-church">Assign to Church</label>
+        <select
+          id="edit-church"
+          [(ngModel)]="editForm.church_id"
+          class="form-control"
+        >
+          <option value="">No Church (Super Admin only)</option>
+          <option *ngFor="let church of churches" [value]="church.id">
+            {{ church.name }} - {{ church.location || church.city }}
+          </option>
+        </select>
+        <small class="help-text">
+          Leave blank for super admin users
+        </small>
+      </div>
+
+      <!-- Active Status -->
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input
+            type="checkbox"
+            [(ngModel)]="editForm.is_active"
+            class="checkbox-input"
+          />
+          <span>Active User</span>
+        </label>
+        <small class="help-text">
+          Inactive users cannot log in
+        </small>
+      </div>
+
+      <div *ngIf="errorMessage" class="alert alert-error">
+        <i class="ri-error-warning-line"></i>
+        <span>{{ errorMessage }}</span>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-secondary" (click)="closeEditModal()" [disabled]="processing">
+        Cancel
+      </button>
+      <button class="btn btn-primary" (click)="updateUser()" [disabled]="processing">
+        <i class="ri-save-line"></i>
+        {{ processing ? 'Updating...' : 'Update User' }}
+      </button>
+    </div>
+  </div>
+</div>
 </div>

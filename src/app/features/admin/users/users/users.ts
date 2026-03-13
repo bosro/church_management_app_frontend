@@ -1,20 +1,32 @@
 import { Component, OnInit } from '@angular/core';
 import { AdminService, UserWithChurch } from '../../services/admin.service';
+import { Church } from '../../../../models/church.model';
 import { AuthService } from '../../../../core/services/auth';
 
 @Component({
-  selector: 'app-users',
-  standalone: false,
+  selector: 'app-admin-users',
   templateUrl: './users.html',
-  styleUrl: './users.scss',
+  standalone: false,
+  styleUrls: ['./users.scss'],
 })
 export class Users implements OnInit {
   users: UserWithChurch[] = [];
   filteredUsers: UserWithChurch[] = [];
+  churches: Church[] = []; // ✅ NEW
   loading = false;
   searchTerm = '';
   selectedRole = 'all';
   selectedStatus = 'all';
+
+  // ✅ NEW: Edit modal state
+  showEditModal = false;
+  selectedUser: UserWithChurch | null = null;
+  editForm = {
+    role: '',
+    church_id: '',
+    is_active: true,
+  };
+  processing = false;
 
   errorMessage = '';
   successMessage = '';
@@ -44,6 +56,7 @@ export class Users implements OnInit {
 
   ngOnInit(): void {
     this.loadUsers();
+    this.loadChurches(); // ✅ NEW
   }
 
   loadUsers(): void {
@@ -59,6 +72,18 @@ export class Users implements OnInit {
       error: (error) => {
         this.errorMessage = error.message || 'Failed to load users';
         this.loading = false;
+      },
+    });
+  }
+
+  // ✅ NEW: Load churches for dropdown
+  loadChurches(): void {
+    this.adminService.getAllChurches().subscribe({
+      next: (data) => {
+        this.churches = data.filter((c) => c.is_active);
+      },
+      error: (error) => {
+        console.error('Failed to load churches:', error);
       },
     });
   }
@@ -92,6 +117,77 @@ export class Users implements OnInit {
 
   onStatusChange(): void {
     this.applyFilters();
+  }
+
+  // ✅ NEW: Open edit modal
+  openEditModal(user: UserWithChurch): void {
+    this.selectedUser = user;
+    this.editForm = {
+      role: user.role,
+      church_id: user.church_id || '',
+      is_active: user.is_active,
+    };
+    this.showEditModal = true;
+    this.errorMessage = '';
+  }
+
+  // ✅ NEW: Close edit modal
+  closeEditModal(): void {
+    this.showEditModal = false;
+    this.selectedUser = null;
+  }
+
+  // ✅ NEW: Update user
+  updateUser(): void {
+    if (!this.selectedUser) return;
+
+    this.processing = true;
+    this.errorMessage = '';
+
+    // Update role
+    this.adminService
+      .updateUserRole(this.selectedUser.id, this.editForm.role)
+      .subscribe({
+        next: () => {
+          // Update church assignment if changed
+          if (this.editForm.church_id !== this.selectedUser!.church_id) {
+            this.updateUserChurch();
+          } else {
+            this.finishUpdate();
+          }
+        },
+        error: (error) => {
+          this.errorMessage = error.message || 'Failed to update user role';
+          this.processing = false;
+        },
+      });
+  }
+
+  // ✅ NEW: Update church assignment
+  private updateUserChurch(): void {
+    if (!this.selectedUser) return;
+
+    this.adminService
+      .updateUserChurch(this.selectedUser.id, this.editForm.church_id || null)
+      .subscribe({
+        next: () => {
+          this.finishUpdate();
+        },
+        error: (error) => {
+          this.errorMessage =
+            error.message || 'Failed to update church assignment';
+          this.processing = false;
+        },
+      });
+  }
+
+  // ✅ NEW: Finish update
+  private finishUpdate(): void {
+    this.successMessage = 'User updated successfully!';
+    this.processing = false;
+    this.closeEditModal();
+    this.loadUsers();
+    setTimeout(() => (this.successMessage = ''), 3000);
   }
 
   toggleUserStatus(user: UserWithChurch): void {

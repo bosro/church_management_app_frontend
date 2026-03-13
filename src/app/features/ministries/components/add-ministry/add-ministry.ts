@@ -54,14 +54,14 @@ export class AddMinistry implements OnInit, OnDestroy {
   private initForm(): void {
     this.ministryForm = this.fb.group({
       name: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(100)]],
-      description: ['', [Validators.maxLength(500)]],
+      description: ['', [Validators.maxLength(2000)]],
       category: ['', [Validators.required]],
       leader_name: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(100)]],
       leader_email: ['', [Validators.email, Validators.maxLength(100)]],
       leader_phone: ['', [Validators.maxLength(20)]],
       meeting_schedule: ['', [Validators.maxLength(200)]],
       meeting_location: ['', [Validators.maxLength(200)]],
-      requirements: ['', [Validators.maxLength(500)]],
+      requirements: ['', [Validators.maxLength(2000)]],
       is_active: [true]
     });
   }

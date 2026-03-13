@@ -12,6 +12,7 @@ import { AdminService } from '../services/admin.service';
 })
 export class SignupRequests implements OnInit {
   requests: SignupRequest[] = [];
+  filteredRequests: SignupRequest[] = [];
   churches: Church[] = [];
   loading = false;
   selectedStatus = 'pending';
@@ -26,8 +27,8 @@ export class SignupRequests implements OnInit {
   processing = false;
   errorMessage = '';
   successMessage = '';
-
   statusOptions = [
+    { value: 'all', label: 'All', icon: 'ri-list-check', color: '#6B7280' }, // ✅ NEW
     {
       value: 'pending',
       label: 'Pending',
@@ -62,12 +63,11 @@ export class SignupRequests implements OnInit {
     this.loading = true;
     this.errorMessage = '';
 
-    const status =
-      this.selectedStatus === 'all' ? undefined : this.selectedStatus;
-
-    this.adminService.getSignupRequests(status).subscribe({
+    // ✅ Always load ALL requests
+    this.adminService.getSignupRequests().subscribe({
       next: (data) => {
-        this.requests = data;
+        this.requests = data; // Store full list
+        this.applyFilter(); // Apply filter for display
         this.loading = false;
       },
       error: (error) => {
@@ -75,6 +75,16 @@ export class SignupRequests implements OnInit {
         this.loading = false;
       },
     });
+  }
+
+  applyFilter(): void {
+    if (this.selectedStatus === 'all') {
+      this.filteredRequests = [...this.requests];
+    } else {
+      this.filteredRequests = this.requests.filter(
+        (r) => r.status === this.selectedStatus,
+      );
+    }
   }
 
   loadChurches(): void {
@@ -90,7 +100,7 @@ export class SignupRequests implements OnInit {
 
   filterByStatus(status: string): void {
     this.selectedStatus = status;
-    this.loadRequests();
+    this.applyFilter(); // ✅ Filter for display only
   }
 
   openApprovalModal(request: SignupRequest): void {
@@ -138,9 +148,8 @@ export class SignupRequests implements OnInit {
           this.successMessage = 'Signup request approved successfully!';
           this.processing = false;
           this.closeApprovalModal();
-          this.loadRequests();
+          this.loadRequests(); // ✅ Reload full data
 
-          // Clear success message after 3 seconds
           setTimeout(() => (this.successMessage = ''), 3000);
         },
         error: (error) => {
@@ -169,7 +178,7 @@ export class SignupRequests implements OnInit {
           this.successMessage = 'Signup request rejected';
           this.processing = false;
           this.closeRejectionModal();
-          this.loadRequests();
+          this.loadRequests(); // ✅ Reload full data
 
           setTimeout(() => (this.successMessage = ''), 3000);
         },

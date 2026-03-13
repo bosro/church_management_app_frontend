@@ -17,7 +17,7 @@ export interface ApprovalStats {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class AdminService {
   constructor(private supabase: SupabaseService) {}
@@ -29,16 +29,18 @@ export class AdminService {
     return from(
       this.supabase.client
         .from('profiles')
-        .select(`
+        .select(
+          `
           *,
           church:churches(*)
-        `)
-        .order('created_at', { ascending: false })
+        `,
+        )
+        .order('created_at', { ascending: false }),
     ).pipe(
       map(({ data, error }) => {
         if (error) throw error;
         return data as UserWithChurch[];
-      })
+      }),
     );
   }
 
@@ -50,12 +52,12 @@ export class AdminService {
       this.supabase.client
         .from('churches')
         .select('*')
-        .order('created_at', { ascending: false })
+        .order('created_at', { ascending: false }),
     ).pipe(
       map(({ data, error }) => {
         if (error) throw error;
         return data as Church[];
-      })
+      }),
     );
   }
 
@@ -68,12 +70,12 @@ export class AdminService {
         .from('signup_requests')
         .select('*')
         .eq('status', 'pending')
-        .order('created_at', { ascending: false })
+        .order('created_at', { ascending: false }),
     ).pipe(
       map(({ data, error }) => {
         if (error) throw error;
         return data as SignupRequest[];
-      })
+      }),
     );
   }
 
@@ -94,43 +96,51 @@ export class AdminService {
       map(({ data, error }) => {
         if (error) throw error;
         return data as SignupRequest[];
-      })
+      }),
     );
   }
 
   /**
    * Approve signup request
    */
-  approveSignupRequest(requestId: string, churchId?: string, adminId?: string): Observable<any> {
+  approveSignupRequest(
+    requestId: string,
+    churchId?: string,
+    adminId?: string,
+  ): Observable<any> {
     return from(
       this.supabase.callFunction('approve_signup_request', {
         p_request_id: requestId,
         p_admin_id: adminId,
-        p_church_id: churchId || null
-      })
+        p_church_id: churchId || null,
+      }),
     ).pipe(
       map(({ data, error }) => {
         if (error) throw error;
         return data;
-      })
+      }),
     );
   }
 
   /**
    * Reject signup request
    */
-  rejectSignupRequest(requestId: string, reason: string, adminId?: string): Observable<any> {
+  rejectSignupRequest(
+    requestId: string,
+    reason: string,
+    adminId?: string,
+  ): Observable<any> {
     return from(
       this.supabase.callFunction('reject_signup_request', {
         p_request_id: requestId,
         p_admin_id: adminId,
-        p_reason: reason || null
-      })
+        p_reason: reason || null,
+      }),
     ).pipe(
       map(({ data, error }) => {
         if (error) throw error;
         return data;
-      })
+      }),
     );
   }
 
@@ -139,12 +149,12 @@ export class AdminService {
    */
   toggleUserStatus(userId: string, isActive: boolean): Observable<any> {
     return from(
-      this.supabase.update('profiles', userId, { is_active: isActive })
+      this.supabase.update('profiles', userId, { is_active: isActive }),
     ).pipe(
       map(({ data, error }) => {
         if (error) throw error;
         return data;
-      })
+      }),
     );
   }
 
@@ -152,13 +162,11 @@ export class AdminService {
    * Update user role
    */
   updateUserRole(userId: string, role: string): Observable<any> {
-    return from(
-      this.supabase.update('profiles', userId, { role })
-    ).pipe(
+    return from(this.supabase.update('profiles', userId, { role })).pipe(
       map(({ data, error }) => {
         if (error) throw error;
         return data;
-      })
+      }),
     );
   }
 
@@ -167,9 +175,7 @@ export class AdminService {
    */
   getApprovalStats(): Observable<ApprovalStats> {
     return from(
-      this.supabase.client
-        .from('signup_requests')
-        .select('status, created_at')
+      this.supabase.client.from('signup_requests').select('status, created_at'),
     ).pipe(
       map(({ data, error }) => {
         if (error) throw error;
@@ -179,14 +185,17 @@ export class AdminService {
         oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
         return {
-          total_pending: requests.filter(r => r.status === 'pending').length,
-          total_approved: requests.filter(r => r.status === 'approved').length,
-          total_rejected: requests.filter(r => r.status === 'rejected').length,
+          total_pending: requests.filter((r) => r.status === 'pending').length,
+          total_approved: requests.filter((r) => r.status === 'approved')
+            .length,
+          total_rejected: requests.filter((r) => r.status === 'rejected')
+            .length,
           pending_this_week: requests.filter(
-            r => r.status === 'pending' && new Date(r.created_at) >= oneWeekAgo
-          ).length
+            (r) =>
+              r.status === 'pending' && new Date(r.created_at) >= oneWeekAgo,
+          ).length,
         };
-      })
+      }),
     );
   }
 
@@ -194,27 +203,39 @@ export class AdminService {
    * Create new church
    */
   createChurch(churchData: Partial<Church>): Observable<Church> {
-    return from(
-      this.supabase.insert('churches', churchData)
-    ).pipe(
+    return from(this.supabase.insert('churches', churchData)).pipe(
       map(({ data, error }) => {
         if (error) throw error;
         return data?.[0] as Church;
-      })
+      }),
     );
   }
 
   /**
-   * Update church
+   * Update user church assignment
    */
-  updateChurch(churchId: string, churchData: Partial<Church>): Observable<Church> {
+  updateUserChurch(userId: string, churchId: string | null): Observable<any> {
     return from(
-      this.supabase.update('churches', churchId, churchData)
+      this.supabase.update('profiles', userId, { church_id: churchId }),
     ).pipe(
       map(({ data, error }) => {
         if (error) throw error;
+        return data;
+      }),
+    );
+  }
+  /**
+   * Update church
+   */
+  updateChurch(
+    churchId: string,
+    churchData: Partial<Church>,
+  ): Observable<Church> {
+    return from(this.supabase.update('churches', churchId, churchData)).pipe(
+      map(({ data, error }) => {
+        if (error) throw error;
         return data?.[0] as Church;
-      })
+      }),
     );
   }
 
