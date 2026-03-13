@@ -48,35 +48,35 @@
                 </span>
               </div>
 
+              <!-- Replace the category select with this input -->
               <div class="form-group">
                 <label for="category">Category *</label>
-                <select id="category" formControlName="category"
-                  [class.error]="ministryForm.get('category')?.invalid && ministryForm.get('category')?.touched">
-                  <option value="">Select a category</option>
-                  <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
-                </select>
-                <span *ngIf="ministryForm.get('category')?.invalid && ministryForm.get('category')?.touched"
-                  class="error-message">
+                <input id="category" type="text" formControlName="category"
+                  placeholder="e.g., Worship, Youth, Outreach, Education" [class.error]="isFieldInvalid('category')" />
+                <span *ngIf="isFieldInvalid('category')" class="error-message">
                   {{ getErrorMessage('category') }}
                 </span>
+                <p class="help-text">Enter the ministry category</p>
               </div>
 
               <div class="form-group">
                 <label for="description">Description</label>
-
                 <textarea id="description" formControlName="description"
                   placeholder="Brief description of the ministry's purpose and activities..." rows="5"
-                  [class.error]="ministryForm.get('description')?.invalid && ministryForm.get('description')?.touched"></textarea>
+                  [class.error]="isFieldInvalid('description')"></textarea>
 
-                <span *ngIf="ministryForm.get('description')?.invalid && ministryForm.get('description')?.touched"
-                  class="error-message">
+                <span *ngIf="isFieldInvalid('description')" class="error-message">
                   {{ getErrorMessage('description') }}
                 </span>
 
-                <p class="help-text" [class.limit-warning]="descriptionLength > 1700"
-                  [class.limit-danger]="descriptionLength > 1900">
-                  {{ descriptionLength }} / 2000 characters
-                </p>
+                <!-- NEW CHARACTER COUNTER - REACTIVE AND 500 LIMIT -->
+                <div class="character-counter" [class.warning]="descriptionLength > 400 && descriptionLength <= 450"
+                  [class.danger]="descriptionLength > 450">
+                  <span>{{ descriptionLength }} / 500 characters</span>
+                  <span *ngIf="descriptionLength > 450" class="warning-text">
+                    <i class="ri-error-warning-line"></i> Approaching limit!
+                  </span>
+                </div>
               </div>
 
               <div class="form-group">

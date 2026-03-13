@@ -47,12 +47,9 @@
                     type="text"
                     formControlName="name"
                     placeholder="e.g., Youth Ministry, Choir, Ushering"
-                    [class.error]="ministryForm.get('name')?.invalid && ministryForm.get('name')?.touched"
+                    [class.error]="isFieldInvalid('name')"
                   />
-                  <span
-                    *ngIf="ministryForm.get('name')?.invalid && ministryForm.get('name')?.touched"
-                    class="error-message"
-                  >
+                  <span *ngIf="isFieldInvalid('name')" class="error-message">
                     {{ getErrorMessage('name') }}
                   </span>
                 </div>
@@ -65,7 +62,22 @@
                     formControlName="description"
                     placeholder="Describe the purpose and activities of this ministry..."
                     rows="4"
+                    [class.error]="isFieldInvalid('description')"
                   ></textarea>
+
+                  <span *ngIf="isFieldInvalid('description')" class="error-message">
+                    {{ getErrorMessage('description') }}
+                  </span>
+
+                  <!-- CHARACTER COUNTER - ADDED -->
+                  <div class="character-counter"
+                       [class.warning]="descriptionLength > 400 && descriptionLength <= 450"
+                       [class.danger]="descriptionLength > 450">
+                    <span>{{ descriptionLength }} / 500 characters</span>
+                    <span *ngIf="descriptionLength > 450" class="warning-text">
+                      <i class="ri-error-warning-line"></i> Approaching limit!
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -90,7 +102,11 @@
                     id="meeting_time"
                     type="time"
                     formControlName="meeting_time"
+                    [class.error]="isFieldInvalid('meeting_time')"
                   />
+                  <span *ngIf="isFieldInvalid('meeting_time')" class="error-message">
+                    {{ getErrorMessage('meeting_time') }}
+                  </span>
                 </div>
 
                 <!-- Meeting Location -->
@@ -119,7 +135,7 @@
               <button
                 type="submit"
                 class="btn-primary"
-                [disabled]="loading"
+                [disabled]="loading || ministryForm.invalid"
               >
                 <span *ngIf="!loading">Create Ministry</span>
                 <span *ngIf="loading">
@@ -134,5 +150,3 @@
     </div>
   </div>
 </div>
-
-

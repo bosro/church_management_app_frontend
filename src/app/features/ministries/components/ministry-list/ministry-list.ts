@@ -106,7 +106,7 @@ export class MinistryList implements OnInit, OnDestroy {
       this.scrollToTop();
       return;
     }
-    this.router.navigate(['main/ministries/create']);
+    this.router.navigate(['main/ministries/add']);
   }
 
   editMinistry(ministryId: string, event: Event): void {

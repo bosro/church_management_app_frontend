@@ -5,7 +5,6 @@ import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { MinistryService } from '../../services/ministry.service';
-import { MINISTRY_CATEGORIES } from '../../../../models/ministry.model';
 
 @Component({
   selector: 'app-add-ministry',
@@ -20,9 +19,6 @@ export class AddMinistry implements OnInit, OnDestroy {
   loading = false;
   errorMessage = '';
   successMessage = '';
-
-  // Ministry Categories
-  categories = MINISTRY_CATEGORIES;
 
   // Permissions
   canManageMinistries = false;
@@ -54,8 +50,8 @@ export class AddMinistry implements OnInit, OnDestroy {
   private initForm(): void {
     this.ministryForm = this.fb.group({
       name: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(100)]],
-      description: ['', [Validators.maxLength(2000)]],
-      category: ['', [Validators.required]],
+      description: ['', [Validators.maxLength(500)]], // CHANGED TO 500
+      category: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(50)]],
       leader_name: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(100)]],
       leader_email: ['', [Validators.email, Validators.maxLength(100)]],
       leader_phone: ['', [Validators.maxLength(20)]],
@@ -66,17 +62,45 @@ export class AddMinistry implements OnInit, OnDestroy {
     });
   }
 
+  // CHARACTER COUNTER GETTER
+  get descriptionLength(): number {
+    const descriptionControl = this.ministryForm?.get('description');
+    if (!descriptionControl) {
+      return 0;
+    }
+    const value = descriptionControl.value;
+    return value ? value.length : 0;
+  }
+
+  // Helper method to check if field is invalid
+  isFieldInvalid(fieldName: string): boolean {
+    const control = this.ministryForm.get(fieldName);
+    return !!(control && control.invalid && control.touched);
+  }
+
   onSubmit(): void {
-   if (this.ministryForm.invalid) {
-  this.markFormGroupTouched(this.ministryForm);
-  this.errorMessage = 'Please fix the highlighted fields';
+    console.log('Form submitted'); // DEBUG
+    console.log('Form valid:', this.ministryForm.valid); // DEBUG
+    console.log('Form value:', this.ministryForm.value); // DEBUG
 
-  setTimeout(() => {
-    this.scrollToFirstInvalidField();
-  });
+    // Mark all fields as touched to show validation errors
+    this.markFormGroupTouched(this.ministryForm);
 
-  return;
-}
+    if (this.ministryForm.invalid) {
+      this.errorMessage = 'Please fill in all required fields correctly';
+
+      // Show specific error for description length
+      const descControl = this.ministryForm.get('description');
+      if (descControl?.hasError('maxlength')) {
+        this.errorMessage = 'Description is too long. Maximum 500 characters allowed.'; // CHANGED TO 500
+      }
+
+      setTimeout(() => {
+        this.scrollToFirstInvalidField();
+      }, 100);
+
+      return;
+    }
 
     this.loading = true;
     this.errorMessage = '';
@@ -84,27 +108,27 @@ export class AddMinistry implements OnInit, OnDestroy {
 
     const formData = this.ministryForm.value;
 
-    // Prepare ministry data
+    // Prepare ministry data - SIMPLIFIED
     const ministryData = {
-      name: formData.name.trim(),
+      name: formData.name?.trim() || '',
       description: formData.description?.trim() || null,
-      category: formData.category,
+      category: formData.category?.trim().toLowerCase() || '', // lowercase to match DB
       meeting_schedule: formData.meeting_schedule?.trim() || null,
       meeting_location: formData.meeting_location?.trim() || null,
       requirements: formData.requirements?.trim() || null,
-      is_active: formData.is_active
+      is_active: formData.is_active ?? true
     };
+
+    console.log('Sending to service:', ministryData); // DEBUG
 
     this.ministryService
       .createMinistry(ministryData)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (ministry) => {
+          console.log('Ministry created:', ministry); // DEBUG
           this.successMessage = 'Ministry created successfully!';
           this.loading = false;
-
-          // TODO: If leader info provided, create leader record
-          // This would require additional service methods
 
           setTimeout(() => {
             this.router.navigate(['main/ministries', ministry.id]);
@@ -112,9 +136,9 @@ export class AddMinistry implements OnInit, OnDestroy {
         },
         error: (error) => {
           this.loading = false;
-          this.errorMessage = error.message || 'Failed to create ministry. Please try again.';
+          console.error('Create ministry error:', error); // DEBUG
+          this.errorMessage = error.error?.message || error.message || 'Failed to create ministry. Please try again.';
           this.scrollToTop();
-          console.error('Create ministry error:', error);
         }
       });
   }
@@ -165,26 +189,23 @@ export class AddMinistry implements OnInit, OnDestroy {
     return 'Invalid input';
   }
 
+  private scrollToFirstInvalidField(): void {
+    const firstInvalidControl: HTMLElement | null = document.querySelector(
+      'input.error, textarea.error, select.error'
+    );
 
-  get descriptionLength(): number {
-  return this.ministryForm?.get('description')?.value?.length || 0;
-}
+    if (firstInvalidControl) {
+      firstInvalidControl.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+      });
 
-
-private scrollToFirstInvalidField(): void {
-  const firstInvalidControl: HTMLElement | null = document.querySelector(
-    '.ng-invalid[formControlName]'
-  );
-
-  if (firstInvalidControl) {
-    firstInvalidControl.scrollIntoView({
-      behavior: 'smooth',
-      block: 'center'
-    });
-
-    firstInvalidControl.focus();
+      setTimeout(() => {
+        firstInvalidControl.focus();
+      }, 400);
+    }
   }
-}
+
   private scrollToTop(): void {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }

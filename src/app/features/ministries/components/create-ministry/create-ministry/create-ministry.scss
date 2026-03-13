@@ -321,3 +321,46 @@
     }
   }
 }
+
+
+
+// Character Counter Styles - ADD AT THE END
+.character-counter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: #F9FAFB;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  color: #6B7280;
+  font-weight: 500;
+
+  &.warning {
+    background: #FEF3C7;
+    color: #92400E;
+    border: 1px solid #FDE68A;
+  }
+
+  &.danger {
+    background: #FEE2E2;
+    color: #991B1B;
+    border: 1px solid #FCA5A5;
+  }
+
+  .warning-text {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-weight: 600;
+
+    i {
+      font-size: 1rem;
+    }
+  }
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}

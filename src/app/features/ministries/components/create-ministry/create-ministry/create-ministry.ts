@@ -60,11 +60,39 @@ export class CreateMinistry implements OnInit, OnDestroy {
     });
   }
 
+  // CHARACTER COUNTER GETTER - ADDED
+  get descriptionLength(): number {
+    const descriptionControl = this.ministryForm?.get('description');
+    if (!descriptionControl) {
+      return 0;
+    }
+    const value = descriptionControl.value;
+    return value ? value.length : 0;
+  }
+
+  // Helper method to check if field is invalid - ADDED
+  isFieldInvalid(fieldName: string): boolean {
+    const control = this.ministryForm.get(fieldName);
+    return !!(control && control.invalid && control.touched);
+  }
+
   onSubmit(): void {
+    // Mark all fields as touched to show validation errors
+    this.markFormGroupTouched(this.ministryForm);
+
     if (this.ministryForm.invalid) {
-      this.markFormGroupTouched(this.ministryForm);
       this.errorMessage = 'Please fill in all required fields correctly';
-      this.scrollToTop();
+
+      // Show specific error for description length
+      const descControl = this.ministryForm.get('description');
+      if (descControl?.hasError('maxlength')) {
+        this.errorMessage = 'Description is too long. Maximum 500 characters allowed.';
+      }
+
+      setTimeout(() => {
+        this.scrollToFirstInvalidField();
+      }, 100);
+
       return;
     }
 
@@ -141,6 +169,25 @@ export class CreateMinistry implements OnInit, OnDestroy {
     }
 
     return 'Invalid input';
+  }
+
+  private scrollToFirstInvalidField(): void {
+    // Find first invalid field with error class
+    const firstInvalidControl: HTMLElement | null = document.querySelector(
+      'input.error, textarea.error, select.error'
+    );
+
+    if (firstInvalidControl) {
+      firstInvalidControl.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+      });
+
+      // Focus after scroll completes
+      setTimeout(() => {
+        firstInvalidControl.focus();
+      }, 400);
+    }
   }
 
   private scrollToTop(): void {
