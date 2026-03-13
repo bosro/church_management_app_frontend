@@ -277,12 +277,23 @@ export class AuthService {
 
         let errorMessage = 'Failed to sign up';
 
-        if (error.message?.includes('User already registered')) {
-          errorMessage = 'This email is already registered';
+        // ✅ Better duplicate email detection
+        if (
+          error.message?.includes('User already registered') ||
+          error.message?.includes('already been registered') ||
+          error.code === '23505' || // PostgreSQL unique violation
+          error.message?.toLowerCase().includes('already exists')
+        ) {
+          errorMessage =
+            'This email is already registered. Please sign in instead or use the "Recover password" link if you forgot your password.';
         } else if (error.message?.includes('Database error')) {
           errorMessage = 'Registration error. Please try again.';
         } else if (error.message?.includes('Invalid email')) {
           errorMessage = 'Please provide a valid email address';
+        } else if (error.message?.includes('foreign key constraint')) {
+          // Catch FK errors and show friendly message
+          errorMessage =
+            'Registration error. Please try again or contact support.';
         } else if (error.message) {
           errorMessage = error.message;
         }
