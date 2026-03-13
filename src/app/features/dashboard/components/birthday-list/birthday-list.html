@@ -20,17 +20,14 @@
           <th>Name</th>
           <th>Location</th>
           <th>Date</th>
-          <th>Age</th>
+          <!-- ✅ CHANGED: Only show Age column if user has permission -->
+          <th *ngIf="canViewAge">Age</th>
           <th>Phone</th>
           <th>Status</th>
         </tr>
       </thead>
       <tbody>
-        <tr
-          *ngFor="let birthday of filteredBirthdays"
-          (click)="onViewMember(birthday.id)"
-          class="birthday-row"
-        >
+        <tr *ngFor="let birthday of filteredBirthdays" (click)="onViewMember(birthday.id)" class="birthday-row">
           <td>
             <div class="name-cell">
               <div class="member-avatar">
@@ -44,7 +41,8 @@
           </td>
           <td>{{ birthday.location }}</td>
           <td>{{ formatDate(birthday.date) }}</td>
-          <td>{{ birthday.age }}</td>
+          <!-- ✅ CHANGED: Only show age if user has permission -->
+          <td *ngIf="canViewAge">{{ birthday.age }}</td>
           <td>{{ formatPhone(birthday.phone) }}</td>
           <td>
             <span class="status-badge" [ngClass]="getStatusClass(birthday.status)">
@@ -55,7 +53,8 @@
 
         <!-- Empty State -->
         <tr *ngIf="filteredBirthdays.length === 0">
-          <td colspan="6" class="empty-state">
+          <!-- ✅ CHANGED: Adjust colspan based on canViewAge -->
+          <td [attr.colspan]="canViewAge ? 6 : 5" class="empty-state">
             <i class="ri-cake-line"></i>
             <p>No birthdays in this month</p>
           </td>
@@ -65,11 +64,7 @@
 
     <!-- Mobile Cards -->
     <div class="birthday-cards mobile-cards">
-      <div
-        *ngFor="let birthday of filteredBirthdays"
-        class="birthday-card"
-        (click)="onViewMember(birthday.id)"
-      >
+      <div *ngFor="let birthday of filteredBirthdays" class="birthday-card" (click)="onViewMember(birthday.id)">
         <div class="card-header">
           <div class="member-avatar">
             <img *ngIf="birthday.avatar" [src]="birthday.avatar" [alt]="birthday.name" />
@@ -90,7 +85,8 @@
             <i class="ri-calendar-line"></i>
             <span>{{ formatDate(birthday.date) }}</span>
           </div>
-          <div class="detail-item">
+          <!-- ✅ CHANGED: Only show age if user has permission -->
+          <div *ngIf="canViewAge" class="detail-item">
             <i class="ri-user-line"></i>
             <span>{{ birthday.age }} years</span>
           </div>
@@ -114,9 +110,3 @@
     <i class="ri-arrow-right-line"></i>
   </button>
 </div>
-
-
-
-
-
-

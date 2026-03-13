@@ -64,6 +64,16 @@ export class Sidebar implements OnInit {
         },
       ],
     },
+
+    {
+    icon: 'ri-hand-heart-line',
+    label: 'My Giving',
+    route: '/main/my-giving',
+    active: false,
+    roles: ['member'], // Only for members
+  },
+
+
     // ✅ Church Operations - EXCLUDE super_admin
     {
       icon: 'ri-group-line',
@@ -71,7 +81,7 @@ export class Sidebar implements OnInit {
       route: '/main/members',
       active: false,
       roles: ['church_admin', 'pastor', 'group_leader'],
-      excludeRoles: ['super_admin'], // ✅ Hide from super_admin
+         excludeRoles: ['super_admin', 'member'], // ✅ Hide from super_admin
     },
     {
       icon: 'ri-calendar-check-line',
@@ -111,7 +121,7 @@ export class Sidebar implements OnInit {
       route: '/main/events',
       active: false,
       roles: ['church_admin', 'pastor'],
-      excludeRoles: ['super_admin'], // ✅ Hide from super_admin
+      excludeRoles: ['church_admin', 'pastor', 'member'], // ✅ Hide from super_admin
     },
     {
       icon: 'ri-chat-3-line',
@@ -134,7 +144,7 @@ export class Sidebar implements OnInit {
       label: 'Settings',
       route: '/main/settings',
       active: false,
-      roles: ['super_admin', 'church_admin', 'pastor', 'finance_officer'],
+     roles: ['church_admin', 'pastor', 'finance_officer', 'member'],
     },
   ];
 

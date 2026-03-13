@@ -14,7 +14,7 @@ interface Birthday {
   date: string;
   age: number;
   phone: string;
-  status: 'Today' | 'Tomorrow' | 'Upcoming'; // ✅ FIXED: Changed 'Passed' to 'Upcoming'
+  status: 'Today' | 'Tomorrow' | 'Upcoming';
   avatar?: string;
 }
 
@@ -26,6 +26,7 @@ interface Birthday {
 })
 export class BirthdayList implements OnChanges {
   @Input() birthdays: Birthday[] = [];
+  @Input() canViewAge = false; // ✅ NEW: Permission to view ages
   @Output() viewAll = new EventEmitter<void>();
   @Output() viewMember = new EventEmitter<string>();
 
@@ -83,7 +84,7 @@ export class BirthdayList implements OnChanges {
         return 'badge-today';
       case 'Tomorrow':
         return 'badge-tomorrow';
-      case 'Upcoming': // ✅ FIXED: Changed from default to explicit 'Upcoming'
+      case 'Upcoming':
         return 'badge-upcoming';
       default:
         return 'badge-upcoming';

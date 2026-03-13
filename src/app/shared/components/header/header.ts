@@ -1,8 +1,10 @@
-// src/app/shared/components/header/header.component.ts (updated)
+// src/app/shared/components/header/header.component.ts
 import { Component, OnInit, HostListener, ElementRef } from '@angular/core';
 import { Router } from '@angular/router';
 import { User } from '../../../models/user.model';
+import { Church } from '../../../models/setting.model';
 import { AuthService } from '../../../core/services/auth';
+import { SettingsService } from '../../../features/settings/services';
 import { SidebarService } from '../../../core/services/sidebar.service';
 
 @Component({
@@ -13,6 +15,7 @@ import { SidebarService } from '../../../core/services/sidebar.service';
 })
 export class Header implements OnInit {
   currentUser: User | null = null;
+  churchProfile: Church | null = null;
   searchQuery = '';
   showUserMenu = false;
   showMobileSearch = false;
@@ -20,6 +23,7 @@ export class Header implements OnInit {
 
   constructor(
     private authService: AuthService,
+    private settingsService: SettingsService,
     private router: Router,
     private sidebarService: SidebarService,
     private elementRef: ElementRef,
@@ -27,9 +31,24 @@ export class Header implements OnInit {
 
   ngOnInit(): void {
     this.checkScreenSize();
+    this.loadCurrentUser();
+    this.loadChurchProfile();
+  }
 
+  private loadCurrentUser(): void {
     this.authService.currentProfile$.subscribe((profile) => {
       this.currentUser = profile;
+    });
+  }
+
+  private loadChurchProfile(): void {
+    this.settingsService.getChurchProfile().subscribe({
+      next: (profile) => {
+        this.churchProfile = profile;
+      },
+      error: (error) => {
+        console.error('Error loading church profile:', error);
+      }
     });
   }
 
@@ -107,6 +126,12 @@ export class Header implements OnInit {
       role.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase())
     );
   }
+
+  get churchLogoUrl(): string | null {
+    return this.churchProfile?.logo_url || null;
+  }
+
+  get churchName(): string {
+    return this.churchProfile?.name || 'Church';
+  }
 }
-
-

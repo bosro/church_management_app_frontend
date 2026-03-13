@@ -1,0 +1,51 @@
+<!-- src/app/shared/components/upcoming-events/upcoming-events.component.html -->
+<div class="events-card">
+  <div class="card-header">
+    <h3>Upcoming Events</h3>
+    <button class="view-all-btn" (click)="onViewAll()">
+      View All
+      <i class="ri-arrow-right-line"></i>
+    </button>
+  </div>
+
+  <div class="events-list">
+    <div
+      *ngFor="let event of events"
+      class="event-item"
+      (click)="onViewEvent(event.id)"
+    >
+      <div class="event-icon" [style.background-color]="getEventColor(event.type) + '20'">
+        <i [class]="getEventIcon(event.type)" [style.color]="getEventColor(event.type)"></i>
+      </div>
+
+      <div class="event-info">
+        <h4>{{ event.title }}</h4>
+        <div class="event-details">
+          <span class="event-date">
+            <i class="ri-calendar-line"></i>
+            {{ event.date }}
+          </span>
+          <span class="event-time">
+            <i class="ri-time-line"></i>
+            {{ event.time }}
+          </span>
+        </div>
+        <div class="event-location">
+          <i class="ri-map-pin-line"></i>
+          {{ event.location }}
+        </div>
+        <div *ngIf="event.attendees" class="event-attendees">
+          <i class="ri-user-line"></i>
+          {{ event.attendees }} attending
+        </div>
+      </div>
+
+      <i class="ri-arrow-right-s-line event-arrow"></i>
+    </div>
+
+    <div *ngIf="events.length === 0" class="empty-state">
+      <i class="ri-calendar-line"></i>
+      <p>No upcoming events</p>
+    </div>
+  </div>
+</div>

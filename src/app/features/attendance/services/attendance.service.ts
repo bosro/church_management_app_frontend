@@ -738,35 +738,62 @@ export class AttendanceService {
   exportAttendanceReport(eventId: string): Observable<Blob> {
     return this.getAttendanceRecords(eventId).pipe(
       map((records) => {
+        // FIXED HEADERS - Now includes separate Date and Time columns
         const headers = [
           'Name',
           'Type',
           'Member Number',
+          'Check-in Date',
           'Check-in Time',
           'Check-in Method',
         ];
 
-        const rows = records.map((record) => {
+        const rows = records.map((record: any) => {
+          // Get member/visitor name
           const name = record.member
             ? `${record.member.first_name} ${record.member.last_name}`
             : record.visitor
               ? `${record.visitor.first_name} ${record.visitor.last_name}`
               : 'Unknown';
 
+          // Get type
           const type = record.member ? 'Member' : 'Visitor';
-          const memberNumber = record.member?.member_number || 'N/A';
-          const checkInTime = new Date(record.checked_in_at).toLocaleString();
-          const method = record.check_in_method;
 
-          return [name, type, memberNumber, checkInTime, method];
+          // Get member number
+          const memberNumber = record.member?.member_number || 'N/A';
+
+          // Parse the checked_in_at timestamp
+          const checkedInDate = new Date(record.checked_in_at);
+
+          // Format date (DD/MM/YYYY)
+          const checkInDate = checkedInDate.toLocaleDateString('en-GB'); // e.g., 13/03/2026
+
+          // Format time (HH:MM:SS)
+          const checkInTime = checkedInDate.toLocaleTimeString('en-GB', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+          }); // e.g., 09:37:28
+
+          // Get check-in method
+          const checkInMethod = record.check_in_method || 'manual';
+
+          return [
+            name,
+            type,
+            memberNumber,
+            checkInDate,
+            checkInTime,
+            checkInMethod,
+          ];
         });
 
         const csv = [
           headers.join(','),
-          ...rows.map((row) => row.join(',')),
+          ...rows.map((row) => row.map((cell) => `"${cell}"`).join(',')),
         ].join('\n');
 
-        return new Blob([csv], { type: 'text/csv' });
+        return new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       }),
       catchError((err) => {
         console.error('Export error:', err);

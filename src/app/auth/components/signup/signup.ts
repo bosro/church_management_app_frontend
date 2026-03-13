@@ -42,10 +42,10 @@ export class Signup implements OnInit {
     { value: 'senior_pastor', label: 'Senior Pastor' },
     { value: 'associate_pastor', label: 'Associate Pastor' },
     { value: 'church_administrator', label: 'Church Administrator' },
-    { value: 'worship_leader', label: 'Worship Leader' },
-    { value: 'youth_pastor', label: 'Youth Pastor' },
-    { value: 'elder', label: 'Elder/Deacon' },
-    { value: 'other', label: 'Other' }
+    // { value: 'worship_leader', label: 'Worship Leader' },
+    // { value: 'youth_pastor', label: 'Youth Pastor' },
+    // { value: 'elder', label: 'Elder/Deacon' },
+    // { value: 'other', label: 'Other' }
   ];
 
   howHeardOptions = [

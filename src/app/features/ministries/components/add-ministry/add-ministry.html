@@ -70,12 +70,21 @@
                 </span>
 
                 <!-- NEW CHARACTER COUNTER - REACTIVE AND 500 LIMIT -->
-                <div class="character-counter" [class.warning]="descriptionLength > 400 && descriptionLength <= 450"
-                  [class.danger]="descriptionLength > 450">
+                <div class="character-counter" [class.warning]="descriptionLength > 400 && descriptionLength < 450"
+                  [class.danger]="descriptionLength >= 450">
+
                   <span>{{ descriptionLength }} / 500 characters</span>
-                  <span *ngIf="descriptionLength > 450" class="warning-text">
-                    <i class="ri-error-warning-line"></i> Approaching limit!
+
+                  <!-- Approaching -->
+                  <span *ngIf="descriptionLength > 400 && descriptionLength < 500" class="warning-text">
+                    <i class="ri-error-warning-line"></i> Approaching limit
                   </span>
+
+                  <!-- Exceeded -->
+                  <span *ngIf="descriptionLength >= 500" class="warning-text">
+                    <i class="ri-close-circle-line"></i> Character limit reached
+                  </span>
+
                 </div>
               </div>
 
@@ -145,8 +154,7 @@
 
               <div class="form-group">
                 <label for="requirements">Requirements</label>
-                <textarea id="requirements" formControlName="requirements"
-                  placeholder="Any requirements or qualifications for joining this ministry..." rows="4"></textarea>
+                <textarea id="description" formControlName="description" maxlength="500" rows="5"></textarea>
                 <p class="help-text">Optional: Specify any prerequisites for members</p>
               </div>
             </div>

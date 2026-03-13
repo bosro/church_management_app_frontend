@@ -33,50 +33,29 @@
         <div class="dashboard-main">
           <!-- Stats Cards -->
           <div class="stats-grid">
-            <app-stats-card
-              title="Total Members"
-              [value]="dashboardStats?.active_members || 0"
-              icon="ri-group-line"
-              iconBg="#DDD6FE"
-              iconColor="#7C3AED"
-              [trend]="8.5"
-              trendText="Up from last month"
-              trendUp="true"
-            ></app-stats-card>
+            <app-stats-card title="Total Members" [value]="dashboardStats?.active_members || 0" icon="ri-group-line"
+              iconBg="#DDD6FE" iconColor="#7C3AED" [trend]="8.5" trendText="Up from last month"
+              trendUp="true"></app-stats-card>
 
-            <app-stats-card
-              title="Attendance (Monthly)"
-              [value]="dashboardStats?.attendance_this_month || 0"
-              icon="ri-calendar-check-line"
-              iconBg="#D1FAE5"
-              iconColor="#10B981"
-              [trend]="4.3"
-              trendText="Compared to last month"
-              trendUp="false"
-            ></app-stats-card>
+            <app-stats-card title="Attendance (Monthly)" [value]="dashboardStats?.attendance_this_month || 0"
+              icon="ri-calendar-check-line" iconBg="#D1FAE5" iconColor="#10B981" [trend]="4.3"
+              trendText="Compared to last month" trendUp="false"></app-stats-card>
 
-            <app-stats-card
-              title="New Members"
-              [value]="dashboardStats?.new_members_this_month || 0"
-              icon="ri-user-add-line"
-              iconBg="#FEF3C7"
-              iconColor="#F59E0B"
-              [trend]="12.5"
-              trendText="Compared to last month"
-              trendUp="true"
-            ></app-stats-card>
+            <app-stats-card title="New Members" [value]="dashboardStats?.new_members_this_month || 0"
+              icon="ri-user-add-line" iconBg="#FEF3C7" iconColor="#F59E0B" [trend]="12.5"
+              trendText="Compared to last month" trendUp="true"></app-stats-card>
           </div>
 
           <!-- Revenue Chart -->
           <app-revenue-chart [chartData]="revenueData"></app-revenue-chart>
 
           <!-- Upcoming Birthdays -->
-          <app-birthday-list
-            [birthdays]="upcomingBirthdays"
-            (viewAll)="viewAllBirthdays()"
-            (viewMember)="viewMember($event)"
-          ></app-birthday-list>
+          <app-birthday-list [birthdays]="upcomingBirthdays" [canViewAge]="canViewAge" (viewAll)="viewAllBirthdays()"
+            (viewMember)="viewMember($event)"></app-birthday-list>
         </div>
+
+        <app-upcoming-events [events]="upcomingEvents" (viewAll)="viewAllEvents()"
+          (viewEvent)="viewEvent($event)"></app-upcoming-events>
 
         <!-- Right Sidebar -->
         <div class="dashboard-sidebar">
@@ -84,42 +63,26 @@
           <div class="quick-actions-card">
             <h3>Quick Actions</h3>
             <div class="action-grid">
-              <button
-                class="action-btn action-purple"
-                (click)="navigateToAddMembers()"
-                [disabled]="!canAddMembers"
-                [class.disabled]="!canAddMembers"
-              >
+              <button class="action-btn action-purple" (click)="navigateToAddMembers()" [disabled]="!canAddMembers"
+                [class.disabled]="!canAddMembers">
                 <i class="ri-user-add-line"></i>
                 <span>Add Members</span>
               </button>
 
-              <button
-                class="action-btn action-pink"
-                (click)="navigateToCheckIn()"
-                [disabled]="!canCheckIn"
-                [class.disabled]="!canCheckIn"
-              >
+              <button class="action-btn action-pink" (click)="navigateToCheckIn()" [disabled]="!canCheckIn"
+                [class.disabled]="!canCheckIn">
                 <i class="ri-file-list-3-line"></i>
                 <span>Check In</span>
               </button>
 
-              <button
-                class="action-btn action-black"
-                (click)="navigateToCreateEvent()"
-                [disabled]="!canCreateEvent"
-                [class.disabled]="!canCreateEvent"
-              >
+              <button class="action-btn action-black" (click)="navigateToCreateEvent()" [disabled]="!canCreateEvent"
+                [class.disabled]="!canCreateEvent">
                 <i class="ri-calendar-event-line"></i>
                 <span>Create Event</span>
               </button>
 
-              <button
-                class="action-btn action-teal"
-                (click)="navigateToRecordGiving()"
-                [disabled]="!canRecordGiving"
-                [class.disabled]="!canRecordGiving"
-              >
+              <button class="action-btn action-teal" (click)="navigateToRecordGiving()" [disabled]="!canRecordGiving"
+                [class.disabled]="!canRecordGiving">
                 <i class="ri-money-dollar-circle-line"></i>
                 <span>Record Giving</span>
               </button>
@@ -162,7 +125,3 @@
     </div>
   </div>
 </div>
-
-
-
-

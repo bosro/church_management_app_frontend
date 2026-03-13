@@ -11,6 +11,7 @@ import { InputComponent } from './components/input/input';
 import { Chart } from './components/chart/chart';
 import { ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { Unauthorized } from './components/unauthorized/unauthorized';
+import { UpcomingEvents } from './components/upcoming-events/upcoming-events';
 
 @NgModule({
   declarations: [
@@ -24,6 +25,7 @@ import { Unauthorized } from './components/unauthorized/unauthorized';
     InputComponent,
     Chart,
     Unauthorized,
+    UpcomingEvents,
   ],
   imports: [CommonModule, ReactiveFormsModule, FormsModule],
   exports: [
@@ -38,6 +40,7 @@ import { Unauthorized } from './components/unauthorized/unauthorized';
     Chart,
     ReactiveFormsModule,
     FormsModule,
+    UpcomingEvents
   ],
 })
 export class SharedModule {}

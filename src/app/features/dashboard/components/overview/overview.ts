@@ -67,6 +67,10 @@ export class Overview implements OnInit, OnDestroy {
 
   isSuperAdmin = false;
 
+  upcomingEvents: any[] = [];
+
+  canViewAge = false;
+
   constructor(
     private supabase: SupabaseService,
     private authService: AuthService,
@@ -105,45 +109,98 @@ export class Overview implements OnInit, OnDestroy {
     });
 }
 
+
+
+
+
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
   }
 
-  private setPermissions(): void {
-    const adminRoles = ['super_admin', 'church_admin', 'pastor'];
-    const financeRoles = ['super_admin', 'church_admin', 'finance_officer'];
+ private setPermissions(): void {
+  const adminRoles = ['super_admin', 'church_admin', 'pastor'];
+  const financeRoles = ['super_admin', 'church_admin', 'finance_officer'];
 
-    this.canAddMembers = this.authService.hasRole(adminRoles);
-    this.canCheckIn = this.authService.hasRole([...adminRoles, 'group_leader']);
-    this.canCreateEvent = this.authService.hasRole(adminRoles);
-    this.canRecordGiving = this.authService.hasRole(financeRoles);
-  }
+  this.canAddMembers = this.authService.hasRole(adminRoles);
+  this.canCheckIn = this.authService.hasRole([...adminRoles, 'group_leader']);
+  this.canCreateEvent = this.authService.hasRole(adminRoles);
+  this.canRecordGiving = this.authService.hasRole(financeRoles);
+  this.canViewAge = this.authService.hasRole(adminRoles); // ✅ NEW: Only admins can view ages
+}
 
   private async loadDashboardData(): Promise<void> {
-    this.loading = true;
-    this.hasError = false;
+  this.loading = true;
+  this.hasError = false;
 
-    try {
-      // Refresh materialized view first
-      await this.refreshDashboardView();
+  try {
+    await this.refreshDashboardView();
 
-      // Load all data in parallel
-      await Promise.all([
-        this.loadDashboardSummary(),
-        this.loadUpcomingBirthdays(),
-        this.loadTeamMembers(),
-        this.loadRevenueData(),
-      ]);
-    } catch (error: any) {
-      console.error('Error loading dashboard data:', error);
-      this.hasError = true;
-      this.errorMessage =
-        'Failed to load dashboard data. Please try refreshing the page.';
-    } finally {
-      this.loading = false;
-    }
+    await Promise.all([
+      this.loadDashboardSummary(),
+      this.loadUpcomingBirthdays(),
+      this.loadTeamMembers(),
+      this.loadRevenueData(),
+      this.loadUpcomingEvents(), // ✅ NEW
+    ]);
+  } catch (error: any) {
+    console.error('Error loading dashboard data:', error);
+    this.hasError = true;
+    this.errorMessage = 'Failed to load dashboard data. Please try refreshing the page.';
+  } finally {
+    this.loading = false;
   }
+}
+
+
+private formatDateWithoutYear(dateString: string): string {
+  const date = new Date(dateString);
+  const months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+  return `${months[date.getMonth()]} ${date.getDate()}`;
+}
+
+// ✅ NEW: Load upcoming events
+private async loadUpcomingEvents(): Promise<void> {
+  const today = new Date().toISOString().split('T')[0];
+
+  const { data, error } = await this.supabase.client
+    .from('events')
+    .select('*')
+    .eq('church_id', this.churchId)
+    .gte('event_date', today)
+    .order('event_date', { ascending: true })
+    .limit(5);
+
+  if (error) {
+    console.error('Error loading events:', error);
+    return;
+  }
+
+  if (data) {
+    this.upcomingEvents = data.map((event: any) => ({
+      id: event.id,
+      title: event.title,
+      date: this.formatDateWithoutYear(event.event_date),
+      time: event.event_time || 'TBA',
+      location: event.location || 'TBA',
+      type: event.event_type || 'other',
+      attendees: event.expected_attendees,
+    }));
+  }
+}
 
   private async refreshDashboardView(): Promise<void> {
     try {
@@ -174,58 +231,56 @@ export class Overview implements OnInit, OnDestroy {
   }
 
   private async loadUpcomingBirthdays(): Promise<void> {
-    const today = new Date();
-    const thirtyDaysLater = new Date();
-    thirtyDaysLater.setDate(today.getDate() + 30);
+  const today = new Date();
+  const thirtyDaysLater = new Date();
+  thirtyDaysLater.setDate(today.getDate() + 30);
 
-    const { data, error } = await this.supabase.client
-      .from('upcoming_birthdays')
-      .select('*')
-      .eq('church_id', this.churchId)
-      .gte('celebration_date', today.toISOString().split('T')[0])
-      .lte('celebration_date', thirtyDaysLater.toISOString().split('T')[0])
-      .order('celebration_date', { ascending: true })
-      .limit(10);
+  const { data, error } = await this.supabase.client
+    .from('upcoming_birthdays')
+    .select('*')
+    .eq('church_id', this.churchId)
+    .gte('celebration_date', today.toISOString().split('T')[0])
+    .lte('celebration_date', thirtyDaysLater.toISOString().split('T')[0])
+    .order('celebration_date', { ascending: true })
+    .limit(10);
 
-    if (error) {
-      console.error('Error loading birthdays:', error);
-      throw error;
-    }
-
-    if (data) {
-      this.upcomingBirthdays = data.map((birthday: any) => {
-        // ✅ FIXED: Normalize all dates to midnight for accurate comparison
-        const celebrationDate = new Date(birthday.celebration_date);
-        celebrationDate.setHours(0, 0, 0, 0);
-
-        const todayDate = new Date();
-        todayDate.setHours(0, 0, 0, 0);
-
-        const tomorrow = new Date(todayDate);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-
-        // ✅ FIXED: Determine status - default to 'Passed' for dates before today
-        let status: 'Today' | 'Tomorrow' | 'Upcoming' = 'Upcoming';
-
-        if (celebrationDate.getTime() === todayDate.getTime()) {
-          status = 'Today';
-        } else if (celebrationDate.getTime() === tomorrow.getTime()) {
-          status = 'Tomorrow';
-        }
-
-        return {
-          id: birthday.id,
-          name: `${birthday.first_name} ${birthday.last_name}`,
-          location: birthday.city || birthday.address || 'Not specified',
-          date: this.formatDate(birthday.next_birthday),
-          age: birthday.age + 1,
-          phone: birthday.phone_primary || '',
-          status: status,
-          avatar: undefined,
-        };
-      });
-    }
+  if (error) {
+    console.error('Error loading birthdays:', error);
+    throw error;
   }
+
+  if (data) {
+    this.upcomingBirthdays = data.map((birthday: any) => {
+      const celebrationDate = new Date(birthday.celebration_date);
+      celebrationDate.setHours(0, 0, 0, 0);
+
+      const todayDate = new Date();
+      todayDate.setHours(0, 0, 0, 0);
+
+      const tomorrow = new Date(todayDate);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      let status: 'Today' | 'Tomorrow' | 'Upcoming' = 'Upcoming';
+
+      if (celebrationDate.getTime() === todayDate.getTime()) {
+        status = 'Today';
+      } else if (celebrationDate.getTime() === tomorrow.getTime()) {
+        status = 'Tomorrow';
+      }
+
+      return {
+        id: birthday.id,
+        name: `${birthday.first_name} ${birthday.last_name}`,
+        location: birthday.city || birthday.address || 'Not specified',
+        date: this.formatDateWithoutYear(birthday.next_birthday), // ✅ CHANGED: No year
+        age: birthday.age + 1,
+        phone: birthday.phone_primary || '',
+        status: status,
+        avatar: undefined,
+      };
+    });
+  }
+}
 
   private async loadTeamMembers(): Promise<void> {
     // Load pastors using the view
@@ -375,6 +430,14 @@ export class Overview implements OnInit, OnDestroy {
     });
   }
 
+
+  viewAllEvents(): void {
+  this.router.navigate(['main/events']);
+}
+
+viewEvent(eventId: string): void {
+  this.router.navigate(['main/events', eventId]);
+}
   viewMember(memberId: string): void {
     this.router.navigate(['main/members', memberId]);
   }
@@ -402,5 +465,7 @@ export class Overview implements OnInit, OnDestroy {
     return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
   }
 }
+
+
 
 

@@ -5,6 +5,7 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { SettingsService } from '../../services';
 import { AuthService } from '../../../../core/services/auth';
+import { SupabaseService } from '../../../../core/services/supabase';
 import {
   Church,
   NotificationSettings,
@@ -32,8 +33,13 @@ export class Settings implements OnInit, OnDestroy {
   loadingProfile = true;
   loadingSettings = false;
   savingSettings = false;
+  uploadingLogo = false;
   errorMessage = '';
   successMessage = '';
+
+  // Logo upload
+  selectedLogoFile: File | null = null;
+  logoPreviewUrl: string | null = null;
 
   // Settings state
   notificationSettings: NotificationSettings | null = null;
@@ -50,19 +56,11 @@ export class Settings implements OnInit, OnDestroy {
   timezones = TIMEZONES;
   currencies = CURRENCIES;
 
-  // Setting Categories
-  categories = {
-    general: 'General Settings',
-    notifications: 'Notifications',
-    finance: 'Finance Settings',
-    communications: 'Communications',
-    security: 'Security'
-  };
-
   constructor(
     private fb: FormBuilder,
     private settingsService: SettingsService,
-    private authService: AuthService
+    private authService: AuthService,
+    private supabase: SupabaseService
   ) {}
 
   ngOnInit(): void {
@@ -111,6 +109,12 @@ export class Settings implements OnInit, OnDestroy {
         next: (profile) => {
           this.churchProfile = profile;
           this.populateForm(profile);
+
+          // Set logo preview if exists
+          if (profile.logo_url) {
+            this.logoPreviewUrl = profile.logo_url;
+          }
+
           this.loadingProfile = false;
         },
         error: (error) => {
@@ -137,14 +141,12 @@ export class Settings implements OnInit, OnDestroy {
         error: (error) => {
           console.error('Error loading settings:', error);
           this.loadingSettings = false;
-          // Use defaults if loading fails
           this.initializeDefaultSettings();
         }
       });
   }
 
   private initializeDefaultSettings(): void {
-    // Import defaults from model
     this.notificationSettings = {
       email_notifications: true,
       sms_notifications: false,
@@ -193,14 +195,98 @@ export class Settings implements OnInit, OnDestroy {
     });
   }
 
-  // Tab Navigation
-  switchTab(tab: string): void {
-    this.activeTab = tab;
-    this.clearMessages();
+  // ==================== LOGO UPLOAD ====================
+
+  onLogoFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) {
+      return;
+    }
+
+    const file = input.files[0];
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      this.errorMessage = 'Please upload a valid image file (JPG, PNG, or WebP)';
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      this.errorMessage = 'Image size must be less than 5MB';
+      return;
+    }
+
+    this.selectedLogoFile = file;
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onload = (e: ProgressEvent<FileReader>) => {
+      this.logoPreviewUrl = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+
+    this.errorMessage = '';
   }
 
-  // Form Submission - General Settings
-  onSubmit(): void {
+  async uploadLogo(): Promise<string | null> {
+    if (!this.selectedLogoFile) {
+      return null;
+    }
+
+    this.uploadingLogo = true;
+    this.errorMessage = '';
+
+    try {
+      const churchId = this.authService.getChurchId();
+      const timestamp = new Date().getTime();
+      const fileExt = this.selectedLogoFile.name.split('.').pop();
+      const fileName = `${churchId}/logo-${timestamp}.${fileExt}`;
+
+      // Upload to Supabase Storage
+      const { data, error } = await this.supabase.client.storage
+        .from('church-logos')
+        .upload(fileName, this.selectedLogoFile, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (error) {
+        throw error;
+      }
+
+      // Get public URL
+      const { data: urlData } = this.supabase.client.storage
+        .from('church-logos')
+        .getPublicUrl(fileName);
+
+      this.uploadingLogo = false;
+      return urlData.publicUrl;
+    } catch (error: any) {
+      this.uploadingLogo = false;
+      console.error('Upload error:', error);
+      this.errorMessage = error.message || 'Failed to upload logo';
+      return null;
+    }
+  }
+
+  removeLogo(): void {
+    this.selectedLogoFile = null;
+    this.logoPreviewUrl = this.churchProfile?.logo_url || null;
+    this.churchForm.patchValue({ logo_url: this.churchProfile?.logo_url || '' });
+
+    // Reset file input
+    const fileInput = document.getElementById('logo-file') as HTMLInputElement;
+    if (fileInput) {
+      fileInput.value = '';
+    }
+  }
+
+  // ==================== FORM SUBMISSION ====================
+
+  async onSubmit(): Promise<void> {
     if (!this.canManageSettings) {
       this.errorMessage = 'You do not have permission to update settings';
       return;
@@ -217,35 +303,53 @@ export class Settings implements OnInit, OnDestroy {
     this.errorMessage = '';
     this.successMessage = '';
 
-    const profileData = this.prepareProfileData();
-
-    this.settingsService.updateChurchProfile(profileData)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (profile) => {
-          this.churchProfile = profile;
-          this.successMessage = 'Church profile updated successfully!';
+    try {
+      // Upload logo if a new file was selected
+      if (this.selectedLogoFile) {
+        const logoUrl = await this.uploadLogo();
+        if (logoUrl) {
+          this.churchForm.patchValue({ logo_url: logoUrl });
+        } else {
           this.loading = false;
-          this.scrollToTop();
-
-          setTimeout(() => {
-            this.successMessage = '';
-          }, 3000);
-        },
-        error: (error) => {
-          this.loading = false;
-          this.errorMessage = error.message || 'Failed to update profile. Please try again.';
-          this.scrollToTop();
-          console.error('Error updating profile:', error);
+          return; // Upload failed, error message already set
         }
-      });
+      }
+
+      const profileData = this.prepareProfileData();
+
+      this.settingsService.updateChurchProfile(profileData)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (profile) => {
+            this.churchProfile = profile;
+            this.logoPreviewUrl = profile.logo_url || null;
+            this.selectedLogoFile = null;
+            this.successMessage = 'Church profile updated successfully!';
+            this.loading = false;
+            this.scrollToTop();
+
+            setTimeout(() => {
+              this.successMessage = '';
+            }, 3000);
+          },
+          error: (error) => {
+            this.loading = false;
+            this.errorMessage = error.message || 'Failed to update profile. Please try again.';
+            this.scrollToTop();
+            console.error('Error updating profile:', error);
+          }
+        });
+    } catch (error: any) {
+      this.loading = false;
+      this.errorMessage = error.message || 'An error occurred';
+      console.error('Error in onSubmit:', error);
+    }
   }
 
   private prepareProfileData(): any {
     const formValue = this.churchForm.value;
     const profileData: any = {};
 
-    // Only include non-empty values
     Object.keys(formValue).forEach(key => {
       const value = formValue[key];
       if (value !== '' && value !== null && value !== undefined) {
@@ -254,6 +358,12 @@ export class Settings implements OnInit, OnDestroy {
     });
 
     return profileData;
+  }
+
+  // Tab Navigation
+  switchTab(tab: string): void {
+    this.activeTab = tab;
+    this.clearMessages();
   }
 
   // Toggle Settings
