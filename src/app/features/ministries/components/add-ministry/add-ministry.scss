@@ -214,6 +214,7 @@
     textarea {
       resize: vertical;
       min-height: 100px;
+       line-height: 1.5;
     }
 
     .help-text {
@@ -360,4 +361,22 @@
       justify-content: center;
     }
   }
+}
+
+
+
+.help-text {
+  font-size: 0.8125rem;
+  color: #6B7280;
+  margin: 0.25rem 0 0 0;
+}
+
+.help-text.limit-warning {
+  color: #D97706; // orange
+  font-weight: 600;
+}
+
+.help-text.limit-danger {
+  color: #DC2626; // red
+  font-weight: 600;
 }

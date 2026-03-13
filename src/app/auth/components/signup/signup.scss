@@ -448,3 +448,163 @@
 
 
 
+// Add to existing signup.component.scss
+
+// Signup Type Selection
+.signup-type-selection {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  animation: fadeIn 0.4s ease;
+
+  .type-card {
+    background: #F9FAFB;
+    border: 2px solid #E5E7EB;
+    border-radius: 12px;
+    padding: 2rem;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-align: center;
+
+    &:hover {
+      border-color: #5B21B6;
+      background: white;
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(91, 33, 182, 0.15);
+    }
+
+    .type-icon {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 1rem;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s;
+
+      i {
+        font-size: 2rem;
+        color: white;
+      }
+
+      &.member {
+        background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+      }
+
+      &.admin {
+        background: linear-gradient(135deg, #5B21B6 0%, #6D28D9 100%);
+      }
+    }
+
+    h3 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #111827;
+      margin: 0 0 0.5rem 0;
+    }
+
+    p {
+      font-size: 0.9375rem;
+      color: #6B7280;
+      margin: 0 0 1.5rem 0;
+      line-height: 1.5;
+    }
+
+    .type-benefits {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+
+      .benefit-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.875rem;
+        color: #374151;
+
+        i {
+          color: #10B981;
+          font-size: 1.125rem;
+        }
+      }
+    }
+
+    &:hover .type-icon {
+      transform: scale(1.1);
+    }
+  }
+
+  .signin-link {
+    text-align: center;
+    margin-top: 1rem;
+
+    p {
+      font-size: 0.9375rem;
+      color: #6B7280;
+      margin: 0;
+
+      a {
+        color: #5B21B6;
+        text-decoration: none;
+        font-weight: 600;
+        transition: color 0.2s;
+
+        &:hover {
+          color: #6D28D9;
+          text-decoration: underline;
+        }
+      }
+    }
+  }
+}
+
+// Back Button
+.btn-back {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 0;
+  font-size: 0.9375rem;
+  color: #6B7280;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  margin-bottom: 1.5rem;
+  transition: color 0.2s;
+  font-family: 'Nunito Sans', sans-serif;
+
+  i {
+    font-size: 1.125rem;
+  }
+
+  &:hover {
+    color: #5B21B6;
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 640px) {
+  .signup-type-selection {
+    .type-card {
+      padding: 1.5rem;
+
+      .type-icon {
+        width: 56px;
+        height: 56px;
+
+        i {
+          font-size: 1.75rem;
+        }
+      }
+
+      h3 {
+        font-size: 1.125rem;
+      }
+
+      p {
+        font-size: 0.875rem;
+      }
+    }
+  }
+}

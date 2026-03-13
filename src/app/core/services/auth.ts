@@ -86,7 +86,6 @@ export class AuthService {
   }
 
   // Sign In with Email & Password
-  // Sign In with Email & Password
   signIn(email: string, password: string): Observable<AuthResponse> {
     this.loadingSubject.next(true);
 
@@ -166,6 +165,97 @@ export class AuthService {
     );
   }
 
+  /**
+   * Handle member signup (joining existing church)
+   */
+  private async handleMemberSignup(
+    data: any,
+    signUpData: SignUpData,
+  ): Promise<any> {
+    // Call function to add member to church
+    const result = await this.supabase.callFunction('create_member_signup', {
+      p_user_id: data.user.id,
+      p_full_name: signUpData.full_name,
+      p_email: signUpData.email,
+      p_phone: signUpData.phone,
+      p_church_id: signUpData.church_id,
+    });
+
+    console.log('Member signup result:', result);
+
+    return {
+      ...data,
+      needsEmailConfirmation: !data.user.email_confirmed_at,
+      pendingApproval: false, // Members are auto-approved
+      isMember: true,
+      message:
+        'Welcome! Please check your email to confirm your account. You can sign in once confirmed.',
+    };
+  }
+
+  /**
+   * Handle admin/pastor signup (creating new church or requesting access)
+   */
+  private async handleAdminSignup(
+    data: any,
+    signUpData: SignUpData,
+  ): Promise<any> {
+    // Determine role based on position
+    const suggestedRole = this.mapPositionToRole(signUpData.position || '');
+
+    // Create signup request record
+    const { data: signupRequest, error: requestError } =
+      await this.supabase.insert<SignupRequest>('signup_requests', {
+        user_id: data.user.id,
+        full_name: signUpData.full_name,
+        email: signUpData.email,
+        phone: signUpData.phone,
+        position: signUpData.position,
+        church_name: signUpData.church_name,
+        church_location: signUpData.church_location,
+        church_size: signUpData.church_size,
+        how_heard: signUpData.how_heard,
+        status: 'pending',
+      });
+
+    if (requestError) {
+      console.error('Signup request creation error:', requestError);
+      throw requestError;
+    }
+
+    if (!signupRequest || signupRequest.length === 0) {
+      throw new Error('Failed to create signup request');
+    }
+
+    console.log('Signup request created:', signupRequest[0]);
+
+    // Send notification to admins via edge function
+    try {
+      await this.supabase.invokeEdgeFunction('notify-admin-signup', {
+        full_name: signUpData.full_name,
+        email: signUpData.email,
+        phone: signUpData.phone,
+        church_name: signUpData.church_name,
+        church_location: signUpData.church_location,
+        position: signUpData.position,
+        church_size: signUpData.church_size,
+        how_heard: signUpData.how_heard,
+        suggested_role: suggestedRole,
+        request_id: signupRequest[0].id,
+      });
+    } catch (notifyError) {
+      console.warn('Failed to send admin notification:', notifyError);
+    }
+
+    return {
+      ...data,
+      needsEmailConfirmation: !data.user.email_confirmed_at,
+      pendingApproval: true,
+      message:
+        'Please check your email to confirm your account. After email confirmation, an administrator will review your signup request.',
+    };
+  }
+
   // Sign Up - With Approval System
   signUp(signUpData: SignUpData): Observable<any> {
     this.loadingSubject.next(true);
@@ -198,73 +288,18 @@ export class AuthService {
         await new Promise((resolve) => setTimeout(resolve, 1000));
 
         try {
-          // Determine role based on position
-          const suggestedRole = this.mapPositionToRole(signUpData.position);
-
-          // Create signup request record
-          const { data: signupRequest, error: requestError } =
-            await this.supabase.insert<SignupRequest>('signup_requests', {
-              user_id: data.user.id,
-              full_name: signUpData.full_name,
-              email: signUpData.email,
-              phone: signUpData.phone,
-              position: signUpData.position,
-              church_name: signUpData.church_name,
-              church_location: signUpData.church_location,
-              church_size: signUpData.church_size,
-              how_heard: signUpData.how_heard,
-              status: 'pending',
-            });
-
-          if (requestError) {
-            console.error('Signup request creation error:', requestError);
-            throw requestError;
+          // ✅ NEW: Handle member signup differently
+          if (signUpData.signup_type === 'member' && signUpData.church_id) {
+            return await this.handleMemberSignup(data, signUpData);
+          } else {
+            return await this.handleAdminSignup(data, signUpData);
           }
-
-          if (!signupRequest || signupRequest.length === 0) {
-            throw new Error('Failed to create signup request');
-          }
-
-          console.log('Signup request created:', signupRequest[0]);
-
-          // Send notification to admins via edge function
-          try {
-            const { data: notifyData, error: notifyError } =
-              await this.supabase.invokeEdgeFunction('notify-admin-signup', {
-                full_name: signUpData.full_name,
-                email: signUpData.email,
-                phone: signUpData.phone,
-                church_name: signUpData.church_name,
-                church_location: signUpData.church_location,
-                position: signUpData.position,
-                church_size: signUpData.church_size,
-                how_heard: signUpData.how_heard,
-                suggested_role: suggestedRole,
-                request_id: signupRequest[0].id,
-              });
-
-            if (notifyError) {
-              console.warn('Failed to send admin notification:', notifyError);
-            } else {
-              console.log('Admin notification sent:', notifyData);
-            }
-          } catch (notifyError) {
-            console.warn('Failed to send admin notification:', notifyError);
-          }
-
-          return {
-            ...data,
-            needsEmailConfirmation: !data.user.email_confirmed_at,
-            pendingApproval: true,
-            message:
-              'Please check your email to confirm your account. After email confirmation, an administrator will review your signup request.',
-          };
         } catch (postSignupError) {
           console.error('Post-signup process error:', postSignupError);
           return {
             ...data,
             needsEmailConfirmation: true,
-            pendingApproval: true,
+            pendingApproval: signUpData.signup_type !== 'member',
             message:
               'Account created. Please check your email to confirm your account.',
           };
@@ -277,23 +312,17 @@ export class AuthService {
 
         let errorMessage = 'Failed to sign up';
 
-        // ✅ Better duplicate email detection
         if (
           error.message?.includes('User already registered') ||
           error.message?.includes('already been registered') ||
-          error.code === '23505' || // PostgreSQL unique violation
-          error.message?.toLowerCase().includes('already exists')
+          error.code === '23505'
         ) {
           errorMessage =
-            'This email is already registered. Please sign in instead or use the "Recover password" link if you forgot your password.';
+            'This email is already registered. Please sign in instead or use "Recover password" if you forgot your password.';
         } else if (error.message?.includes('Database error')) {
           errorMessage = 'Registration error. Please try again.';
         } else if (error.message?.includes('Invalid email')) {
           errorMessage = 'Please provide a valid email address';
-        } else if (error.message?.includes('foreign key constraint')) {
-          // Catch FK errors and show friendly message
-          errorMessage =
-            'Registration error. Please try again or contact support.';
         } else if (error.message) {
           errorMessage = error.message;
         }

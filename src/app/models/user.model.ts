@@ -32,16 +32,25 @@ export interface AuthResponse {
   session: any;
 }
 
+export type SignupType = 'member' | 'admin';
+
 export interface SignUpData {
   email: string;
   password: string;
   full_name: string;
-  church_name: string;
-  church_location: string;
-  position: string;
   phone: string;
-  church_size: string;
-  how_heard: string;
+
+  signup_type: SignupType;
+
+  // Member signup
+  church_id?: string;
+
+  // Admin signup
+  church_name?: string;
+  church_location?: string;
+  position?: string;
+  church_size?: string;
+  how_heard?: string;
 }
 
 export interface SignupRequest {

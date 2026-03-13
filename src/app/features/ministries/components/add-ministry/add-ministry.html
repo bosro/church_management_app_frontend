@@ -73,8 +73,9 @@
                   {{ getErrorMessage('description') }}
                 </span>
 
-                <p class="help-text">
-                  {{ ministryForm.get('description')?.value?.length || 0 }}/2000 characters
+                <p class="help-text" [class.limit-warning]="descriptionLength > 1700"
+                  [class.limit-danger]="descriptionLength > 1900">
+                  {{ descriptionLength }} / 2000 characters
                 </p>
               </div>
 

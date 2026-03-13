@@ -67,12 +67,16 @@ export class AddMinistry implements OnInit, OnDestroy {
   }
 
   onSubmit(): void {
-    if (this.ministryForm.invalid) {
-      this.markFormGroupTouched(this.ministryForm);
-      this.errorMessage = 'Please fill in all required fields correctly';
-      this.scrollToTop();
-      return;
-    }
+   if (this.ministryForm.invalid) {
+  this.markFormGroupTouched(this.ministryForm);
+  this.errorMessage = 'Please fix the highlighted fields';
+
+  setTimeout(() => {
+    this.scrollToFirstInvalidField();
+  });
+
+  return;
+}
 
     this.loading = true;
     this.errorMessage = '';
@@ -161,6 +165,26 @@ export class AddMinistry implements OnInit, OnDestroy {
     return 'Invalid input';
   }
 
+
+  get descriptionLength(): number {
+  return this.ministryForm?.get('description')?.value?.length || 0;
+}
+
+
+private scrollToFirstInvalidField(): void {
+  const firstInvalidControl: HTMLElement | null = document.querySelector(
+    '.ng-invalid[formControlName]'
+  );
+
+  if (firstInvalidControl) {
+    firstInvalidControl.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center'
+    });
+
+    firstInvalidControl.focus();
+  }
+}
   private scrollToTop(): void {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
