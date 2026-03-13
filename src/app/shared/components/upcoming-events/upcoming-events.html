@@ -2,7 +2,8 @@
 <div class="events-card">
   <div class="card-header">
     <h3>Upcoming Events</h3>
-    <button class="view-all-btn" (click)="onViewAll()">
+    <!-- ✅ CHANGED: Only show if user has permission -->
+    <button *ngIf="canViewAll" class="view-all-btn" (click)="onViewAll()">
       View All
       <i class="ri-arrow-right-line"></i>
     </button>

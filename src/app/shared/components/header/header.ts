@@ -30,10 +30,20 @@ export class Header implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.checkScreenSize();
-    this.loadCurrentUser();
+  this.checkScreenSize();
+  this.loadCurrentUser();
+  this.loadChurchProfile();
+
+  // ✅ NEW: Refresh church profile every 30 seconds
+  setInterval(() => {
     this.loadChurchProfile();
-  }
+  }, 30000); // 30 seconds
+}
+
+// ✅ NEW: Add public refresh method
+refreshChurchProfile(): void {
+  this.loadChurchProfile();
+}
 
   private loadCurrentUser(): void {
     this.authService.currentProfile$.subscribe((profile) => {
@@ -42,15 +52,22 @@ export class Header implements OnInit {
   }
 
   private loadChurchProfile(): void {
-    this.settingsService.getChurchProfile().subscribe({
-      next: (profile) => {
+  // ✅ CHANGED: Subscribe to the observable stream instead of calling once
+  this.settingsService.churchProfile$.subscribe({
+    next: (profile) => {
+      if (profile) {
         this.churchProfile = profile;
-      },
-      error: (error) => {
-        console.error('Error loading church profile:', error);
+      } else {
+        // If null, load it for the first time
+        this.settingsService.getChurchProfile().subscribe({
+          error: (error) => {
+            console.error('Error loading church profile:', error);
+          }
+        });
       }
-    });
-  }
+    }
+  });
+}
 
   @HostListener('window:resize')
   onResize() {
@@ -135,3 +152,5 @@ export class Header implements OnInit {
     return this.churchProfile?.name || 'Church';
   }
 }
+
+

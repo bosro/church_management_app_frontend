@@ -1,4 +1,3 @@
-
 // src/app/shared/components/upcoming-events/upcoming-events.component.ts
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 
@@ -13,13 +12,14 @@ interface Event {
 }
 
 @Component({
- selector: 'app-upcoming-events',
+  selector: 'app-upcoming-events',
   standalone: false,
   templateUrl: './upcoming-events.html',
   styleUrl: './upcoming-events.scss',
 })
 export class UpcomingEvents {
   @Input() events: Event[] = [];
+  @Input() canViewAll = true; // ✅ NEW: Permission to view all events
   @Output() viewAll = new EventEmitter<void>();
   @Output() viewEvent = new EventEmitter<string>();
 

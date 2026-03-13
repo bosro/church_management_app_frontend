@@ -1,7 +1,7 @@
 // src/app/features/settings/services/settings.service.ts
 import { Injectable } from '@angular/core';
-import { Observable, from, throwError, forkJoin, of } from 'rxjs';
-import { map, catchError } from 'rxjs/operators';
+import { Observable, from, throwError, forkJoin, of, BehaviorSubject } from 'rxjs';
+import { map, catchError, tap } from 'rxjs/operators';
 import { SupabaseService } from '../../core/services/supabase';
 import { AuthService } from '../../core/services/auth';
 import {
@@ -26,6 +26,10 @@ import {
 export class SettingsService {
   private churchId?: string;
   private currentUserId?: string;
+
+  // ✅ NEW: Observable church profile
+  private churchProfileSubject = new BehaviorSubject<Church | null>(null);
+  public churchProfile$ = this.churchProfileSubject.asObservable();
 
   constructor(
     private supabase: SupabaseService,
@@ -172,6 +176,8 @@ export class SettingsService {
         if (!data) throw new Error('Church profile not found');
         return data as Church;
       }),
+      // ✅ NEW: Update BehaviorSubject when profile is loaded
+      tap((profile) => this.churchProfileSubject.next(profile)),
       catchError(err => throwError(() => err))
     );
   }
@@ -193,8 +199,19 @@ export class SettingsService {
         if (!data) throw new Error('Failed to update church profile');
         return data as Church;
       }),
+      // ✅ NEW: Update BehaviorSubject when profile is updated
+      tap((profile) => this.churchProfileSubject.next(profile)),
       catchError(err => throwError(() => err))
     );
+  }
+
+  // ✅ NEW: Method to refresh church profile manually
+  refreshChurchProfile(): void {
+    this.getChurchProfile().subscribe({
+      error: (error) => {
+        console.error('Error refreshing church profile:', error);
+      }
+    });
   }
 
   // ==================== TYPED SETTINGS ====================
