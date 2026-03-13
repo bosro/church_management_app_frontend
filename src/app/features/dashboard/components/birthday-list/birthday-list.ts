@@ -26,7 +26,8 @@ interface Birthday {
 })
 export class BirthdayList implements OnChanges {
   @Input() birthdays: Birthday[] = [];
-  @Input() canViewAge = false; // ✅ NEW: Permission to view ages
+  @Input() canViewAge = false;
+  @Input() canViewAll = true; // ✅ ADD THIS
   @Output() viewAll = new EventEmitter<void>();
   @Output() viewMember = new EventEmitter<string>();
 
@@ -59,10 +60,8 @@ export class BirthdayList implements OnChanges {
 
   private filterBirthdaysByMonth(): void {
     if (this.selectedMonth === new Date().getMonth()) {
-      // Show all for current month
       this.filteredBirthdays = this.birthdays;
     } else {
-      // Filter by selected month
       this.filteredBirthdays = this.birthdays.filter((b) => {
         const birthDate = new Date(b.date);
         return birthDate.getMonth() === this.selectedMonth;
@@ -93,7 +92,6 @@ export class BirthdayList implements OnChanges {
 
   formatPhone(phone: string): string {
     if (!phone) return '';
-    // Format: 0555440404 -> 0555 440 404
     if (phone.length === 10) {
       return `${phone.substring(0, 4)} ${phone.substring(4, 7)} ${phone.substring(7)}`;
     }
@@ -112,18 +110,8 @@ export class BirthdayList implements OnChanges {
   formatDate(dateString: string): string {
     const date = new Date(dateString);
     const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
     ];
     return `${months[date.getMonth()]} ${date.getDate()}`;
   }

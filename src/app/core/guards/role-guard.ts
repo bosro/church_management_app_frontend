@@ -1,6 +1,7 @@
 // src/app/core/guards/role.guard.ts
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import { filter, map, take } from 'rxjs/operators';
 import { AuthService } from '../services/auth';
 import {
   ActivatedRouteSnapshot,
@@ -25,42 +26,46 @@ export class RoleGuard implements CanActivate, CanMatch {
   canActivate(
     route: ActivatedRouteSnapshot,
     state: RouterStateSnapshot
-  ): Observable<boolean> | Promise<boolean> | boolean {
+  ): Observable<boolean | UrlTree> {
     const requiredRoles = route.data['roles'] as Array<string>;
 
-    if (!requiredRoles || requiredRoles.length === 0) {
-      return true;
-    }
+    return this.authService.authReady$.pipe(
+      filter(ready => ready === true),  // ✅ wait for profile to be loaded
+      take(1),
+      map(() => {
+        if (!requiredRoles || requiredRoles.length === 0) {
+          return true;
+        }
 
-    if (this.authService.hasRole(requiredRoles)) {
-      return true;
-    }
+        if (this.authService.hasRole(requiredRoles)) {
+          return true;
+        }
 
-    // Redirect to unauthorized page
-    this.router.navigate(['/unauthorized']);
-    return false;
+        return this.router.createUrlTree(['/unauthorized']);
+      })
+    );
   }
 
   canMatch(
     route: Route,
     segments: UrlSegment[]
-  ): Observable<boolean | UrlTree> | Promise<boolean | UrlTree> | boolean | UrlTree {
+  ): Observable<boolean | UrlTree> {
     const requiredRoles = route.data?.['roles'] as Array<string>;
 
-    if (!requiredRoles || requiredRoles.length === 0) {
-      return true;
-    }
+    return this.authService.authReady$.pipe(
+      filter(ready => ready === true),  // ✅ wait for profile to be loaded
+      take(1),
+      map(() => {
+        if (!requiredRoles || requiredRoles.length === 0) {
+          return true;
+        }
 
-    if (this.authService.hasRole(requiredRoles)) {
-      return true;
-    }
+        if (this.authService.hasRole(requiredRoles)) {
+          return true;
+        }
 
-    // Redirect to unauthorized page
-    return this.router.createUrlTree(['/unauthorized']);
+        return this.router.createUrlTree(['/unauthorized']);
+      })
+    );
   }
 }
-
-
-
-
-

@@ -1,0 +1,59 @@
+<!-- src/app/features/my-giving/components/giving-history/giving-history.component.html -->
+<div class="giving-history">
+  <!-- Loading State -->
+  <div *ngIf="loading" class="loading-container">
+    <div class="spinner"></div>
+    <p>Loading transaction history...</p>
+  </div>
+
+  <!-- Empty State -->
+  <div *ngIf="!loading && transactions.length === 0" class="empty-state">
+    <i class="ri-inbox-line"></i>
+    <h3>No Transactions Yet</h3>
+    <p>Your giving history will appear here once you make your first contribution.</p>
+  </div>
+
+  <!-- Transaction List -->
+  <div *ngIf="!loading && transactions.length > 0" class="transaction-list">
+    <div
+      *ngFor="let transaction of transactions"
+      class="transaction-card"
+    >
+      <div class="transaction-header">
+        <div class="transaction-icon" [ngClass]="getCategoryIconColor(transaction.category_name || '')">
+          <i [class]="getCategoryIcon(transaction.category_name || '')"></i>
+        </div>
+        <div class="transaction-info">
+          <h4>{{ transaction.category_name || 'Unknown Category' }}</h4>
+          <div class="transaction-meta">
+            <span class="date">{{ formatDate(transaction.transaction_date) }}</span>
+            <span class="separator">•</span>
+            <span class="time">{{ formatTime(transaction.created_at) }}</span>
+          </div>
+        </div>
+        <div class="transaction-amount">
+          <span class="amount">{{ transaction.currency }} {{ transaction.amount | number:'1.2-2' }}</span>
+        </div>
+      </div>
+
+      <div class="transaction-details">
+        <div class="detail-row">
+          <div class="detail-item">
+            <i [class]="getPaymentMethodIcon(transaction.payment_method)"></i>
+            <span>{{ getPaymentMethodLabel(transaction.payment_method) }}</span>
+          </div>
+        </div>
+
+        <div *ngIf="transaction.transaction_reference" class="reference-number">
+          <span class="label">Reference:</span>
+          <span class="value">{{ transaction.transaction_reference }}</span>
+        </div>
+
+        <div *ngIf="transaction.notes" class="transaction-notes">
+          <span class="label">Notes:</span>
+          <span class="value">{{ transaction.notes }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

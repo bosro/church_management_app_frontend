@@ -82,28 +82,53 @@ export class EventsService {
   }
 
   getUpcomingEvents(limit: number = 10): Observable<ChurchEvent[]> {
-    const churchId = this.authService.getChurchId();
-    const today = new Date().toISOString().split('T')[0];
+  const churchId = this.authService.getChurchId();
+  const today = new Date().toISOString().split('T')[0];
+  const userRole = this.authService.getUserRole();
 
-    return from(
-      this.supabase.client
+  console.log('🔍 Loading upcoming events:', {
+    churchId,
+    userRole,
+    today,
+    limit
+  });
+
+  return from(
+    (async () => {
+      // Build the query
+      let query = this.supabase.client
         .from('events')
         .select('*')
         .eq('church_id', churchId)
         .gte('start_date', today)
         .order('start_date', { ascending: true })
-        .limit(limit),
-    ).pipe(
-      map(({ data, error }) => {
-        if (error) throw new Error(error.message);
-        return data as ChurchEvent[];
-      }),
-      catchError((err) => {
-        console.error('Error loading upcoming events:', err);
-        return throwError(() => err);
-      }),
-    );
-  }
+        .limit(limit);
+
+      // For non-admin roles, only show public events or use RLS
+      const adminRoles = ['super_admin', 'church_admin', 'pastor', 'ministry_leader'];
+      if (!adminRoles.includes(userRole || '')) {
+        // Rely on RLS policy, but also add explicit filter for safety
+        query = query.eq('is_public', true);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('❌ Error loading upcoming events:', error);
+        throw new Error(error.message);
+      }
+
+      console.log('✅ Loaded upcoming events:', data?.length || 0);
+
+      return (data || []) as ChurchEvent[];
+    })(),
+  ).pipe(
+    catchError((err) => {
+      console.error('❌ Error in getUpcomingEvents observable:', err);
+      return throwError(() => err);
+    }),
+  );
+}
 
   getEventById(eventId: string): Observable<ChurchEvent> {
     const churchId = this.authService.getChurchId();

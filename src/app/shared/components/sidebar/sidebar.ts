@@ -27,126 +27,122 @@ export class Sidebar implements OnInit {
   currentUser: User | null = null;
   isSuperAdmin = false;
 
-  menuItems: MenuItem[] = [
-    {
-      icon: 'ri-pie-chart-line',
-      label: 'Overview',
-      route: '/main/dashboard',
-      active: true,
-    },
-    // ✅ Super Admin Section - ONLY for super_admin
-    {
-      icon: 'ri-admin-line',
-      label: 'System Admin',
-      active: false,
-      roles: ['super_admin'],
-      children: [
-        {
-          icon: 'ri-user-add-line',
-          label: 'Signup Requests',
-          route: '/main/admin/signup-requests',
-          active: false,
-          roles: ['super_admin'],
-        },
-        {
-          icon: 'ri-team-line',
-          label: 'All Users',
-          route: '/main/admin/users',
-          active: false,
-          roles: ['super_admin'],
-        },
-        {
-          icon: 'ri-building-line',
-          label: 'All Churches',
-          route: '/main/admin/churches',
-          active: false,
-          roles: ['super_admin'],
-        },
-      ],
-    },
-
-    {
+menuItems: MenuItem[] = [
+  {
+    icon: 'ri-pie-chart-line',
+    label: 'Overview',
+    route: '/main/dashboard',
+    active: true,
+  },
+  {
+    icon: 'ri-admin-line',
+    label: 'System Admin',
+    active: false,
+    roles: ['super_admin'],
+    children: [
+      {
+        icon: 'ri-user-add-line',
+        label: 'Signup Requests',
+        route: '/main/admin/signup-requests',
+        active: false,
+        roles: ['super_admin'],
+      },
+      {
+        icon: 'ri-team-line',
+        label: 'All Users',
+        route: '/main/admin/users',
+        active: false,
+        roles: ['super_admin'],
+      },
+      {
+        icon: 'ri-building-line',
+        label: 'All Churches',
+        route: '/main/admin/churches',
+        active: false,
+        roles: ['super_admin'],
+      },
+    ],
+  },
+  {
     icon: 'ri-hand-heart-line',
     label: 'My Giving',
     route: '/main/my-giving',
     active: false,
-    roles: ['member'], // Only for members
+    roles: ['member'],
   },
-
-
-    // ✅ Church Operations - EXCLUDE super_admin
-    {
-      icon: 'ri-group-line',
-      label: 'Members',
-      route: '/main/members',
-      active: false,
-      roles: ['church_admin', 'pastor', 'group_leader'],
-         excludeRoles: ['super_admin', 'member'], // ✅ Hide from super_admin
-    },
-    {
-      icon: 'ri-calendar-check-line',
-      label: 'Attendance',
-      route: '/main/attendance',
-      active: false,
-      roles: ['church_admin', 'pastor', 'group_leader'],
-      excludeRoles: ['super_admin'], // ✅ Hide from super_admin
-    },
-    {
-      icon: 'ri-money-dollar-circle-line',
-      label: 'Finance',
-      route: '/main/finance',
-      active: false,
-      roles: ['church_admin', 'finance_officer'],
-      excludeRoles: ['super_admin'], // ✅ Hide from super_admin
-    },
-    {
-      icon: 'ri-team-line',
-      label: 'Departments',
-      route: '/main/ministries',
-      active: false,
-      roles: ['church_admin', 'pastor'],
-      excludeRoles: ['super_admin'], // ✅ Hide from super_admin
-    },
-    {
-      icon: 'ri-building-2-line',
-      label: 'Branches',
-      route: '/main/branches',
-      active: false,
-      roles: ['church_admin'],
-      excludeRoles: ['super_admin'], // ✅ Hide from super_admin
-    },
-    {
-      icon: 'ri-calendar-event-line',
-      label: 'Events',
-      route: '/main/events',
-      active: false,
-      roles: ['church_admin', 'pastor'],
-      excludeRoles: ['church_admin', 'pastor', 'member'], // ✅ Hide from super_admin
-    },
-    {
-      icon: 'ri-chat-3-line',
-      label: 'Communication',
-      route: '/main/communications',
-      active: false,
-      roles: ['church_admin', 'pastor'],
-      excludeRoles: ['super_admin'], // ✅ Hide from super_admin
-    },
-    {
-      icon: 'ri-shield-user-line',
-      label: 'User Roles',
-      route: '/main/user-roles',
-      active: false,
-      roles: ['church_admin'],
-      excludeRoles: ['super_admin'], // ✅ Hide from super_admin
-    },
-    {
-      icon: 'ri-settings-3-line',
-      label: 'Settings',
-      route: '/main/settings',
-      active: false,
-     roles: ['church_admin', 'pastor', 'finance_officer', 'member'],
-    },
-  ];
+  {
+    icon: 'ri-group-line',
+    label: 'Members',
+    route: '/main/members',
+    active: false,
+    roles: ['church_admin', 'pastor', 'group_leader'],
+    excludeRoles: ['super_admin', 'member'],
+  },
+  {
+    icon: 'ri-calendar-check-line',
+    label: 'Attendance',
+    route: '/main/attendance',
+    active: false,
+    roles: ['church_admin', 'pastor', 'group_leader'],
+    excludeRoles: ['super_admin'],
+  },
+  {
+    icon: 'ri-money-dollar-circle-line',
+    label: 'Finance',
+    route: '/main/finance',
+    active: false,
+    roles: ['church_admin', 'finance_officer'],
+    excludeRoles: ['super_admin'],
+  },
+  {
+    icon: 'ri-team-line',
+    label: 'Departments',
+    route: '/main/ministries',
+    active: false,
+    roles: ['church_admin', 'pastor'],
+    excludeRoles: ['super_admin'],
+  },
+  {
+    icon: 'ri-building-2-line',
+    label: 'Branches',
+    route: '/main/branches',
+    active: false,
+    roles: ['church_admin'],
+    excludeRoles: ['super_admin'],
+  },
+  // ✅ FIXED: Allow all users except super_admin to see events
+  {
+    icon: 'ri-calendar-event-line',
+    label: 'Events',
+    route: '/main/events',
+    active: false,
+    excludeRoles: ['super_admin', 'member'], // Only exclude super_admin
+  },
+  {
+    icon: 'ri-chat-3-line',
+    label: 'Communication',
+    route: '/main/communications',
+    active: false,
+    roles: ['church_admin', 'pastor'],
+    excludeRoles: ['super_admin'],
+  },
+  {
+    icon: 'ri-shield-user-line',
+    label: 'User Roles',
+    route: '/main/user-roles',
+    active: false,
+    roles: ['church_admin'],
+    excludeRoles: ['super_admin'],
+  },
+  // ✅ FIXED: Allow all users to access settings
+  {
+    icon: 'ri-settings-3-line',
+    label: 'Settings',
+    route: '/main/settings',
+    active: false,
+    excludeRoles: ['super_admin'], // Only exclude super_admin
+  },
+];
 
   filteredMenuItems: MenuItem[] = [];
   expandedItems: Set<string> = new Set();

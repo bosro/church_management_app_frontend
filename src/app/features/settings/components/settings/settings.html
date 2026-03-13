@@ -11,7 +11,7 @@
         <div class="page-header">
           <div class="header-left">
             <h1>Settings</h1>
-            <p class="subtitle">Manage your church configuration</p>
+            <p class="subtitle">Manage your {{ isMember ? 'profile' : 'church configuration' }}</p>
           </div>
         </div>
 
@@ -43,50 +43,290 @@
         <div *ngIf="!loadingProfile" class="settings-content">
           <!-- Tabs Navigation -->
           <div class="settings-tabs">
-            <button class="tab-btn" [class.active]="activeTab === 'general'" (click)="switchTab('general')">
-              <i class="ri-settings-3-line"></i>
-              <span>General</span>
+            <!-- Member sees only Profile tab -->
+            <button *ngIf="isMember" class="tab-btn active" (click)="switchTab('profile')">
+              <i class="ri-user-3-line"></i>
+              <span>My Profile</span>
             </button>
-            <!-- <button
-              class="tab-btn"
-              [class.active]="activeTab === 'notifications'"
-              (click)="switchTab('notifications')"
-            >
-              <i class="ri-notification-3-line"></i>
-              <span>Notifications</span>
-            </button>
-            <button
-              class="tab-btn"
-              [class.active]="activeTab === 'finance'"
-              (click)="switchTab('finance')"
-              [disabled]="!canManageFinanceSettings"
-            >
-              <i class="ri-money-dollar-circle-line"></i>
-              <span>Finance</span>
-            </button>
-            <button
-              class="tab-btn"
-              [class.active]="activeTab === 'communications'"
-              (click)="switchTab('communications')"
-            >
-              <i class="ri-mail-line"></i>
-              <span>Communications</span>
-            </button>
-            <button
-              class="tab-btn"
-              [class.active]="activeTab === 'security'"
-              (click)="switchTab('security')"
-              [disabled]="!canManageSecuritySettings"
-            >
-              <i class="ri-shield-check-line"></i>
-              <span>Security</span>
-            </button> -->
+
+            <!-- Admin sees all tabs -->
+            <ng-container *ngIf="isAdmin">
+              <button class="tab-btn" [class.active]="activeTab === 'general'" (click)="switchTab('general')">
+                <i class="ri-settings-3-line"></i>
+                <span>General</span>
+              </button>
+              <!-- <button class="tab-btn" [class.active]="activeTab === 'notifications'"
+                (click)="switchTab('notifications')">
+                <i class="ri-notification-3-line"></i>
+                <span>Notifications</span>
+              </button>
+              <button class="tab-btn" [class.active]="activeTab === 'finance'" (click)="switchTab('finance')"
+                [disabled]="!canManageFinanceSettings">
+                <i class="ri-money-dollar-circle-line"></i>
+                <span>Finance</span>
+              </button>
+              <button class="tab-btn" [class.active]="activeTab === 'communications'"
+                (click)="switchTab('communications')">
+                <i class="ri-mail-line"></i>
+                <span>Communications</span>
+              </button>
+              <button class="tab-btn" [class.active]="activeTab === 'security'" (click)="switchTab('security')">
+                <i class="ri-shield-check-line"></i>
+                <span>Security</span>
+              </button> -->
+            </ng-container>
           </div>
 
           <!-- Tab Content -->
           <div class="tab-content">
-            <!-- General Settings -->
-            <div *ngIf="activeTab === 'general'" class="settings-panel">
+            <!-- ═══════════════════════════════════════════════════════ -->
+            <!-- MEMBER PROFILE TAB (Members Only) -->
+            <!-- ═══════════════════════════════════════════════════════ -->
+            <div *ngIf="isMember && activeTab === 'profile'" class="settings-panel">
+              <div class="panel-header">
+                <h2>
+                  <i class="ri-user-3-line"></i>
+                  My Profile
+                </h2>
+                <p>Update your personal information</p>
+              </div>
+
+              <form [formGroup]="memberForm" (ngSubmit)="saveMemberProfile()">
+                <!-- Photo Upload Section -->
+                <div class="form-section">
+                  <h3>Profile Photo</h3>
+
+                  <div class="logo-preview-container">
+                    <div *ngIf="photoPreviewUrl" class="logo-preview">
+                      <img [src]="photoPreviewUrl" alt="Profile Photo" />
+                    </div>
+                    <div *ngIf="!photoPreviewUrl" class="logo-preview-placeholder">
+                      <i class="ri-user-3-line"></i>
+                      <p>No photo uploaded</p>
+                    </div>
+                  </div>
+
+                  <div class="logo-upload-actions">
+                    <label for="photo-file" class="btn-upload">
+                      <i class="ri-upload-2-line"></i>
+                      <span *ngIf="!uploadingPhoto">{{ selectedPhotoFile ? 'Change Photo' : 'Upload Photo' }}</span>
+                      <span *ngIf="uploadingPhoto">Uploading...</span>
+                    </label>
+                    <input type="file" id="photo-file" accept="image/*" (change)="onPhotoFileSelected($event)"
+                      style="display: none" [disabled]="uploadingPhoto" />
+                    <button *ngIf="selectedPhotoFile || photoPreviewUrl" type="button" class="btn-remove"
+                      (click)="removePhoto()" [disabled]="uploadingPhoto">
+                      <i class="ri-delete-bin-line"></i>
+                      Remove
+                    </button>
+                  </div>
+
+                  <p class="help-text">
+                    Accepted formats: JPG, PNG, WebP. Max size: 5MB
+                  </p>
+                </div>
+
+                <!-- Personal Information -->
+                <div class="form-section">
+                  <h3>Personal Information</h3>
+
+                  <div class="form-grid">
+                    <!-- First Name -->
+                    <div class="form-group">
+                      <label for="first_name">
+                        First Name <span class="required">*</span>
+                      </label>
+                      <input id="first_name" type="text" class="form-control" formControlName="first_name"
+                        placeholder="John"
+                        [class.error]="memberForm.get('first_name')?.invalid && memberForm.get('first_name')?.touched" />
+                      <span *ngIf="memberForm.get('first_name')?.invalid && memberForm.get('first_name')?.touched"
+                        class="error-message">
+                        {{ getErrorMessage('first_name', 'member') }}
+                      </span>
+                    </div>
+
+                    <!-- Middle Name -->
+                    <div class="form-group">
+                      <label for="middle_name">Middle Name</label>
+                      <input id="middle_name" type="text" class="form-control" formControlName="middle_name"
+                        placeholder="Paul" />
+                    </div>
+
+                    <!-- Last Name -->
+                    <div class="form-group">
+                      <label for="last_name">
+                        Last Name <span class="required">*</span>
+                      </label>
+                      <input id="last_name" type="text" class="form-control" formControlName="last_name"
+                        placeholder="Doe"
+                        [class.error]="memberForm.get('last_name')?.invalid && memberForm.get('last_name')?.touched" />
+                      <span *ngIf="memberForm.get('last_name')?.invalid && memberForm.get('last_name')?.touched"
+                        class="error-message">
+                        {{ getErrorMessage('last_name', 'member') }}
+                      </span>
+                    </div>
+
+                    <!-- Date of Birth -->
+                    <div class="form-group">
+                      <label for="date_of_birth">Date of Birth</label>
+                      <input id="date_of_birth" type="date" class="form-control" formControlName="date_of_birth" />
+                    </div>
+
+                    <!-- Gender -->
+                    <div class="form-group">
+                      <label for="gender">Gender</label>
+                      <select id="gender" class="form-control" formControlName="gender">
+                        <option value="">Select Gender</option>
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
+                      </select>
+                    </div>
+
+                    <!-- Marital Status -->
+                    <div class="form-group">
+                      <label for="marital_status">Marital Status</label>
+                      <select id="marital_status" class="form-control" formControlName="marital_status">
+                        <option value="">Select Status</option>
+                        <option value="single">Single</option>
+                        <option value="married">Married</option>
+                        <option value="divorced">Divorced</option>
+                        <option value="widowed">Widowed</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Contact Information -->
+                <div class="form-section">
+                  <h3>Contact Information</h3>
+
+                  <div class="form-grid">
+                    <!-- Primary Phone -->
+                    <div class="form-group">
+                      <label for="phone_primary">Primary Phone</label>
+                      <input id="phone_primary" type="tel" class="form-control" formControlName="phone_primary"
+                        placeholder="+233 XX XXX XXXX"
+                        [class.error]="memberForm.get('phone_primary')?.invalid && memberForm.get('phone_primary')?.touched" />
+                      <span *ngIf="memberForm.get('phone_primary')?.invalid && memberForm.get('phone_primary')?.touched"
+                        class="error-message">
+                        {{ getErrorMessage('phone_primary', 'member') }}
+                      </span>
+                    </div>
+
+                    <!-- Secondary Phone -->
+                    <div class="form-group">
+                      <label for="phone_secondary">Secondary Phone</label>
+                      <input id="phone_secondary" type="tel" class="form-control" formControlName="phone_secondary"
+                        placeholder="+233 XX XXX XXXX"
+                        [class.error]="memberForm.get('phone_secondary')?.invalid && memberForm.get('phone_secondary')?.touched" />
+                      <span
+                        *ngIf="memberForm.get('phone_secondary')?.invalid && memberForm.get('phone_secondary')?.touched"
+                        class="error-message">
+                        {{ getErrorMessage('phone_secondary', 'member') }}
+                      </span>
+                    </div>
+
+                    <!-- Email -->
+                    <div class="form-group">
+                      <label for="email">Email Address</label>
+                      <input id="email" type="email" class="form-control" formControlName="email"
+                        placeholder="john.doe@example.com"
+                        [class.error]="memberForm.get('email')?.invalid && memberForm.get('email')?.touched" />
+                      <span *ngIf="memberForm.get('email')?.invalid && memberForm.get('email')?.touched"
+                        class="error-message">
+                        {{ getErrorMessage('email', 'member') }}
+                      </span>
+                    </div>
+
+                    <!-- Address -->
+                    <div class="form-group">
+                      <label for="address">Address</label>
+                      <input id="address" type="text" class="form-control" formControlName="address"
+                        placeholder="123 Main Street" />
+                    </div>
+
+                    <!-- City -->
+                    <div class="form-group">
+                      <label for="city">City</label>
+                      <input id="city" type="text" class="form-control" formControlName="city" placeholder="Accra" />
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Professional Information -->
+                <div class="form-section">
+                  <h3>Professional Information</h3>
+
+                  <div class="form-grid">
+                    <!-- Occupation -->
+                    <div class="form-group">
+                      <label for="occupation">Occupation</label>
+                      <input id="occupation" type="text" class="form-control" formControlName="occupation"
+                        placeholder="Software Engineer" />
+                    </div>
+
+                    <!-- Employer -->
+                    <div class="form-group">
+                      <label for="employer">Employer</label>
+                      <input id="employer" type="text" class="form-control" formControlName="employer"
+                        placeholder="Company Name" />
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Emergency Contact -->
+                <div class="form-section">
+                  <h3>Emergency Contact</h3>
+
+                  <div class="form-grid">
+                    <!-- Emergency Contact Name -->
+                    <div class="form-group">
+                      <label for="emergency_contact_name">Contact Name</label>
+                      <input id="emergency_contact_name" type="text" class="form-control"
+                        formControlName="emergency_contact_name" placeholder="Jane Doe" />
+                    </div>
+
+                    <!-- Emergency Contact Phone -->
+                    <div class="form-group">
+                      <label for="emergency_contact_phone">Contact Phone</label>
+                      <input id="emergency_contact_phone" type="tel" class="form-control"
+                        formControlName="emergency_contact_phone" placeholder="+233 XX XXX XXXX"
+                        [class.error]="memberForm.get('emergency_contact_phone')?.invalid && memberForm.get('emergency_contact_phone')?.touched" />
+                      <span
+                        *ngIf="memberForm.get('emergency_contact_phone')?.invalid && memberForm.get('emergency_contact_phone')?.touched"
+                        class="error-message">
+                        {{ getErrorMessage('emergency_contact_phone', 'member') }}
+                      </span>
+                    </div>
+
+                    <!-- Emergency Contact Relationship -->
+                    <div class="form-group">
+                      <label for="emergency_contact_relationship">Relationship</label>
+                      <input id="emergency_contact_relationship" type="text" class="form-control"
+                        formControlName="emergency_contact_relationship" placeholder="Spouse, Parent, Sibling, etc." />
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="form-actions">
+                  <button type="button" class="btn-secondary" (click)="loadMemberProfile()" [disabled]="loading">
+                    <i class="ri-refresh-line"></i>
+                    Reset
+                  </button>
+                  <button type="submit" class="btn-primary" [disabled]="loading || memberForm.invalid">
+                    <i class="ri-save-line"></i>
+                    <span *ngIf="!loading">Save Changes</span>
+                    <span *ngIf="loading">Saving...</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <!-- ═══════════════════════════════════════════════════════ -->
+            <!-- GENERAL SETTINGS TAB (Admin Only) -->
+            <!-- ═══════════════════════════════════════════════════════ -->
+            <div *ngIf="isAdmin && activeTab === 'general'" class="settings-panel">
               <div class="panel-header">
                 <h2>
                   <i class="ri-settings-3-line"></i>
@@ -95,222 +335,226 @@
                 <p>Configure your church basic information</p>
               </div>
 
-              <form [formGroup]="churchForm" (ngSubmit)="onSubmit()">
-                <!-- Church Information -->
+              <form [formGroup]="churchForm" (ngSubmit)="saveChurchProfile()">
+                <!-- Logo Upload Section -->
                 <div class="form-section">
-                  <h3>Church Information</h3>
+                  <h3>Church Logo</h3>
 
-                  <div class="form-grid">
-                    <div class="form-group">
-                      <label for="name">
-                        Church Name <span class="required">*</span>
-                      </label>
-                      <input id="name" type="text" formControlName="name" placeholder="e.g., Grace Fellowship Church"
-                        maxlength="100"
-                        [class.error]="churchForm.get('name')?.invalid && churchForm.get('name')?.touched" />
-                      <span *ngIf="churchForm.get('name')?.invalid && churchForm.get('name')?.touched"
-                        class="error-message">
-                        <i class="ri-error-warning-line"></i>
-                        {{ getErrorMessage('name') }}
-                      </span>
+                  <div class="logo-preview-container">
+                    <div *ngIf="photoPreviewUrl" class="logo-preview">
+                      <img [src]="photoPreviewUrl" alt="Church Logo" />
                     </div>
-
-                    <div class="form-group">
-                      <label for="email">
-                        Email Address <span class="required">*</span>
-                      </label>
-                      <input id="email" type="email" formControlName="email" placeholder="info@church.com"
-                        [class.error]="churchForm.get('email')?.invalid && churchForm.get('email')?.touched" />
-                      <span *ngIf="churchForm.get('email')?.invalid && churchForm.get('email')?.touched"
-                        class="error-message">
-                        <i class="ri-error-warning-line"></i>
-                        {{ getErrorMessage('email') }}
-                      </span>
+                    <div *ngIf="!photoPreviewUrl" class="logo-preview-placeholder">
+                      <i class="ri-image-line"></i>
+                      <p>No logo uploaded</p>
                     </div>
                   </div>
 
-                  <div class="form-grid">
-                    <div class="form-group">
-                      <label for="phone">Phone Number</label>
-                      <input id="phone" type="tel" formControlName="phone" placeholder="+233 XX XXX XXXX"
-                        [class.error]="churchForm.get('phone')?.invalid && churchForm.get('phone')?.touched" />
-                      <span *ngIf="churchForm.get('phone')?.invalid && churchForm.get('phone')?.touched"
-                        class="error-message">
-                        <i class="ri-error-warning-line"></i>
-                        {{ getErrorMessage('phone') }}
-                      </span>
-                    </div>
-
-                    <div class="form-group">
-                      <label for="website">Website</label>
-                      <input id="website" type="url" formControlName="website" placeholder="https://www.church.com"
-                        [class.error]="churchForm.get('website')?.invalid && churchForm.get('website')?.touched" />
-                      <span *ngIf="churchForm.get('website')?.invalid && churchForm.get('website')?.touched"
-                        class="error-message">
-                        <i class="ri-error-warning-line"></i>
-                        {{ getErrorMessage('website') }}
-                      </span>
-                    </div>
+                  <div class="logo-upload-actions">
+                    <label for="photo-file" class="btn-upload">
+                      <i class="ri-upload-2-line"></i>
+                      <span *ngIf="!uploadingPhoto">{{ selectedPhotoFile ? 'Change Logo' : 'Upload Logo' }}</span>
+                      <span *ngIf="uploadingPhoto">Uploading...</span>
+                    </label>
+                    <input type="file" id="photo-file" accept="image/*" (change)="onPhotoFileSelected($event)"
+                      style="display: none" [disabled]="uploadingPhoto || !canManageSettings" />
+                    <button *ngIf="selectedPhotoFile || photoPreviewUrl" type="button" class="btn-remove"
+                      (click)="removePhoto()" [disabled]="uploadingPhoto || !canManageSettings">
+                      <i class="ri-delete-bin-line"></i>
+                      Remove
+                    </button>
                   </div>
 
-                  <div class="form-group">
-                    <label for="description">Description</label>
-                    <textarea id="description" formControlName="description"
-                      placeholder="Brief description of your church..." rows="4" maxlength="500"></textarea>
-                    <span class="char-count">
-                      {{ churchForm.get('description')?.value?.length || 0 }} / 500
+                  <p class="help-text">
+                    Accepted formats: JPG, PNG, WebP. Max size: 5MB
+                  </p>
+
+                  <!-- Or enter URL -->
+                  <div class="url-input-toggle">
+                    <label for="logo_url">Or enter logo URL</label>
+                    <input id="logo_url" type="url" class="form-control" formControlName="logo_url"
+                      placeholder="https://example.com/logo.png"
+                      [class.error]="churchForm.get('logo_url')?.invalid && churchForm.get('logo_url')?.touched" />
+                    <span *ngIf="churchForm.get('logo_url')?.invalid && churchForm.get('logo_url')?.touched"
+                      class="error-message">
+                      {{ getErrorMessage('logo_url', 'church') }}
                     </span>
                   </div>
                 </div>
 
-                <!-- Location Information -->
+                <!-- Church Information Section -->
                 <div class="form-section">
-                  <h3>Location Information</h3>
-
-                  <div class="form-group">
-                    <label for="address">Address</label>
-                    <input id="address" type="text" formControlName="address" placeholder="Street address"
-                      maxlength="200" />
-                  </div>
+                  <h3>Church Information</h3>
 
                   <div class="form-grid">
-                    <div class="form-group">
-                      <label for="city">City</label>
-                      <input id="city" type="text" formControlName="city" placeholder="e.g., Accra" maxlength="100" />
+                    <!-- Church Name -->
+                    <div class="form-group full-width">
+                      <label for="name">
+                        Church Name <span class="required">*</span>
+                      </label>
+                      <input id="name" type="text" class="form-control" formControlName="name"
+                        placeholder="e.g., Grace Fellowship Church"
+                        [class.error]="churchForm.get('name')?.invalid && churchForm.get('name')?.touched" />
+                      <span *ngIf="churchForm.get('name')?.invalid && churchForm.get('name')?.touched"
+                        class="error-message">
+                        {{ getErrorMessage('name', 'church') }}
+                      </span>
                     </div>
 
+                    <!-- Email -->
                     <div class="form-group">
-                      <label for="state">State/Region</label>
-                      <input id="state" type="text" formControlName="state" placeholder="e.g., Greater Accra"
-                        maxlength="100" />
+                      <label for="email">
+                        Email Address <span class="required">*</span>
+                      </label>
+                      <input id="email" type="email" class="form-control" formControlName="email"
+                        placeholder="info@church.com"
+                        [class.error]="churchForm.get('email')?.invalid && churchForm.get('email')?.touched" />
+                      <span *ngIf="churchForm.get('email')?.invalid && churchForm.get('email')?.touched"
+                        class="error-message">
+                        {{ getErrorMessage('email', 'church') }}
+                      </span>
                     </div>
-                  </div>
 
-                  <div class="form-grid">
+                    <!-- Phone -->
                     <div class="form-group">
-                      <label for="country">Country</label>
-                      <input id="country" type="text" formControlName="country" placeholder="e.g., Ghana"
-                        maxlength="100" />
+                      <label for="phone">Phone Number</label>
+                      <input id="phone" type="tel" class="form-control" formControlName="phone"
+                        placeholder="+233 XX XXX XXXX"
+                        [class.error]="churchForm.get('phone')?.invalid && churchForm.get('phone')?.touched" />
+                      <span *ngIf="churchForm.get('phone')?.invalid && churchForm.get('phone')?.touched"
+                        class="error-message">
+                        {{ getErrorMessage('phone', 'church') }}
+                      </span>
                     </div>
 
+                    <!-- Website -->
                     <div class="form-group">
-                      <label for="zip_code">Postal Code</label>
-                      <input id="zip_code" type="text" formControlName="zip_code" placeholder="Postal/Zip code"
-                        maxlength="20" />
+                      <label for="website">Website</label>
+                      <input id="website" type="url" class="form-control" formControlName="website"
+                        placeholder="https://www.church.com"
+                        [class.error]="churchForm.get('website')?.invalid && churchForm.get('website')?.touched" />
+                      <span *ngIf="churchForm.get('website')?.invalid && churchForm.get('website')?.touched"
+                        class="error-message">
+                        {{ getErrorMessage('website', 'church') }}
+                      </span>
+                    </div>
+
+                    <!-- Description -->
+                    <div class="form-group full-width">
+                      <label for="description">Description</label>
+                      <textarea id="description" class="form-control" formControlName="description" rows="4"
+                        placeholder="Brief description of your church..."
+                        [class.error]="churchForm.get('description')?.invalid && churchForm.get('description')?.touched"></textarea>
+                      <span *ngIf="churchForm.get('description')?.invalid && churchForm.get('description')?.touched"
+                        class="error-message">
+                        {{ getErrorMessage('description', 'church') }}
+                      </span>
                     </div>
                   </div>
                 </div>
 
-                <!-- System Configuration -->
+                <!-- Location Information Section -->
                 <div class="form-section">
-                  <h3>System Configuration</h3>
+                  <h3>Location Information</h3>
 
                   <div class="form-grid">
+                    <!-- Address -->
+                    <div class="form-group full-width">
+                      <label for="address">Street Address</label>
+                      <input id="address" type="text" class="form-control" formControlName="address"
+                        placeholder="123 Church Street" />
+                    </div>
+
+                    <!-- City -->
+                    <div class="form-group">
+                      <label for="city">City</label>
+                      <input id="city" type="text" class="form-control" formControlName="city" placeholder="Accra" />
+                    </div>
+
+                    <!-- State -->
+                    <div class="form-group">
+                      <label for="state">State/Region</label>
+                      <input id="state" type="text" class="form-control" formControlName="state"
+                        placeholder="Greater Accra" />
+                    </div>
+
+                    <!-- Country -->
+                    <div class="form-group">
+                      <label for="country">Country</label>
+                      <input id="country" type="text" class="form-control" formControlName="country"
+                        placeholder="Ghana" />
+                    </div>
+
+                    <!-- Zip Code -->
+                    <div class="form-group">
+                      <label for="zip_code">Zip/Postal Code</label>
+                      <input id="zip_code" type="text" class="form-control" formControlName="zip_code"
+                        placeholder="00233" />
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Regional Settings Section -->
+                <div class="form-section">
+                  <h3>Regional Settings</h3>
+
+                  <div class="form-grid">
+                    <!-- Timezone -->
                     <div class="form-group">
                       <label for="timezone">Timezone</label>
-                      <select id="timezone" formControlName="timezone">
-                        <option value="">Select timezone</option>
+                      <select id="timezone" class="form-control" formControlName="timezone">
+                        <option value="">Select Timezone</option>
                         <option *ngFor="let tz of timezones" [value]="tz.value">
                           {{ tz.label }}
                         </option>
                       </select>
-                      <p class="help-text">
-                        <i class="ri-information-line"></i>
-                        Choose the timezone for your church location
-                      </p>
                     </div>
 
+                    <!-- Currency -->
                     <div class="form-group">
                       <label for="currency">Currency</label>
-                      <select id="currency" formControlName="currency">
+                      <select id="currency" class="form-control" formControlName="currency">
                         <option *ngFor="let curr of currencies" [value]="curr.value">
                           {{ curr.label }}
                         </option>
                       </select>
-                      <p class="help-text">
-                        <i class="ri-information-line"></i>
-                        Currency for financial transactions
-                      </p>
-                    </div>
-                  </div>
-
-                  <!-- Logo Upload Section - REPLACE THE EXISTING logo_url SECTION -->
-                  <div class="form-group">
-                    <label>Church Logo</label>
-
-                    <!-- Logo Preview -->
-                    <div class="logo-preview-container">
-                      <div class="logo-preview" *ngIf="logoPreviewUrl">
-                        <img [src]="logoPreviewUrl" alt="Church Logo" />
-                      </div>
-                      <div class="logo-preview-placeholder" *ngIf="!logoPreviewUrl">
-                        <i class="ri-image-line"></i>
-                        <p>No logo uploaded</p>
-                      </div>
-                    </div>
-
-                    <!-- Upload Buttons -->
-                    <div class="logo-upload-actions">
-                      <label for="logo-file" class="btn-upload">
-                        <i class="ri-upload-2-line"></i>
-                        <span>{{ selectedLogoFile ? 'Change Logo' : 'Upload Logo' }}</span>
-                        <input id="logo-file" type="file" accept="image/jpeg,image/jpg,image/png,image/webp"
-                          (change)="onLogoFileSelected($event)" style="display: none;"
-                          [disabled]="!canManageSettings" />
-                      </label>
-
-                      <button type="button" class="btn-remove" *ngIf="selectedLogoFile || logoPreviewUrl"
-                        (click)="removeLogo()" [disabled]="!canManageSettings">
-                        <i class="ri-delete-bin-line"></i>
-                        Remove
-                      </button>
-                    </div>
-
-                    <p class="help-text">
-                      <i class="ri-information-line"></i>
-                      Upload a logo image (JPG, PNG, or WebP). Maximum file size: 5MB. Recommended: 400x400px
-                    </p>
-
-                    <!-- Optional: URL Input (for manual URL entry) -->
-                    <div class="url-input-toggle" *ngIf="!selectedLogoFile">
-                      <label for="logo_url_manual">Or enter logo URL manually</label>
-                      <input id="logo_url_manual" type="url" formControlName="logo_url"
-                        placeholder="https://example.com/logo.png"
-                        [class.error]="churchForm.get('logo_url')?.invalid && churchForm.get('logo_url')?.touched" />
-                      <span *ngIf="churchForm.get('logo_url')?.invalid && churchForm.get('logo_url')?.touched"
-                        class="error-message">
-                        <i class="ri-error-warning-line"></i>
-                        {{ getErrorMessage('logo_url') }}
-                      </span>
                     </div>
                   </div>
                 </div>
 
                 <!-- Form Actions -->
                 <div class="form-actions">
+                  <button type="button" class="btn-secondary" (click)="loadChurchProfile()"
+                    [disabled]="loading || !canManageSettings">
+                    <i class="ri-refresh-line"></i>
+                    Reset
+                  </button>
                   <button type="submit" class="btn-primary"
-                    [disabled]="loading || !canManageSettings || churchForm.invalid">
-                    <span *ngIf="!loading">
-                      <i class="ri-save-line"></i>
-                      Save Changes
-                    </span>
-                    <span *ngIf="loading" class="loading-content">
-                      <i class="ri-loader-4-line spin"></i>
-                      Saving...
-                    </span>
+                    [disabled]="loading || churchForm.invalid || !canManageSettings">
+                    <i class="ri-save-line"></i>
+                    <span *ngIf="!loading">Save Changes</span>
+                    <span *ngIf="loading">Saving...</span>
                   </button>
                 </div>
               </form>
             </div>
 
-            <!-- Notifications Settings -->
-            <div *ngIf="activeTab === 'notifications'" class="settings-panel">
+            <!-- ═══════════════════════════════════════════════════════ -->
+            <!-- NOTIFICATIONS SETTINGS TAB -->
+            <!-- ═══════════════════════════════════════════════════════ -->
+            <div *ngIf="isAdmin && activeTab === 'notifications'" class="settings-panel">
               <div class="panel-header">
                 <h2>
                   <i class="ri-notification-3-line"></i>
                   Notification Settings
                 </h2>
-                <p>Configure how you receive notifications</p>
+                <p>Configure notification preferences</p>
+              </div>
+
+              <!-- Permission Warning -->
+              <div *ngIf="!canManageSettings" class="warning-alert">
+                <i class="ri-error-warning-line"></i>
+                <span>You do not have permission to modify notification settings</span>
               </div>
 
               <!-- Loading State -->
@@ -320,13 +564,14 @@
               </div>
 
               <div *ngIf="!loadingSettings && notificationSettings" class="settings-list">
+                <!-- Email Notifications -->
                 <div class="setting-item">
                   <div class="setting-info">
                     <div class="setting-header">
                       <i class="ri-mail-line"></i>
                       <h4>Email Notifications</h4>
                     </div>
-                    <p>Receive notifications via email for important updates</p>
+                    <p>Receive email notifications for important events</p>
                   </div>
                   <label class="toggle-switch">
                     <input type="checkbox" [checked]="notificationSettings.email_notifications"
@@ -336,13 +581,14 @@
                   </label>
                 </div>
 
+                <!-- SMS Notifications -->
                 <div class="setting-item">
                   <div class="setting-info">
                     <div class="setting-header">
                       <i class="ri-message-3-line"></i>
                       <h4>SMS Notifications</h4>
                     </div>
-                    <p>Receive notifications via SMS for urgent matters</p>
+                    <p>Receive SMS alerts for critical updates</p>
                   </div>
                   <label class="toggle-switch">
                     <input type="checkbox" [checked]="notificationSettings.sms_notifications"
@@ -352,13 +598,14 @@
                   </label>
                 </div>
 
+                <!-- Event Reminders -->
                 <div class="setting-item">
                   <div class="setting-info">
                     <div class="setting-header">
                       <i class="ri-calendar-event-line"></i>
                       <h4>Event Reminders</h4>
                     </div>
-                    <p>Get reminders for upcoming events and services</p>
+                    <p>Send reminders for upcoming events</p>
                   </div>
                   <label class="toggle-switch">
                     <input type="checkbox" [checked]="notificationSettings.event_reminders"
@@ -368,13 +615,14 @@
                   </label>
                 </div>
 
+                <!-- New Member Alerts -->
                 <div class="setting-item">
                   <div class="setting-info">
                     <div class="setting-header">
                       <i class="ri-user-add-line"></i>
                       <h4>New Member Alerts</h4>
                     </div>
-                    <p>Notify when new members join the church</p>
+                    <p>Notify when new members join</p>
                   </div>
                   <label class="toggle-switch">
                     <input type="checkbox" [checked]="notificationSettings.new_member_alerts"
@@ -384,13 +632,14 @@
                   </label>
                 </div>
 
+                <!-- Donation Receipts -->
                 <div class="setting-item">
                   <div class="setting-info">
                     <div class="setting-header">
-                      <i class="ri-file-list-line"></i>
+                      <i class="ri-receipt-line"></i>
                       <h4>Donation Receipts</h4>
                     </div>
-                    <p>Send automated receipts for donations and offerings</p>
+                    <p>Send automatic receipts for donations</p>
                   </div>
                   <label class="toggle-switch">
                     <input type="checkbox" [checked]="notificationSettings.donation_receipts"
@@ -402,8 +651,10 @@
               </div>
             </div>
 
-            <!-- Finance Settings -->
-            <div *ngIf="activeTab === 'finance'" class="settings-panel">
+            <!-- ═══════════════════════════════════════════════════════ -->
+            <!-- FINANCE SETTINGS TAB -->
+            <!-- ═══════════════════════════════════════════════════════ -->
+            <div *ngIf="isAdmin && activeTab === 'finance'" class="settings-panel">
               <div class="panel-header">
                 <h2>
                   <i class="ri-money-dollar-circle-line"></i>
@@ -425,6 +676,7 @@
               </div>
 
               <div *ngIf="!loadingSettings && financeSettings" class="settings-list">
+                <!-- Online Giving -->
                 <div class="setting-item">
                   <div class="setting-info">
                     <div class="setting-header">
@@ -441,6 +693,7 @@
                   </label>
                 </div>
 
+                <!-- Recurring Donations -->
                 <div class="setting-item">
                   <div class="setting-info">
                     <div class="setting-header">
@@ -457,13 +710,14 @@
                   </label>
                 </div>
 
+                <!-- Auto Generate Receipts -->
                 <div class="setting-item">
                   <div class="setting-info">
                     <div class="setting-header">
-                      <i class="ri-file-text-line"></i>
-                      <h4>Auto-Generate Receipts</h4>
+                      <i class="ri-receipt-line"></i>
+                      <h4>Auto Generate Receipts</h4>
                     </div>
-                    <p>Automatically create and send donation receipts</p>
+                    <p>Automatically generate receipts for contributions</p>
                   </div>
                   <label class="toggle-switch">
                     <input type="checkbox" [checked]="financeSettings.auto_generate_receipts"
@@ -473,13 +727,14 @@
                   </label>
                 </div>
 
+                <!-- Tax Deductible Receipts -->
                 <div class="setting-item">
                   <div class="setting-info">
                     <div class="setting-header">
-                      <i class="ri-government-line"></i>
+                      <i class="ri-file-list-3-line"></i>
                       <h4>Tax Deductible Receipts</h4>
                     </div>
-                    <p>Mark receipts as tax-deductible for member benefits</p>
+                    <p>Mark receipts as tax-deductible</p>
                   </div>
                   <label class="toggle-switch">
                     <input type="checkbox" [checked]="financeSettings.tax_deductible_receipts"
@@ -491,14 +746,22 @@
               </div>
             </div>
 
-            <!-- Communications Settings -->
-            <div *ngIf="activeTab === 'communications'" class="settings-panel">
+            <!-- ═══════════════════════════════════════════════════════ -->
+            <!-- COMMUNICATIONS SETTINGS TAB -->
+            <!-- ═══════════════════════════════════════════════════════ -->
+            <div *ngIf="isAdmin && activeTab === 'communications'" class="settings-panel">
               <div class="panel-header">
                 <h2>
                   <i class="ri-mail-line"></i>
                   Communication Settings
                 </h2>
                 <p>Configure email and messaging preferences</p>
+              </div>
+
+              <!-- Permission Warning -->
+              <div *ngIf="!canManageSettings" class="warning-alert">
+                <i class="ri-error-warning-line"></i>
+                <span>You do not have permission to modify communication settings</span>
               </div>
 
               <!-- Loading State -->
@@ -508,6 +771,7 @@
               </div>
 
               <div *ngIf="!loadingSettings && communicationSettings" class="settings-list">
+                <!-- Email Campaigns -->
                 <div class="setting-item">
                   <div class="setting-info">
                     <div class="setting-header">
@@ -524,13 +788,14 @@
                   </label>
                 </div>
 
+                <!-- SMS Campaigns -->
                 <div class="setting-item">
                   <div class="setting-info">
                     <div class="setting-header">
-                      <i class="ri-message-line"></i>
+                      <i class="ri-chat-3-line"></i>
                       <h4>SMS Campaigns</h4>
                     </div>
-                    <p>Enable bulk SMS campaigns to members</p>
+                    <p>Enable bulk SMS messaging to members</p>
                   </div>
                   <label class="toggle-switch">
                     <input type="checkbox" [checked]="communicationSettings.sms_campaigns"
@@ -540,10 +805,11 @@
                   </label>
                 </div>
 
+                <!-- Automated Welcome Emails -->
                 <div class="setting-item">
                   <div class="setting-info">
                     <div class="setting-header">
-                      <i class="ri-hand-heart-line"></i>
+                      <i class="ri-mail-check-line"></i>
                       <h4>Automated Welcome Emails</h4>
                     </div>
                     <p>Send welcome emails to new members automatically</p>
@@ -556,10 +822,11 @@
                   </label>
                 </div>
 
+                <!-- Birthday Greetings -->
                 <div class="setting-item">
                   <div class="setting-info">
                     <div class="setting-header">
-                      <i class="ri-cake-3-line"></i>
+                      <i class="ri-gift-line"></i>
                       <h4>Birthday Greetings</h4>
                     </div>
                     <p>Send automated birthday messages to members</p>
@@ -574,8 +841,10 @@
               </div>
             </div>
 
-            <!-- Security Settings -->
-            <div *ngIf="activeTab === 'security'" class="settings-panel">
+            <!-- ═══════════════════════════════════════════════════════ -->
+            <!-- SECURITY SETTINGS TAB -->
+            <!-- ═══════════════════════════════════════════════════════ -->
+            <div *ngIf="isAdmin && activeTab === 'security'" class="settings-panel">
               <div class="panel-header">
                 <h2>
                   <i class="ri-shield-check-line"></i>
@@ -597,13 +866,14 @@
               </div>
 
               <div *ngIf="!loadingSettings && securitySettings" class="settings-list">
+                <!-- Two-Factor Authentication -->
                 <div class="setting-item">
                   <div class="setting-info">
                     <div class="setting-header">
                       <i class="ri-shield-keyhole-line"></i>
                       <h4>Two-Factor Authentication</h4>
                     </div>
-                    <p>Require 2FA for admin accounts for enhanced security</p>
+                    <p>Require 2FA for admin and finance officer accounts</p>
                   </div>
                   <label class="toggle-switch">
                     <input type="checkbox" [checked]="securitySettings.two_factor_authentication"
@@ -613,6 +883,7 @@
                   </label>
                 </div>
 
+                <!-- Session Timeout -->
                 <div class="setting-item">
                   <div class="setting-info">
                     <div class="setting-header">
@@ -629,13 +900,14 @@
                   </label>
                 </div>
 
+                <!-- Login Notifications -->
                 <div class="setting-item">
                   <div class="setting-info">
                     <div class="setting-header">
-                      <i class="ri-login-circle-line"></i>
+                      <i class="ri-notification-badge-line"></i>
                       <h4>Login Notifications</h4>
                     </div>
-                    <p>Get notified of new login attempts to your account</p>
+                    <p>Get notified of new login attempts on your account</p>
                   </div>
                   <label class="toggle-switch">
                     <input type="checkbox" [checked]="securitySettings.login_notifications"
@@ -645,11 +917,12 @@
                   </label>
                 </div>
 
+                <!-- Data Export -->
                 <div class="setting-item">
                   <div class="setting-info">
                     <div class="setting-header">
-                      <i class="ri-download-cloud-line"></i>
-                      <h4>Data Export</h4>
+                      <i class="ri-file-download-line"></i>
+                      <h4>Member Data Export</h4>
                     </div>
                     <p>Allow members to export their personal data</p>
                   </div>

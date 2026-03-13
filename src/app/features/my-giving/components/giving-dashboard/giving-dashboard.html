@@ -1,0 +1,100 @@
+<!-- src/app/features/my-giving/pages/giving-dashboard/giving-dashboard.component.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+
+  <div class="dashboard-content">
+    <app-header></app-header>
+
+    <div class="dashboard-body">
+      <div class="giving-dashboard-container">
+        <!-- Page Header -->
+        <div class="page-header">
+          <div class="header-left">
+            <h1>My Giving</h1>
+            <p class="subtitle">Track your contributions and make new payments</p>
+          </div>
+          <button class="btn btn-primary" (click)="navigateToMakePayment()">
+            <i class="ri-add-line"></i>
+            Make Payment
+          </button>
+        </div>
+
+        <!-- Loading State -->
+        <div *ngIf="loading && summaryLoading" class="loading-container">
+          <div class="spinner"></div>
+          <p>Loading your giving summary...</p>
+        </div>
+
+        <!-- Content -->
+        <div *ngIf="!loading || !summaryLoading">
+          <!-- Summary Cards -->
+          <div class="summary-grid">
+            <!-- Total Giving -->
+            <div class="summary-card total">
+              <div class="card-icon">
+                <i class="ri-hand-heart-fill"></i>
+              </div>
+              <div class="card-content">
+                <p class="card-label">Total Giving ({{ fiscalYear }})</p>
+                <h2 class="card-value">{{ summary.currency }} {{ summary.total_giving | number:'1.2-2' }}</h2>
+                <p class="card-subtitle">{{ summary.total_transactions }} transaction{{ summary.total_transactions !== 1
+                  ? 's' : '' }}</p>
+              </div>
+            </div>
+
+            <!-- Tithes -->
+            <div class="summary-card">
+              <div class="card-icon tithe">
+                <i class="ri-hand-heart-line"></i>
+              </div>
+              <div class="card-content">
+                <p class="card-label">Tithes</p>
+                <h3 class="card-value">{{ summary.currency }} {{ summary.total_tithes | number:'1.2-2' }}</h3>
+              </div>
+            </div>
+
+            <!-- Offerings -->
+            <div class="summary-card">
+              <div class="card-icon offering">
+                <i class="ri-gift-line"></i>
+              </div>
+              <div class="card-content">
+                <p class="card-label">Offerings</p>
+                <h3 class="card-value">{{ summary.currency }} {{ summary.total_offerings | number:'1.2-2' }}</h3>
+              </div>
+            </div>
+
+            <!-- Seeds -->
+            <div class="summary-card">
+              <div class="card-icon seed">
+                <i class="ri-seedling-line"></i>
+              </div>
+              <div class="card-content">
+                <p class="card-label">Seeds</p>
+                <h3 class="card-value">{{ summary.currency }} {{ summary.total_seeds | number:'1.2-2' }}</h3>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recent Transactions -->
+
+          <div class="recent-transactions">
+            <div class="section-header">
+              <div>
+                <h2>Recent Transactions</h2>
+                <p>Your latest contributions</p>
+              </div>
+              <!-- ADD THIS BUTTON -->
+              <button class="btn-view-all" (click)="navigateToHistory()">
+                View All <i class="ri-arrow-right-line"></i>
+              </button>
+            </div>
+
+            <app-giving-history [transactions]="recentTransactions" [loading]="transactionsLoading">
+            </app-giving-history>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

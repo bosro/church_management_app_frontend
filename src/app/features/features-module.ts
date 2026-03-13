@@ -33,7 +33,7 @@ const routes: Routes = [
           import('./members/members-module').then((m) => m.MembersModule),
       },
 
-          {
+      {
         path: 'admin',
         canActivate: [RoleGuard],
         data: { roles: ['super_admin'] },
@@ -116,12 +116,26 @@ const routes: Routes = [
           import('./sermons/sermons-module').then((m) => m.SermonsModule),
       },
       {
-        path: 'settings',
+        path: 'my-giving',
+        loadChildren: () =>
+          import('./my-giving/my-giving-module').then((m) => m.MyGivingModule),
+            data: { roles: ['member'] },
          canActivate: [RoleGuard],
-        data: { roles: ['super_admin', 'church_admin', 'pastor', 'finance_officer'] },
+      },
+      {
+        path: 'settings',
+        canActivate: [RoleGuard],
+        data: {
+          roles: [
+            'super_admin',
+            'church_admin',
+            'pastor',
+            'finance_officer',
+            'member',
+          ],
+        },
         loadChildren: () =>
           import('./settings/settings-module').then((m) => m.SettingsModule),
-
       },
     ],
   },
@@ -136,11 +150,7 @@ const routes: Routes = [
 ];
 
 @NgModule({
-  declarations: [Features, MemberRegistration,],
+  declarations: [Features, MemberRegistration],
   imports: [CommonModule, RouterModule.forChild(routes), ReactiveFormsModule],
 })
 export class FeaturesModule {}
-
-
-
-

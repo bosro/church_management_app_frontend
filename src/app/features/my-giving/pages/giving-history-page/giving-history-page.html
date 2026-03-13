@@ -1,0 +1,66 @@
+<!-- src/app/features/my-giving/pages/giving-history-page/giving-history-page.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+
+  <div class="dashboard-content">
+    <app-header></app-header>
+
+    <div class="dashboard-body">
+      <div class="history-page-container">
+
+        <!-- Page Header -->
+        <div class="page-header">
+          <div class="header-left">
+            <button class="btn-back" (click)="onBack()">
+              <i class="ri-arrow-left-line"></i>
+            </button>
+            <div>
+              <h1>Giving History</h1>
+              <p class="subtitle">All your contributions in one place</p>
+            </div>
+          </div>
+          <button class="btn btn-primary" (click)="navigateToMakePayment()">
+            <i class="ri-add-line"></i>
+            Make Payment
+          </button>
+        </div>
+
+        <!-- Error Alert -->
+        <div *ngIf="errorMessage" class="alert alert-error">
+          <i class="ri-error-warning-fill"></i>
+          <span>{{ errorMessage }}</span>
+        </div>
+
+        <!-- Filters -->
+        <div class="filters-card">
+          <div class="filter-group">
+            <label><i class="ri-calendar-line"></i> Year</label>
+            <select [(ngModel)]="selectedYear" class="filter-select">
+              <option *ngFor="let year of availableYears" [value]="year">{{ year }}</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label><i class="ri-wallet-line"></i> Payment Method</label>
+            <select [(ngModel)]="selectedMethod" class="filter-select">
+              <option *ngFor="let method of paymentMethods" [value]="method.value">
+                {{ method.label }}
+              </option>
+            </select>
+          </div>
+          <div class="filter-summary">
+            <span>{{ filteredTransactions.length }} transaction{{ filteredTransactions.length !== 1 ? 's' : '' }}</span>
+          </div>
+        </div>
+
+        <!-- History List -->
+        <div class="history-card">
+          <app-giving-history
+            [transactions]="filteredTransactions"
+            [loading]="loading">
+          </app-giving-history>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>

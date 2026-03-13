@@ -2,8 +2,7 @@
 import { Injectable } from '@angular/core';
 import { Observable, from, throwError, forkJoin, of, BehaviorSubject } from 'rxjs';
 import { map, catchError, tap } from 'rxjs/operators';
-import { SupabaseService } from '../../core/services/supabase';
-import { AuthService } from '../../core/services/auth';
+ // ✅ FIXED PATH
 import {
   ChurchSetting,
   Church,
@@ -18,25 +17,38 @@ import {
   DEFAULT_FINANCE_SETTINGS,
   DEFAULT_COMMUNICATION_SETTINGS,
   DEFAULT_SECURITY_SETTINGS
-} from '../../models/setting.model';
+} from '../../models/setting.model';  // ✅ FIXED PATH
+import { SupabaseService } from '../../core/services/supabase';
+import { AuthService } from '../../core/services/auth';
 
 @Injectable({
   providedIn: 'root',
 })
 export class SettingsService {
-  private churchId?: string;
-  private currentUserId?: string;
-
-  // ✅ NEW: Observable church profile
   private churchProfileSubject = new BehaviorSubject<Church | null>(null);
   public churchProfile$ = this.churchProfileSubject.asObservable();
 
   constructor(
     private supabase: SupabaseService,
     private authService: AuthService
-  ) {
-    this.churchId = this.authService.getChurchId();
-    this.currentUserId = this.authService.getUserId();
+  ) {}
+
+  // ✅ NEW: Get church ID dynamically
+  private getChurchId(): string {
+    const churchId = this.authService.getChurchId();
+    if (!churchId) {
+      throw new Error('No church ID found. Please ensure you are logged in.');
+    }
+    return churchId;
+  }
+
+  // ✅ NEW: Get user ID dynamically
+  private getUserId(): string {
+    const userId = this.authService.getUserId();
+    if (!userId) {
+      throw new Error('No user ID found. Please ensure you are logged in.');
+    }
+    return userId;
   }
 
   // ==================== CHURCH SETTINGS ====================
@@ -46,10 +58,12 @@ export class SettingsService {
   }
 
   private async fetchSettings(category?: SettingCategory): Promise<ChurchSetting[]> {
+    const churchId = this.getChurchId();  // ✅ CHANGED
+
     let query = this.supabase.client
       .from('church_settings')
       .select('*')
-      .eq('church_id', this.churchId)
+      .eq('church_id', churchId)
       .order('setting_key', { ascending: true });
 
     if (category) {
@@ -66,11 +80,13 @@ export class SettingsService {
   }
 
   getSetting(key: string): Observable<ChurchSetting | null> {
+    const churchId = this.getChurchId();  // ✅ CHANGED
+
     return from(
       this.supabase.client
         .from('church_settings')
         .select('*')
-        .eq('church_id', this.churchId)
+        .eq('church_id', churchId)
         .eq('setting_key', key)
         .single()
     ).pipe(
@@ -97,14 +113,17 @@ export class SettingsService {
     value: any,
     category: SettingCategory
   ): Promise<ChurchSetting> {
+    const churchId = this.getChurchId();  // ✅ CHANGED
+    const userId = this.getUserId();  // ✅ CHANGED
+
     const { data, error } = await this.supabase.client
       .from('church_settings')
       .upsert({
-        church_id: this.churchId,
+        church_id: churchId,
         setting_key: key,
         setting_value: value,
         category: category,
-        updated_by: this.currentUserId,
+        updated_by: userId,
         updated_at: new Date().toISOString()
       }, {
         onConflict: 'church_id,setting_key'
@@ -126,12 +145,15 @@ export class SettingsService {
   private async bulkUpsertSettings(
     settings: Array<{ key: string; value: any; category: SettingCategory }>
   ): Promise<void> {
+    const churchId = this.getChurchId();  // ✅ CHANGED
+    const userId = this.getUserId();  // ✅ CHANGED
+
     const upserts = settings.map(setting => ({
-      church_id: this.churchId,
+      church_id: churchId,
       setting_key: setting.key,
       setting_value: setting.value,
       category: setting.category,
-      updated_by: this.currentUserId,
+      updated_by: userId,
       updated_at: new Date().toISOString()
     }));
 
@@ -147,11 +169,13 @@ export class SettingsService {
   }
 
   deleteSetting(key: string): Observable<void> {
+    const churchId = this.getChurchId();  // ✅ CHANGED
+
     return from(
       this.supabase.client
         .from('church_settings')
         .delete()
-        .eq('church_id', this.churchId)
+        .eq('church_id', churchId)
         .eq('setting_key', key)
     ).pipe(
       map(({ error }) => {
@@ -164,11 +188,13 @@ export class SettingsService {
   // ==================== CHURCH PROFILE ====================
 
   getChurchProfile(): Observable<Church> {
+    const churchId = this.getChurchId();  // ✅ CHANGED
+
     return from(
       this.supabase.client
         .from('churches')
         .select('*')
-        .eq('id', this.churchId)
+        .eq('id', churchId)
         .single()
     ).pipe(
       map(({ data, error }) => {
@@ -176,13 +202,14 @@ export class SettingsService {
         if (!data) throw new Error('Church profile not found');
         return data as Church;
       }),
-      // ✅ NEW: Update BehaviorSubject when profile is loaded
       tap((profile) => this.churchProfileSubject.next(profile)),
       catchError(err => throwError(() => err))
     );
   }
 
   updateChurchProfile(profileData: ChurchUpdateInput): Observable<Church> {
+    const churchId = this.getChurchId();  // ✅ CHANGED
+
     return from(
       this.supabase.client
         .from('churches')
@@ -190,7 +217,7 @@ export class SettingsService {
           ...profileData,
           updated_at: new Date().toISOString()
         })
-        .eq('id', this.churchId)
+        .eq('id', churchId)
         .select()
         .single()
     ).pipe(
@@ -199,13 +226,11 @@ export class SettingsService {
         if (!data) throw new Error('Failed to update church profile');
         return data as Church;
       }),
-      // ✅ NEW: Update BehaviorSubject when profile is updated
       tap((profile) => this.churchProfileSubject.next(profile)),
       catchError(err => throwError(() => err))
     );
   }
 
-  // ✅ NEW: Method to refresh church profile manually
   refreshChurchProfile(): void {
     this.getChurchProfile().subscribe({
       error: (error) => {
@@ -342,17 +367,17 @@ export class SettingsService {
   // ==================== PERMISSIONS ====================
 
   canManageSettings(): boolean {
-    const adminRoles = ['super_admin', 'church_admin'];
+    const adminRoles = ['church_admin', 'pastor'];  // ✅ REMOVED super_admin
     return this.authService.hasRole(adminRoles);
   }
 
   canManageFinanceSettings(): boolean {
-    const roles = ['super_admin', 'church_admin', 'finance_officer'];
+    const roles = ['church_admin', 'finance_officer'];  // ✅ REMOVED super_admin
     return this.authService.hasRole(roles);
   }
 
   canManageSecuritySettings(): boolean {
-    const roles = ['super_admin', 'church_admin'];
+    const roles = ['church_admin'];  // ✅ REMOVED super_admin
     return this.authService.hasRole(roles);
   }
 }

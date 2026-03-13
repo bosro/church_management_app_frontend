@@ -20,7 +20,6 @@
           <th>Name</th>
           <th>Location</th>
           <th>Date</th>
-          <!-- ✅ CHANGED: Only show Age column if user has permission -->
           <th *ngIf="canViewAge">Age</th>
           <th>Phone</th>
           <th>Status</th>
@@ -41,7 +40,6 @@
           </td>
           <td>{{ birthday.location }}</td>
           <td>{{ formatDate(birthday.date) }}</td>
-          <!-- ✅ CHANGED: Only show age if user has permission -->
           <td *ngIf="canViewAge">{{ birthday.age }}</td>
           <td>{{ formatPhone(birthday.phone) }}</td>
           <td>
@@ -53,7 +51,6 @@
 
         <!-- Empty State -->
         <tr *ngIf="filteredBirthdays.length === 0">
-          <!-- ✅ CHANGED: Adjust colspan based on canViewAge -->
           <td [attr.colspan]="canViewAge ? 6 : 5" class="empty-state">
             <i class="ri-cake-line"></i>
             <p>No birthdays in this month</p>
@@ -85,7 +82,6 @@
             <i class="ri-calendar-line"></i>
             <span>{{ formatDate(birthday.date) }}</span>
           </div>
-          <!-- ✅ CHANGED: Only show age if user has permission -->
           <div *ngIf="canViewAge" class="detail-item">
             <i class="ri-user-line"></i>
             <span>{{ birthday.age }} years</span>
@@ -105,7 +101,8 @@
     </div>
   </div>
 
-  <button class="view-all-btn" (click)="onViewAll()">
+  <!-- ✅ CHANGED: Only show if user has permission -->
+  <button *ngIf="canViewAll" class="view-all-btn" (click)="onViewAll()">
     View All
     <i class="ri-arrow-right-line"></i>
   </button>

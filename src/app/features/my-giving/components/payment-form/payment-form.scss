@@ -1,0 +1,241 @@
+// src/app/features/my-giving/components/payment-form/payment-form.component.scss
+.payment-form-container {
+  width: 100%;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.form-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 0.5rem;
+
+  i {
+    font-size: 1.125rem;
+    color: #5B21B6;
+  }
+
+  .required {
+    color: #EF4444;
+  }
+}
+
+.form-control {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  font-size: 0.9375rem;
+  color: #111827;
+  background: white;
+  border: 1px solid #D1D5DB;
+  border-radius: 8px;
+  font-family: inherit;
+  transition: all 0.2s;
+
+  &:focus {
+    outline: none;
+    border-color: #5B21B6;
+    box-shadow: 0 0 0 3px rgba(91, 33, 182, 0.1);
+  }
+
+  &.error {
+    border-color: #EF4444;
+
+    &:focus {
+      box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+    }
+  }
+
+  &::placeholder {
+    color: #9CA3AF;
+  }
+
+  &:disabled {
+    background: #F3F4F6;
+    cursor: not-allowed;
+  }
+}
+
+select.form-control {
+  cursor: pointer;
+}
+
+textarea.form-control {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.error-message {
+  display: block;
+  margin-top: 0.5rem;
+  font-size: 0.8125rem;
+  color: #EF4444;
+}
+
+.char-count {
+  display: block;
+  margin-top: 0.5rem;
+  font-size: 0.8125rem;
+  color: #6B7280;
+  text-align: right;
+}
+
+.payment-methods {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1rem;
+  margin-top: 0.75rem;
+
+  @media (max-width: 768px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.payment-method-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1.25rem 1rem;
+  background: white;
+  border: 2px solid #E5E7EB;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  i {
+    font-size: 2rem;
+    color: #6B7280;
+    transition: all 0.2s;
+  }
+
+  span {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #374151;
+    text-align: center;
+  }
+
+  &:hover {
+    border-color: #5B21B6;
+    background: rgba(91, 33, 182, 0.02);
+
+    i {
+      color: #5B21B6;
+    }
+  }
+
+  &.selected {
+    border-color: #5B21B6;
+    background: linear-gradient(135deg, rgba(91, 33, 182, 0.05) 0%, rgba(124, 58, 237, 0.05) 100%);
+
+    i {
+      color: #5B21B6;
+    }
+
+    span {
+      color: #5B21B6;
+    }
+  }
+
+  @media (max-width: 480px) {
+    padding: 1rem;
+
+    i {
+      font-size: 1.75rem;
+    }
+
+    span {
+      font-size: 0.8125rem;
+    }
+  }
+}
+
+.form-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #E5E7EB;
+
+  @media (max-width: 576px) {
+    flex-direction: column-reverse;
+  }
+}
+
+.btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1.5rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+
+  i {
+    font-size: 1.125rem;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+}
+
+.btn-secondary {
+  background: #E5E7EB;
+  color: #374151;
+
+  &:hover:not(:disabled) {
+    background: #D1D5DB;
+  }
+}
+
+.btn-primary {
+  background: #5B21B6;
+  color: white;
+
+  &:hover:not(:disabled) {
+    background: #6D28D9;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(91, 33, 182, 0.3);
+  }
+}
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+

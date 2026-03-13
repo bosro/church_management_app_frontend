@@ -1,0 +1,49 @@
+<!-- src/app/features/my-giving/pages/make-payment/make-payment.component.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+
+  <div class="dashboard-content">
+    <app-header></app-header>
+
+    <div class="dashboard-body">
+      <div class="make-payment-container">
+        <!-- Page Header -->
+        <div class="page-header">
+          <div class="header-left">
+            <button class="btn-back" (click)="onFormCancel()">
+              <i class="ri-arrow-left-line"></i>
+            </button>
+            <div>
+              <h1>Make Payment</h1>
+              <p class="subtitle">Submit your tithe, offering, or seed</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Success Alert -->
+        <div *ngIf="successMessage" class="alert alert-success">
+          <i class="ri-checkbox-circle-fill"></i>
+          <span>{{ successMessage }}</span>
+        </div>
+
+        <!-- Error Alert -->
+        <div *ngIf="errorMessage" class="alert alert-error">
+          <i class="ri-error-warning-fill"></i>
+          <span>{{ errorMessage }}</span>
+        </div>
+
+        <!-- Payment Form -->
+        <div class="form-card">
+          <app-payment-form
+            [categories]="categories"
+            [loading]="submitting || categoriesLoading"
+            (formSubmit)="onFormSubmit($event)"
+            (formCancel)="onFormCancel()">
+          </app-payment-form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+

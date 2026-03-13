@@ -7,6 +7,7 @@ import { filter, takeUntil } from 'rxjs/operators';
 import { DashboardSummary } from '../../../../models/statistics.model';
 import { SupabaseService } from '../../../../core/services/supabase';
 import { AuthService } from '../../../../core/services/auth';
+import { EventsService } from '../../../events/services/events'; // ✅ ADD THIS
 
 interface UpcomingBirthday {
   id: string;
@@ -15,7 +16,7 @@ interface UpcomingBirthday {
   date: string;
   age: number;
   phone: string;
-  status: 'Today' | 'Tomorrow' | 'Upcoming'; // ← Changed from 'Passed' to 'Upcoming'
+  status: 'Today' | 'Tomorrow' | 'Upcoming';
   avatar?: string;
 }
 
@@ -41,17 +42,11 @@ export class Overview implements OnInit, OnDestroy {
   hasError = false;
   errorMessage = '';
 
-  // Dashboard Stats
   dashboardStats: DashboardSummary | null = null;
-
-  // Upcoming Birthdays
   upcomingBirthdays: UpcomingBirthday[] = [];
-
-  // Team Lists
   pastors: TeamMember[] = [];
   shepherds: TeamMember[] = [];
 
-  // Revenue Chart Data (for current year)
   revenueData = {
     labels: [] as string[],
     tithe: [] as number[],
@@ -59,31 +54,26 @@ export class Overview implements OnInit, OnDestroy {
     seed: [] as number[],
   };
 
-  // Quick action permissions
   canAddMembers = false;
   canCheckIn = false;
   canCreateEvent = false;
   canRecordGiving = false;
-
   canViewRevenue = false;
   canViewQuickActions = false;
-
   isSuperAdmin = false;
-
   upcomingEvents: any[] = [];
-
   canViewAge = false;
-
   canViewAllEvents = false;
+  canViewAllBirthdays = false; // ✅ NEW
 
   constructor(
     private supabase: SupabaseService,
     private authService: AuthService,
+    private eventsService: EventsService, // ✅ ADD THIS
     private router: Router,
   ) {}
 
   ngOnInit(): void {
-    // Check if super admin
     this.authService.currentProfile$
       .pipe(
         takeUntil(this.destroy$),
@@ -92,7 +82,6 @@ export class Overview implements OnInit, OnDestroy {
       .subscribe((profile) => {
         this.isSuperAdmin = profile?.role === 'super_admin';
 
-        // ✅ If super admin, redirect to admin dashboard
         if (this.isSuperAdmin) {
           this.router.navigate(['/main/admin/dashboard']);
           return;
@@ -118,6 +107,7 @@ export class Overview implements OnInit, OnDestroy {
     this.destroy$.next();
     this.destroy$.complete();
   }
+
   private setPermissions(): void {
     const adminRoles = ['super_admin', 'church_admin', 'pastor'];
     const financeRoles = ['super_admin', 'church_admin', 'finance_officer'];
@@ -132,7 +122,8 @@ export class Overview implements OnInit, OnDestroy {
       ...financeRoles,
     ]);
     this.canViewQuickActions = !this.authService.hasRole(['member']);
-    this.canViewAllEvents = this.authService.hasRole(adminRoles); // ✅ NEW: Only admins can view all events
+    this.canViewAllEvents = this.authService.hasRole(adminRoles);
+    this.canViewAllBirthdays = this.authService.hasRole(adminRoles); // ✅ NEW
   }
 
   private async loadDashboardData(): Promise<void> {
@@ -146,9 +137,9 @@ export class Overview implements OnInit, OnDestroy {
         this.loadDashboardSummary(),
         this.loadUpcomingBirthdays(),
         this.loadTeamMembers(),
+        this.loadUpcomingEvents(), // ✅ Always load events
       ];
 
-      // ✅ Only load revenue if user has permission
       if (this.canViewRevenue) {
         promises.push(this.loadRevenueData());
       }
@@ -183,33 +174,58 @@ export class Overview implements OnInit, OnDestroy {
     return `${months[date.getMonth()]} ${date.getDate()}`;
   }
 
-  // ✅ NEW: Load upcoming events
-  private async loadUpcomingEvents(): Promise<void> {
-    const today = new Date().toISOString().split('T')[0];
+  // ✅ FIXED: Use EventsService instead of direct query
+  private loadUpcomingEvents(): Promise<void> {
+  console.log('📅 Loading upcoming events for dashboard...');
 
-    const { data, error } = await this.supabase.client
-      .from('events')
-      .select('*')
-      .eq('church_id', this.churchId)
-      .gte('event_date', today)
-      .order('event_date', { ascending: true })
-      .limit(5);
+  return new Promise((resolve) => {
+    this.eventsService
+      .getUpcomingEvents(5)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (events) => {
+          console.log('✅ Events loaded successfully:', events.length);
 
-    if (error) {
-      console.error('Error loading events:', error);
-      return;
-    }
+          this.upcomingEvents = events.map((event: any) => ({
+            id: event.id,
+            title: event.title,
+            date: this.formatDateWithoutYear(event.start_date),
+            time: event.start_time || this.extractTime(event.start_date) || 'TBA',
+            location: event.location || 'TBA',
+            type: event.category || 'other',
+            attendees: event.max_attendees,
+          }));
 
-    if (data) {
-      this.upcomingEvents = data.map((event: any) => ({
-        id: event.id,
-        title: event.title,
-        date: this.formatDateWithoutYear(event.event_date),
-        time: event.event_time || 'TBA',
-        location: event.location || 'TBA',
-        type: event.event_type || 'other',
-        attendees: event.expected_attendees,
-      }));
+          console.log('📅 Formatted events:', this.upcomingEvents);
+          resolve();
+        },
+        error: (error) => {
+          console.error('❌ Error loading events:', {
+            error,
+            message: error?.message,
+            churchId: this.churchId,
+            userRole: this.userRole
+          });
+
+          this.upcomingEvents = [];
+          resolve(); // Don't reject - just show empty
+        },
+      });
+  });
+}
+
+  // ✅ ADD: Helper to extract time from datetime string
+  private extractTime(datetime: string): string {
+    if (!datetime) return '';
+    try {
+      const date = new Date(datetime);
+      return date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      });
+    } catch {
+      return '';
     }
   }
 
@@ -218,7 +234,6 @@ export class Overview implements OnInit, OnDestroy {
       await this.supabase.callFunction('refresh_dashboard_summary', {});
     } catch (error) {
       console.warn('Could not refresh dashboard view:', error);
-      // Don't throw - continue with existing data
     }
   }
 
@@ -283,7 +298,7 @@ export class Overview implements OnInit, OnDestroy {
           id: birthday.id,
           name: `${birthday.first_name} ${birthday.last_name}`,
           location: birthday.city || birthday.address || 'Not specified',
-          date: this.formatDateWithoutYear(birthday.next_birthday), // ✅ CHANGED: No year
+          date: this.formatDateWithoutYear(birthday.next_birthday),
           age: birthday.age + 1,
           phone: birthday.phone_primary || '',
           status: status,
@@ -294,7 +309,6 @@ export class Overview implements OnInit, OnDestroy {
   }
 
   private async loadTeamMembers(): Promise<void> {
-    // Load pastors using the view
     const { data: pastorData, error: pastorError } = await this.supabase.client
       .from('members_with_roles')
       .select('id, first_name, last_name, photo_url, profile_role')
@@ -311,7 +325,6 @@ export class Overview implements OnInit, OnDestroy {
       }));
     }
 
-    // Load shepherds/group leaders
     const { data: shepherdData, error: shepherdError } =
       await this.supabase.client
         .from('members_with_roles')
@@ -333,7 +346,6 @@ export class Overview implements OnInit, OnDestroy {
   private async loadRevenueData(): Promise<void> {
     const currentYear = new Date().getFullYear();
 
-    // Get monthly giving for current year grouped by category
     const { data, error } = await this.supabase.client
       .from('monthly_giving_summary')
       .select('*')
@@ -343,7 +355,6 @@ export class Overview implements OnInit, OnDestroy {
 
     if (error) {
       console.error('Error loading revenue data:', error);
-      // Use empty data
       this.revenueData = {
         labels: [
           'Jan',
@@ -367,7 +378,6 @@ export class Overview implements OnInit, OnDestroy {
     }
 
     if (data && data.length > 0) {
-      // Initialize arrays
       const labels: string[] = [];
       const tithe: number[] = [];
       const offering: number[] = [];
@@ -388,12 +398,11 @@ export class Overview implements OnInit, OnDestroy {
         'Dec',
       ];
 
-      // Fill in the data
       for (let i = 1; i <= 12; i++) {
         const monthData = data.find((d) => d.month === i);
         labels.push(monthNames[i - 1]);
         tithe.push(monthData?.total_amount || 0);
-        offering.push(0); // Will calculate from category breakdown
+        offering.push(0);
         seed.push(0);
       }
 
@@ -401,7 +410,6 @@ export class Overview implements OnInit, OnDestroy {
     }
   }
 
-  // Quick Actions (with permission checks)
   navigateToAddMembers(): void {
     if (!this.canAddMembers) {
       alert('You do not have permission to add members');
@@ -434,7 +442,6 @@ export class Overview implements OnInit, OnDestroy {
     this.router.navigate(['main/finance/record-giving']);
   }
 
-  // Navigation helpers
   viewAllBirthdays(): void {
     this.router.navigate(['main/members'], {
       queryParams: { filter: 'birthdays' },
@@ -448,30 +455,12 @@ export class Overview implements OnInit, OnDestroy {
   viewEvent(eventId: string): void {
     this.router.navigate(['main/events', eventId]);
   }
+
   viewMember(memberId: string): void {
     this.router.navigate(['main/members', memberId]);
   }
 
   retryLoad(): void {
     this.loadDashboardData();
-  }
-
-  private formatDate(dateString: string): string {
-    const date = new Date(dateString);
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
   }
 }

@@ -32,6 +32,9 @@ export class AuthService {
   private loadingSubject = new BehaviorSubject<boolean>(false);
   public loading$ = this.loadingSubject.asObservable();
 
+  private authReadySubject = new BehaviorSubject<boolean>(false);
+  public authReady$ = this.authReadySubject.asObservable();
+
   constructor(
     private supabase: SupabaseService,
     private router: Router,
@@ -41,7 +44,6 @@ export class AuthService {
 
   // In auth.service.ts
   private initializeAuth() {
-    // ✅ Wait for Supabase auth to initialize first
     this.supabase.authInitialized$
       .pipe(
         filter((initialized) => initialized),
@@ -54,6 +56,8 @@ export class AuthService {
         } else {
           this.currentProfileSubject.next(null);
         }
+        // ✅ ADD THIS — signal auth is resolved whether user exists or not
+        this.authReadySubject.next(true);
       });
   }
 
@@ -367,11 +371,12 @@ export class AuthService {
     try {
       await this.supabase.client.auth.signOut();
       this.currentProfileSubject.next(null);
+      this.authReadySubject.next(false); // ✅ reset on logout
       this.router.navigate(['/auth/signin']);
     } catch (error) {
       console.error('Sign out error:', error);
-      // Force navigation even if signOut fails
       this.currentProfileSubject.next(null);
+      this.authReadySubject.next(false); // ✅ reset on logout
       this.router.navigate(['/auth/signin']);
     }
   }
@@ -457,6 +462,27 @@ export class AuthService {
     return this.supabase.currentUser;
   }
 
+  async refreshProfile(): Promise<void> {
+    const userId = this.getUserId();
+    if (!userId) return;
+
+    try {
+      const { data, error } = await this.supabase.client
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        this.currentProfileSubject.next(data);
+      }
+    } catch (error) {
+      console.error('Error refreshing profile:', error);
+    }
+  }
+
   /**
    * Get current user ID
    */
@@ -466,6 +492,21 @@ export class AuthService {
       throw new Error('No authenticated user');
     }
     return user.id;
+  }
+
+  /**
+   * Get current user role
+   */
+  getUserRole(): UserRole | null {
+    return this.currentProfile?.role || null;
+  }
+
+  /**
+   * Get current user email
+   */
+  getUserEmail(): string | null {
+    const user = this.getCurrentUser();
+    return user?.email || null;
   }
 
   /**

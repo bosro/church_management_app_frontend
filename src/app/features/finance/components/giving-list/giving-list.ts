@@ -35,13 +35,14 @@ export class GivingList implements OnInit, OnDestroy {
   paymentMethodControl = new FormControl('');
 
   paymentMethods: { value: PaymentMethod | '', label: string }[] = [
-    { value: '', label: 'All Methods' },
-    { value: 'cash', label: 'Cash' },
-    { value: 'mobile_money', label: 'Mobile Money' },
-    { value: 'bank_transfer', label: 'Bank Transfer' },
-    { value: 'card', label: 'Card' },
-    { value: 'cheque', label: 'Cheque' }
-  ];
+  { value: '', label: 'All Methods' },
+  { value: 'cash', label: 'Cash' },
+  { value: 'mobile_money', label: 'Mobile Money' },
+  { value: 'bank_transfer', label: 'Bank Transfer' },
+  { value: 'card', label: 'Card' },
+  { value: 'check', label: 'Cheque' } // ✅ Changed 'cheque' to 'check'
+];
+
 
   // Permissions
   canViewFinance = false;

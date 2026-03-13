@@ -5,6 +5,17 @@
     <i class="ri-menu-line"></i>
   </button>
 
+  <!-- ✅ NEW: Church Logo & Name -->
+  <div class="church-branding" *ngIf="churchProfile">
+    <img
+      *ngIf="churchLogoUrl"
+      [src]="churchLogoUrl"
+      [alt]="churchName"
+      class="church-logo"
+    />
+    <span class="church-name" *ngIf="!isMobile">{{ churchName }}</span>
+  </div>
+
   <!-- Search Bar - Desktop -->
   <div class="search-container" [class.mobile-hidden]="isMobile && !showMobileSearch">
     <i class="ri-search-line search-icon"></i>
@@ -22,7 +33,7 @@
     <i class="ri-search-line"></i>
   </button>
 
-  <!-- Right Section — pushed to far right via margin-left: auto -->
+  <!-- Right Section -->
   <div class="header-actions">
     <!-- Notifications -->
     <button class="icon-btn notifications-btn">
@@ -63,10 +74,6 @@
           <i class="ri-user-line"></i>
           <span>Profile</span>
         </button>
-        <!-- <button class="dropdown-item" (click)="navigateToSettings()">
-          <i class="ri-settings-3-line"></i>
-          <span>Settings</span>
-        </button> -->
         <div class="dropdown-divider"></div>
         <button class="dropdown-item logout" (click)="logout()">
           <i class="ri-logout-box-line"></i>

@@ -6,16 +6,14 @@
 }
 
 .dashboard-content {
-  /* Offset content so it starts AFTER the fixed sidebar */
   margin-left: 280px;
   flex: 1;
   display: flex;
   flex-direction: column;
-  min-width: 0; /* prevents flex children from overflowing */
+  min-width: 0;
   width: calc(100% - 280px);
 
   @media (max-width: 768px) {
-    /* On mobile the sidebar slides off-screen, so no offset needed */
     margin-left: 0;
     width: 100%;
   }
@@ -29,7 +27,6 @@
   @media (max-width: 768px) {
     padding: 1rem;
   }
-
 }
 
 .loading-container,
@@ -77,12 +74,22 @@
   to { transform: rotate(360deg); }
 }
 
+// ✅ CHANGED: Dynamic grid based on role
 .dashboard-grid {
   display: grid;
-  grid-template-columns: 1fr 320px;
   gap: 24px;
 
-  @media (max-width: 1200px) {
+  // Admin/Pastor view - two columns
+  &.admin-layout {
+    grid-template-columns: 1fr 320px;
+
+    @media (max-width: 1200px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  // Member view - full width
+  &.member-layout {
     grid-template-columns: 1fr;
   }
 
@@ -127,7 +134,6 @@
   background: white;
   border-radius: 12px;
   padding: 20px;
-  // //box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 
   h3 {
     font-size: 16px;
@@ -168,7 +174,6 @@
 
   &:hover:not(.disabled) {
     transform: translateY(-2px);
-    //box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   }
 
   &.disabled {
@@ -240,6 +245,5 @@
   color: #374151;
   font-weight: 500;
 }
-
 
 
