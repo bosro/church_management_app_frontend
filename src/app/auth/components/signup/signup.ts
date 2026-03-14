@@ -141,24 +141,36 @@ export class Signup implements OnInit {
 
   // ✅ NEW: Check if email exists when church is selected
   onChurchSelected(): void {
-    const email = this.signupForm.get('email')?.value;
-    const churchId = this.signupForm.get('church_id')?.value;
+  const email = this.signupForm.get('email')?.value;
+  const churchId = this.signupForm.get('church_id')?.value;
 
-    if (email && churchId && this.signupForm.get('email')?.valid) {
-      this.churchService.checkEmailExistsInChurch(email, churchId).subscribe({
-        next: (exists) => {
-          if (exists) {
-            this.errorMessage = 'This email already exists in the selected church. Please use "Recover password" to reset your password.';
-          } else {
-            this.errorMessage = '';
-          }
-        },
-        error: (error) => {
-          console.error('Error checking email:', error);
+  if (email && churchId && this.signupForm.get('email')?.valid) {
+    this.churchService.checkEmailExistsInChurch(email, churchId).subscribe({
+      next: (result: any) => {
+        if (!result) {
+          // Email not in system at all — normal new signup
+          this.errorMessage = '';
+          return;
         }
-      });
-    }
+
+        if (result.has_auth_account) {
+          // Has both users row AND auth account — they've signed up before
+          this.errorMessage =
+            'This email is already registered. Please sign in or use "Forgot Password" to reset your password.';
+        } else {
+          // Admin pre-created this user — they just need to complete signup
+          // Let them proceed normally, the signup flow will create the auth account
+          this.errorMessage = '';
+          this.successMessage =
+            'Your account has been set up by your church admin. Complete registration to set your password.';
+        }
+      },
+      error: (error) => {
+        console.error('Error checking email:', error);
+      },
+    });
   }
+}
 
   passwordMatchValidator(group: FormGroup): { [key: string]: boolean } | null {
     const password = group.get('password')?.value;

@@ -383,3 +383,5 @@ export class ManagePermissions implements OnInit, OnDestroy {
     return Object.keys(this.permissionsByCategory).length > 0;
   }
 }
+
+

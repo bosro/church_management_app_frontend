@@ -1,0 +1,151 @@
+// src/app/features/user-roles/components/create-user/create-user.component.ts
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
+import { UserRolesService } from '../../services/user-roles';
+import { AuthService } from '../../../../core/services/auth';
+
+@Component({
+  selector: 'app-create-user',
+  standalone: false,
+  templateUrl: './create-user.html',
+  styleUrl: './create-user.scss',
+})
+export class CreateUser implements OnInit, OnDestroy {
+  private destroy$ = new Subject<void>();
+
+  userForm!: FormGroup;
+  submitting = false;
+  errorMessage = '';
+
+  canManagePermissions = false;
+
+  readonly roles = [
+    { value: 'church_admin', label: 'Church Admin' },
+    { value: 'pastor', label: 'Pastor' },
+    { value: 'finance_officer', label: 'Finance Officer' },
+    { value: 'group_leader', label: 'Group Leader' },
+    { value: 'member', label: 'Member' },
+  ];
+
+  constructor(
+    private fb: FormBuilder,
+    private userRolesService: UserRolesService,
+    private authService: AuthService,
+    private router: Router,
+  ) {}
+
+  ngOnInit(): void {
+    this.checkPermissions();
+    this.initForm();
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  private checkPermissions(): void {
+    this.canManagePermissions = this.userRolesService.canManagePermissions();
+    if (!this.canManagePermissions) {
+      this.router.navigate(['/unauthorized']);
+    }
+  }
+
+  private initForm(): void {
+    this.userForm = this.fb.group({
+      full_name: [
+        '',
+        [Validators.required, Validators.minLength(2), Validators.maxLength(100)],
+      ],
+      email: ['', [Validators.required, Validators.email]],
+      phone_number: ['', [Validators.pattern(/^\+?[0-9\s\-().]{7,20}$/)]],
+      role: ['member', [Validators.required]],
+    });
+  }
+
+  createUser(): void {
+    if (this.userForm.invalid) {
+      this.markFormGroupTouched(this.userForm);
+      this.errorMessage = 'Please fill in all required fields correctly.';
+      return;
+    }
+
+    this.submitting = true;
+    this.errorMessage = '';
+
+    const payload = {
+      full_name: this.userForm.value.full_name.trim(),
+      email: this.userForm.value.email.trim().toLowerCase(),
+      phone_number: this.userForm.value.phone_number?.trim() || null,
+      role: this.userForm.value.role,
+    };
+
+    this.userRolesService
+      .createUser(payload)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (newUser) => {
+          this.submitting = false;
+          // Navigate directly to manage permissions for the new user
+          this.router.navigate([
+            'main/user-roles/manage-permission',
+            newUser.id,
+            'permissions',
+          ]);
+        },
+        error: (error) => {
+          this.errorMessage = error.message || 'Failed to create user. Please try again.';
+          this.submitting = false;
+        },
+      });
+  }
+
+  goBack(): void {
+    this.router.navigate(['main/user-roles']);
+  }
+
+  getFormError(fieldName: string): string {
+    const control = this.userForm.get(fieldName);
+    if (!control || !control.errors || !control.touched) return '';
+
+    if (control.hasError('required')) return 'This field is required';
+    if (control.hasError('email')) return 'Please enter a valid email address';
+    if (control.hasError('minlength')) {
+      return `Minimum ${control.getError('minlength').requiredLength} characters required`;
+    }
+    if (control.hasError('maxlength')) {
+      return `Maximum ${control.getError('maxlength').requiredLength} characters allowed`;
+    }
+    if (control.hasError('pattern')) return 'Please enter a valid phone number';
+
+    return 'Invalid input';
+  }
+
+  private markFormGroupTouched(formGroup: FormGroup): void {
+    Object.keys(formGroup.controls).forEach((key) => {
+      const control = formGroup.get(key);
+      control?.markAsTouched();
+      if (control instanceof FormGroup) {
+        this.markFormGroupTouched(control);
+      }
+    });
+  }
+
+  clearError(): void {
+    this.errorMessage = '';
+  }
+
+  getRoleIcon(role: string): string {
+    const icons: Record<string, string> = {
+      church_admin: 'ri-shield-star-line',
+      pastor: 'ri-book-open-line',
+      finance_officer: 'ri-money-dollar-circle-line',
+      group_leader: 'ri-group-line',
+      member: 'ri-user-line',
+    };
+    return icons[role] || 'ri-user-line';
+  }
+}

@@ -1,0 +1,180 @@
+<!-- src/app/features/user-roles/components/create-user/create-user.component.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+
+  <div class="dashboard-content">
+    <app-header></app-header>
+
+    <div class="dashboard-body">
+      <div class="create-user-container">
+
+        <!-- Page Header -->
+        <div class="page-header">
+          <button class="back-btn" (click)="goBack()">
+            <i class="ri-arrow-left-line"></i>
+          </button>
+          <div class="header-text">
+            <h1>Create User</h1>
+            <p>Add a new user and configure their permissions</p>
+          </div>
+        </div>
+
+        <!-- Error Alert -->
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i>
+          <span>{{ errorMessage }}</span>
+          <button class="close-btn" (click)="clearError()">
+            <i class="ri-close-line"></i>
+          </button>
+        </div>
+
+        <!-- Form Card -->
+        <div class="form-card">
+          <div class="form-card-header">
+            <div class="header-icon">
+              <i class="ri-user-add-line"></i>
+            </div>
+            <h2>User Details</h2>
+          </div>
+
+          <div class="form-card-body">
+            <form [formGroup]="userForm">
+
+              <!-- Name + Email row -->
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="full_name">
+                    Full Name <span class="required">*</span>
+                  </label>
+                  <div class="input-wrapper">
+                    <i class="ri-user-line input-icon"></i>
+                    <input
+                      id="full_name"
+                      type="text"
+                      formControlName="full_name"
+                      placeholder="e.g. John Mensah"
+                      maxlength="100"
+                      [class.error]="userForm.get('full_name')?.invalid && userForm.get('full_name')?.touched"
+                    />
+                  </div>
+                  <span
+                    *ngIf="userForm.get('full_name')?.invalid && userForm.get('full_name')?.touched"
+                    class="field-error"
+                  >
+                    <i class="ri-error-warning-line"></i>
+                    {{ getFormError('full_name') }}
+                  </span>
+                </div>
+
+                <div class="form-group">
+                  <label for="email">
+                    Email Address <span class="required">*</span>
+                  </label>
+                  <div class="input-wrapper">
+                    <i class="ri-mail-line input-icon"></i>
+                    <input
+                      id="email"
+                      type="email"
+                      formControlName="email"
+                      placeholder="e.g. john@church.org"
+                      [class.error]="userForm.get('email')?.invalid && userForm.get('email')?.touched"
+                    />
+                  </div>
+                  <span
+                    *ngIf="userForm.get('email')?.invalid && userForm.get('email')?.touched"
+                    class="field-error"
+                  >
+                    <i class="ri-error-warning-line"></i>
+                    {{ getFormError('email') }}
+                  </span>
+                </div>
+
+                <div class="form-group">
+                  <label for="phone_number">Phone Number</label>
+                  <div class="input-wrapper">
+                    <i class="ri-phone-line input-icon"></i>
+                    <input
+                      id="phone_number"
+                      type="tel"
+                      formControlName="phone_number"
+                      placeholder="e.g. +233 24 000 0000"
+                      [class.error]="userForm.get('phone_number')?.invalid && userForm.get('phone_number')?.touched"
+                    />
+                  </div>
+                  <span
+                    *ngIf="userForm.get('phone_number')?.invalid && userForm.get('phone_number')?.touched"
+                    class="field-error"
+                  >
+                    <i class="ri-error-warning-line"></i>
+                    {{ getFormError('phone_number') }}
+                  </span>
+                </div>
+              </div>
+
+              <div class="form-divider"></div>
+
+              <!-- Role Selection -->
+              <div class="form-group">
+                <label>Role <span class="required">*</span></label>
+                <div class="role-options">
+
+                  <div class="role-option" *ngFor="let role of roles">
+                    <input
+                      type="radio"
+                      [id]="'role_' + role.value"
+                      [value]="role.value"
+                      formControlName="role"
+                    />
+                    <label [for]="'role_' + role.value">
+                      <div class="role-icon">
+                        <i [class]="getRoleIcon(role.value)"></i>
+                      </div>
+                      <span class="role-name">{{ role.label }}</span>
+                    </label>
+                  </div>
+
+                </div>
+              </div>
+
+            </form>
+
+            <!-- Info note -->
+            <div class="info-note">
+              <i class="ri-information-line"></i>
+              <p>
+                After creating the user, you'll be taken directly to their permissions page
+                to configure their access. The user will receive an email invitation to set up their account.
+              </p>
+            </div>
+          </div>
+
+          <div class="form-card-footer">
+            <button
+              class="btn-secondary"
+              (click)="goBack()"
+              [disabled]="submitting"
+            >
+              <i class="ri-close-line"></i>
+              Cancel
+            </button>
+            <button
+              class="btn-primary"
+              (click)="createUser()"
+              [disabled]="submitting || userForm.invalid"
+            >
+              <ng-container *ngIf="!submitting">
+                <i class="ri-user-add-line"></i>
+                Create & Set Permissions
+              </ng-container>
+              <ng-container *ngIf="submitting">
+                <i class="ri-loader-4-line spin"></i>
+                Creating...
+              </ng-container>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>

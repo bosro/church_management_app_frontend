@@ -10,13 +10,13 @@ import {
   PermissionCategory,
   UserListResult,
   RoleTemplateCreateInput,
-  RoleTemplateUpdateInput
+  RoleTemplateUpdateInput,
 } from '../../../models/user-role.model';
 import { SupabaseService } from '../../../core/services/supabase';
 import { AuthService } from '../../../core/services/auth';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class UserRolesService {
   private churchId?: string;
@@ -24,7 +24,7 @@ export class UserRolesService {
 
   constructor(
     private supabase: SupabaseService,
-    private authService: AuthService
+    private authService: AuthService,
   ) {
     this.churchId = this.authService.getChurchId();
     this.currentUserId = this.authService.getUserId();
@@ -34,14 +34,14 @@ export class UserRolesService {
 
   getUsers(
     page: number = 1,
-    pageSize: number = 20
+    pageSize: number = 20,
   ): Observable<UserListResult> {
     return from(this.fetchUsers(page, pageSize));
   }
 
   private async fetchUsers(
     page: number,
-    pageSize: number
+    pageSize: number,
   ): Promise<UserListResult> {
     const offset = (page - 1) * pageSize;
 
@@ -64,7 +64,7 @@ export class UserRolesService {
       count: count || 0,
       page,
       pageSize,
-      totalPages
+      totalPages,
     };
   }
 
@@ -75,14 +75,14 @@ export class UserRolesService {
         .select('*')
         .eq('id', userId)
         .eq('church_id', this.churchId)
-        .single()
+        .single(),
     ).pipe(
       map(({ data, error }) => {
         if (error) throw new Error(error.message);
         if (!data) throw new Error('User not found');
         return data;
       }),
-      catchError(err => throwError(() => err))
+      catchError((err) => throwError(() => err)),
     );
   }
 
@@ -92,18 +92,18 @@ export class UserRolesService {
         .from('users')
         .update({
           role,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq('id', userId)
         .eq('church_id', this.churchId)
         .select()
-        .single()
+        .single(),
     ).pipe(
       map(({ data, error }) => {
         if (error) throw new Error(error.message);
         return data;
       }),
-      catchError(err => throwError(() => err))
+      catchError((err) => throwError(() => err)),
     );
   }
 
@@ -113,15 +113,15 @@ export class UserRolesService {
         .from('users')
         .update({
           is_active: false,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq('id', userId)
-        .eq('church_id', this.churchId)
+        .eq('church_id', this.churchId),
     ).pipe(
       map(({ error }) => {
         if (error) throw new Error(error.message);
       }),
-      catchError(err => throwError(() => err))
+      catchError((err) => throwError(() => err)),
     );
   }
 
@@ -133,31 +133,34 @@ export class UserRolesService {
         .from('user_permissions')
         .select('*')
         .eq('user_id', userId)
-        .order('permission_name', { ascending: true })
+        .order('permission_name', { ascending: true }),
     ).pipe(
       map(({ data, error }) => {
         if (error) throw new Error(error.message);
         return (data || []) as UserPermission[];
       }),
-      catchError(err => throwError(() => err))
+      catchError((err) => throwError(() => err)),
     );
   }
 
-  grantPermission(userId: string, permissionName: string): Observable<UserPermission> {
+  grantPermission(
+    userId: string,
+    permissionName: string,
+  ): Observable<UserPermission> {
     return from(this.insertPermission(userId, permissionName));
   }
 
   private async insertPermission(
     userId: string,
-    permissionName: string
+    permissionName: string,
   ): Promise<UserPermission> {
-    // Check if permission already exists
+    // Use maybeSingle() instead of single() — returns null instead of error when no rows found
     const { data: existing } = await this.supabase.client
       .from('user_permissions')
       .select('id')
       .eq('user_id', userId)
       .eq('permission_name', permissionName)
-      .single();
+      .maybeSingle(); // ← was .single()
 
     if (existing) {
       throw new Error('Permission already granted');
@@ -169,7 +172,7 @@ export class UserRolesService {
         user_id: userId,
         permission_name: permissionName,
         granted_by: this.currentUserId,
-        granted_at: new Date().toISOString()
+        granted_at: new Date().toISOString(),
       })
       .select()
       .single();
@@ -181,27 +184,101 @@ export class UserRolesService {
     return data as UserPermission;
   }
 
+  createUser(userData: {
+    full_name: string;
+    email: string;
+    phone_number: string | null;
+    role: string;
+  }): Observable<any> {
+    return from(
+      this.supabase.client
+        .from('users')
+        .insert({
+          id: crypto.randomUUID(),
+          full_name: userData.full_name,
+          email: userData.email,
+          phone_number: userData.phone_number,
+          role: userData.role,
+          church_id: this.churchId,
+          is_active: true,
+          approval_status: 'approved',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .select()
+        .single(),
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw new Error(error.message);
+        return data;
+      }),
+      catchError((err) => throwError(() => err)),
+    );
+  }
+  private async inviteAndCreateUser(userData: {
+    full_name: string;
+    email: string;
+    phone_number: string | null;
+    role: string;
+  }): Promise<any> {
+    // Step 1: Invite user via Supabase Auth — creates the auth.users record
+    const { data: authData, error: authError } =
+      await this.supabase.client.auth.admin.inviteUserByEmail(userData.email, {
+        data: {
+          full_name: userData.full_name,
+          role: userData.role,
+        },
+      });
+
+    if (authError) throw new Error(authError.message);
+
+    const authUserId = authData.user.id;
+
+    // Step 2: Insert the profile row using the auth user's ID
+    const { data, error } = await this.supabase.client
+      .from('users')
+      .insert({
+        id: authUserId,
+        full_name: userData.full_name,
+        email: userData.email,
+        phone_number: userData.phone_number,
+        role: userData.role,
+        church_id: this.churchId,
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+    return data;
+  }
+
   revokePermission(permissionId: string): Observable<void> {
     return from(
       this.supabase.client
         .from('user_permissions')
         .delete()
-        .eq('id', permissionId)
+        .eq('id', permissionId),
     ).pipe(
       map(({ error }) => {
         if (error) throw new Error(error.message);
       }),
-      catchError(err => throwError(() => err))
+      catchError((err) => throwError(() => err)),
     );
   }
 
-  bulkGrantPermissions(userId: string, permissionNames: string[]): Observable<void> {
+  bulkGrantPermissions(
+    userId: string,
+    permissionNames: string[],
+  ): Observable<void> {
     return from(this.insertBulkPermissions(userId, permissionNames));
   }
 
   private async insertBulkPermissions(
     userId: string,
-    permissionNames: string[]
+    permissionNames: string[],
   ): Promise<void> {
     // Get existing permissions
     const { data: existing } = await this.supabase.client
@@ -209,18 +286,20 @@ export class UserRolesService {
       .select('permission_name')
       .eq('user_id', userId);
 
-    const existingPermissions = existing?.map(p => p.permission_name) || [];
-    const newPermissions = permissionNames.filter(p => !existingPermissions.includes(p));
+    const existingPermissions = existing?.map((p) => p.permission_name) || [];
+    const newPermissions = permissionNames.filter(
+      (p) => !existingPermissions.includes(p),
+    );
 
     if (newPermissions.length === 0) {
       return; // All permissions already granted
     }
 
-    const inserts = newPermissions.map(permissionName => ({
+    const inserts = newPermissions.map((permissionName) => ({
       user_id: userId,
       permission_name: permissionName,
       granted_by: this.currentUserId,
-      granted_at: new Date().toISOString()
+      granted_at: new Date().toISOString(),
     }));
 
     const { error } = await this.supabase.client
@@ -232,18 +311,21 @@ export class UserRolesService {
     }
   }
 
-  bulkRevokePermissions(userId: string, permissionNames: string[]): Observable<void> {
+  bulkRevokePermissions(
+    userId: string,
+    permissionNames: string[],
+  ): Observable<void> {
     return from(
       this.supabase.client
         .from('user_permissions')
         .delete()
         .eq('user_id', userId)
-        .in('permission_name', permissionNames)
+        .in('permission_name', permissionNames),
     ).pipe(
       map(({ error }) => {
         if (error) throw new Error(error.message);
       }),
-      catchError(err => throwError(() => err))
+      catchError((err) => throwError(() => err)),
     );
   }
 
@@ -255,13 +337,13 @@ export class UserRolesService {
         .from('role_templates')
         .select('*')
         .eq('church_id', this.churchId)
-        .order('role_name', { ascending: true })
+        .order('role_name', { ascending: true }),
     ).pipe(
       map(({ data, error }) => {
         if (error) throw new Error(error.message);
         return (data || []) as RoleTemplate[];
       }),
-      catchError(err => throwError(() => err))
+      catchError((err) => throwError(() => err)),
     );
   }
 
@@ -272,18 +354,20 @@ export class UserRolesService {
         .select('*')
         .eq('id', templateId)
         .eq('church_id', this.churchId)
-        .single()
+        .single(),
     ).pipe(
       map(({ data, error }) => {
         if (error) throw new Error(error.message);
         if (!data) throw new Error('Role template not found');
         return data as RoleTemplate;
       }),
-      catchError(err => throwError(() => err))
+      catchError((err) => throwError(() => err)),
     );
   }
 
-  createRoleTemplate(templateData: RoleTemplateCreateInput): Observable<RoleTemplate> {
+  createRoleTemplate(
+    templateData: RoleTemplateCreateInput,
+  ): Observable<RoleTemplate> {
     return from(
       this.supabase.client
         .from('role_templates')
@@ -291,40 +375,40 @@ export class UserRolesService {
           ...templateData,
           church_id: this.churchId,
           created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .select()
-        .single()
+        .single(),
     ).pipe(
       map(({ data, error }) => {
         if (error) throw new Error(error.message);
         return data as RoleTemplate;
       }),
-      catchError(err => throwError(() => err))
+      catchError((err) => throwError(() => err)),
     );
   }
 
   updateRoleTemplate(
     templateId: string,
-    templateData: RoleTemplateUpdateInput
+    templateData: RoleTemplateUpdateInput,
   ): Observable<RoleTemplate> {
     return from(
       this.supabase.client
         .from('role_templates')
         .update({
           ...templateData,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq('id', templateId)
         .eq('church_id', this.churchId)
         .select()
-        .single()
+        .single(),
     ).pipe(
       map(({ data, error }) => {
         if (error) throw new Error(error.message);
         return data as RoleTemplate;
       }),
-      catchError(err => throwError(() => err))
+      catchError((err) => throwError(() => err)),
     );
   }
 
@@ -334,12 +418,12 @@ export class UserRolesService {
         .from('role_templates')
         .delete()
         .eq('id', templateId)
-        .eq('church_id', this.churchId)
+        .eq('church_id', this.churchId),
     ).pipe(
       map(({ error }) => {
         if (error) throw new Error(error.message);
       }),
-      catchError(err => throwError(() => err))
+      catchError((err) => throwError(() => err)),
     );
   }
 
@@ -347,7 +431,10 @@ export class UserRolesService {
     return from(this.applyTemplate(userId, templateId));
   }
 
-  private async applyTemplate(userId: string, templateId: string): Promise<void> {
+  private async applyTemplate(
+    userId: string,
+    templateId: string,
+  ): Promise<void> {
     // Get template
     const { data: template, error: templateError } = await this.supabase.client
       .from('role_templates')
@@ -389,7 +476,7 @@ export class UserRolesService {
   getPermissionsByCategory(): Record<string, Permission[]> {
     const grouped: Record<string, Permission[]> = {};
 
-    AVAILABLE_PERMISSIONS.forEach(permission => {
+    AVAILABLE_PERMISSIONS.forEach((permission) => {
       if (!grouped[permission.category]) {
         grouped[permission.category] = [];
       }
@@ -400,12 +487,12 @@ export class UserRolesService {
   }
 
   getPermissionsByNames(names: string[]): Permission[] {
-    return AVAILABLE_PERMISSIONS.filter(p => names.includes(p.name));
+    return AVAILABLE_PERMISSIONS.filter((p) => names.includes(p.name));
   }
 
   validatePermissions(permissions: string[]): boolean {
-    const validNames = AVAILABLE_PERMISSIONS.map(p => p.name);
-    return permissions.every(p => validNames.includes(p));
+    const validNames = AVAILABLE_PERMISSIONS.map((p) => p.name);
+    return permissions.every((p) => validNames.includes(p));
   }
 
   // Check if current user has permission to manage roles

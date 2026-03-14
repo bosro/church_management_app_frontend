@@ -296,6 +296,26 @@ export class Settings implements OnInit, OnDestroy {
     });
   }
 
+
+  // ✅ Add this helper method to the class
+  private prepareUpdateData(formValue: any): any {
+    const updateData: any = {};
+
+    Object.keys(formValue).forEach((key) => {
+      const value = formValue[key];
+
+      // Convert empty strings to null for database compatibility
+      if (value === '' || value === null || value === undefined) {
+        updateData[key] = null;
+      } else {
+        updateData[key] = value;
+      }
+    });
+
+    return updateData;
+  }
+
+  // Then use it in saveMemberProfile:
   async saveMemberProfile(): Promise<void> {
     if (this.memberForm.invalid) {
       this.markFormGroupTouched(this.memberForm);
@@ -312,13 +332,11 @@ export class Settings implements OnInit, OnDestroy {
       const userId = this.authService.getUserId();
       let photoUrl = this.memberForm.value.photo_url;
 
-      // ✅ Upload photo if selected
       if (this.selectedPhotoFile) {
         photoUrl = await this.uploadPhoto();
         if (photoUrl) {
           this.memberForm.patchValue({ photo_url: photoUrl });
 
-          // ✅ Update profiles.avatar_url for header display
           await this.supabase.client
             .from('profiles')
             .update({ avatar_url: photoUrl })
@@ -326,13 +344,13 @@ export class Settings implements OnInit, OnDestroy {
         }
       }
 
-      const updateData = this.memberForm.value;
+      // ✅ Use the helper method
+      const updateData = this.prepareUpdateData(this.memberForm.value);
 
-      // ✅ FIX: Update by user_id instead of id
       const { error } = await this.supabase.client
         .from('members')
         .update(updateData)
-        .eq('user_id', userId); // ✅ CHANGED: Use user_id instead of id
+        .eq('user_id', userId);
 
       if (error) throw error;
 
@@ -341,10 +359,7 @@ export class Settings implements OnInit, OnDestroy {
       this.loading = false;
       this.scrollToTop();
 
-      // ✅ Reload profile
       await this.loadMemberProfile();
-
-      // ✅ Refresh auth profile for header
       this.authService.refreshProfile();
 
       setTimeout(() => {

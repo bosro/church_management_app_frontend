@@ -6,6 +6,7 @@ import { RoleTemplates } from './components/role-templates/role-templates';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { SharedModule } from '../../shared/shared-module';
 import { UserRolesRoutingModule } from './user-roles-routing.module';
+import { CreateUser } from './components/create-user/create-user';
 
 
 
@@ -13,7 +14,8 @@ import { UserRolesRoutingModule } from './user-roles-routing.module';
   declarations: [
     UsersList,
     ManagePermissions,
-    RoleTemplates
+    RoleTemplates,
+    CreateUser
   ],
   imports: [
     CommonModule,

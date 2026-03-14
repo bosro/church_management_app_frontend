@@ -106,6 +106,11 @@ export class UsersList implements OnInit, OnDestroy {
     }
   }
 
+  createUser(): void {
+  this.router.navigate(['main/user-roles/create']);
+}
+ 
+
   nextPage(): void {
     if (this.currentPage < this.totalPages) {
       this.currentPage++;
@@ -156,6 +161,7 @@ export class UsersList implements OnInit, OnDestroy {
     this.successMessage = '';
   }
 }
+
 
 
 

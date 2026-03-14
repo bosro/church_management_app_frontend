@@ -176,7 +176,32 @@ export class AuthService {
     data: any,
     signUpData: SignUpData,
   ): Promise<any> {
-    // Call function to add member to church
+    // Check if a pre-created user record exists for this email in this church
+    const { data: existingUser } = await this.supabase.client
+      .from('users')
+      .select('id')
+      .eq('email', signUpData.email)
+      .eq('church_id', signUpData.church_id!)
+      .neq('id', data.user.id)
+      .maybeSingle(); // ← was .single()
+
+    if (existingUser) {
+      // Update the pre-created record to use the real auth UID
+      await this.supabase.client
+        .from('users')
+        .update({ id: data.user.id, updated_at: new Date().toISOString() })
+        .eq('email', signUpData.email)
+        .eq('church_id', signUpData.church_id!);
+
+      // ← ADD HERE: reconcile the members row that was created with a null user_id
+      await this.supabase.client
+        .from('members')
+        .update({ user_id: data.user.id })
+        .eq('email', signUpData.email)
+        .is('user_id', null);
+    }
+
+    // Continue with normal member signup
     const result = await this.supabase.callFunction('create_member_signup', {
       p_user_id: data.user.id,
       p_full_name: signUpData.full_name,
@@ -185,15 +210,11 @@ export class AuthService {
       p_church_id: signUpData.church_id,
     });
 
-    console.log('Member signup result:', result);
-
     return {
       ...data,
       needsEmailConfirmation: !data.user.email_confirmed_at,
-      pendingApproval: false, // Members are auto-approved
-      isMember: true,
-      message:
-        'Welcome! Please check your email to confirm your account. You can sign in once confirmed.',
+      pendingApproval: false,
+      message: 'Welcome! Please check your email to confirm your account.',
     };
   }
 

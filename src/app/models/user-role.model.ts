@@ -144,3 +144,6 @@ export function getPermissionsByCategory(category: PermissionCategory): Permissi
 export function getAllCategories(): PermissionCategory[] {
   return Array.from(new Set(AVAILABLE_PERMISSIONS.map(p => p.category)));
 }
+
+
+
