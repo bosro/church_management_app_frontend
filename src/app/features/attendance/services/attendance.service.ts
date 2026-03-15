@@ -15,6 +15,7 @@ import {
   VisitorCheckInData,
   CheckInMethod,
 } from '../../../models/attendance.model';
+import { UserRolesService } from '../../user-roles/services/user-roles';
 
 @Injectable({
   providedIn: 'root',
@@ -23,36 +24,25 @@ export class AttendanceService {
   constructor(
     private supabase: SupabaseService,
     private authService: AuthService,
+    private userRolesService: UserRolesService
   ) {}
 
   // ==================== PERMISSIONS ====================
 
-  canManageAttendance(): boolean {
-    const roles = ['super_admin', 'church_admin', 'pastor', 'ministry_leader'];
-    return this.authService.hasRole(roles);
-  }
+canManageAttendance(): boolean {
+  return this.authService.hasRole(['super_admin', 'church_admin'])
+    || this.userRolesService.hasPermission('attendance.manage');
+}
 
-  canViewAttendance(): boolean {
-    const roles = [
-      'super_admin',
-      'church_admin',
-      'pastor',
-      'ministry_leader',
-      'secretary',
-    ];
-    return this.authService.hasRole(roles);
-  }
+ canViewAttendance(): boolean {
+  return this.authService.hasRole(['super_admin', 'church_admin'])
+    || this.userRolesService.hasPermission('attendance.view');
+}
 
-  canMarkAttendance(): boolean {
-    const roles = [
-      'super_admin',
-      'church_admin',
-      'pastor',
-      'ministry_leader',
-      'usher',
-    ];
-    return this.authService.hasRole(roles);
-  }
+canMarkAttendance(): boolean {
+  return this.authService.hasRole(['super_admin', 'church_admin'])
+    || this.userRolesService.hasPermission('attendance.checkin');
+}
 
   // ==================== ATTENDANCE EVENTS ====================
 

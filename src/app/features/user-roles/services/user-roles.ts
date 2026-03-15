@@ -22,12 +22,43 @@ export class UserRolesService {
   private churchId?: string;
   private currentUserId?: string;
 
+  private currentUserPermissions: Set<string> = new Set();
+
   constructor(
     private supabase: SupabaseService,
     private authService: AuthService,
   ) {
     this.churchId = this.authService.getChurchId();
     this.currentUserId = this.authService.getUserId();
+    this.authService.setUserRolesService(this);
+  }
+
+  async loadCurrentUserPermissions(): Promise<void> {
+    try {
+      const userId = this.authService.getUserId();
+      const { data, error } = await this.supabase.client
+        .from('user_permissions')
+        .select('permission_name')
+        .eq('user_id', userId);
+
+      if (!error && data) {
+        this.currentUserPermissions = new Set(
+          data.map((p: any) => p.permission_name),
+        );
+      }
+    } catch {
+      this.currentUserPermissions = new Set();
+    }
+  }
+
+  clearCurrentUserPermissions(): void {
+    this.currentUserPermissions = new Set();
+  }
+
+  hasPermission(permissionName: string): boolean {
+    // Admins always have all permissions
+    if (this.authService.hasRole(['super_admin', 'church_admin'])) return true;
+    return this.currentUserPermissions.has(permissionName);
   }
 
   // ==================== USERS ====================

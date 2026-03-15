@@ -35,11 +35,17 @@ export class AuthService {
   private authReadySubject = new BehaviorSubject<boolean>(false);
   public authReady$ = this.authReadySubject.asObservable();
 
+  private userRolesService?: any; // lazy loaded to avoid circular dep
+
   constructor(
     private supabase: SupabaseService,
     private router: Router,
   ) {
     this.initializeAuth();
+  }
+
+  setUserRolesService(service: any): void {
+    this.userRolesService = service;
   }
 
   // In auth.service.ts
@@ -53,10 +59,13 @@ export class AuthService {
       .subscribe(async (user) => {
         if (user) {
           await this.loadUserProfile(user.id);
+          // Load permissions on page refresh too
+          if (this.userRolesService) {
+            await this.userRolesService.loadCurrentUserPermissions();
+          }
         } else {
           this.currentProfileSubject.next(null);
         }
-        // ✅ ADD THIS — signal auth is resolved whether user exists or not
         this.authReadySubject.next(true);
       });
   }
@@ -151,6 +160,10 @@ export class AuthService {
           throw new Error(
             'Please verify your email address before signing in. Check your inbox for the confirmation link.',
           );
+        }
+
+        if (this.userRolesService) {
+          await this.userRolesService.loadCurrentUserPermissions();
         }
 
         return {
@@ -392,7 +405,10 @@ export class AuthService {
     try {
       await this.supabase.client.auth.signOut();
       this.currentProfileSubject.next(null);
-      this.authReadySubject.next(false); // ✅ reset on logout
+      this.authReadySubject.next(false);
+      if (this.userRolesService) {
+        this.userRolesService.clearCurrentUserPermissions(); // ← clear on logout
+      }
       this.router.navigate(['/auth/signin']);
     } catch (error) {
       console.error('Sign out error:', error);
