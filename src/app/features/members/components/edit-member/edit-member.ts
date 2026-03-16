@@ -7,6 +7,7 @@ import { takeUntil } from 'rxjs/operators';
 import { MemberService } from '../../services/member.service';
 import { AuthService } from '../../../../core/services/auth';
 import { Member } from '../../../../models/member.model';
+import { PermissionService } from '../../../../core/services/permission.service';
 
 @Component({
   selector: 'app-edit-member',
@@ -63,6 +64,7 @@ export class EditMember implements OnInit, OnDestroy {
     private authService: AuthService,
     private router: Router,
     private route: ActivatedRoute,
+    public permissionService: PermissionService
   ) {}
 
   ngOnInit(): void {
@@ -83,14 +85,15 @@ export class EditMember implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  private checkPermissions(): void {
-    const editRoles = ['super_admin', 'church_admin', 'pastor', 'group_leader'];
-    this.canEditMember = this.authService.hasRole(editRoles);
+ private checkPermissions(): void {
+  this.canEditMember =
+    this.permissionService.isAdmin ||
+    this.permissionService.members.edit;
 
-    if (!this.canEditMember) {
-      this.router.navigate(['/unauthorized']);
-    }
+  if (!this.canEditMember) {
+    this.router.navigate(['/unauthorized']);
   }
+}
 
   private initForm(): void {
     this.memberForm = this.fb.group({
@@ -383,3 +386,5 @@ export class EditMember implements OnInit, OnDestroy {
     else return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
   }
 }
+
+

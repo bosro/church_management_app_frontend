@@ -1,0 +1,102 @@
+@use '../../reports-shared' as *;
+
+.fee-structures-container {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.class-fee-card {
+  background: white;
+  border: 1px solid #E5E7EB;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+
+  .class-fee-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background: #F9FAFB;
+    border-bottom: 1px solid #E5E7EB;
+
+    .class-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+
+      h3 { font-size: 16px; font-weight: 600; color: #111827; margin: 0; }
+
+      .total-badge {
+        background: #D1FAE5;
+        color: #065F46;
+        padding: 3px 10px;
+        border-radius: 100px;
+        font-size: 13px;
+        font-weight: 500;
+      }
+    }
+
+    .btn-assign {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      background: #4F46E5;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.2s;
+
+      &:hover { background: #4338CA; }
+    }
+  }
+}
+
+.fee-table {
+  width: 100%;
+  border-collapse: collapse;
+
+  th {
+    padding: 10px 20px;
+    text-align: left;
+    font-size: 12px;
+    font-weight: 600;
+    color: #6B7280;
+    text-transform: uppercase;
+    border-bottom: 1px solid #F3F4F6;
+  }
+
+  td {
+    padding: 12px 20px;
+    font-size: 14px;
+    color: #374151;
+    border-bottom: 1px solid #F3F4F6;
+    vertical-align: middle;
+
+    &:last-child { border-bottom: none; }
+  }
+
+  tr:last-child td { border-bottom: none; }
+
+  .badge {
+    display: inline-flex;
+    padding: 2px 8px;
+    border-radius: 100px;
+    font-size: 12px;
+    background: #F3F4F6;
+    color: #6B7280;
+
+    &.yes { background: #D1FAE5; color: #065F46; }
+  }
+
+  .action-buttons { display: flex; gap: 6px; }
+}
+
+
+
+

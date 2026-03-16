@@ -20,7 +20,6 @@ import {
   UserRole,
 } from '../../models/user.model';
 import { SupabaseService } from './supabase';
-import { Church } from '../../models/church.model';
 
 @Injectable({
   providedIn: 'root',
@@ -36,6 +35,9 @@ export class AuthService {
   public authReady$ = this.authReadySubject.asObservable();
 
   private userRolesService?: any; // lazy loaded to avoid circular dep
+
+  private churchFeaturesSubject = new BehaviorSubject<string[]>([]);
+  churchFeatures$ = this.churchFeaturesSubject.asObservable();
 
   constructor(
     private supabase: SupabaseService,
@@ -59,6 +61,9 @@ export class AuthService {
       .subscribe(async (user) => {
         if (user) {
           await this.loadUserProfile(user.id);
+
+          await this.loadChurchFeatures();
+
           // Load permissions on page refresh too
           if (this.userRolesService) {
             await this.userRolesService.loadCurrentUserPermissions();
@@ -98,7 +103,10 @@ export class AuthService {
     return !!this.supabase.currentUser;
   }
 
-  // Sign In with Email & Password
+  // Add this method to your AuthService class
+  getCurrentUserRole(): string {
+    return this.currentProfile?.role || '';
+  }
   signIn(email: string, password: string): Observable<AuthResponse> {
     this.loadingSubject.next(true);
 
@@ -119,12 +127,6 @@ export class AuthService {
         }
 
         const userProfile = profile[0];
-
-        // console.log(
-        //   'Auth user email_confirmed_at:',
-        //   data.user?.email_confirmed_at,
-        // );
-        // console.log('User role:', userProfile.role);
 
         // Check approval status FIRST
         const approvalStatus = userProfile.approval_status || 'pending';
@@ -154,7 +156,6 @@ export class AuthService {
         const isAdmin = adminRoles.includes(userProfile.role);
 
         // Check email verification - BYPASS for admins
-        // Use data.user.email_confirmed_at from auth, not userProfile.email_verified
         if (!isAdmin && !data.user?.email_confirmed_at) {
           await this.supabase.client.auth.signOut();
           throw new Error(
@@ -162,9 +163,19 @@ export class AuthService {
           );
         }
 
+        // Set profile BEFORE loading permissions so hasRole() works correctly
+        this.currentProfileSubject.next(userProfile);
+
+        await this.loadChurchFeatures();
+
+        // Load permissions for this user
         if (this.userRolesService) {
           await this.userRolesService.loadCurrentUserPermissions();
         }
+
+        // Signal that auth + permissions are fully ready
+        // This unblocks PermissionGuard and RoleGuard which wait on authReady$
+        this.authReadySubject.next(true);
 
         return {
           user: userProfile,
@@ -180,6 +191,26 @@ export class AuthService {
         );
       }),
     );
+  }
+
+  // Call this inside initializeAuth() and signIn()
+  private async loadChurchFeatures(): Promise<void> {
+    const churchId = this.getChurchId();
+    if (!churchId) return;
+
+    const { data, error } = await this.supabase.client
+      .from('churches')
+      .select('enabled_features')
+      .eq('id', churchId)
+      .single();
+
+    if (!error && data) {
+      this.churchFeaturesSubject.next(data.enabled_features || []);
+    }
+  }
+
+  hasChurchFeature(feature: string): boolean {
+    return this.churchFeaturesSubject.value.includes(feature);
   }
 
   /**

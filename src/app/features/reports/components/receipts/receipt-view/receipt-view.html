@@ -1,0 +1,162 @@
+<div class="dashboard-layout no-print">
+  <app-sidebar></app-sidebar>
+  <div class="dashboard-content">
+    <app-header></app-header>
+    <div class="dashboard-body">
+      <div class="receipt-page-container">
+
+        <!-- Action Bar (hidden when printing) -->
+        <div class="action-bar no-print">
+          <button class="back-btn" (click)="goBack()">
+            <i class="ri-arrow-left-line"></i>
+            Back
+          </button>
+          <button class="btn-primary" (click)="printReceipt()" *ngIf="payment">
+            <i class="ri-printer-line"></i>
+            Print Receipt
+          </button>
+        </div>
+
+        <!-- Loading -->
+        <div *ngIf="loading" class="loading-container no-print">
+          <div class="spinner"></div>
+          <p>Loading receipt...</p>
+        </div>
+
+        <!-- Error -->
+        <div *ngIf="errorMessage" class="error-alert no-print">
+          <i class="ri-error-warning-line"></i>
+          {{ errorMessage }}
+        </div>
+
+        <!-- Receipt (printable) -->
+        <div *ngIf="!loading && payment" class="receipt-wrapper" id="receipt">
+
+          <!-- Receipt Card -->
+          <div class="receipt-card">
+
+            <!-- Header -->
+            <div class="receipt-header">
+              <div class="church-brand">
+                <img *ngIf="churchLogo" [src]="churchLogo"
+                     [alt]="churchName" class="church-logo" />
+                <div class="church-info">
+                  <h1 class="church-name">{{ churchName }}</h1>
+                  <p *ngIf="churchAddress">{{ churchAddress }}</p>
+                  <p *ngIf="churchPhone">Tel: {{ churchPhone }}</p>
+                </div>
+              </div>
+              <div class="receipt-title">
+                <h2>OFFICIAL RECEIPT</h2>
+                <p class="receipt-number">Receipt No: <strong>{{ payment.receipt_number }}</strong></p>
+              </div>
+            </div>
+
+            <div class="receipt-divider"></div>
+
+            <!-- Student Info -->
+            <div class="receipt-student-info">
+              <div class="info-row">
+                <span class="info-label">Student Name:</span>
+                <span class="info-value">{{ getStudentFullName() }}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Student No:</span>
+                <span class="info-value">{{ payment.student?.student_number }}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Class:</span>
+                <span class="info-value">{{ payment.student?.class?.name }}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Academic Year:</span>
+                <span class="info-value">{{ payment.academic_year }}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Term:</span>
+                <span class="info-value">{{ payment.term }}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Payment Date:</span>
+                <span class="info-value">
+                  {{ payment.payment_date | date:'MMMM d, y' }}
+                </span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Payment Method:</span>
+                <span class="info-value">{{ payment.payment_method }}</span>
+              </div>
+            </div>
+
+            <div class="receipt-divider"></div>
+
+            <!-- Fee Items Table -->
+            <table class="receipt-table">
+              <thead>
+                <tr>
+                  <th>Description</th>
+                  <th class="amount-col">Amount (GHS)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of payment.fee_items">
+                  <td>{{ item.fee_name }}</td>
+                  <td class="amount-col">{{ formatCurrency(item.amount) }}</td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr class="total-row">
+                  <td><strong>TOTAL PAID</strong></td>
+                  <td class="amount-col">
+                    <strong>{{ formatCurrency(payment.amount) }}</strong>
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+
+            <!-- Amount in Words -->
+            <div class="amount-words">
+              <span class="words-label">Amount in Words:</span>
+              <span class="words-value">{{ numberToWords(payment.amount) }}</span>
+            </div>
+
+            <!-- Notes -->
+            <div class="receipt-notes" *ngIf="payment.notes">
+              <span class="notes-label">Notes:</span>
+              <span>{{ payment.notes }}</span>
+            </div>
+
+            <div class="receipt-divider"></div>
+
+            <!-- Footer -->
+            <div class="receipt-footer">
+              <div class="signature-section">
+                <div class="signature-line">
+                  <div class="line"></div>
+                  <p>Received By</p>
+                </div>
+                <div class="signature-line">
+                  <div class="line"></div>
+                  <p>Parent/Guardian Signature</p>
+                </div>
+              </div>
+
+              <div class="receipt-stamp">
+                <div class="stamp-circle">
+                  <i class="ri-checkbox-circle-fill"></i>
+                  <span>PAID</span>
+                </div>
+              </div>
+            </div>
+
+            <p class="receipt-note">
+              This is an official receipt. Please keep it for your records.
+            </p>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>

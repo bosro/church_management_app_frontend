@@ -6,6 +6,7 @@ import { takeUntil } from 'rxjs/operators';
 import { MemberService } from '../../services/member.service';
 import { AuthService } from '../../../../core/services/auth';
 import { Member } from '../../../../models/member.model';
+import { PermissionService } from '../../../../core/services/permission.service';
 
 @Component({
   selector: 'app-member-detail',
@@ -32,6 +33,7 @@ export class MemberDetail implements OnInit, OnDestroy {
     private router: Router,
     private memberService: MemberService,
     private authService: AuthService,
+    public permissionService: PermissionService,
   ) {}
 
   ngOnInit(): void {
@@ -51,11 +53,12 @@ export class MemberDetail implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-    const editRoles = ['super_admin', 'church_admin', 'pastor', 'group_leader'];
-    const deleteRoles = ['super_admin', 'church_admin'];
+    // View is implicit — if you can reach this page, you can view
+    this.canEditMember =
+      this.permissionService.isAdmin || this.permissionService.members.edit;
 
-    this.canEditMember = this.authService.hasRole(editRoles);
-    this.canDeleteMember = this.authService.hasRole(deleteRoles);
+    this.canDeleteMember =
+      this.permissionService.isAdmin || this.permissionService.members.delete;
   }
 
   private loadMember(memberId: string): void {

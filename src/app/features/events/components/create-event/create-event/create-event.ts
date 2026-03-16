@@ -5,7 +5,8 @@ import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { EventsService } from '../../../services/events';
-import {  EventCategory } from '../../../../../models/event.model';
+import { EventCategory } from '../../../../../models/event.model';
+import { PermissionService } from '../../../../../core/services/permission.service';
 
 @Component({
   selector: 'app-create-event',
@@ -41,7 +42,8 @@ export class CreateEvent implements OnInit, OnDestroy {
   constructor(
     private fb: FormBuilder,
     private eventsService: EventsService,
-    private router: Router
+    private router: Router,
+    public permissionService: PermissionService,
   ) {}
 
   ngOnInit(): void {
@@ -53,9 +55,9 @@ export class CreateEvent implements OnInit, OnDestroy {
     this.destroy$.next();
     this.destroy$.complete();
   }
-
   private checkPermissions(): void {
-    this.canManageEvents = this.eventsService.canManageEvents();
+    this.canManageEvents =
+      this.permissionService.isAdmin || this.permissionService.events.create;
 
     if (!this.canManageEvents) {
       this.router.navigate(['/unauthorized']);
@@ -66,7 +68,14 @@ export class CreateEvent implements OnInit, OnDestroy {
     const today = new Date().toISOString().split('T')[0];
 
     this.eventForm = this.fb.group({
-      title: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(200)]],
+      title: [
+        '',
+        [
+          Validators.required,
+          Validators.minLength(3),
+          Validators.maxLength(200),
+        ],
+      ],
       description: ['', [Validators.maxLength(2000)]],
       category: ['service' as EventCategory, [Validators.required]],
       start_date: [today, [Validators.required]],
@@ -103,7 +112,8 @@ export class CreateEvent implements OnInit, OnDestroy {
     if (this.eventForm.value.registration_deadline) {
       const deadline = new Date(this.eventForm.value.registration_deadline);
       if (deadline > startDate) {
-        this.errorMessage = 'Registration deadline must be before the event start date';
+        this.errorMessage =
+          'Registration deadline must be before the event start date';
         this.scrollToTop();
         return;
       }
@@ -125,9 +135,14 @@ export class CreateEvent implements OnInit, OnDestroy {
       max_attendees: this.eventForm.value.max_attendees
         ? parseInt(this.eventForm.value.max_attendees)
         : undefined,
-      registration_deadline: this.eventForm.value.registration_deadline || undefined,
-      registration_required: this.eventForm.value.registration_required || false,
-      is_public: this.eventForm.value.is_public !== undefined ? this.eventForm.value.is_public : true,
+      registration_deadline:
+        this.eventForm.value.registration_deadline || undefined,
+      registration_required:
+        this.eventForm.value.registration_required || false,
+      is_public:
+        this.eventForm.value.is_public !== undefined
+          ? this.eventForm.value.is_public
+          : true,
     };
 
     this.eventsService
@@ -144,7 +159,8 @@ export class CreateEvent implements OnInit, OnDestroy {
         },
         error: (error) => {
           this.loading = false;
-          this.errorMessage = error.message || 'Failed to create event. Please try again.';
+          this.errorMessage =
+            error.message || 'Failed to create event. Please try again.';
           this.scrollToTop();
           console.error('Error creating event:', error);
         },
@@ -153,7 +169,9 @@ export class CreateEvent implements OnInit, OnDestroy {
 
   cancel(): void {
     if (this.eventForm.dirty) {
-      if (confirm('You have unsaved changes. Are you sure you want to leave?')) {
+      if (
+        confirm('You have unsaved changes. Are you sure you want to leave?')
+      ) {
         this.router.navigate(['main/events']);
       }
     } else {

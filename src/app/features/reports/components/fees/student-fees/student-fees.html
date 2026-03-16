@@ -1,0 +1,104 @@
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+  <div class="dashboard-content">
+    <app-header></app-header>
+    <div class="dashboard-body">
+      <div class="student-fees-container">
+
+        <div class="page-header">
+          <div class="header-left">
+            <button class="back-btn" (click)="router.navigate(['main/reports'])">
+              <i class="ri-arrow-left-line"></i>
+            </button>
+            <div>
+              <h1>Student Fees</h1>
+              <p class="subtitle">Track fee payments per student</p>
+            </div>
+          </div>
+        </div>
+
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i>
+          {{ errorMessage }}
+        </div>
+
+        <!-- Filters -->
+        <div class="filters-bar">
+          <select [(ngModel)]="selectedYear" (change)="onFilterChange()" class="filter-select">
+            <option *ngFor="let y of academicYears" [value]="y">{{ y }}</option>
+          </select>
+          <select [(ngModel)]="selectedTerm" (change)="onFilterChange()" class="filter-select">
+            <option *ngFor="let t of terms" [value]="t">{{ t }}</option>
+          </select>
+          <select [(ngModel)]="selectedClassId" (change)="onFilterChange()" class="filter-select">
+            <option value="">All Classes</option>
+            <option *ngFor="let c of classes" [value]="c.id">{{ c.name }}</option>
+          </select>
+        </div>
+
+        <!-- Loading -->
+        <div *ngIf="loading" class="loading-container">
+          <div class="spinner"></div>
+          <p>Loading fee records...</p>
+        </div>
+
+        <!-- Table -->
+        <div *ngIf="!loading" class="table-card">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Student</th>
+                <th>Class</th>
+                <th>Total Due</th>
+                <th>Total Paid</th>
+                <th>Balance</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let summary of studentSummaries"
+                  class="table-row"
+                  (click)="viewStudent(summary.student?.id)">
+                <td>
+                  <p class="student-name">
+                    {{ summary.student?.first_name }}
+                    {{ summary.student?.last_name }}
+                  </p>
+                  <p class="student-num">{{ summary.student?.student_number }}</p>
+                </td>
+                <td>{{ summary.student?.class?.name }}</td>
+                <td>{{ formatCurrency(summary.totalDue) }}</td>
+                <td>{{ formatCurrency(summary.totalPaid) }}</td>
+                <td><strong>{{ formatCurrency(summary.totalBalance) }}</strong></td>
+                <td>
+                  <span class="status-badge" [ngClass]="getStatusClass(summary.status)">
+                    {{ summary.status | titlecase }}
+                  </span>
+                </td>
+                <td>
+                  <button class="btn-pay"
+                          (click)="recordPayment(summary.student?.id);
+                                   $event.stopPropagation()"
+                          *ngIf="permissionService.school.fees &&
+                                 summary.status !== 'paid'">
+                    <i class="ri-money-dollar-circle-line"></i>
+                    Pay
+                  </button>
+                </td>
+              </tr>
+
+              <tr *ngIf="studentSummaries.length === 0">
+                <td colspan="7" class="empty-state">
+                  <i class="ri-checkbox-circle-line" style="color: #10B981;"></i>
+                  <p>All fees cleared for this term!</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>

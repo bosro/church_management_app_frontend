@@ -18,7 +18,8 @@
               <p class="subtitle">Manage your website pages</p>
             </div>
           </div>
-          <button class="btn-primary" (click)="createPage()">
+          <button class="btn-primary" (click)="createPage()"
+            *ngIf="permissionService.isAdmin || permissionService.settings.manage">
             <i class="ri-add-line"></i>
             Create Page
           </button>
@@ -55,18 +56,18 @@
               </div>
 
               <div class="page-actions">
-                <button
-                  class="btn-action btn-publish"
-                  (click)="togglePublish(page, $event)"
-                >
+                <button class="btn-action btn-publish" (click)="togglePublish(page, $event)"
+                  *ngIf="permissionService.isAdmin || permissionService.settings.manage">
                   <i [class]="page.is_published ? 'ri-eye-off-line' : 'ri-eye-line'"></i>
                   {{ page.is_published ? 'Unpublish' : 'Publish' }}
                 </button>
-                <button class="btn-action btn-edit" (click)="editPage(page.id, $event)">
+                <button class="btn-action btn-edit" (click)="editPage(page.id, $event)"
+                  *ngIf="permissionService.isAdmin || permissionService.settings.manage">
                   <i class="ri-edit-line"></i>
                   Edit
                 </button>
-                <button class="btn-action btn-delete" (click)="deletePage(page.id, $event)">
+                <button class="btn-action btn-delete" (click)="deletePage(page.id, $event)"
+                  *ngIf="permissionService.isAdmin || permissionService.settings.manage">
                   <i class="ri-delete-bin-line"></i>
                   Delete
                 </button>
@@ -85,7 +86,8 @@
             <i class="ri-pages-line"></i>
             <h3>No Pages Yet</h3>
             <p>Create your first page to get started</p>
-            <button class="btn-primary" (click)="createPage()">
+            <button class="btn-primary" (click)="createPage()"
+              *ngIf="permissionService.isAdmin || permissionService.settings.manage">
               <i class="ri-add-line"></i>
               Create Page
             </button>
@@ -94,11 +96,7 @@
 
         <!-- Pagination -->
         <div class="pagination" *ngIf="totalPages > 1 && !loading">
-          <button
-            class="pagination-btn"
-            [disabled]="currentPage === 1"
-            (click)="previousPage()"
-          >
+          <button class="pagination-btn" [disabled]="currentPage === 1" (click)="previousPage()">
             <i class="ri-arrow-left-s-line"></i>
             Previous
           </button>
@@ -109,11 +107,7 @@
             </span>
           </div>
 
-          <button
-            class="pagination-btn"
-            [disabled]="currentPage === totalPages"
-            (click)="nextPage()"
-          >
+          <button class="pagination-btn" [disabled]="currentPage === totalPages" (click)="nextPage()">
             Next
             <i class="ri-arrow-right-s-line"></i>
           </button>
@@ -122,5 +116,3 @@
     </div>
   </div>
 </div>
-
-

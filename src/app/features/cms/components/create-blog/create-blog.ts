@@ -6,6 +6,7 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { CmsService } from '../../services/cms'
 import { BLOG_CATEGORIES } from '../../../../models/cms.model';
+import { PermissionService } from '../../../../core/services/permission.service';
 
 @Component({
   selector: 'app-create-blog',
@@ -28,7 +29,8 @@ export class CreateBlog implements OnInit, OnDestroy {
   constructor(
     private fb: FormBuilder,
     private cmsService: CmsService,
-    private router: Router
+    private router: Router,
+    public permissionService: PermissionService
   ) {}
 
   ngOnInit(): void {
@@ -40,14 +42,15 @@ export class CreateBlog implements OnInit, OnDestroy {
     this.destroy$.next();
     this.destroy$.complete();
   }
+private checkPermissions(): void {
+  this.canManageContent =
+    this.permissionService.isAdmin ||
+    this.permissionService.settings.manage;
 
-  private checkPermissions(): void {
-    this.canManageContent = this.cmsService.canManageContent();
-
-    if (!this.canManageContent) {
-      this.router.navigate(['/unauthorized']);
-    }
+  if (!this.canManageContent) {
+    this.router.navigate(['/unauthorized']);
   }
+}
 
   private initForm(): void {
     this.blogForm = this.fb.group({
@@ -150,3 +153,6 @@ export class CreateBlog implements OnInit, OnDestroy {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }
+
+
+

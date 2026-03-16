@@ -1,0 +1,228 @@
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+  <div class="dashboard-content">
+    <app-header></app-header>
+    <div class="dashboard-body">
+      <div class="classes-container">
+
+        <!-- Page Header -->
+        <div class="page-header">
+          <div class="header-left">
+            <button class="back-btn" (click)="router.navigate(['main/reports'])">
+              <i class="ri-arrow-left-line"></i>
+            </button>
+            <div>
+              <h1>Classes</h1>
+              <p class="subtitle">Manage school classes and grades</p>
+            </div>
+          </div>
+          <div class="header-actions" *ngIf="permissionService.isAdmin">
+            <button class="btn-secondary" (click)="openSeedModal()"
+                    *ngIf="classes.length === 0">
+              <i class="ri-magic-line"></i>
+              Load Defaults
+            </button>
+            <button class="btn-primary" (click)="openCreateModal()">
+              <i class="ri-add-line"></i>
+              Add Class
+            </button>
+          </div>
+        </div>
+
+        <!-- Alerts -->
+        <div *ngIf="successMessage" class="success-alert">
+          <i class="ri-checkbox-circle-line"></i>
+          <span>{{ successMessage }}</span>
+        </div>
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i>
+          <span>{{ errorMessage }}</span>
+        </div>
+
+        <!-- Year Filter -->
+        <div class="year-filter">
+          <label>Academic Year:</label>
+          <select [(ngModel)]="selectedYear" (change)="onYearChange()" class="filter-select">
+            <option *ngFor="let year of academicYears" [value]="year">{{ year }}</option>
+          </select>
+        </div>
+
+        <!-- Loading -->
+        <div *ngIf="loading" class="loading-container">
+          <div class="spinner"></div>
+          <p>Loading classes...</p>
+        </div>
+
+        <!-- Classes Grid -->
+        <div *ngIf="!loading" class="classes-grid">
+          <div *ngFor="let class of classes" class="class-card">
+            <div class="class-header">
+              <div class="class-icon">
+                <i class="ri-building-line"></i>
+              </div>
+              <div class="class-actions" *ngIf="permissionService.isAdmin">
+                <button class="btn-icon-small" (click)="openEditModal(class)" title="Edit">
+                  <i class="ri-edit-line"></i>
+                </button>
+                <button class="btn-icon-small btn-danger"
+                        (click)="deleteClass(class)" title="Deactivate">
+                  <i class="ri-delete-bin-line"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="class-body">
+              <h3>{{ class.name }}</h3>
+              <p class="academic-year">{{ class.academic_year }}</p>
+              <p class="class-teacher" *ngIf="class.class_teacher">
+                <i class="ri-user-line"></i>
+                {{ class.class_teacher }}
+              </p>
+            </div>
+
+            <div class="class-footer">
+              <button class="btn-view" (click)="viewStudents(class.id)">
+                <i class="ri-group-line"></i>
+                View Students
+              </button>
+            </div>
+          </div>
+
+          <!-- Empty State -->
+          <div *ngIf="classes.length === 0" class="empty-state">
+            <i class="ri-building-line"></i>
+            <h3>No Classes Yet</h3>
+            <p>Create classes or load the default school structure</p>
+            <div class="empty-actions" *ngIf="permissionService.isAdmin">
+              <button class="btn-secondary" (click)="openSeedModal()">
+                <i class="ri-magic-line"></i>
+                Load Default Classes
+              </button>
+              <button class="btn-primary" (click)="openCreateModal()">
+                <i class="ri-add-line"></i>
+                Create Manually
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Create Modal -->
+<div class="modal-overlay" *ngIf="showCreateModal" (click)="closeCreateModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>Add Class</h2>
+      <button class="close-btn" (click)="closeCreateModal()">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Class Name *</label>
+        <input type="text" [(ngModel)]="classForm.name"
+               placeholder="e.g., Primary 1, JHS 2" />
+      </div>
+      <div class="form-group">
+        <label>Academic Year *</label>
+        <select [(ngModel)]="classForm.academic_year">
+          <option *ngFor="let year of academicYears" [value]="year">{{ year }}</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Class Teacher</label>
+        <input type="text" [(ngModel)]="classForm.class_teacher"
+               placeholder="Teacher's name" />
+      </div>
+      <div class="form-group">
+        <label>Level Order</label>
+        <input type="number" [(ngModel)]="classForm.level_order" min="1" />
+        <p class="help-text">Used for sorting (1 = lowest grade)</p>
+      </div>
+      <div *ngIf="errorMessage" class="error-alert">
+        <span>{{ errorMessage }}</span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" (click)="closeCreateModal()"
+              [disabled]="processing">Cancel</button>
+      <button class="btn-primary" (click)="createClass()"
+              [disabled]="processing">
+        {{ processing ? 'Creating...' : 'Create Class' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal-overlay" *ngIf="showEditModal" (click)="closeEditModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>Edit Class</h2>
+      <button class="close-btn" (click)="closeEditModal()">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Class Name *</label>
+        <input type="text" [(ngModel)]="classForm.name" />
+      </div>
+      <div class="form-group">
+        <label>Class Teacher</label>
+        <input type="text" [(ngModel)]="classForm.class_teacher" />
+      </div>
+      <div class="form-group">
+        <label>Level Order</label>
+        <input type="number" [(ngModel)]="classForm.level_order" min="1" />
+      </div>
+      <div *ngIf="errorMessage" class="error-alert">
+        <span>{{ errorMessage }}</span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" (click)="closeEditModal()"
+              [disabled]="processing">Cancel</button>
+      <button class="btn-primary" (click)="updateClass()"
+              [disabled]="processing">
+        {{ processing ? 'Saving...' : 'Save Changes' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Seed Modal -->
+<div class="modal-overlay" *ngIf="showSeedModal" (click)="closeSeedModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>Load Default Classes</h2>
+      <button class="close-btn" (click)="closeSeedModal()">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p>This will create the following classes for
+        <strong>{{ selectedYear }}</strong>:</p>
+      <div class="default-classes-list">
+        <span *ngFor="let cls of defaultClasses" class="class-chip">
+          {{ cls.name }}
+        </span>
+      </div>
+      <p class="help-text">
+        You can edit or delete them individually afterwards.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" (click)="closeSeedModal()"
+              [disabled]="processing">Cancel</button>
+      <button class="btn-primary" (click)="seedDefaultClasses()"
+              [disabled]="processing">
+        <i class="ri-magic-line"></i>
+        {{ processing ? 'Creating...' : 'Create All Classes' }}
+      </button>
+    </div>
+  </div>
+</div>

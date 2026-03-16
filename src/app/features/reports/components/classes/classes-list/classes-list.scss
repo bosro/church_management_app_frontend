@@ -1,0 +1,115 @@
+@use '../../reports-shared' as *;
+
+.classes-container {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.year-filter {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+
+  label { font-size: 13px; font-weight: 500; color: #6B7280; }
+}
+
+.classes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.class-card {
+  background: white;
+  border: 1px solid #E5E7EB;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  transition: box-shadow 0.2s;
+
+  &:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+
+  .class-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+
+    .class-icon {
+      width: 44px;
+      height: 44px;
+      background: #EEF2FF;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #4F46E5;
+      font-size: 20px;
+    }
+
+    .class-actions { display: flex; gap: 6px; }
+  }
+
+  .class-body {
+    h3 { font-size: 16px; font-weight: 600; color: #111827; margin: 0 0 4px; }
+
+    .academic-year {
+      font-size: 12px;
+      color: #9CA3AF;
+      margin: 0 0 6px;
+    }
+
+    .class-teacher {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: #6B7280;
+      margin: 0;
+
+      i { font-size: 14px; }
+    }
+  }
+
+  .class-footer {
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid #F3F4F6;
+
+    .btn-view {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 8px;
+      background: #F9FAFB;
+      border: 1px solid #E5E7EB;
+      border-radius: 8px;
+      font-size: 13px;
+      color: #374151;
+      cursor: pointer;
+      transition: all 0.2s;
+
+      &:hover { background: #EEF2FF; color: #4F46E5; border-color: #C7D2FE; }
+    }
+  }
+}
+
+.default-classes-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+
+  .class-chip {
+    background: #EEF2FF;
+    color: #4F46E5;
+    padding: 4px 12px;
+    border-radius: 100px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+}

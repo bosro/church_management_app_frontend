@@ -165,3 +165,7 @@ export class FinanceRevenueChart implements OnInit, AfterViewInit, OnChanges {
     return `₵${value.toFixed(0)}`;
   }
 }
+
+
+
+

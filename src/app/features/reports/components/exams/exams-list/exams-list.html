@@ -1,0 +1,101 @@
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+  <div class="dashboard-content">
+    <app-header></app-header>
+    <div class="dashboard-body">
+      <div class="exams-container">
+
+        <div class="page-header">
+          <div class="header-left">
+            <button class="back-btn" (click)="router.navigate(['main/reports'])">
+              <i class="ri-arrow-left-line"></i>
+            </button>
+            <div>
+              <h1>Exams</h1>
+              <p class="subtitle">Manage exams and enter results</p>
+            </div>
+          </div>
+          <button class="btn-primary" (click)="createExam()"
+                  *ngIf="permissionService.isAdmin">
+            <i class="ri-add-line"></i>
+            Create Exam
+          </button>
+        </div>
+
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i>
+          {{ errorMessage }}
+        </div>
+
+        <!-- Filters -->
+        <div class="filters-bar">
+          <select [(ngModel)]="selectedYear" (change)="onFilterChange()" class="filter-select">
+            <option *ngFor="let y of academicYears" [value]="y">{{ y }}</option>
+          </select>
+          <select [(ngModel)]="selectedTerm" (change)="onFilterChange()" class="filter-select">
+            <option *ngFor="let t of terms" [value]="t">{{ t }}</option>
+          </select>
+          <select [(ngModel)]="selectedClassId" (change)="onFilterChange()" class="filter-select">
+            <option value="">All Classes</option>
+            <option *ngFor="let c of classes" [value]="c.id">{{ c.name }}</option>
+          </select>
+        </div>
+
+        <!-- Loading -->
+        <div *ngIf="loading" class="loading-container">
+          <div class="spinner"></div>
+          <p>Loading exams...</p>
+        </div>
+
+        <!-- Exams Grid -->
+        <div *ngIf="!loading" class="exams-grid">
+          <div *ngFor="let exam of exams" class="exam-card">
+            <div class="exam-header">
+              <div class="exam-icon">
+                <i class="ri-file-list-line"></i>
+              </div>
+              <span class="published-badge" [class.published]="exam.is_published">
+                {{ exam.is_published ? 'Published' : 'Draft' }}
+              </span>
+            </div>
+
+            <div class="exam-body">
+              <h3>{{ exam.exam_name }}</h3>
+              <p class="exam-class">{{ exam.class?.name }}</p>
+              <div class="exam-meta">
+                <span>
+                  <i class="ri-calendar-line"></i>
+                  {{ exam.exam_date ? (exam.exam_date | date:'MMM d, y') : 'No date set' }}
+                </span>
+                <span>
+                  <i class="ri-award-line"></i>
+                  Total: {{ exam.total_marks }} marks
+                </span>
+              </div>
+            </div>
+
+            <div class="exam-footer">
+              <button class="btn-action" (click)="enterResults(exam.id)"
+                      *ngIf="permissionService.school.exams">
+                <i class="ri-edit-box-line"></i>
+                {{ exam.is_published ? 'View Results' : 'Enter Results' }}
+              </button>
+            </div>
+          </div>
+
+          <div *ngIf="exams.length === 0" class="empty-state">
+            <i class="ri-file-list-line"></i>
+            <h3>No Exams Yet</h3>
+            <p>Create an exam to start entering results</p>
+            <button class="btn-primary" (click)="createExam()"
+                    *ngIf="permissionService.isAdmin">
+              <i class="ri-add-line"></i>
+              Create Exam
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>

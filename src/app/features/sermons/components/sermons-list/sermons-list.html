@@ -14,14 +14,18 @@
             <p class="subtitle">Manage your sermon library</p>
           </div>
           <div class="header-actions">
-            <button class="btn-secondary" (click)="manageSeries()">
-              <i class="ri-folder-line"></i>
-              Manage Series
-            </button>
-            <button class="btn-primary" (click)="createSermon()">
-              <i class="ri-add-line"></i>
-              Upload Sermon
-            </button>
+            <button class="btn-secondary" (click)="manageSeries()"
+        *ngIf="permissionService.isAdmin || permissionService.sermons.edit">
+  <i class="ri-folder-line"></i>
+  Manage Series
+</button>
+
+<!-- Upload Sermon button — upload permission -->
+<button class="btn-primary" (click)="createSermon()"
+        *ngIf="!selectedSeries && (permissionService.isAdmin || permissionService.sermons.upload)">
+  <i class="ri-add-line"></i>
+  Upload Sermon
+</button>
           </div>
         </div>
 
@@ -156,20 +160,26 @@
               </div>
 
               <div class="card-actions">
-                <button
-                  class="btn-icon"
-                  [class.featured]="sermon.is_featured"
-                  (click)="toggleFeatured(sermon, $event)"
-                  [title]="sermon.is_featured ? 'Remove from featured' : 'Add to featured'"
-                >
-                  <i [class]="sermon.is_featured ? 'ri-star-fill' : 'ri-star-line'"></i>
-                </button>
-                <button class="btn-icon" (click)="editSermon(sermon.id, $event)" title="Edit">
-                  <i class="ri-edit-line"></i>
-                </button>
-                <button class="btn-icon btn-danger" (click)="deleteSermon(sermon.id, $event)" title="Delete">
-                  <i class="ri-delete-bin-line"></i>
-                </button>
+               <button class="btn-icon"
+        [class.featured]="sermon.is_featured"
+        (click)="toggleFeatured(sermon, $event)"
+        *ngIf="permissionService.isAdmin || permissionService.sermons.edit"
+        [title]="sermon.is_featured ? 'Remove from featured' : 'Add to featured'">
+  <i [class]="sermon.is_featured ? 'ri-star-fill' : 'ri-star-line'"></i>
+</button>
+
+               <button class="btn-icon" (click)="editSermon(sermon.id, $event)"
+        *ngIf="permissionService.isAdmin || permissionService.sermons.edit"
+        title="Edit">
+  <i class="ri-edit-line"></i>
+</button>
+
+<!-- Delete button — delete permission -->
+<button class="btn-icon btn-danger" (click)="deleteSermon(sermon.id, $event)"
+        *ngIf="permissionService.isAdmin || permissionService.sermons.delete"
+        title="Delete">
+  <i class="ri-delete-bin-line"></i>
+</button>
               </div>
             </div>
           </div>

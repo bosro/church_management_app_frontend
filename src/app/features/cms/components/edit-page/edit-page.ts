@@ -6,6 +6,7 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { CmsService } from '../../services/cms';
 import { CmsPage } from '../../../../models/cms.model';
+import { PermissionService } from '../../../../core/services/permission.service';
 
 @Component({
   selector: 'app-edit-page',
@@ -31,7 +32,8 @@ export class EditPage implements OnInit, OnDestroy {
     private fb: FormBuilder,
     private cmsService: CmsService,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    public permissionService: PermissionService,
   ) {}
 
   ngOnInit(): void {
@@ -53,7 +55,8 @@ export class EditPage implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-    this.canManageContent = this.cmsService.canManageContent();
+    this.canManageContent =
+      this.permissionService.isAdmin || this.permissionService.settings.manage;
 
     if (!this.canManageContent) {
       this.router.navigate(['/unauthorized']);
@@ -62,10 +65,17 @@ export class EditPage implements OnInit, OnDestroy {
 
   private initForm(): void {
     this.pageForm = this.fb.group({
-      title: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(200)]],
+      title: [
+        '',
+        [
+          Validators.required,
+          Validators.minLength(3),
+          Validators.maxLength(200),
+        ],
+      ],
       content: ['', [Validators.required, Validators.minLength(10)]],
       meta_description: ['', [Validators.maxLength(160)]],
-      meta_keywords: ['', [Validators.maxLength(255)]]
+      meta_keywords: ['', [Validators.maxLength(255)]],
     });
   }
 
@@ -86,7 +96,7 @@ export class EditPage implements OnInit, OnDestroy {
           this.errorMessage = error.message || 'Failed to load page';
           this.loadingPage = false;
           console.error('Load page error:', error);
-        }
+        },
       });
   }
 
@@ -95,7 +105,7 @@ export class EditPage implements OnInit, OnDestroy {
       title: page.title,
       content: page.content,
       meta_description: page.meta_description || '',
-      meta_keywords: page.meta_keywords || ''
+      meta_keywords: page.meta_keywords || '',
     });
   }
 
@@ -125,16 +135,19 @@ export class EditPage implements OnInit, OnDestroy {
         },
         error: (error) => {
           this.loading = false;
-          this.errorMessage = error.message || 'Failed to update page. Please try again.';
+          this.errorMessage =
+            error.message || 'Failed to update page. Please try again.';
           this.scrollToTop();
           console.error('Update page error:', error);
-        }
+        },
       });
   }
 
   cancel(): void {
     if (this.pageForm.dirty) {
-      if (confirm('You have unsaved changes. Are you sure you want to leave?')) {
+      if (
+        confirm('You have unsaved changes. Are you sure you want to leave?')
+      ) {
         this.router.navigate(['main/cms/pages']);
       }
     } else {
@@ -143,7 +156,7 @@ export class EditPage implements OnInit, OnDestroy {
   }
 
   private markFormGroupTouched(formGroup: FormGroup): void {
-    Object.keys(formGroup.controls).forEach(key => {
+    Object.keys(formGroup.controls).forEach((key) => {
       const control = formGroup.get(key);
       control?.markAsTouched();
 

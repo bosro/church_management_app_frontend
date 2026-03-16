@@ -6,6 +6,7 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { AttendanceService } from '../../../services/attendance.service';
 import { AttendanceEventType } from '../../../../../models/attendance.model';
+import { PermissionService } from '../../../../../core/services/permission.service';
 
 @Component({
   selector: 'app-create-event',
@@ -35,7 +36,8 @@ export class CreateEvent implements OnInit, OnDestroy {
   constructor(
     private fb: FormBuilder,
     private attendanceService: AttendanceService,
-    private router: Router
+    private router: Router,
+    public permissionService: PermissionService
   ) {}
 
   ngOnInit(): void {
@@ -48,13 +50,15 @@ export class CreateEvent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  private checkPermissions(): void {
-    this.canManageAttendance = this.attendanceService.canManageAttendance();
+ private checkPermissions(): void {
+  this.canManageAttendance =
+    this.permissionService.isAdmin ||
+    this.permissionService.attendance.manage;
 
-    if (!this.canManageAttendance) {
-      this.router.navigate(['/unauthorized']);
-    }
+  if (!this.canManageAttendance) {
+    this.router.navigate(['/unauthorized']);
   }
+}
 
   private initForm(): void {
     const today = new Date().toISOString().split('T')[0];
@@ -177,5 +181,8 @@ export class CreateEvent implements OnInit, OnDestroy {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }
+
+
+
 
 

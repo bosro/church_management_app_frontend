@@ -24,7 +24,8 @@
               <i class="ri-settings-3-line"></i>
               <span>Categories</span>
             </button>
-            <button class="btn-secondary" (click)="viewReports()">
+            <button class="btn-secondary" (click)="viewReports()"
+              *ngIf="permissionService.isAdmin || permissionService.finance.reports">
               <i class="ri-file-chart-line"></i>
               <span>Reports</span>
             </button>
@@ -146,7 +147,7 @@
                 </div>
               </div>
 
-          
+
             </div>
 
             <!-- Right Column -->
@@ -155,22 +156,29 @@
               <div class="content-card">
                 <h3>Quick Actions</h3>
                 <div class="quick-actions-grid">
-                  <button class="action-btn action-green" (click)="recordGiving()">
+                  <button class="action-btn action-green" (click)="recordGiving()"
+                    *ngIf="permissionService.isAdmin || permissionService.finance.record || permissionService.finance.manage">
                     <i class="ri-money-dollar-circle-line"></i>
                     <span>Record Giving</span>
                   </button>
 
-                  <button class="action-btn action-blue" (click)="viewPledges()">
+                  <!-- Pledges — view permission -->
+                  <button class="action-btn action-blue" (click)="viewPledges()"
+                    *ngIf="permissionService.isAdmin || permissionService.finance.view">
                     <i class="ri-hand-heart-line"></i>
                     <span>Pledges</span>
                   </button>
 
-                  <button class="action-btn action-purple" (click)="viewReports()">
+                  <!-- Reports — reports permission -->
+                  <button class="action-btn action-purple" (click)="viewReports()"
+                    *ngIf="permissionService.isAdmin || permissionService.finance.reports">
                     <i class="ri-file-chart-line"></i>
                     <span>Reports</span>
                   </button>
 
-                  <button class="action-btn action-orange" (click)="manageCategories()">
+                  <!-- Categories — manage permission -->
+                  <button class="action-btn action-orange" (click)="manageCategories()"
+                    *ngIf="permissionService.isAdmin || permissionService.finance.manage">
                     <i class="ri-settings-3-line"></i>
                     <span>Categories</span>
                   </button>

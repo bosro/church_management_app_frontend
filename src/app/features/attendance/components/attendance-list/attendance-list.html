@@ -14,15 +14,18 @@
             <p class="subtitle">Manage and track church attendance</p>
           </div>
           <div class="header-actions">
-            <button class="btn-secondary" (click)="viewVisitors()">
+            <button class="btn-secondary" (click)="viewVisitors()"
+              *ngIf="permissionService.isAdmin || permissionService.attendance.view">
               <i class="ri-user-follow-line"></i>
               <span>Visitors</span>
             </button>
-            <button class="btn-secondary" (click)="viewReports()">
+            <button class="btn-secondary" (click)="viewReports()"
+              *ngIf="permissionService.isAdmin || permissionService.attendance.reports">
               <i class="ri-file-chart-line"></i>
               <span>Reports</span>
             </button>
-            <button class="btn-primary" (click)="createEvent()">
+
+            <button class="btn-primary" (click)="createEvent()" *ngIf="canManageAttendance">
               <i class="ri-add-line"></i>
               <span>Create Event</span>
             </button>
@@ -76,12 +79,7 @@
         <div class="filters-card">
           <div class="filter-group">
             <label for="eventType">Event Type</label>
-            <select
-              id="eventType"
-              [(ngModel)]="selectedEventType"
-              (change)="onEventTypeChange()"
-              class="filter-select"
-            >
+            <select id="eventType" [(ngModel)]="selectedEventType" (change)="onEventTypeChange()" class="filter-select">
               <option *ngFor="let type of eventTypes" [value]="type.value">
                 {{ type.label }}
               </option>
@@ -96,28 +94,19 @@
 
         <!-- Events List -->
         <div *ngIf="!loading" class="events-grid">
-          <div
-            *ngFor="let event of events"
-            class="event-card"
-            (click)="viewEvent(event.id)"
-          >
+          <div *ngFor="let event of events" class="event-card" (click)="viewEvent(event.id)">
             <div class="event-header">
               <div class="event-type-badge" [ngClass]="getEventTypeClass(event.event_type)">
                 {{ getEventTypeLabel(event.event_type) }}
               </div>
               <div class="event-actions">
-                <button
-                  class="btn-icon-small"
-                  (click)="markAttendance(event.id, $event)"
-                  title="Mark Attendance"
-                >
+                <button class="btn-icon-small" (click)="markAttendance(event.id, $event)" *ngIf="canMarkAttendance"
+                  title="Mark Attendance">
                   <i class="ri-checkbox-line"></i>
                 </button>
-                <button
-                  class="btn-icon-small btn-danger"
-                  (click)="deleteEvent(event.id, $event)"
-                  title="Delete"
-                >
+
+                <button class="btn-icon-small btn-danger" (click)="deleteEvent(event.id, $event)"
+                  *ngIf="canManageAttendance" title="Delete">
                   <i class="ri-delete-bin-line"></i>
                 </button>
               </div>
@@ -173,11 +162,8 @@
                   </span>
                 </div>
                 <div class="rate-bar">
-                  <div
-                    class="rate-fill"
-                    [ngClass]="getAttendanceRateClass(calculateAttendanceRate(event))"
-                    [style.width.%]="calculateAttendanceRate(event)"
-                  ></div>
+                  <div class="rate-fill" [ngClass]="getAttendanceRateClass(calculateAttendanceRate(event))"
+                    [style.width.%]="calculateAttendanceRate(event)"></div>
                 </div>
               </div>
             </div>
@@ -197,11 +183,7 @@
 
         <!-- Pagination -->
         <div class="pagination" *ngIf="totalPages > 1 && !loading">
-          <button
-            class="pagination-btn"
-            [disabled]="currentPage === 1"
-            (click)="previousPage()"
-          >
+          <button class="pagination-btn" [disabled]="currentPage === 1" (click)="previousPage()">
             <i class="ri-arrow-left-s-line"></i>
             Previous
           </button>
@@ -212,11 +194,7 @@
             </span>
           </div>
 
-          <button
-            class="pagination-btn"
-            [disabled]="currentPage === totalPages"
-            (click)="nextPage()"
-          >
+          <button class="pagination-btn" [disabled]="currentPage === totalPages" (click)="nextPage()">
             Next
             <i class="ri-arrow-right-s-line"></i>
           </button>
@@ -225,5 +203,3 @@
     </div>
   </div>
 </div>
-
-

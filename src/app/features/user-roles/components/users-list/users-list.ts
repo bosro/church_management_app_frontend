@@ -5,6 +5,7 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { UserRolesService } from '../../services/user-roles';
 import { AuthService } from '../../../../core/services/auth';
+import { PermissionService } from '../../../../core/services/permission.service';
 
 @Component({
   selector: 'app-users-list',
@@ -33,7 +34,8 @@ export class UsersList implements OnInit, OnDestroy {
   constructor(
     private userRolesService: UserRolesService,
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+      public permissionService: PermissionService
   ) {}
 
   ngOnInit(): void {
@@ -46,14 +48,14 @@ export class UsersList implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  private checkPermissions(): void {
-    this.canManageRoles = this.userRolesService.canManageRoles();
-    this.canManagePermissions = this.userRolesService.canManagePermissions();
+ private checkPermissions(): void {
+  this.canManageRoles = this.userRolesService.canManageRoles();
+  this.canManagePermissions = this.userRolesService.canManagePermissions();
 
-    if (!this.canManageRoles && !this.canManagePermissions) {
-      this.router.navigate(['/unauthorized']);
-    }
+  if (!this.canManageRoles && !this.canManagePermissions) {
+    this.router.navigate(['/unauthorized']);
   }
+}
 
   loadUsers(): void {
     this.loading = true;
@@ -109,7 +111,7 @@ export class UsersList implements OnInit, OnDestroy {
   createUser(): void {
   this.router.navigate(['main/user-roles/create']);
 }
- 
+
 
   nextPage(): void {
     if (this.currentPage < this.totalPages) {

@@ -5,6 +5,7 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { AttendanceService } from '../../services/attendance.service';
 import { AttendanceEvent, AttendanceEventType, AttendanceStatistics } from '../../../../models/attendance.model';
+import { PermissionService } from '../../../../core/services/permission.service';
 
 @Component({
   selector: 'app-attendance-list',
@@ -45,7 +46,8 @@ export class AttendanceList implements OnInit, OnDestroy {
 
   constructor(
     private attendanceService: AttendanceService,
-    private router: Router
+    private router: Router,
+    public permissionService: PermissionService
   ) {}
 
   ngOnInit(): void {
@@ -60,13 +62,20 @@ export class AttendanceList implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-    this.canManageAttendance = this.attendanceService.canManageAttendance();
-    this.canMarkAttendance = this.attendanceService.canMarkAttendance();
-
-    if (!this.attendanceService.canViewAttendance()) {
-      this.router.navigate(['/unauthorized']);
-    }
+  if (
+    !this.permissionService.isAdmin &&
+    !this.permissionService.attendance.view
+  ) {
+    this.router.navigate(['/unauthorized']);
+    return;
   }
+  this.canManageAttendance =
+    this.permissionService.isAdmin ||
+    this.permissionService.attendance.manage;
+  this.canMarkAttendance =
+    this.permissionService.isAdmin ||
+    this.permissionService.attendance.checkin;
+}
 
   loadEvents(): void {
     this.loading = true;
@@ -229,3 +238,5 @@ export class AttendanceList implements OnInit, OnDestroy {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }
+
+

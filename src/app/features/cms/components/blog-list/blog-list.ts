@@ -5,6 +5,7 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { CmsService } from '../../services/cms';
 import { BlogPost, BLOG_CATEGORIES } from '../../../../models/cms.model';
+import { PermissionService } from '../../../../core/services/permission.service';
 
 @Component({
   selector: 'app-blog-list',
@@ -34,7 +35,8 @@ export class BlogList implements OnInit, OnDestroy {
 
   constructor(
     private cmsService: CmsService,
-    private router: Router
+    private router: Router,
+    public permissionService: PermissionService,
   ) {}
 
   ngOnInit(): void {
@@ -48,10 +50,16 @@ export class BlogList implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-    this.canManageContent = this.cmsService.canManageContent();
-    this.canPublishContent = this.cmsService.canPublishContent();
+    const canView =
+      this.permissionService.isAdmin || this.permissionService.settings.view;
 
-    if (!this.cmsService.canViewContent()) {
+    this.canManageContent =
+      this.permissionService.isAdmin || this.permissionService.settings.manage;
+
+    this.canPublishContent =
+      this.permissionService.isAdmin || this.permissionService.settings.manage;
+
+    if (!canView) {
       this.router.navigate(['/unauthorized']);
     }
   }
@@ -78,7 +86,7 @@ export class BlogList implements OnInit, OnDestroy {
           this.errorMessage = error.message || 'Failed to load blog posts';
           this.loading = false;
           console.error('Error loading blog posts:', error);
-        }
+        },
       });
   }
 
@@ -125,7 +133,8 @@ export class BlogList implements OnInit, OnDestroy {
     event.stopPropagation();
 
     if (!this.canPublishContent) {
-      this.errorMessage = 'You do not have permission to publish/unpublish blog posts';
+      this.errorMessage =
+        'You do not have permission to publish/unpublish blog posts';
       this.scrollToTop();
       return;
     }
@@ -148,7 +157,7 @@ export class BlogList implements OnInit, OnDestroy {
         this.errorMessage = error.message || `Failed to ${action} blog post`;
         this.scrollToTop();
         console.error(`${action} error:`, error);
-      }
+      },
     });
   }
 
@@ -161,7 +170,7 @@ export class BlogList implements OnInit, OnDestroy {
       return;
     }
 
-    const post = this.blogPosts.find(p => p.id === postId);
+    const post = this.blogPosts.find((p) => p.id === postId);
     if (!post) return;
 
     const confirmMessage = post.is_published
@@ -188,7 +197,7 @@ export class BlogList implements OnInit, OnDestroy {
           this.errorMessage = error.message || 'Failed to delete blog post';
           this.scrollToTop();
           console.error('Delete error:', error);
-        }
+        },
       });
   }
 

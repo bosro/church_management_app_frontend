@@ -4,7 +4,11 @@ import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { MinistryService } from '../../services/ministry.service';
-import { Ministry, MinistryStatistics } from '../../../../models/ministry.model';
+import {
+  Ministry,
+  MinistryStatistics,
+} from '../../../../models/ministry.model';
+import { PermissionService } from '../../../../core/services/permission.service';
 
 @Component({
   selector: 'app-ministry-list',
@@ -35,7 +39,8 @@ export class MinistryList implements OnInit, OnDestroy {
 
   constructor(
     private ministryService: MinistryService,
-    private router: Router
+    private router: Router,
+    public permissionService: PermissionService,
   ) {}
 
   ngOnInit(): void {
@@ -50,8 +55,12 @@ export class MinistryList implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-    this.canManageMinistries = this.ministryService.canManageMinistries();
-    this.canViewMinistries = this.ministryService.canViewMinistries();
+    this.canViewMinistries =
+      this.permissionService.isAdmin || this.permissionService.ministries.view;
+
+    this.canManageMinistries =
+      this.permissionService.isAdmin ||
+      this.permissionService.ministries.manage;
 
     if (!this.canViewMinistries) {
       this.router.navigate(['/unauthorized']);
@@ -76,7 +85,7 @@ export class MinistryList implements OnInit, OnDestroy {
           this.errorMessage = error.message || 'Failed to load ministries';
           this.loading = false;
           console.error('Error loading ministries:', error);
-        }
+        },
       });
   }
 
@@ -91,7 +100,7 @@ export class MinistryList implements OnInit, OnDestroy {
         error: (error) => {
           console.error('Error loading statistics:', error);
           // Don't show error to user for statistics failure
-        }
+        },
       });
   }
 
@@ -129,13 +138,14 @@ export class MinistryList implements OnInit, OnDestroy {
       return;
     }
 
-    const ministry = this.ministries.find(m => m.id === ministryId);
+    const ministry = this.ministries.find((m) => m.id === ministryId);
     if (!ministry) return;
 
     let confirmMessage = `Are you sure you want to delete "${ministry.name}"?`;
 
     if (ministry.member_count && ministry.member_count > 0) {
-      confirmMessage = `"${ministry.name}" has ${ministry.member_count} members. ` +
+      confirmMessage =
+        `"${ministry.name}" has ${ministry.member_count} members. ` +
         `Please remove all members before deleting the ministry.`;
       alert(confirmMessage);
       return;
@@ -162,7 +172,7 @@ export class MinistryList implements OnInit, OnDestroy {
           this.errorMessage = error.message || 'Failed to delete ministry';
           this.scrollToTop();
           console.error('Error deleting ministry:', error);
-        }
+        },
       });
   }
 

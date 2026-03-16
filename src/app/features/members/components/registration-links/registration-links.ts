@@ -8,6 +8,7 @@ import {
   RegistrationLink,
 } from '../../services/registration-link.service';
 import { AuthService } from '../../../../core/services/auth';
+import { PermissionService } from '../../../../core/services/permission.service';
 
 @Component({
   selector: 'app-registration-links',
@@ -41,6 +42,7 @@ export class RegistrationLinks implements OnInit, OnDestroy {
     private linkService: RegistrationLinkService,
     private authService: AuthService,
     private router: Router,
+    public permissionService: PermissionService,
   ) {}
 
   ngOnInit(): void {
@@ -54,8 +56,8 @@ export class RegistrationLinks implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-    const adminRoles = ['super_admin', 'church_admin'];
-    this.canManageLinks = this.authService.hasRole(adminRoles);
+    this.canManageLinks =
+      this.permissionService.isAdmin || this.permissionService.members.import; // import permission covers link creation
 
     if (!this.canManageLinks) {
       this.router.navigate(['/unauthorized']);
@@ -125,17 +127,17 @@ export class RegistrationLinks implements OnInit, OnDestroy {
   }
 
   copyToClipboard(text: string): void {
-  navigator.clipboard
-    .writeText(text)
-    .then(() => {
-      this.successMessage = 'Link copied to clipboard!';
-      setTimeout(() => (this.successMessage = ''), 3000);
-    })
-    .catch(() => {
-      this.errorMessage = 'Failed to copy link';
-      setTimeout(() => (this.errorMessage = ''), 3000);
-    });
-}
+    navigator.clipboard
+      .writeText(text)
+      .then(() => {
+        this.successMessage = 'Link copied to clipboard!';
+        setTimeout(() => (this.successMessage = ''), 3000);
+      })
+      .catch(() => {
+        this.errorMessage = 'Failed to copy link';
+        setTimeout(() => (this.errorMessage = ''), 3000);
+      });
+  }
 
   showQRCode(link: any) {
     const fullUrl = `${window.location.origin}/register/${link.link_token}`;
@@ -235,5 +237,3 @@ export class RegistrationLinks implements OnInit, OnDestroy {
     this.router.navigate(['main/members']);
   }
 }
-
-

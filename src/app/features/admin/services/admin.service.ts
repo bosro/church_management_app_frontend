@@ -245,4 +245,17 @@ export class AdminService {
   deleteChurch(churchId: string): Observable<any> {
     return this.updateChurch(churchId, { is_active: false });
   }
+
+  clearUserPermissions(userId: string): Observable<void> {
+  return from(
+    this.supabase.client
+      .from('user_permissions')
+      .delete()
+      .eq('user_id', userId)
+  ).pipe(
+    map(({ error }) => {
+      if (error) throw error;
+    })
+  );
+}
 }

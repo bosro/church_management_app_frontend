@@ -8,6 +8,7 @@ import { DashboardSummary } from '../../../../models/statistics.model';
 import { SupabaseService } from '../../../../core/services/supabase';
 import { AuthService } from '../../../../core/services/auth';
 import { EventsService } from '../../../events/services/events'; // ✅ ADD THIS
+import { PermissionService } from '../../../../core/services/permission.service';
 
 interface UpcomingBirthday {
   id: string;
@@ -71,6 +72,7 @@ export class Overview implements OnInit, OnDestroy {
     private authService: AuthService,
     private eventsService: EventsService, // ✅ ADD THIS
     private router: Router,
+    public permissionService: PermissionService,
   ) {}
 
   ngOnInit(): void {
@@ -112,18 +114,46 @@ export class Overview implements OnInit, OnDestroy {
     const adminRoles = ['super_admin', 'church_admin', 'pastor'];
     const financeRoles = ['super_admin', 'church_admin', 'finance_officer'];
 
-    this.canAddMembers = this.authService.hasRole(adminRoles);
-    this.canCheckIn = this.authService.hasRole([...adminRoles, 'group_leader']);
-    this.canCreateEvent = this.authService.hasRole(adminRoles);
-    this.canRecordGiving = this.authService.hasRole(financeRoles);
-    this.canViewAge = this.authService.hasRole(adminRoles);
-    this.canViewRevenue = this.authService.hasRole([
-      ...adminRoles,
-      ...financeRoles,
-    ]);
-    this.canViewQuickActions = !this.authService.hasRole(['member']);
-    this.canViewAllEvents = this.authService.hasRole(adminRoles);
-    this.canViewAllBirthdays = this.authService.hasRole(adminRoles); // ✅ NEW
+    // Role-based OR permission-based — sub-users with granted permissions get access too
+    this.canAddMembers =
+      this.authService.hasRole(adminRoles) ||
+      this.permissionService.members.create;
+
+    this.canCheckIn =
+      this.authService.hasRole([...adminRoles, 'group_leader']) ||
+      this.permissionService.attendance.checkin;
+
+    this.canCreateEvent =
+      this.authService.hasRole(adminRoles) ||
+      this.permissionService.events.create;
+
+    this.canRecordGiving =
+      this.authService.hasRole(financeRoles) ||
+      this.permissionService.finance.record;
+
+    this.canViewAge =
+      this.authService.hasRole(adminRoles) ||
+      this.permissionService.members.view;
+
+    this.canViewRevenue =
+      this.authService.hasRole([...adminRoles, ...financeRoles]) ||
+      this.permissionService.finance.view;
+
+    this.canViewQuickActions =
+      !this.authService.hasRole(['member']) ||
+      this.permissionService.isAdmin ||
+      this.canAddMembers ||
+      this.canCheckIn ||
+      this.canCreateEvent ||
+      this.canRecordGiving;
+
+    this.canViewAllEvents =
+      this.authService.hasRole(adminRoles) ||
+      this.permissionService.events.view;
+
+    this.canViewAllBirthdays =
+      this.authService.hasRole(adminRoles) ||
+      this.permissionService.members.view;
   }
 
   private async loadDashboardData(): Promise<void> {
@@ -176,43 +206,44 @@ export class Overview implements OnInit, OnDestroy {
 
   // ✅ FIXED: Use EventsService instead of direct query
   private loadUpcomingEvents(): Promise<void> {
-  console.log('📅 Loading upcoming events for dashboard...');
+    console.log('📅 Loading upcoming events for dashboard...');
 
-  return new Promise((resolve) => {
-    this.eventsService
-      .getUpcomingEvents(5)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (events) => {
-          console.log('✅ Events loaded successfully:', events.length);
+    return new Promise((resolve) => {
+      this.eventsService
+        .getUpcomingEvents(5)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (events) => {
+            console.log('✅ Events loaded successfully:', events.length);
 
-          this.upcomingEvents = events.map((event: any) => ({
-            id: event.id,
-            title: event.title,
-            date: this.formatDateWithoutYear(event.start_date),
-            time: event.start_time || this.extractTime(event.start_date) || 'TBA',
-            location: event.location || 'TBA',
-            type: event.category || 'other',
-            attendees: event.max_attendees,
-          }));
+            this.upcomingEvents = events.map((event: any) => ({
+              id: event.id,
+              title: event.title,
+              date: this.formatDateWithoutYear(event.start_date),
+              time:
+                event.start_time || this.extractTime(event.start_date) || 'TBA',
+              location: event.location || 'TBA',
+              type: event.category || 'other',
+              attendees: event.max_attendees,
+            }));
 
-          console.log('📅 Formatted events:', this.upcomingEvents);
-          resolve();
-        },
-        error: (error) => {
-          console.error('❌ Error loading events:', {
-            error,
-            message: error?.message,
-            churchId: this.churchId,
-            userRole: this.userRole
-          });
+            console.log('📅 Formatted events:', this.upcomingEvents);
+            resolve();
+          },
+          error: (error) => {
+            console.error('❌ Error loading events:', {
+              error,
+              message: error?.message,
+              churchId: this.churchId,
+              userRole: this.userRole,
+            });
 
-          this.upcomingEvents = [];
-          resolve(); // Don't reject - just show empty
-        },
-      });
-  });
-}
+            this.upcomingEvents = [];
+            resolve(); // Don't reject - just show empty
+          },
+        });
+    });
+  }
 
   // ✅ ADD: Helper to extract time from datetime string
   private extractTime(datetime: string): string {

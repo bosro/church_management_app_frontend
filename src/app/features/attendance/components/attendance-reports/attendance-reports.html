@@ -18,7 +18,8 @@
               <p class="subtitle">View and analyze attendance trends</p>
             </div>
           </div>
-          <button class="btn-primary" (click)="exportReport()">
+          <button class="btn-primary" (click)="exportReport()"
+            *ngIf="permissionService.isAdmin || permissionService.attendance.reports">
             <i class="ri-download-line"></i>
             Export Report
           </button>
@@ -37,20 +38,12 @@
             <div class="filter-grid">
               <div class="form-group">
                 <label for="start_date">Start Date</label>
-                <input
-                  id="start_date"
-                  type="date"
-                  formControlName="start_date"
-                />
+                <input id="start_date" type="date" formControlName="start_date" />
               </div>
 
               <div class="form-group">
                 <label for="end_date">End Date</label>
-                <input
-                  id="end_date"
-                  type="date"
-                  formControlName="end_date"
-                />
+                <input id="end_date" type="date" formControlName="end_date" />
               </div>
 
               <div class="form-group">
@@ -162,11 +155,8 @@
                   <td>
                     <div class="attendance-rate">
                       <div class="rate-bar">
-                        <div
-                          class="rate-fill"
-                          [style.width.%]="report.attendance_rate"
-                          [style.background]="getAttendanceColor(report.attendance_rate)"
-                        ></div>
+                        <div class="rate-fill" [style.width.%]="report.attendance_rate"
+                          [style.background]="getAttendanceColor(report.attendance_rate)"></div>
                       </div>
                       <span class="rate-text">{{ report.attendance_rate }}%</span>
                     </div>
@@ -191,5 +181,3 @@
     </div>
   </div>
 </div>
-
-

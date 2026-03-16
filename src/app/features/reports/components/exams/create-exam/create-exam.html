@@ -1,0 +1,105 @@
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+  <div class="dashboard-content">
+    <app-header></app-header>
+    <div class="dashboard-body">
+      <div class="form-container">
+
+        <div class="page-header">
+          <div class="header-left">
+            <button class="back-btn" (click)="cancel()">
+              <i class="ri-arrow-left-line"></i>
+            </button>
+            <div>
+              <h1>Create Exam</h1>
+              <p class="subtitle">Set up a new exam</p>
+            </div>
+          </div>
+        </div>
+
+        <div *ngIf="successMessage" class="success-alert">
+          <i class="ri-checkbox-circle-line"></i>
+          {{ successMessage }}
+        </div>
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i>
+          {{ errorMessage }}
+        </div>
+
+        <div class="form-card">
+          <form [formGroup]="examForm" (ngSubmit)="onSubmit()">
+            <div class="form-section">
+              <h3>Exam Details</h3>
+              <div class="form-grid">
+                <div class="form-group full-width">
+                  <label>Exam Name *</label>
+                  <input type="text" formControlName="exam_name"
+                         placeholder="e.g., Mid-Term Examination, End of Term Exam"
+                         [class.error]="examForm.get('exam_name')?.invalid &&
+                                        examForm.get('exam_name')?.touched" />
+                  <span class="error-message">{{ getError('exam_name') }}</span>
+                </div>
+
+                <div class="form-group">
+                  <label>Class *</label>
+                  <select formControlName="class_id"
+                          [class.error]="examForm.get('class_id')?.invalid &&
+                                         examForm.get('class_id')?.touched">
+                    <option value="">Select Class</option>
+                    <option *ngFor="let c of classes" [value]="c.id">
+                      {{ c.name }}
+                    </option>
+                  </select>
+                  <span class="error-message">{{ getError('class_id') }}</span>
+                </div>
+
+                <div class="form-group">
+                  <label>Academic Year *</label>
+                  <select formControlName="academic_year">
+                    <option *ngFor="let y of academicYears" [value]="y">{{ y }}</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label>Term *</label>
+                  <select formControlName="term">
+                    <option *ngFor="let t of terms" [value]="t">{{ t }}</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label>Exam Date</label>
+                  <input type="date" formControlName="exam_date" />
+                </div>
+
+                <div class="form-group">
+                  <label>Total Marks *</label>
+                  <input type="number" formControlName="total_marks"
+                         min="1" placeholder="100"
+                         [class.error]="examForm.get('total_marks')?.invalid &&
+                                        examForm.get('total_marks')?.touched" />
+                  <span class="error-message">{{ getError('total_marks') }}</span>
+                  <p class="help-text">Maximum marks for each subject</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button type="button" class="btn-secondary"
+                      (click)="cancel()" [disabled]="loading">Cancel</button>
+              <button type="submit" class="btn-primary" [disabled]="loading">
+                <span *ngIf="!loading">
+                  <i class="ri-save-line"></i> Create & Enter Results
+                </span>
+                <span *ngIf="loading">
+                  <i class="ri-loader-4-line spin"></i> Creating...
+                </span>
+              </button>
+            </div>
+          </form>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>

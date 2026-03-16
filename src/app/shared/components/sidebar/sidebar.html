@@ -50,6 +50,13 @@
           <i [class]="item.icon"></i>
           <span>{{ item.label }}</span>
         </li>
+
+        <li *ngIf="authService.hasChurchFeature('reports')">
+  <a routerLink="main/reports">
+    <i class="ri-bar-chart-line"></i>
+    <span>Reports</span>
+  </a>
+</li>
       </ng-container>
     </ul>
   </nav>

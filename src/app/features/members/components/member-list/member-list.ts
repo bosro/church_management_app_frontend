@@ -11,6 +11,7 @@ import {
   MemberSearchFilters,
   MemberStatistics,
 } from '../../../../models/member.model';
+import { PermissionService } from '../../../../core/services/permission.service';
 
 @Component({
   selector: 'app-member-list',
@@ -58,6 +59,7 @@ export class MemberList implements OnInit, OnDestroy {
     private router: Router,
     private route: ActivatedRoute,
     private fb: FormBuilder,
+    public permissionService: PermissionService,
   ) {}
 
   ngOnInit(): void {
@@ -91,19 +93,19 @@ export class MemberList implements OnInit, OnDestroy {
   }
 
   private setPermissions(): void {
-    const adminRoles = ['super_admin', 'church_admin', 'pastor'];
-    const editRoles = ['super_admin', 'church_admin', 'pastor', 'group_leader'];
+    this.canAddMember =
+      this.permissionService.isAdmin || this.permissionService.members.create;
 
-    this.canAddMember = this.authService.hasRole(adminRoles);
-    this.canEditMember = this.authService.hasRole(editRoles);
-    this.canDeleteMember = this.authService.hasRole([
-      'super_admin',
-      'church_admin',
-    ]);
-    this.canImportExport = this.authService.hasRole([
-      'super_admin',
-      'church_admin',
-    ]);
+    this.canEditMember =
+      this.permissionService.isAdmin || this.permissionService.members.edit;
+
+    this.canDeleteMember =
+      this.permissionService.isAdmin || this.permissionService.members.delete;
+
+    this.canImportExport =
+      this.permissionService.isAdmin ||
+      this.permissionService.members.export ||
+      this.permissionService.members.import;
   }
 
   private initFilterForm(): void {

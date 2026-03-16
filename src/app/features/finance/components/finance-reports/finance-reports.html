@@ -22,16 +22,16 @@
         </div>
 
         <!-- Success Message -->
-<div *ngIf="successMessage" class="success-alert">
-  <i class="ri-checkbox-circle-line"></i>
-  <span>{{ successMessage }}</span>
-</div>
+        <div *ngIf="successMessage" class="success-alert">
+          <i class="ri-checkbox-circle-line"></i>
+          <span>{{ successMessage }}</span>
+        </div>
 
-<!-- Error Message -->
-<div *ngIf="errorMessage" class="error-alert">
-  <i class="ri-error-warning-line"></i>
-  <span>{{ errorMessage }}</span>
-</div>
+        <!-- Error Message -->
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i>
+          <span>{{ errorMessage }}</span>
+        </div>
 
         <!-- Loading State -->
         <div *ngIf="loading" class="loading-container">
@@ -129,10 +129,12 @@
                   </div>
                 </div>
 
-                <button class="btn-export" (click)="exportGivingReport()">
+                <button class="btn-export" (click)="exportGivingReport()"
+                  *ngIf="permissionService.isAdmin || permissionService.finance.reports">
                   <i class="ri-download-line"></i>
                   Export CSV
                 </button>
+
               </div>
 
               <!-- Pledges Report -->
@@ -145,7 +147,8 @@
 
                 <div class="spacer"></div>
 
-                <button class="btn-export" (click)="exportPledgesReport()">
+                <button class="btn-export" (click)="exportPledgesReport()"
+                  *ngIf="permissionService.isAdmin || permissionService.finance.reports">
                   <i class="ri-download-line"></i>
                   Export CSV
                 </button>
@@ -164,7 +167,8 @@
                   </div>
                   <div class="giver-info">
                     <p class="giver-name">{{ giver.member_name }}</p>
-                    <p class="giver-count">{{ giver.transaction_count }} transaction{{ giver.transaction_count > 1 ? 's' : '' }}</p>
+                    <p class="giver-count">{{ giver.transaction_count }} transaction{{ giver.transaction_count > 1 ? 's'
+                      : '' }}</p>
                   </div>
                   <div class="giver-amount">
                     <p class="amount">{{ formatCurrency(giver.total_amount) }}</p>

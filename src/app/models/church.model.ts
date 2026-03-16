@@ -15,6 +15,7 @@ export interface Church {
   currency?: string;
   is_active: boolean;
   subscription_tier?: string;
+  enabled_features?: string[];
   created_at?: string;
   updated_at?: string;
 }

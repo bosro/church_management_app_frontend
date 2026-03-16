@@ -251,6 +251,22 @@
         />
       </div>
 
+      <div class="form-group">
+  <label>Enabled Features</label>
+  <div class="feature-toggles">
+    <label class="checkbox-label">
+      <input type="checkbox"
+             [checked]="churchForm.enabled_features?.includes('reports')"
+             (change)="toggleFeature('reports', $event)" />
+      <span>Reports Module</span>
+    </label>
+    <!-- add more features here as you build them -->
+  </div>
+  <small class="help-text">
+    Enable or disable entire modules for this church
+  </small>
+</div>
+
       <div *ngIf="errorMessage" class="alert alert-error">
         <i class="ri-error-warning-line"></i>
         <span>{{ errorMessage }}</span>

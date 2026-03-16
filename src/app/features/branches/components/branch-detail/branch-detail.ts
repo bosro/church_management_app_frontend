@@ -7,6 +7,7 @@ import { BranchesService } from '../../services/branches';
 import { MemberService } from '../../../members/services/member.service';
 import { Branch, BranchMember } from '../../../../models/branch.model';
 import { Member } from '../../../../models/member.model';
+import { PermissionService } from '../../../../core/services/permission.service';
 
 @Component({
   selector: 'app-branch-detail',
@@ -46,6 +47,7 @@ export class BranchDetail implements OnInit, OnDestroy {
     private membersService: MemberService,
     private router: Router,
     private route: ActivatedRoute,
+    public permissionService: PermissionService,
   ) {}
 
   ngOnInit(): void {
@@ -67,10 +69,16 @@ export class BranchDetail implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-    this.canManageBranches = this.branchesService.canManageBranches();
-    this.canAssignMembers = this.branchesService.canAssignMembers();
+    this.canManageBranches =
+      this.permissionService.isAdmin || this.permissionService.branches.manage;
 
-    if (!this.branchesService.canViewBranches()) {
+    this.canAssignMembers =
+      this.permissionService.isAdmin || this.permissionService.branches.assign;
+
+    const canView =
+      this.permissionService.isAdmin || this.permissionService.branches.view;
+
+    if (!canView) {
       this.router.navigate(['/unauthorized']);
     }
   }
@@ -208,7 +216,9 @@ export class BranchDetail implements OnInit, OnDestroy {
       return;
     }
 
-    if (!confirm('Are you sure you want to remove this member from the branch?')) {
+    if (
+      !confirm('Are you sure you want to remove this member from the branch?')
+    ) {
       return;
     }
 
@@ -255,7 +265,7 @@ export class BranchDetail implements OnInit, OnDestroy {
       const parts = [
         branchMember.member.first_name,
         branchMember.member.middle_name,
-        branchMember.member.last_name
+        branchMember.member.last_name,
       ].filter(Boolean);
       return parts.join(' ');
     }

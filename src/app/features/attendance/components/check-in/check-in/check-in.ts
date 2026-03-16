@@ -5,7 +5,7 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { AttendanceEvent } from '../../../../../models/attendance.model';
 import { AttendanceService } from '../../../services/attendance.service';
-
+import { PermissionService } from '../../../../../core/services/permission.service';
 
 @Component({
   selector: 'app-check-in',
@@ -29,7 +29,8 @@ export class CheckIn implements OnInit, OnDestroy {
 
   constructor(
     private attendanceService: AttendanceService,
-    private router: Router
+    private router: Router,
+    public permissionService: PermissionService,
   ) {}
 
   ngOnInit(): void {
@@ -43,7 +44,17 @@ export class CheckIn implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-    this.canCreateEvent = this.attendanceService.canManageAttendance();
+    if (
+      !this.permissionService.isAdmin &&
+      !this.permissionService.attendance.view &&
+      !this.permissionService.attendance.checkin
+    ) {
+      this.router.navigate(['/unauthorized']);
+      return;
+    }
+    this.canCreateEvent =
+      this.permissionService.isAdmin ||
+      this.permissionService.attendance.manage;
   }
 
   private loadEvents(): void {
@@ -66,7 +77,7 @@ export class CheckIn implements OnInit, OnDestroy {
     this.attendanceService
       .getAttendanceEvents(1, 50, {
         startDate: weekAgoStr,
-        endDate: weekLaterStr
+        endDate: weekLaterStr,
       })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
@@ -88,24 +99,28 @@ export class CheckIn implements OnInit, OnDestroy {
           this.hasError = true;
           this.errorMessage = error.message || 'Failed to load events';
           console.error('Error loading events:', error);
-        }
+        },
       });
   }
 
   private categorizeEvents(events: AttendanceEvent[], todayStr: string): void {
     const today = new Date(todayStr);
 
-    this.todayEvents = events.filter(e => e.event_date === todayStr);
+    this.todayEvents = events.filter((e) => e.event_date === todayStr);
 
-    this.upcomingEvents = events.filter(e => {
-      const eventDate = new Date(e.event_date);
-      return eventDate > today;
-    }).slice(0, 5); // Limit to 5 upcoming events
+    this.upcomingEvents = events
+      .filter((e) => {
+        const eventDate = new Date(e.event_date);
+        return eventDate > today;
+      })
+      .slice(0, 5); // Limit to 5 upcoming events
 
-    this.recentEvents = events.filter(e => {
-      const eventDate = new Date(e.event_date);
-      return eventDate < today;
-    }).slice(0, 5); // Limit to 5 recent events
+    this.recentEvents = events
+      .filter((e) => {
+        const eventDate = new Date(e.event_date);
+        return eventDate < today;
+      })
+      .slice(0, 5); // Limit to 5 recent events
   }
 
   goToMarkAttendance(eventId: string): void {
@@ -144,7 +159,20 @@ export class CheckIn implements OnInit, OnDestroy {
       return 'Yesterday';
     }
 
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
     const day = date.getDate();
     const month = months[date.getMonth()];
     const year = date.getFullYear();
@@ -170,7 +198,7 @@ export class CheckIn implements OnInit, OnDestroy {
       midweek_service: 'Midweek Service',
       ministry_meeting: 'Ministry Meeting',
       special_event: 'Special Event',
-      prayer_meeting: 'Prayer Meeting'
+      prayer_meeting: 'Prayer Meeting',
     };
     return labels[eventType] || eventType;
   }
@@ -181,7 +209,7 @@ export class CheckIn implements OnInit, OnDestroy {
       midweek_service: 'type-midweek',
       ministry_meeting: 'type-ministry',
       special_event: 'type-special',
-      prayer_meeting: 'type-prayer'
+      prayer_meeting: 'type-prayer',
     };
     return classes[eventType] || '';
   }

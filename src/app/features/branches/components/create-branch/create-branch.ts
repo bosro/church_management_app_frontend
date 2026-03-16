@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { BranchesService } from '../../services/branches';
+import { PermissionService } from '../../../../core/services/permission.service';
 
 @Component({
   selector: 'app-create-branch',
@@ -26,7 +27,8 @@ export class CreateBranch implements OnInit, OnDestroy {
   constructor(
     private fb: FormBuilder,
     private branchesService: BranchesService,
-    private router: Router
+    private router: Router,
+      public permissionService: PermissionService
   ) {}
 
   ngOnInit(): void {
@@ -39,13 +41,15 @@ export class CreateBranch implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  private checkPermissions(): void {
-    this.canManageBranches = this.branchesService.canManageBranches();
+ private checkPermissions(): void {
+  this.canManageBranches =
+    this.permissionService.isAdmin ||
+    this.permissionService.branches.manage;
 
-    if (!this.canManageBranches) {
-      this.router.navigate(['/unauthorized']);
-    }
+  if (!this.canManageBranches) {
+    this.router.navigate(['/unauthorized']);
   }
+}
 
   private initForm(): void {
     this.branchForm = this.fb.group({
@@ -157,3 +161,5 @@ export class CreateBranch implements OnInit, OnDestroy {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }
+
+

@@ -9,21 +9,21 @@
       <div class="users-container">
         <!-- Page Header -->
         <div class="page-header">
-  <div class="header-left">
-    <h1>User Roles & Permissions</h1>
-    <p class="subtitle">Manage user access and permissions</p>
-  </div>
-  <div class="header-actions">
-    <button class="btn-secondary-outline" (click)="viewRoleTemplates()" [disabled]="!canManageRoles">
-      <i class="ri-shield-user-line"></i>
-      <span class="desktop-only">Role Templates</span>
-    </button>
-    <button class="btn-primary" (click)="createUser()" [disabled]="!canManagePermissions">
-      <i class="ri-user-add-line"></i>
-      <span class="desktop-only">Create User</span>
-    </button>
-  </div>
-</div>
+          <div class="header-left">
+            <h1>User Roles & Permissions</h1>
+            <p class="subtitle">Manage user access and permissions</p>
+          </div>
+          <div class="header-actions">
+            <button class="btn-secondary-outline" (click)="viewRoleTemplates()" [disabled]="!canManageRoles">
+              <i class="ri-shield-user-line"></i>
+              <span class="desktop-only">Role Templates</span>
+            </button>
+            <button class="btn-primary" (click)="createUser()" [disabled]="!canManagePermissions">
+              <i class="ri-user-add-line"></i>
+              <span class="desktop-only">Create User</span>
+            </button>
+          </div>
+        </div>
 
         <!-- Success Message -->
         <div *ngIf="successMessage" class="success-alert">
@@ -121,3 +121,4 @@
     </div>
   </div>
 </div>
+

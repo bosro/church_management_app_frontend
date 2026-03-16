@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { MinistryService } from '../../services/ministry.service';
+import { PermissionService } from '../../../../core/services/permission.service';
 
 @Component({
   selector: 'app-add-ministry',
@@ -26,7 +27,8 @@ export class AddMinistry implements OnInit, OnDestroy {
   constructor(
     private fb: FormBuilder,
     private ministryService: MinistryService,
-    private router: Router
+    private router: Router,
+    public permissionService: PermissionService,
   ) {}
 
   ngOnInit(): void {
@@ -40,7 +42,9 @@ export class AddMinistry implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-    this.canManageMinistries = this.ministryService.canManageMinistries();
+    this.canManageMinistries =
+      this.permissionService.isAdmin ||
+      this.permissionService.ministries.manage;
 
     if (!this.canManageMinistries) {
       this.router.navigate(['/unauthorized']);
@@ -49,16 +53,37 @@ export class AddMinistry implements OnInit, OnDestroy {
 
   private initForm(): void {
     this.ministryForm = this.fb.group({
-      name: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(100)]],
+      name: [
+        '',
+        [
+          Validators.required,
+          Validators.minLength(3),
+          Validators.maxLength(100),
+        ],
+      ],
       description: ['', [Validators.maxLength(500)]], // CHANGED TO 500
-      category: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(50)]],
-      leader_name: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(100)]],
+      category: [
+        '',
+        [
+          Validators.required,
+          Validators.minLength(2),
+          Validators.maxLength(50),
+        ],
+      ],
+      leader_name: [
+        '',
+        [
+          Validators.required,
+          Validators.minLength(2),
+          Validators.maxLength(100),
+        ],
+      ],
       leader_email: ['', [Validators.email, Validators.maxLength(100)]],
       leader_phone: ['', [Validators.maxLength(20)]],
       meeting_schedule: ['', [Validators.maxLength(200)]],
       meeting_location: ['', [Validators.maxLength(200)]],
       requirements: ['', [Validators.maxLength(2000)]],
-      is_active: [true]
+      is_active: [true],
     });
   }
 
@@ -92,7 +117,8 @@ export class AddMinistry implements OnInit, OnDestroy {
       // Show specific error for description length
       const descControl = this.ministryForm.get('description');
       if (descControl?.hasError('maxlength')) {
-        this.errorMessage = 'Description is too long. Maximum 500 characters allowed.'; // CHANGED TO 500
+        this.errorMessage =
+          'Description is too long. Maximum 500 characters allowed.'; // CHANGED TO 500
       }
 
       setTimeout(() => {
@@ -116,7 +142,7 @@ export class AddMinistry implements OnInit, OnDestroy {
       meeting_schedule: formData.meeting_schedule?.trim() || null,
       meeting_location: formData.meeting_location?.trim() || null,
       requirements: formData.requirements?.trim() || null,
-      is_active: formData.is_active ?? true
+      is_active: formData.is_active ?? true,
     };
 
     console.log('Sending to service:', ministryData); // DEBUG
@@ -137,15 +163,20 @@ export class AddMinistry implements OnInit, OnDestroy {
         error: (error) => {
           this.loading = false;
           console.error('Create ministry error:', error); // DEBUG
-          this.errorMessage = error.error?.message || error.message || 'Failed to create ministry. Please try again.';
+          this.errorMessage =
+            error.error?.message ||
+            error.message ||
+            'Failed to create ministry. Please try again.';
           this.scrollToTop();
-        }
+        },
       });
   }
 
   cancel(): void {
     if (this.ministryForm.dirty) {
-      if (confirm('You have unsaved changes. Are you sure you want to leave?')) {
+      if (
+        confirm('You have unsaved changes. Are you sure you want to leave?')
+      ) {
         this.router.navigate(['main/ministries']);
       }
     } else {
@@ -154,7 +185,7 @@ export class AddMinistry implements OnInit, OnDestroy {
   }
 
   private markFormGroupTouched(formGroup: FormGroup): void {
-    Object.keys(formGroup.controls).forEach(key => {
+    Object.keys(formGroup.controls).forEach((key) => {
       const control = formGroup.get(key);
       control?.markAsTouched();
 
@@ -191,13 +222,13 @@ export class AddMinistry implements OnInit, OnDestroy {
 
   private scrollToFirstInvalidField(): void {
     const firstInvalidControl: HTMLElement | null = document.querySelector(
-      'input.error, textarea.error, select.error'
+      'input.error, textarea.error, select.error',
     );
 
     if (firstInvalidControl) {
       firstInvalidControl.scrollIntoView({
         behavior: 'smooth',
-        block: 'center'
+        block: 'center',
       });
 
       setTimeout(() => {

@@ -5,6 +5,7 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { MemberService } from '../../services/member.service';
 import { AuthService } from '../../../../core/services/auth';
+import { PermissionService } from '../../../../core/services/permission.service';
 
 interface ImportResults {
   success: number;
@@ -37,6 +38,7 @@ export class ImportMembers implements OnInit, OnDestroy {
     private memberService: MemberService,
     private authService: AuthService,
     private router: Router,
+    public permissionService: PermissionService,
   ) {}
 
   ngOnInit(): void {
@@ -49,8 +51,8 @@ export class ImportMembers implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-    const importRoles = ['super_admin', 'church_admin'];
-    this.canImport = this.authService.hasRole(importRoles);
+    this.canImport =
+      this.permissionService.isAdmin || this.permissionService.members.import;
 
     if (!this.canImport) {
       this.router.navigate(['/unauthorized']);

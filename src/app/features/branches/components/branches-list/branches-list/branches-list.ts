@@ -5,6 +5,7 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { BranchesService } from '../../../services/branches';
 import { Branch, BranchStatistics } from '../../../../../models/branch.model';
+import { PermissionService } from '../../../../../core/services/permission.service';
 
 @Component({
   selector: 'app-branches-list',
@@ -33,7 +34,8 @@ export class BranchesList implements OnInit, OnDestroy {
 
   constructor(
     private branchesService: BranchesService,
-    private router: Router
+    private router: Router,
+     public permissionService: PermissionService
   ) {}
 
   ngOnInit(): void {
@@ -47,14 +49,19 @@ export class BranchesList implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  private checkPermissions(): void {
-    this.canManageBranches = this.branchesService.canManageBranches();
-    this.canViewBranches = this.branchesService.canViewBranches();
+private checkPermissions(): void {
+  this.canViewBranches =
+    this.permissionService.isAdmin ||
+    this.permissionService.branches.view;
 
-    if (!this.canViewBranches) {
-      this.router.navigate(['/unauthorized']);
-    }
+  this.canManageBranches =
+    this.permissionService.isAdmin ||
+    this.permissionService.branches.manage;
+
+  if (!this.canViewBranches) {
+    this.router.navigate(['/unauthorized']);
   }
+}
 
   loadBranches(): void {
     this.loading = true;
@@ -213,3 +220,6 @@ export class BranchesList implements OnInit, OnDestroy {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }
+
+
+

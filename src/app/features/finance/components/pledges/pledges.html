@@ -16,11 +16,15 @@
 
 
           <div class="header-actions">
-            <button class="btn-secondary" (click)="exportPledges()">
+            <button class="btn-secondary" (click)="exportPledges()"
+              *ngIf="permissionService.isAdmin || permissionService.finance.reports">
               <i class="ri-download-line"></i>
               <span>Export</span>
             </button>
-            <button class="btn-primary" (click)="createPledge()">
+
+            <button class="btn-primary" (click)="createPledge()" *ngIf="permissionService.isAdmin ||
+               permissionService.finance.record ||
+               permissionService.finance.manage">
               <i class="ri-add-line"></i>
               <span>Create Pledge</span>
             </button>
@@ -63,7 +67,8 @@
                   <p class="pledge-category">{{ pledge.category?.name || 'General' }}</p>
                 </div>
               </div>
-              <button class="btn-delete" (click)="deletePledge(pledge.id, $event)">
+              <button class="btn-delete" (click)="deletePledge(pledge.id, $event)"
+                *ngIf="permissionService.isAdmin || permissionService.finance.manage">
                 <i class="ri-delete-bin-line"></i>
               </button>
             </div>
@@ -120,7 +125,9 @@
             <i class="ri-hand-heart-line"></i>
             <h3>No Pledges Found</h3>
             <p>Create your first pledge to get started</p>
-            <button class="btn-primary" (click)="createPledge()">
+            <button class="btn-primary" (click)="createPledge()" *ngIf="permissionService.isAdmin ||
+               permissionService.finance.record ||
+               permissionService.finance.manage">
               <i class="ri-add-line"></i>
               Create Pledge
             </button>

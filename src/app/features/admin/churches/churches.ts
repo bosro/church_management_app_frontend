@@ -1,4 +1,3 @@
-
 import { Component, OnInit } from '@angular/core';
 import { Church } from '../../../models/church.model';
 import { AdminService } from '../services/admin.service';
@@ -24,7 +23,8 @@ export class Churches implements OnInit {
     location: '',
     size_category: '',
     contact_email: '',
-    contact_phone: ''
+    contact_phone: '',
+    enabled_features: [] as string[],
   };
 
   errorMessage = '';
@@ -50,13 +50,14 @@ export class Churches implements OnInit {
       error: (error) => {
         this.errorMessage = error.message || 'Failed to load churches';
         this.loading = false;
-      }
+      },
     });
   }
 
   applyFilters(): void {
-    this.filteredChurches = this.churches.filter(church => {
-      const matchesSearch = !this.searchTerm ||
+    this.filteredChurches = this.churches.filter((church) => {
+      const matchesSearch =
+        !this.searchTerm ||
         church.name.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
         church.location?.toLowerCase().includes(this.searchTerm.toLowerCase());
 
@@ -74,7 +75,8 @@ export class Churches implements OnInit {
       location: '',
       size_category: '',
       contact_email: '',
-      contact_phone: ''
+      contact_phone: '',
+      enabled_features: [] as string[],
     };
     this.showCreateModal = true;
     this.errorMessage = '';
@@ -91,7 +93,8 @@ export class Churches implements OnInit {
       location: church.location || '',
       size_category: church.size_category || '',
       contact_email: church.contact_email || '',
-      contact_phone: church.contact_phone || ''
+      contact_phone: church.contact_phone || '',
+      enabled_features: church.enabled_features || [],
     };
     this.showEditModal = true;
     this.errorMessage = '';
@@ -106,22 +109,24 @@ export class Churches implements OnInit {
     this.processing = true;
     this.errorMessage = '';
 
-    this.adminService.createChurch({
-      ...this.churchForm,
-      is_active: true
-    }).subscribe({
-      next: () => {
-        this.successMessage = 'Church created successfully!';
-        this.processing = false;
-        this.closeCreateModal();
-        this.loadChurches();
-        setTimeout(() => this.successMessage = '', 3000);
-      },
-      error: (error) => {
-        this.errorMessage = error.message || 'Failed to create church';
-        this.processing = false;
-      }
-    });
+    this.adminService
+      .createChurch({
+        ...this.churchForm,
+        is_active: true,
+      })
+      .subscribe({
+        next: () => {
+          this.successMessage = 'Church created successfully!';
+          this.processing = false;
+          this.closeCreateModal();
+          this.loadChurches();
+          setTimeout(() => (this.successMessage = ''), 3000);
+        },
+        error: (error) => {
+          this.errorMessage = error.message || 'Failed to create church';
+          this.processing = false;
+        },
+      });
   }
 
   updateChurch(): void {
@@ -130,19 +135,21 @@ export class Churches implements OnInit {
     this.processing = true;
     this.errorMessage = '';
 
-    this.adminService.updateChurch(this.selectedChurch.id, this.churchForm).subscribe({
-      next: () => {
-        this.successMessage = 'Church updated successfully!';
-        this.processing = false;
-        this.closeEditModal();
-        this.loadChurches();
-        setTimeout(() => this.successMessage = '', 3000);
-      },
-      error: (error) => {
-        this.errorMessage = error.message || 'Failed to update church';
-        this.processing = false;
-      }
-    });
+    this.adminService
+      .updateChurch(this.selectedChurch.id, this.churchForm)
+      .subscribe({
+        next: () => {
+          this.successMessage = 'Church updated successfully!';
+          this.processing = false;
+          this.closeEditModal();
+          this.loadChurches();
+          setTimeout(() => (this.successMessage = ''), 3000);
+        },
+        error: (error) => {
+          this.errorMessage = error.message || 'Failed to update church';
+          this.processing = false;
+        },
+      });
   }
 
   deactivateChurch(church: Church): void {
@@ -154,12 +161,12 @@ export class Churches implements OnInit {
       next: () => {
         this.successMessage = 'Church deactivated successfully!';
         this.loadChurches();
-        setTimeout(() => this.successMessage = '', 3000);
+        setTimeout(() => (this.successMessage = ''), 3000);
       },
       error: (error) => {
         this.errorMessage = error.message || 'Failed to deactivate church';
-        setTimeout(() => this.errorMessage = '', 3000);
-      }
+        setTimeout(() => (this.errorMessage = ''), 3000);
+      },
     });
   }
 
@@ -167,7 +174,20 @@ export class Churches implements OnInit {
     return new Date(date).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
     });
+  }
+
+  toggleFeature(feature: string, event: Event): void {
+    const checked = (event.target as HTMLInputElement).checked;
+    if (checked) {
+      this.churchForm.enabled_features = [
+        ...this.churchForm.enabled_features,
+        feature,
+      ];
+    } else {
+      this.churchForm.enabled_features =
+        this.churchForm.enabled_features.filter((f) => f !== feature);
+    }
   }
 }

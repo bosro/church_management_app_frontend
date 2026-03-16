@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { FinanceService } from '../../services/finance.service';
+import { PermissionService } from '../../../../core/services/permission.service';
 
 @Component({
   selector: 'app-pledges-list',
@@ -32,6 +33,7 @@ export class Pledges implements OnInit, OnDestroy {
   constructor(
     private financeService: FinanceService,
     private router: Router,
+     public permissionService: PermissionService
   ) {}
 
   ngOnInit(): void {
@@ -45,13 +47,19 @@ export class Pledges implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-    this.canViewFinance = this.financeService.canViewFinance();
-    this.canManageFinance = this.financeService.canManageFinance();
+  this.canViewFinance =
+    this.permissionService.isAdmin ||
+    this.permissionService.finance.view;
 
-    if (!this.canViewFinance) {
-      this.router.navigate(['/unauthorized']);
-    }
+  this.canManageFinance =
+    this.permissionService.isAdmin ||
+    this.permissionService.finance.manage ||
+    this.permissionService.finance.record;
+
+  if (!this.canViewFinance) {
+    this.router.navigate(['/unauthorized']);
   }
+}
 
   loadPledges(): void {
     this.loading = true;
@@ -212,6 +220,9 @@ export class Pledges implements OnInit, OnDestroy {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }
+
+
+
 
 
 

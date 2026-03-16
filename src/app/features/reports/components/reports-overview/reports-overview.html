@@ -1,0 +1,223 @@
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+  <div class="dashboard-content">
+    <app-header></app-header>
+    <div class="dashboard-body">
+      <div class="reports-overview-container">
+
+        <!-- Page Header -->
+        <div class="page-header">
+          <div class="header-left">
+            <h1>School Reports</h1>
+            <p class="subtitle">Manage students, fees, and academic records</p>
+          </div>
+          <div class="header-filters">
+            <select [(ngModel)]="currentTerm" (change)="onTermChange()" class="filter-select">
+              <option *ngFor="let term of terms" [value]="term">{{ term }}</option>
+            </select>
+            <select [(ngModel)]="currentAcademicYear" (change)="onYearChange()" class="filter-select">
+              <option *ngFor="let year of academicYears" [value]="year">{{ year }}</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Error -->
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i>
+          <span>{{ errorMessage }}</span>
+        </div>
+
+        <!-- Loading -->
+        <div *ngIf="loading" class="loading-container">
+          <div class="spinner"></div>
+          <p>Loading school data...</p>
+        </div>
+
+        <!-- Stats Grid -->
+        <div *ngIf="!loading && statistics" class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon" style="background: #DDD6FE; color: #7C3AED;">
+              <i class="ri-user-3-line"></i>
+            </div>
+            <div class="stat-info">
+              <p class="stat-label">Total Students</p>
+              <h3 class="stat-value">{{ statistics.total_students }}</h3>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon" style="background: #D1FAE5; color: #10B981;">
+              <i class="ri-building-line"></i>
+            </div>
+            <div class="stat-info">
+              <p class="stat-label">Classes</p>
+              <h3 class="stat-value">{{ statistics.total_classes }}</h3>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon" style="background: #DBEAFE; color: #3B82F6;">
+              <i class="ri-money-dollar-circle-line"></i>
+            </div>
+            <div class="stat-info">
+              <p class="stat-label">Total Fees Due</p>
+              <h3 class="stat-value">{{ formatCurrency(statistics.total_fees_due) }}</h3>
+              <p class="stat-meta">{{ currentTerm }}</p>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon" style="background: #D1FAE5; color: #10B981;">
+              <i class="ri-checkbox-circle-line"></i>
+            </div>
+            <div class="stat-info">
+              <p class="stat-label">Fees Collected</p>
+              <h3 class="stat-value">{{ formatCurrency(statistics.total_fees_paid) }}</h3>
+              <p class="stat-meta">{{ getCollectionRate() }}% collected</p>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon" style="background: #FEE2E2; color: #EF4444;">
+              <i class="ri-error-warning-line"></i>
+            </div>
+            <div class="stat-info">
+              <p class="stat-label">Outstanding</p>
+              <h3 class="stat-value">{{ formatCurrency(statistics.total_outstanding) }}</h3>
+              <p class="stat-meta">{{ statistics.unpaid_count + statistics.partial_count }} students</p>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon" style="background: #FEF3C7; color: #F59E0B;">
+              <i class="ri-time-line"></i>
+            </div>
+            <div class="stat-info">
+              <p class="stat-label">Partial Payments</p>
+              <h3 class="stat-value">{{ statistics.partial_count }}</h3>
+              <p class="stat-meta">{{ statistics.paid_count }} fully paid</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Fee Progress Bar -->
+        <div *ngIf="!loading && statistics" class="progress-card">
+          <div class="progress-header">
+            <h3>Fee Collection Progress — {{ currentTerm }} {{ currentAcademicYear }}</h3>
+            <span class="progress-percent">{{ getCollectionRate() }}%</span>
+          </div>
+          <div class="progress-bar-container">
+            <div class="progress-bar" [style.width.%]="getCollectionRate()"></div>
+          </div>
+          <div class="progress-legend">
+            <span class="legend-item paid">
+              <span class="dot"></span>
+              Paid: {{ statistics.paid_count }}
+            </span>
+            <span class="legend-item partial">
+              <span class="dot"></span>
+              Partial: {{ statistics.partial_count }}
+            </span>
+            <span class="legend-item unpaid">
+              <span class="dot"></span>
+              Unpaid: {{ statistics.unpaid_count }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Quick Actions Grid -->
+        <h2 class="section-title">Quick Actions</h2>
+        <div class="actions-grid">
+
+          <!-- Students -->
+          <div class="action-group">
+            <h3 class="group-title">
+              <i class="ri-user-3-line"></i>
+              Students
+            </h3>
+            <div class="action-cards">
+              <div class="action-card" (click)="goToStudents()">
+                <i class="ri-group-line"></i>
+                <span>All Students</span>
+              </div>
+              <div class="action-card"
+                   *ngIf="permissionService.school.manage"
+                   (click)="router.navigate(['main/reports/students/add'])">
+                <i class="ri-user-add-line"></i>
+                <span>Add Student</span>
+              </div>
+              <div class="action-card" (click)="goToClasses()">
+                <i class="ri-building-line"></i>
+                <span>Classes</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Fees -->
+          <div class="action-group"
+               *ngIf="permissionService.school.fees">
+            <h3 class="group-title">
+              <i class="ri-money-dollar-circle-line"></i>
+              Fees
+            </h3>
+            <div class="action-cards">
+              <div class="action-card" (click)="goToStudentFees()">
+                <i class="ri-file-list-3-line"></i>
+                <span>Student Fees</span>
+              </div>
+              <div class="action-card" (click)="goToFeeStructures()">
+                <i class="ri-settings-3-line"></i>
+                <span>Fee Structures</span>
+              </div>
+              <div class="action-card" (click)="goToFeeReport()">
+                <i class="ri-bar-chart-line"></i>
+                <span>Fee Report</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Exams -->
+          <div class="action-group"
+               *ngIf="permissionService.school.exams">
+            <h3 class="group-title">
+              <i class="ri-book-open-line"></i>
+              Exams
+            </h3>
+            <div class="action-cards">
+              <div class="action-card" (click)="goToExams()">
+                <i class="ri-file-list-line"></i>
+                <span>All Exams</span>
+              </div>
+              <div class="action-card"
+                   *ngIf="permissionService.isAdmin"
+                   (click)="router.navigate(['main/reports/exams/create'])">
+                <i class="ri-add-circle-line"></i>
+                <span>Create Exam</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Settings -->
+          <div class="action-group"
+               *ngIf="permissionService.isAdmin">
+            <h3 class="group-title">
+              <i class="ri-settings-3-line"></i>
+              Settings
+            </h3>
+            <div class="action-cards">
+              <div class="action-card" (click)="goToGrading()">
+                <i class="ri-award-line"></i>
+                <span>Grading Scale</span>
+              </div>
+              <div class="action-card" (click)="goToSubjects()">
+                <i class="ri-book-2-line"></i>
+                <span>Subjects</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

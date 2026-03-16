@@ -6,6 +6,7 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { CmsService } from '../../services/cms';
 import { BlogPost, BLOG_CATEGORIES } from '../../../../models/cms.model';
+import { PermissionService } from '../../../../core/services/permission.service';
 
 @Component({
   selector: 'app-edit-blog',
@@ -32,7 +33,8 @@ export class EditBlog implements OnInit, OnDestroy {
     private fb: FormBuilder,
     private cmsService: CmsService,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+     public permissionService: PermissionService
   ) {}
 
   ngOnInit(): void {
@@ -54,21 +56,30 @@ export class EditBlog implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-    this.canManageContent = this.cmsService.canManageContent();
+  this.canManageContent =
+    this.permissionService.isAdmin ||
+    this.permissionService.settings.manage;
 
-    if (!this.canManageContent) {
-      this.router.navigate(['/unauthorized']);
-    }
+  if (!this.canManageContent) {
+    this.router.navigate(['/unauthorized']);
   }
+}
 
   private initForm(): void {
     this.blogForm = this.fb.group({
-      title: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(200)]],
+      title: [
+        '',
+        [
+          Validators.required,
+          Validators.minLength(3),
+          Validators.maxLength(200),
+        ],
+      ],
       excerpt: ['', [Validators.maxLength(300)]],
       content: ['', [Validators.required, Validators.minLength(10)]],
       category: [''],
       tags: [''],
-      featured_image_url: ['', [Validators.pattern(/^https?:\/\/.+/)]]
+      featured_image_url: ['', [Validators.pattern(/^https?:\/\/.+/)]],
     });
   }
 
@@ -89,7 +100,7 @@ export class EditBlog implements OnInit, OnDestroy {
           this.errorMessage = error.message || 'Failed to load blog post';
           this.loadingPost = false;
           console.error('Load blog error:', error);
-        }
+        },
       });
   }
 
@@ -100,7 +111,7 @@ export class EditBlog implements OnInit, OnDestroy {
       content: post.content,
       category: post.category || '',
       tags: post.tags ? post.tags.join(', ') : '',
-      featured_image_url: post.featured_image_url || ''
+      featured_image_url: post.featured_image_url || '',
     });
   }
 
@@ -119,8 +130,11 @@ export class EditBlog implements OnInit, OnDestroy {
     const formData = {
       ...this.blogForm.value,
       tags: this.blogForm.value.tags
-        ? this.blogForm.value.tags.split(',').map((t: string) => t.trim()).filter((t: string) => t)
-        : []
+        ? this.blogForm.value.tags
+            .split(',')
+            .map((t: string) => t.trim())
+            .filter((t: string) => t)
+        : [],
     };
 
     this.cmsService
@@ -137,16 +151,19 @@ export class EditBlog implements OnInit, OnDestroy {
         },
         error: (error) => {
           this.loading = false;
-          this.errorMessage = error.message || 'Failed to update blog post. Please try again.';
+          this.errorMessage =
+            error.message || 'Failed to update blog post. Please try again.';
           this.scrollToTop();
           console.error('Update blog error:', error);
-        }
+        },
       });
   }
 
   cancel(): void {
     if (this.blogForm.dirty) {
-      if (confirm('You have unsaved changes. Are you sure you want to leave?')) {
+      if (
+        confirm('You have unsaved changes. Are you sure you want to leave?')
+      ) {
         this.router.navigate(['main/cms/blog']);
       }
     } else {
@@ -155,7 +172,7 @@ export class EditBlog implements OnInit, OnDestroy {
   }
 
   private markFormGroupTouched(formGroup: FormGroup): void {
-    Object.keys(formGroup.controls).forEach(key => {
+    Object.keys(formGroup.controls).forEach((key) => {
       const control = formGroup.get(key);
       control?.markAsTouched();
 

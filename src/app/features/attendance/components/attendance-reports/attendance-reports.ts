@@ -6,6 +6,7 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { AttendanceService } from '../../services/attendance.service';
 import { AttendanceReportData } from '../../../../models/attendance.model';
+import { PermissionService } from '../../../../core/services/permission.service';
 
 interface ReportSummary {
   total_services: number;
@@ -35,7 +36,7 @@ export class AttendanceReports implements OnInit, OnDestroy {
     average_attendance: 0,
     highest_attendance: 0,
     lowest_attendance: 0,
-    overall_rate: 0
+    overall_rate: 0,
   };
 
   // Service Types
@@ -44,7 +45,7 @@ export class AttendanceReports implements OnInit, OnDestroy {
     'Midweek Service',
     'Prayer Meeting',
     'Ministry Meeting',
-    'Special Event'
+    'Special Event',
   ];
 
   // Permissions
@@ -53,7 +54,8 @@ export class AttendanceReports implements OnInit, OnDestroy {
   constructor(
     private fb: FormBuilder,
     private attendanceService: AttendanceService,
-    private router: Router
+    private router: Router,
+    public permissionService: PermissionService,
   ) {}
 
   ngOnInit(): void {
@@ -68,9 +70,10 @@ export class AttendanceReports implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-    this.canViewAttendance = this.attendanceService.canViewAttendance();
-
-    if (!this.canViewAttendance) {
+    if (
+      !this.permissionService.isAdmin &&
+      !this.permissionService.attendance.reports
+    ) {
       this.router.navigate(['/unauthorized']);
     }
   }
@@ -78,12 +81,16 @@ export class AttendanceReports implements OnInit, OnDestroy {
   private initForm(): void {
     const today = new Date();
     const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-    const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    const lastDayOfMonth = new Date(
+      today.getFullYear(),
+      today.getMonth() + 1,
+      0,
+    );
 
     this.filterForm = this.fb.group({
       start_date: [this.formatDate(firstDayOfMonth), [Validators.required]],
       end_date: [this.formatDate(lastDayOfMonth), [Validators.required]],
-      service_type: ['']
+      service_type: [''],
     });
   }
 
@@ -125,9 +132,10 @@ export class AttendanceReports implements OnInit, OnDestroy {
         },
         error: (error) => {
           console.error('Error loading reports:', error);
-          this.errorMessage = error.message || 'Failed to load attendance reports';
+          this.errorMessage =
+            error.message || 'Failed to load attendance reports';
           this.loading = false;
-        }
+        },
       });
   }
 
@@ -138,13 +146,16 @@ export class AttendanceReports implements OnInit, OnDestroy {
         average_attendance: 0,
         highest_attendance: 0,
         lowest_attendance: 0,
-        overall_rate: 0
+        overall_rate: 0,
       };
       return;
     }
 
-    const totalAttendance = this.reports.reduce((sum, r) => sum + r.total_present, 0);
-    const attendances = this.reports.map(r => r.total_present);
+    const totalAttendance = this.reports.reduce(
+      (sum, r) => sum + r.total_present,
+      0,
+    );
+    const attendances = this.reports.map((r) => r.total_present);
 
     this.summary = {
       total_services: this.reports.length,
@@ -152,8 +163,9 @@ export class AttendanceReports implements OnInit, OnDestroy {
       highest_attendance: Math.max(...attendances),
       lowest_attendance: Math.min(...attendances),
       overall_rate: Math.round(
-        this.reports.reduce((sum, r) => sum + r.attendance_rate, 0) / this.reports.length
-      )
+        this.reports.reduce((sum, r) => sum + r.attendance_rate, 0) /
+          this.reports.length,
+      ),
     };
   }
 
@@ -174,22 +186,21 @@ export class AttendanceReports implements OnInit, OnDestroy {
       'Present',
       'Absent',
       'Total Members',
-      'Attendance Rate'
+      'Attendance Rate',
     ];
 
-    const rows = this.reports.map(report => [
+    const rows = this.reports.map((report) => [
       report.date,
       report.service_type,
       report.total_present.toString(),
       report.total_absent.toString(),
       report.total_members.toString(),
-      `${report.attendance_rate}%`
+      `${report.attendance_rate}%`,
     ]);
 
-    const csv = [
-      headers.join(','),
-      ...rows.map(row => row.join(','))
-    ].join('\n');
+    const csv = [headers.join(','), ...rows.map((row) => row.join(','))].join(
+      '\n',
+    );
 
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
@@ -211,7 +222,7 @@ export class AttendanceReports implements OnInit, OnDestroy {
   }
 
   private markFormGroupTouched(formGroup: FormGroup): void {
-    Object.keys(formGroup.controls).forEach(key => {
+    Object.keys(formGroup.controls).forEach((key) => {
       const control = formGroup.get(key);
       control?.markAsTouched();
 

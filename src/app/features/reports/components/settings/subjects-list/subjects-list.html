@@ -1,0 +1,136 @@
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+  <div class="dashboard-content">
+    <app-header></app-header>
+    <div class="dashboard-body">
+      <div class="subjects-container">
+
+        <div class="page-header">
+          <div class="header-left">
+            <button class="back-btn" (click)="router.navigate(['main/reports'])">
+              <i class="ri-arrow-left-line"></i>
+            </button>
+            <div>
+              <h1>Subjects</h1>
+              <p class="subtitle">Manage subjects per class</p>
+            </div>
+          </div>
+          <button class="btn-primary" (click)="openCreateModal()">
+            <i class="ri-add-line"></i>
+            Add Subject
+          </button>
+        </div>
+
+        <div *ngIf="successMessage" class="success-alert">
+          <i class="ri-checkbox-circle-line"></i>
+          {{ successMessage }}
+        </div>
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i>
+          {{ errorMessage }}
+        </div>
+
+        <!-- Class Filter -->
+        <div class="filter-bar">
+          <select [(ngModel)]="selectedClassId"
+                  (change)="onClassFilterChange()" class="filter-select">
+            <option value="">All Classes</option>
+            <option *ngFor="let c of classes" [value]="c.id">{{ c.name }}</option>
+          </select>
+        </div>
+
+        <!-- Loading -->
+        <div *ngIf="loading" class="loading-container">
+          <div class="spinner"></div>
+          <p>Loading subjects...</p>
+        </div>
+
+        <!-- Grouped Subjects -->
+        <div *ngIf="!loading">
+          <div *ngFor="let group of groupedSubjects" class="class-subjects-card">
+            <div class="class-header">
+              <h3>{{ group.class.name }}</h3>
+              <span class="subject-count">
+                {{ group.subjects.length }} subject(s)
+              </span>
+            </div>
+
+            <div class="subjects-grid">
+              <div *ngFor="let subject of group.subjects" class="subject-chip">
+                <div class="subject-info">
+                  <span class="subject-name">{{ subject.name }}</span>
+                  <span class="teacher-name" *ngIf="subject.teacher_name">
+                    {{ subject.teacher_name }}
+                  </span>
+                </div>
+                <div class="subject-actions">
+                  <button class="btn-icon-tiny" (click)="openEditModal(subject)"
+                          title="Edit">
+                    <i class="ri-edit-line"></i>
+                  </button>
+                  <button class="btn-icon-tiny btn-danger"
+                          (click)="deleteSubject(subject)" title="Delete">
+                    <i class="ri-delete-bin-line"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div *ngIf="groupedSubjects.length === 0" class="empty-state">
+            <i class="ri-book-2-line"></i>
+            <h3>No Subjects Yet</h3>
+            <p>Add subjects for each class to enable exam results</p>
+            <button class="btn-primary" (click)="openCreateModal()">
+              <i class="ri-add-line"></i>
+              Add First Subject
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Subject Modal -->
+<div class="modal-overlay" *ngIf="showModal" (click)="closeModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>{{ editingSubject ? 'Edit Subject' : 'Add Subject' }}</h2>
+      <button class="close-btn" (click)="closeModal()">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Class *</label>
+        <select [(ngModel)]="subjectForm.class_id">
+          <option value="">Select Class</option>
+          <option *ngFor="let c of classes" [value]="c.id">{{ c.name }}</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Subject Name *</label>
+        <input type="text" [(ngModel)]="subjectForm.name"
+               placeholder="e.g., Mathematics, English Language" />
+      </div>
+      <div class="form-group">
+        <label>Teacher Name</label>
+        <input type="text" [(ngModel)]="subjectForm.teacher_name"
+               placeholder="Subject teacher's name" />
+      </div>
+      <div *ngIf="errorMessage" class="error-alert">
+        <span>{{ errorMessage }}</span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" (click)="closeModal()"
+              [disabled]="processing">Cancel</button>
+      <button class="btn-primary" (click)="saveSubject()"
+              [disabled]="processing">
+        {{ processing ? 'Saving...' : (editingSubject ? 'Update' : 'Add Subject') }}
+      </button>
+    </div>
+  </div>
+</div>

@@ -1,13 +1,24 @@
 // src/app/features/finance/components/create-pledge/create-pledge.component.ts
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { FormBuilder, FormGroup, Validators, FormControl } from '@angular/forms';
+import {
+  FormBuilder,
+  FormGroup,
+  Validators,
+  FormControl,
+} from '@angular/forms';
 import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
-import { takeUntil, debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
+import {
+  takeUntil,
+  debounceTime,
+  distinctUntilChanged,
+  switchMap,
+} from 'rxjs/operators';
 import { GivingCategory } from '../../../../../models/giving.model';
 import { Member } from './../../../../../models/member.model';
 import { FinanceService } from '../../../services/finance.service';
 import { MemberService } from '../../../../members/services/member.service';
+import { PermissionService } from '../../../../../core/services/permission.service';
 
 @Component({
   selector: 'app-create-pledge',
@@ -46,7 +57,8 @@ export class CreatePledge implements OnInit, OnDestroy {
     private fb: FormBuilder,
     private financeService: FinanceService,
     private memberService: MemberService,
-    private router: Router
+    private router: Router,
+    public permissionService: PermissionService,
   ) {}
 
   ngOnInit(): void {
@@ -62,7 +74,10 @@ export class CreatePledge implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-    this.canManageFinance = this.financeService.canManageFinance();
+    this.canManageFinance =
+      this.permissionService.isAdmin ||
+      this.permissionService.finance.record ||
+      this.permissionService.finance.manage;
 
     if (!this.canManageFinance) {
       this.router.navigate(['/unauthorized']);
@@ -88,7 +103,7 @@ export class CreatePledge implements OnInit, OnDestroy {
       category_id: [''],
       pledge_date: [today, [Validators.required]],
       due_date: [''],
-      notes: ['', [Validators.maxLength(500)]]
+      notes: ['', [Validators.maxLength(500)]],
     });
 
     // Set initial validators
@@ -106,7 +121,7 @@ export class CreatePledge implements OnInit, OnDestroy {
         visitor_first_name: '',
         visitor_last_name: '',
         visitor_phone: '',
-        visitor_email: ''
+        visitor_email: '',
       });
     } else {
       this.selectedMember = null;
@@ -141,7 +156,8 @@ export class CreatePledge implements OnInit, OnDestroy {
   private loadCategories(): void {
     this.loadingCategories = true;
 
-    this.financeService.getGivingCategories()
+    this.financeService
+      .getGivingCategories()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (categories) => {
@@ -151,7 +167,7 @@ export class CreatePledge implements OnInit, OnDestroy {
         error: (error) => {
           console.error('Error loading categories:', error);
           this.loadingCategories = false;
-        }
+        },
       });
   }
 
@@ -160,7 +176,7 @@ export class CreatePledge implements OnInit, OnDestroy {
       .pipe(
         debounceTime(300),
         distinctUntilChanged(),
-        switchMap(query => {
+        switchMap((query) => {
           if (!query || query.length < 2) {
             this.searchResults = [];
             return [];
@@ -168,7 +184,7 @@ export class CreatePledge implements OnInit, OnDestroy {
           this.searching = true;
           return this.memberService.searchMembers(query);
         }),
-        takeUntil(this.destroy$)
+        takeUntil(this.destroy$),
       )
       .subscribe({
         next: (members) => {
@@ -179,7 +195,7 @@ export class CreatePledge implements OnInit, OnDestroy {
           console.error('Search error:', error);
           this.searching = false;
           this.searchResults = [];
-        }
+        },
       });
   }
 
@@ -230,19 +246,24 @@ export class CreatePledge implements OnInit, OnDestroy {
       category_id: this.pledgeForm.value.category_id || null,
       pledge_date: this.pledgeForm.value.pledge_date,
       due_date: this.pledgeForm.value.due_date || null,
-      notes: this.pledgeForm.value.notes || null
+      notes: this.pledgeForm.value.notes || null,
     };
 
     if (this.pledgeType === 'member') {
       pledgeData.member_id = this.selectedMember!.id;
     } else {
-      pledgeData.visitor_first_name = this.pledgeForm.value.visitor_first_name.trim();
-      pledgeData.visitor_last_name = this.pledgeForm.value.visitor_last_name.trim();
-      pledgeData.visitor_phone = this.pledgeForm.value.visitor_phone?.trim() || null;
-      pledgeData.visitor_email = this.pledgeForm.value.visitor_email?.trim() || null;
+      pledgeData.visitor_first_name =
+        this.pledgeForm.value.visitor_first_name.trim();
+      pledgeData.visitor_last_name =
+        this.pledgeForm.value.visitor_last_name.trim();
+      pledgeData.visitor_phone =
+        this.pledgeForm.value.visitor_phone?.trim() || null;
+      pledgeData.visitor_email =
+        this.pledgeForm.value.visitor_email?.trim() || null;
     }
 
-    this.financeService.createPledge(pledgeData)
+    this.financeService
+      .createPledge(pledgeData)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
@@ -255,10 +276,11 @@ export class CreatePledge implements OnInit, OnDestroy {
         },
         error: (error) => {
           this.loading = false;
-          this.errorMessage = error.message || 'Failed to create pledge. Please try again.';
+          this.errorMessage =
+            error.message || 'Failed to create pledge. Please try again.';
           this.scrollToTop();
           console.error('Error creating pledge:', error);
-        }
+        },
       });
   }
 
@@ -267,7 +289,7 @@ export class CreatePledge implements OnInit, OnDestroy {
   }
 
   private markFormGroupTouched(formGroup: FormGroup): void {
-    Object.keys(formGroup.controls).forEach(key => {
+    Object.keys(formGroup.controls).forEach((key) => {
       const control = formGroup.get(key);
       control?.markAsTouched();
 

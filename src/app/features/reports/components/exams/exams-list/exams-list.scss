@@ -1,0 +1,102 @@
+@use '../../reports-shared' as *;
+
+.exams-container {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.exams-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.exam-card {
+  background: white;
+  border: 1px solid #E5E7EB;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  transition: box-shadow 0.2s;
+
+  &:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+
+  .exam-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 16px 16px 12px;
+
+    .exam-icon {
+      width: 44px;
+      height: 44px;
+      background: #EEF2FF;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #4F46E5;
+      font-size: 20px;
+    }
+
+    .published-badge {
+      display: inline-flex;
+      padding: 3px 10px;
+      border-radius: 100px;
+      font-size: 11px;
+      font-weight: 500;
+      background: #F3F4F6;
+      color: #6B7280;
+
+      &.published { background: #D1FAE5; color: #065F46; }
+    }
+  }
+
+  .exam-body {
+    padding: 0 16px 12px;
+
+    h3 { font-size: 15px; font-weight: 600; color: #111827; margin: 0 0 4px; }
+    .exam-class { font-size: 13px; color: #6366F1; font-weight: 500; margin: 0 0 8px; }
+
+    .exam-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+
+      span {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: #6B7280;
+
+        i { font-size: 14px; }
+      }
+    }
+  }
+
+  .exam-footer {
+    border-top: 1px solid #F3F4F6;
+    padding: 12px 16px;
+
+    .btn-action {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 9px;
+      background: #4F46E5;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+
+      &:hover { background: #4338CA; }
+    }
+  }
+}

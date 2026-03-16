@@ -1,0 +1,147 @@
+<p>record-payment works!</p>
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+  <div class="dashboard-content">
+    <app-header></app-header>
+    <div class="dashboard-body">
+      <div class="record-payment-container">
+
+        <div class="page-header">
+          <div class="header-left">
+            <button class="back-btn" (click)="cancel()">
+              <i class="ri-arrow-left-line"></i>
+            </button>
+            <div>
+              <h1>Record Payment</h1>
+              <p class="subtitle" *ngIf="student">
+                {{ getFullName() }} — {{ student.student_number }}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div *ngIf="successMessage" class="success-alert">
+          <i class="ri-checkbox-circle-line"></i>
+          {{ successMessage }}
+        </div>
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i>
+          {{ errorMessage }}
+        </div>
+
+        <!-- Term Selector -->
+        <div class="term-selector">
+          <select [(ngModel)]="selectedTerm" (change)="onTermChange()" class="filter-select">
+            <option *ngFor="let t of terms" [value]="t">{{ t }}</option>
+          </select>
+          <select [(ngModel)]="selectedYear" (change)="onTermChange()" class="filter-select">
+            <option *ngFor="let y of academicYears" [value]="y">{{ y }}</option>
+          </select>
+        </div>
+
+        <!-- Loading -->
+        <div *ngIf="loading" class="loading-container">
+          <div class="spinner"></div>
+          <p>Loading fees...</p>
+        </div>
+
+        <div *ngIf="!loading" class="payment-layout">
+
+          <!-- Left: Fees to Pay -->
+          <div class="fees-panel">
+            <div class="panel-header">
+              <h3>Outstanding Fees</h3>
+            </div>
+
+            <div *ngIf="fees.length === 0" class="empty-state">
+              <i class="ri-checkbox-circle-line" style="color: #10B981;"></i>
+              <p>No outstanding fees for this term!</p>
+            </div>
+
+            <div *ngFor="let fp of feePayments" class="fee-row">
+              <div class="fee-select">
+                <input type="checkbox" [(ngModel)]="fp.selected" />
+              </div>
+              <div class="fee-info">
+                <p class="fee-name">{{ fp.fee.fee_name }}</p>
+                <p class="fee-balance">
+                  Balance: {{ formatCurrency(fp.fee.amount_due - fp.fee.amount_paid) }}
+                </p>
+                <span class="fee-status" [class]="'status-' + fp.fee.status">
+                  {{ fp.fee.status | titlecase }}
+                </span>
+              </div>
+              <div class="fee-amount-input">
+                <input type="number" [(ngModel)]="fp.amount" [disabled]="!fp.selected"
+                  [max]="fp.fee.amount_due - fp.fee.amount_paid" min="0" step="0.01" class="amount-input" />
+              </div>
+            </div>
+
+            <!-- Total -->
+            <div class="payment-total" *ngIf="fees.length > 0">
+              <span>Total Payment</span>
+              <strong>{{ formatCurrency(totalPayment) }}</strong>
+            </div>
+          </div>
+
+          <!-- Right: Payment Details -->
+          <div class="payment-details-panel" *ngIf="fees.length > 0">
+            <div class="panel-header">
+              <h3>Payment Details</h3>
+            </div>
+
+            <div class="form-group">
+              <label>Payment Date *</label>
+              <input type="date" [(ngModel)]="paymentForm.payment_date" />
+            </div>
+
+            <div class="form-group">
+              <label>Payment Method *</label>
+              <select [(ngModel)]="paymentForm.payment_method">
+                <option *ngFor="let method of paymentMethods" [value]="method">
+                  {{ method }}
+                </option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Notes (Optional)</label>
+              <textarea [(ngModel)]="paymentForm.notes" rows="3" placeholder="Any additional notes..."></textarea>
+            </div>
+
+            <!-- Summary -->
+            <div class="payment-summary">
+              <h4>Payment Summary</h4>
+              <ng-container *ngFor="let fp of feePayments">
+                <div class="summary-row" *ngIf="fp.selected && fp.amount > 0">
+                  <span>{{ fp.fee.fee_name }}</span>
+                  <span>{{ formatCurrency(fp.amount) }}</span>
+                </div>
+              </ng-container>
+              <div class="summary-total">
+                <strong>Total</strong>
+                <strong>{{ formatCurrency(totalPayment) }}</strong>
+              </div>
+            </div>
+
+            <button class="btn-primary btn-full" (click)="onSubmit()" [disabled]="processing || totalPayment <= 0">
+              <span *ngIf="!processing">
+                <i class="ri-money-dollar-circle-line"></i>
+                Record Payment & Generate Receipt
+              </span>
+              <span *ngIf="processing">
+                <i class="ri-loader-4-line spin"></i>
+                Processing...
+              </span>
+            </button>
+
+            <button class="btn-secondary btn-full" (click)="cancel()" [disabled]="processing">
+              Cancel
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

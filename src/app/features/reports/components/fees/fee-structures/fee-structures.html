@@ -1,0 +1,183 @@
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+  <div class="dashboard-content">
+    <app-header></app-header>
+    <div class="dashboard-body">
+      <div class="fee-structures-container">
+
+        <div class="page-header">
+          <div class="header-left">
+            <button class="back-btn" (click)="router.navigate(['main/reports'])">
+              <i class="ri-arrow-left-line"></i>
+            </button>
+            <div>
+              <h1>Fee Structures</h1>
+              <p class="subtitle">Set fee amounts per class per term</p>
+            </div>
+          </div>
+          <button class="btn-primary" (click)="openCreateModal()"
+                  *ngIf="permissionService.school.fees">
+            <i class="ri-add-line"></i>
+            Add Fee
+          </button>
+        </div>
+
+        <div *ngIf="successMessage" class="success-alert">
+          <i class="ri-checkbox-circle-line"></i>
+          {{ successMessage }}
+        </div>
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i>
+          {{ errorMessage }}
+        </div>
+
+        <!-- Filters -->
+        <div class="filters-bar">
+          <select [(ngModel)]="selectedYear" (change)="onFilterChange()" class="filter-select">
+            <option *ngFor="let y of academicYears" [value]="y">{{ y }}</option>
+          </select>
+          <select [(ngModel)]="selectedTerm" (change)="onFilterChange()" class="filter-select">
+            <option *ngFor="let t of terms" [value]="t">{{ t }}</option>
+          </select>
+          <select [(ngModel)]="selectedClassId" (change)="onFilterChange()" class="filter-select">
+            <option value="">All Classes</option>
+            <option *ngFor="let c of classes" [value]="c.id">{{ c.name }}</option>
+          </select>
+        </div>
+
+        <!-- Loading -->
+        <div *ngIf="loading" class="loading-container">
+          <div class="spinner"></div>
+          <p>Loading fee structures...</p>
+        </div>
+
+        <!-- Grouped Fee Cards -->
+        <div *ngIf="!loading">
+          <div *ngFor="let group of groupedFees" class="class-fee-card">
+            <div class="class-fee-header">
+              <div class="class-info">
+                <h3>{{ group.class.name }}</h3>
+                <span class="total-badge">
+                  Total: {{ formatCurrency(getClassTotal(group.fees)) }}
+                </span>
+              </div>
+              <button class="btn-assign"
+                      (click)="assignFeesToClass(group.class.id)"
+                      *ngIf="permissionService.school.fees"
+                      title="Assign these fees to all students in this class">
+                <i class="ri-user-add-line"></i>
+                Assign to Students
+              </button>
+            </div>
+
+            <table class="fee-table">
+              <thead>
+                <tr>
+                  <th>Fee Name</th>
+                  <th>Amount</th>
+                  <th>Mandatory</th>
+                  <th *ngIf="permissionService.school.fees">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let fee of group.fees">
+                  <td>{{ fee.fee_name }}</td>
+                  <td>{{ formatCurrency(fee.amount) }}</td>
+                  <td>
+                    <span class="badge" [class.yes]="fee.is_mandatory">
+                      {{ fee.is_mandatory ? 'Yes' : 'No' }}
+                    </span>
+                  </td>
+                  <td *ngIf="permissionService.school.fees">
+                    <div class="action-buttons">
+                      <button class="btn-icon-small"
+                              (click)="openEditModal(fee)" title="Edit">
+                        <i class="ri-edit-line"></i>
+                      </button>
+                      <button class="btn-icon-small btn-danger"
+                              (click)="deleteFee(fee)" title="Delete">
+                        <i class="ri-delete-bin-line"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div *ngIf="groupedFees.length === 0" class="empty-state">
+            <i class="ri-money-dollar-circle-line"></i>
+            <h3>No Fee Structures</h3>
+            <p>Create fee structures for each class and term</p>
+            <button class="btn-primary" (click)="openCreateModal()"
+                    *ngIf="permissionService.school.fees">
+              <i class="ri-add-line"></i>
+              Add First Fee
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Fee Modal -->
+<div class="modal-overlay" *ngIf="showModal" (click)="closeModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>{{ editingFee ? 'Edit Fee' : 'Add Fee' }}</h2>
+      <button class="close-btn" (click)="closeModal()">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Class *</label>
+        <select [(ngModel)]="feeForm.class_id">
+          <option value="">Select Class</option>
+          <option *ngFor="let c of classes" [value]="c.id">{{ c.name }}</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Term *</label>
+        <select [(ngModel)]="feeForm.term">
+          <option *ngFor="let t of terms" [value]="t">{{ t }}</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Academic Year *</label>
+        <select [(ngModel)]="feeForm.academic_year">
+          <option *ngFor="let y of academicYears" [value]="y">{{ y }}</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Fee Name *</label>
+        <input type="text" [(ngModel)]="feeForm.fee_name"
+               placeholder="e.g., Tuition, Sports Levy, PTA" />
+      </div>
+      <div class="form-group">
+        <label>Amount (GHS) *</label>
+        <input type="number" [(ngModel)]="feeForm.amount"
+               min="0" step="0.01" placeholder="0.00" />
+      </div>
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input type="checkbox" [(ngModel)]="feeForm.is_mandatory" />
+          <span>Mandatory Fee</span>
+        </label>
+      </div>
+      <div *ngIf="errorMessage" class="error-alert">
+        <span>{{ errorMessage }}</span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" (click)="closeModal()"
+              [disabled]="processing">Cancel</button>
+      <button class="btn-primary" (click)="saveFee()"
+              [disabled]="processing">
+        {{ processing ? 'Saving...' : (editingFee ? 'Update Fee' : 'Add Fee') }}
+      </button>
+    </div>
+  </div>
+</div>

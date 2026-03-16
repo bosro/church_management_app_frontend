@@ -13,7 +13,8 @@
             <h1>Communications</h1>
             <p class="subtitle">Send messages to your members</p>
           </div>
-          <button class="btn-primary" (click)="createCommunication()">
+          <button class="btn-primary" (click)="createCommunication()"
+            *ngIf="permissionService.isAdmin || permissionService.communications.send">
             <i class="ri-add-line"></i>
             <span>New Message</span>
           </button>
@@ -100,7 +101,8 @@
               <div class="comm-info">
                 <h3>{{ comm.title }}</h3>
                 <p class="comm-meta">
-                  {{ comm.communication_type === 'sms' ? 'SMS' : comm.communication_type === 'email' ? 'Email' : 'SMS & Email' }}
+                  {{ comm.communication_type === 'sms' ? 'SMS' : comm.communication_type === 'email' ? 'Email' : 'SMS &
+                  Email' }}
                   • {{ comm.target_audience | titlecase }}
                   • {{ comm.created_at | date:'MMM d, y h:mm a' }}
                 </p>
@@ -117,18 +119,14 @@
             </div>
 
             <div class="card-actions">
-              <button
-                *ngIf="comm.status === 'draft'"
-                class="btn-action btn-send"
-                (click)="sendCommunication(comm.id, $event)"
-              >
+              <button *ngIf="comm.status === 'draft' &&
+               (permissionService.isAdmin || permissionService.communications.send)" class="btn-action btn-send"
+                (click)="sendCommunication(comm.id, $event)">
                 <i class="ri-send-plane-line"></i>
                 Send Now
               </button>
-              <button
-                class="btn-action btn-delete"
-                (click)="deleteCommunication(comm.id, $event)"
-              >
+              <button class="btn-action btn-delete" (click)="deleteCommunication(comm.id, $event)"
+                *ngIf="permissionService.isAdmin || permissionService.communications.bulk">
                 <i class="ri-delete-bin-line"></i>
                 Delete
               </button>
@@ -140,7 +138,8 @@
             <i class="ri-message-3-line"></i>
             <h3>No Messages Yet</h3>
             <p>Create your first message to communicate with members</p>
-            <button class="btn-primary" (click)="createCommunication()">
+            <button class="btn-primary" (click)="createCommunication()"
+              *ngIf="permissionService.isAdmin || permissionService.communications.send">
               <i class="ri-add-line"></i>
               New Message
             </button>
@@ -149,11 +148,7 @@
 
         <!-- Pagination -->
         <div class="pagination" *ngIf="totalPages > 1 && !loading">
-          <button
-            class="pagination-btn"
-            [disabled]="currentPage === 1"
-            (click)="previousPage()"
-          >
+          <button class="pagination-btn" [disabled]="currentPage === 1" (click)="previousPage()">
             <i class="ri-arrow-left-s-line"></i>
             Previous
           </button>
@@ -164,11 +159,7 @@
             </span>
           </div>
 
-          <button
-            class="pagination-btn"
-            [disabled]="currentPage === totalPages"
-            (click)="nextPage()"
-          >
+          <button class="pagination-btn" [disabled]="currentPage === totalPages" (click)="nextPage()">
             Next
             <i class="ri-arrow-right-s-line"></i>
           </button>
@@ -177,5 +168,3 @@
     </div>
   </div>
 </div>
-
-

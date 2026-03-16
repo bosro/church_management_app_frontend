@@ -1,0 +1,246 @@
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+  <div class="dashboard-content">
+    <app-header></app-header>
+    <div class="dashboard-body">
+      <div class="student-detail-container">
+
+        <!-- Loading -->
+        <div *ngIf="loading" class="loading-container">
+          <div class="spinner"></div>
+          <p>Loading student...</p>
+        </div>
+
+        <div *ngIf="!loading && student">
+
+          <!-- Header -->
+          <div class="detail-header">
+            <button class="back-btn" (click)="goBack()">
+              <i class="ri-arrow-left-line"></i>
+            </button>
+            <div class="header-actions">
+              <button class="btn-secondary"
+                      *ngIf="permissionService.school.fees"
+                      (click)="recordPayment()">
+                <i class="ri-money-dollar-circle-line"></i>
+                Record Payment
+              </button>
+              <button class="btn-secondary"
+                      *ngIf="permissionService.school.manage"
+                      (click)="editStudent()">
+                <i class="ri-edit-line"></i>
+                Edit
+              </button>
+            </div>
+          </div>
+
+          <!-- Alerts -->
+          <div *ngIf="successMessage" class="success-alert">
+            <i class="ri-checkbox-circle-line"></i>
+            {{ successMessage }}
+          </div>
+          <div *ngIf="errorMessage" class="error-alert">
+            <i class="ri-error-warning-line"></i>
+            {{ errorMessage }}
+          </div>
+
+          <!-- Student Profile Card -->
+          <div class="profile-card">
+            <div class="profile-left">
+              <div class="profile-avatar">
+                <img *ngIf="student.photo_url"
+                     [src]="student.photo_url" [alt]="getFullName()" />
+                <div *ngIf="!student.photo_url" class="avatar-large">
+                  {{ getInitials() }}
+                </div>
+              </div>
+              <div class="profile-info">
+                <h1>{{ getFullName() }}</h1>
+                <p class="student-number">{{ student.student_number }}</p>
+                <span class="class-badge">{{ student.class?.name }}</span>
+                <span class="status-badge"
+                      [class.active]="student.is_active"
+                      [class.inactive]="!student.is_active">
+                  {{ student.is_active ? 'Active' : 'Inactive' }}
+                </span>
+              </div>
+            </div>
+
+            <div class="profile-details">
+              <div class="detail-item" *ngIf="student.date_of_birth">
+                <i class="ri-calendar-line"></i>
+                <div>
+                  <p class="label">Date of Birth</p>
+                  <p class="value">
+                    {{ student.date_of_birth | date:'MMM d, y' }}
+                    ({{ calculateAge(student.date_of_birth) }} years)
+                  </p>
+                </div>
+              </div>
+              <div class="detail-item" *ngIf="student.gender">
+                <i class="ri-user-line"></i>
+                <div>
+                  <p class="label">Gender</p>
+                  <p class="value capitalize">{{ student.gender }}</p>
+                </div>
+              </div>
+              <div class="detail-item" *ngIf="student.parent_name">
+                <i class="ri-parent-line"></i>
+                <div>
+                  <p class="label">Parent/Guardian</p>
+                  <p class="value">{{ student.parent_name }}</p>
+                </div>
+              </div>
+              <div class="detail-item" *ngIf="student.parent_phone">
+                <i class="ri-phone-line"></i>
+                <div>
+                  <p class="label">Phone</p>
+                  <p class="value">{{ student.parent_phone }}</p>
+                </div>
+              </div>
+              <div class="detail-item" *ngIf="student.address">
+                <i class="ri-map-pin-line"></i>
+                <div>
+                  <p class="label">Address</p>
+                  <p class="value">{{ student.address }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Term Selector -->
+          <div class="term-selector" *ngIf="permissionService.school.fees">
+            <select [(ngModel)]="currentTerm" (change)="onTermChange()" class="filter-select">
+              <option *ngFor="let term of terms" [value]="term">{{ term }}</option>
+            </select>
+            <select [(ngModel)]="currentAcademicYear" (change)="onTermChange()" class="filter-select">
+              <option *ngFor="let year of academicYears" [value]="year">{{ year }}</option>
+            </select>
+          </div>
+
+          <!-- Tabs -->
+          <div class="tabs-container" *ngIf="permissionService.school.fees">
+            <div class="tabs">
+              <button class="tab" [class.active]="activeTab === 'overview'"
+                      (click)="activeTab = 'overview'">Overview</button>
+              <button class="tab" [class.active]="activeTab === 'fees'"
+                      (click)="activeTab = 'fees'">
+                Fees ({{ fees.length }})
+              </button>
+              <button class="tab" [class.active]="activeTab === 'payments'"
+                      (click)="activeTab = 'payments'">
+                Payments ({{ payments.length }})
+              </button>
+            </div>
+          </div>
+
+          <!-- Overview Tab -->
+          <div *ngIf="activeTab === 'overview'" class="tab-content">
+            <div class="fee-summary-grid" *ngIf="fees.length > 0">
+              <div class="summary-card">
+                <p class="summary-label">Total Due</p>
+                <p class="summary-value">{{ formatCurrency(getTotalDue()) }}</p>
+              </div>
+              <div class="summary-card paid">
+                <p class="summary-label">Total Paid</p>
+                <p class="summary-value">{{ formatCurrency(getTotalPaid()) }}</p>
+              </div>
+              <div class="summary-card" [class.outstanding]="getTotalBalance() > 0">
+                <p class="summary-label">Balance</p>
+                <p class="summary-value">{{ formatCurrency(getTotalBalance()) }}</p>
+              </div>
+            </div>
+            <div *ngIf="fees.length === 0" class="empty-state">
+              <i class="ri-file-list-3-line"></i>
+              <p>No fee records for {{ currentTerm }} {{ currentAcademicYear }}</p>
+            </div>
+          </div>
+
+          <!-- Fees Tab -->
+          <div *ngIf="activeTab === 'fees'" class="tab-content">
+            <div class="table-card">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Fee</th>
+                    <th>Amount Due</th>
+                    <th>Amount Paid</th>
+                    <th>Balance</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let fee of fees">
+                    <td>{{ fee.fee_name }}</td>
+                    <td>{{ formatCurrency(fee.amount_due) }}</td>
+                    <td>{{ formatCurrency(fee.amount_paid) }}</td>
+                    <td>{{ formatCurrency(fee.amount_due - fee.amount_paid) }}</td>
+                    <td>
+                      <span class="status-badge" [ngClass]="getFeeStatusClass(fee.status)">
+                        {{ fee.status | titlecase }}
+                      </span>
+                    </td>
+                  </tr>
+                  <tr *ngIf="fees.length === 0">
+                    <td colspan="5" class="empty-state">
+                      <p>No fees assigned for this term</p>
+                    </td>
+                  </tr>
+                </tbody>
+                <tfoot *ngIf="fees.length > 0">
+                  <tr class="total-row">
+                    <td><strong>Total</strong></td>
+                    <td><strong>{{ formatCurrency(getTotalDue()) }}</strong></td>
+                    <td><strong>{{ formatCurrency(getTotalPaid()) }}</strong></td>
+                    <td><strong>{{ formatCurrency(getTotalBalance()) }}</strong></td>
+                    <td></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+
+          <!-- Payments Tab -->
+          <div *ngIf="activeTab === 'payments'" class="tab-content">
+            <div class="table-card">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Receipt No.</th>
+                    <th>Date</th>
+                    <th>Amount</th>
+                    <th>Method</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let payment of payments">
+                    <td>
+                      <span class="receipt-number">{{ payment.receipt_number }}</span>
+                    </td>
+                    <td>{{ payment.payment_date | date:'MMM d, y' }}</td>
+                    <td>{{ formatCurrency(payment.amount) }}</td>
+                    <td>{{ payment.payment_method }}</td>
+                    <td>
+                      <button class="btn-icon-small"
+                              (click)="viewReceipt(payment.receipt_number)"
+                              title="View Receipt">
+                        <i class="ri-file-text-line"></i>
+                      </button>
+                    </td>
+                  </tr>
+                  <tr *ngIf="payments.length === 0">
+                    <td colspan="5" class="empty-state">
+                      <p>No payments recorded for this term</p>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
