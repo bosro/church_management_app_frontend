@@ -11,7 +11,6 @@ import { RecordPayment } from './components/fees/record-payment/record-payment';
 import { FeeReport } from './components/fees/fee-report/fee-report';
 import { ReceiptView } from './components/receipts/receipt-view/receipt-view';
 import { ClassesList } from './components/classes/classes-list/classes-list';
-import { CreateClass } from './components/classes/create-class/create-class';
 import { StudentsList } from './components/students/students-list/students-list';
 import { AddStudent } from './components/students/add-student/add-student';
 import { EditStudent } from './components/students/edit-student/edit-student';
@@ -36,7 +35,6 @@ import { SubjectsList } from './components/settings/subjects-list/subjects-list'
     FeeReport,
     ReceiptView,
     ClassesList,
-    CreateClass,
     StudentsList,
     AddStudent,
     EditStudent,

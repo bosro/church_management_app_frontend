@@ -256,7 +256,7 @@
   <div class="feature-toggles">
     <label class="checkbox-label">
       <input type="checkbox"
-             [checked]="churchForm.enabled_features?.includes('reports')"
+             [checked]="churchForm.enabled_features.includes('reports')"
              (change)="toggleFeature('reports', $event)" />
       <span>Reports Module</span>
     </label>

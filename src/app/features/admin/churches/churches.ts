@@ -8,6 +8,7 @@ import { AdminService } from '../services/admin.service';
   templateUrl: './churches.html',
   styleUrl: './churches.scss',
 })
+
 export class Churches implements OnInit {
   churches: Church[] = [];
   filteredChurches: Church[] = [];
