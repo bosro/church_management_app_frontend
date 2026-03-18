@@ -64,7 +64,19 @@ export class BranchesService {
       (async () => {
         let query = this.supabase.client
           .from('branches')
-          .select('*', { count: 'exact' })
+          .select(
+            `
+            *,
+            pastor:profiles!pastor_id(
+              id,
+              full_name,
+              email,
+              avatar_url,
+              phone
+            )
+          `,
+            { count: 'exact' },
+          )
           .eq('church_id', churchId);
 
         // Apply filters
@@ -100,16 +112,18 @@ export class BranchesService {
     return from(
       this.supabase.client
         .from('branches')
-        .select(`
+        .select(
+          `
           *,
-          pastor:users!pastor_id(
+          pastor:profiles!pastor_id(
             id,
             full_name,
             email,
             avatar_url,
-            phone_number
+            phone
           )
-        `)
+        `,
+        )
         .eq('id', branchId)
         .eq('church_id', churchId)
         .single(),
@@ -462,25 +476,44 @@ export class BranchesService {
   // ==================== NEW: BRANCH PASTOR MANAGEMENT ====================
 
   /**
-   * Get all users with 'pastor' role who are not assigned to any branch
+   * Get all profiles with 'pastor' role who are not assigned to any branch
    */
   getAvailablePastors(): Observable<BranchPastor[]> {
     const churchId = this.authService.getChurchId();
 
     return from(
-      this.supabase.client
-        .from('users')
-        .select('id, full_name, email, avatar_url, phone_number')
-        .eq('church_id', churchId)
-        .eq('role', 'pastor')
-        .is('branch_id', null)
-        .eq('is_active', true)
-        .order('full_name', { ascending: true }),
+      (async () => {
+        // Get all pastors
+        const { data: allPastors, error: pastorsError } =
+          await this.supabase.client
+            .from('profiles')
+            .select('id, full_name, email, avatar_url, phone')
+            .eq('church_id', churchId)
+            .eq('role', 'pastor')
+            .eq('is_active', true)
+            .order('full_name', { ascending: true });
+
+        if (pastorsError) throw new Error(pastorsError.message);
+
+        // Get all assigned pastor IDs
+        const { data: assignedBranches } = await this.supabase.client
+          .from('branches')
+          .select('pastor_id')
+          .not('pastor_id', 'is', null)
+          .eq('is_active', true);
+
+        const assignedPastorIds = new Set(
+          (assignedBranches || []).map((b) => b.pastor_id),
+        );
+
+        // Filter out already assigned pastors
+        const availablePastors = (allPastors || []).filter(
+          (pastor) => !assignedPastorIds.has(pastor.id),
+        );
+
+        return availablePastors as BranchPastor[];
+      })(),
     ).pipe(
-      map(({ data, error }) => {
-        if (error) throw new Error(error.message);
-        return (data || []) as BranchPastor[];
-      }),
       catchError((err) => {
         console.error('Error loading available pastors:', err);
         return throwError(() => err);
@@ -512,16 +545,16 @@ export class BranchesService {
           throw new Error('This branch already has an assigned pastor');
         }
 
-        // Verify user exists and is a pastor
-        const { data: user } = await this.supabase.client
-          .from('users')
+        // Verify profile exists and is a pastor
+        const { data: profile } = await this.supabase.client
+          .from('profiles')
           .select('id, email, full_name, role')
           .eq('id', request.user_id)
           .eq('church_id', churchId)
           .eq('role', 'pastor')
           .single();
 
-        if (!user) {
+        if (!profile) {
           throw new Error('User not found or is not a pastor');
         }
 
@@ -544,47 +577,27 @@ export class BranchesService {
           .from('branches')
           .update({
             pastor_id: request.user_id,
+            pastor_name: profile.full_name,
             updated_at: new Date().toISOString(),
           })
           .eq('id', request.branch_id);
 
         if (updateBranchError) throw new Error(updateBranchError.message);
 
-        // Update user with branch assignment
-        const { error: updateUserError } = await this.supabase.client
-          .from('users')
-          .update({
-            branch_id: request.branch_id,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', request.user_id);
-
-        if (updateUserError) throw new Error(updateUserError.message);
-
         // Send welcome email if requested
         if (request.send_welcome_email) {
           try {
-            const { data: emailPayload, error: emailError } =
-              await this.supabase.client.rpc(
-                'send_branch_pastor_welcome_email',
-                {
-                  p_user_id: request.user_id,
-                  p_branch_id: request.branch_id,
-                },
-              );
+            // Call edge function or RPC to send password reset email
+            await this.supabase.client.auth.resetPasswordForEmail(
+              profile.email,
+              {
+                redirectTo: `${window.location.origin}/auth/reset-password`,
+              },
+            );
 
-            if (emailError) {
-              console.error('Failed to send welcome email:', emailError);
-              // Don't throw - assignment succeeded even if email failed
-            } else {
-              // TODO: Integrate with your email service
-              console.log('Email payload:', emailPayload);
-
-              // You can call Supabase Auth to send password reset email
-              // This requires Supabase Admin privileges or Edge Function
-            }
+            console.log('Password reset email sent to:', profile.email);
           } catch (emailErr) {
-            console.error('Error sending email:', emailErr);
+            console.error('Error sending password reset email:', emailErr);
             // Continue - assignment was successful
           }
         }
@@ -623,29 +636,17 @@ export class BranchesService {
           throw new Error('This branch does not have an assigned pastor');
         }
 
-        const pastorId = existing.pastor_id;
-
         // Remove pastor from branch
         const { error: branchError } = await this.supabase.client
           .from('branches')
           .update({
             pastor_id: null,
+            pastor_name: null,
             updated_at: new Date().toISOString(),
           })
           .eq('id', branchId);
 
         if (branchError) throw new Error(branchError.message);
-
-        // Remove branch from user
-        const { error: userError } = await this.supabase.client
-          .from('users')
-          .update({
-            branch_id: null,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', pastorId);
-
-        if (userError) throw new Error(userError.message);
       })(),
     ).pipe(
       catchError((err) => {
