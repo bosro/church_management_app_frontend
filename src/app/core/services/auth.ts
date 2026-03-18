@@ -131,12 +131,21 @@ export class AuthService {
         // Check approval status FIRST
         const approvalStatus = userProfile.approval_status || 'pending';
 
+        // if (approvalStatus === 'pending') {
+        //   await this.supabase.client.auth.signOut();
+        //   throw new Error(
+        //     'Your account is pending admin approval. You will receive an email once approved.',
+        //   );
+        // }
+
         if (approvalStatus === 'pending') {
-          await this.supabase.client.auth.signOut();
-          throw new Error(
-            'Your account is pending admin approval. You will receive an email once approved.',
-          );
-        }
+  await this.supabase.client.auth.signOut();
+  throw new Error(
+    'Please confirm your email address first. ' +
+    'Check your inbox for a confirmation link. ' +
+    'Once confirmed you can sign in immediately.'
+  );
+}
 
         if (approvalStatus === 'rejected') {
           await this.supabase.client.auth.signOut();
@@ -216,52 +225,62 @@ export class AuthService {
   /**
    * Handle member signup (joining existing church)
    */
-  private async handleMemberSignup(
-    data: any,
-    signUpData: SignUpData,
-  ): Promise<any> {
-    // Check if a pre-created user record exists for this email in this church
-    const { data: existingUser } = await this.supabase.client
+ private async handleMemberSignup(
+  data: any,
+  signUpData: SignUpData,
+): Promise<any> {
+  // Check if a pre-created user record exists for this email in this church
+  const { data: existingUser } = await this.supabase.client
+    .from('users')
+    .select('id')
+    .eq('email', signUpData.email)
+    .eq('church_id', signUpData.church_id!)
+    .neq('id', data.user.id)
+    .maybeSingle();
+
+  if (existingUser) {
+    await this.supabase.client
       .from('users')
-      .select('id')
+      .update({ id: data.user.id, updated_at: new Date().toISOString() })
       .eq('email', signUpData.email)
-      .eq('church_id', signUpData.church_id!)
-      .neq('id', data.user.id)
-      .maybeSingle(); // ← was .single()
+      .eq('church_id', signUpData.church_id!);
 
-    if (existingUser) {
-      // Update the pre-created record to use the real auth UID
-      await this.supabase.client
-        .from('users')
-        .update({ id: data.user.id, updated_at: new Date().toISOString() })
-        .eq('email', signUpData.email)
-        .eq('church_id', signUpData.church_id!);
-
-      // ← ADD HERE: reconcile the members row that was created with a null user_id
-      await this.supabase.client
-        .from('members')
-        .update({ user_id: data.user.id })
-        .eq('email', signUpData.email)
-        .is('user_id', null);
-    }
-
-    // Continue with normal member signup
-    const result = await this.supabase.callFunction('create_member_signup', {
-      p_user_id: data.user.id,
-      p_full_name: signUpData.full_name,
-      p_email: signUpData.email,
-      p_phone: signUpData.phone,
-      p_church_id: signUpData.church_id,
-    });
-
-    return {
-      ...data,
-      needsEmailConfirmation: !data.user.email_confirmed_at,
-      pendingApproval: false,
-      message: 'Welcome! Please check your email to confirm your account.',
-    };
+    await this.supabase.client
+      .from('members')
+      .update({ user_id: data.user.id })
+      .eq('email', signUpData.email)
+      .is('user_id', null);
   }
 
+  // ✅ ADD THIS — ensure profile is set to pending until email confirmed
+  // The DB trigger will flip this to approved once email is confirmed
+  await this.supabase.client
+    .from('profiles')
+    .update({
+      approval_status: 'pending',
+      is_active: false,
+      church_id: signUpData.church_id,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', data.user.id);
+
+  const result = await this.supabase.callFunction('create_member_signup', {
+    p_user_id: data.user.id,
+    p_full_name: signUpData.full_name,
+    p_email: signUpData.email,
+    p_phone: signUpData.phone,
+    p_church_id: signUpData.church_id,
+  });
+
+  return {
+    ...data,
+    needsEmailConfirmation: !data.user.email_confirmed_at,
+    pendingApproval: false,
+    // ✅ Updated message — no mention of admin approval
+    message:
+      'Account created! Please check your email and click the confirmation link to activate your account. You can sign in immediately after confirming.',
+  };
+}
   /**
    * Handle admin/pastor signup (creating new church or requesting access)
    */

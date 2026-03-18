@@ -7,6 +7,7 @@ import { GivingCategory } from '../../../../../models/giving.model';
 import { FinanceService } from '../../../services/finance.service';
 import { PermissionService } from '../../../../../core/services/permission.service';
 import { Router } from '@angular/router';
+import { Location } from '@angular/common';
 
 @Component({
   selector: 'app-categories-management',
@@ -35,7 +36,8 @@ export class CategoriesManagement implements OnInit, OnDestroy {
     private fb: FormBuilder,
     private financeService: FinanceService,
      public permissionService: PermissionService,
-     private router: Router
+     private router: Router,
+       private location: Location
   ) {}
 
   ngOnInit(): void {
@@ -229,6 +231,9 @@ private checkPermissions(): void {
     this.errorMessage = '';
     this.successMessage = '';
   }
+  goBack(): void {
+  this.location.back();
+}
 }
 
 

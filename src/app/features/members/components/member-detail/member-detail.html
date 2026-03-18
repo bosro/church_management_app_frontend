@@ -25,20 +25,25 @@
 
       <!-- Member Details -->
       <div *ngIf="member && !loading" class="member-detail-container">
+        <!-- Back Button -->
+        <button class="btn-back" (click)="goBack()">
+          <i class="ri-arrow-left-line"></i>
+          <span>Back</span>
+        </button>
+
         <!-- Header -->
         <div class="detail-header">
-          <button class="back-btn" (click)="goBack()">
-            <i class="ri-arrow-left-line"></i>
-            <span class="desktop-only">Back</span>
-          </button>
+          <div class="header-info">
+            <h1>Member Details</h1>
+          </div>
           <div class="header-actions">
             <button class="btn-secondary" (click)="editMember()" [disabled]="!canEditMember" *ngIf="canEditMember">
               <i class="ri-edit-line"></i>
-              <span class="desktop-only">Edit</span>
+              <span>Edit</span>
             </button>
             <button class="btn-danger" (click)="deleteMember()" [disabled]="!canDeleteMember" *ngIf="canDeleteMember">
               <i class="ri-delete-bin-line"></i>
-              <span class="desktop-only">Delete</span>
+              <span>Delete</span>
             </button>
           </div>
         </div>

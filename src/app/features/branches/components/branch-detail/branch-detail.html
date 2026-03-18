@@ -14,15 +14,23 @@
 
         <!-- Branch Content -->
         <div *ngIf="!loadingBranch && branch">
+          <!-- Back Button -->
+          <button class="btn-back" (click)="goBack()">
+            <i class="ri-arrow-left-line"></i>
+            <span>Back</span>
+          </button>
+
           <!-- Page Header -->
           <div class="page-header">
             <div class="header-left">
-              <button class="back-btn" (click)="goBack()">
-                <i class="ri-arrow-left-line"></i>
-              </button>
               <div>
                 <h1>{{ branch.name }}</h1>
-                <p class="subtitle" *ngIf="branch.pastor_name">Led by {{ branch.pastor_name }}</p>
+                <p class="subtitle" *ngIf="branch.pastor_name && !branch.pastor">
+                  Led by {{ branch.pastor_name }}
+                </p>
+                <p class="subtitle" *ngIf="branch.pastor">
+                  Led by {{ branch.pastor.full_name }}
+                </p>
               </div>
             </div>
             <button
@@ -48,7 +56,39 @@
 
           <!-- Branch Information Card -->
           <div class="info-card">
-            <h3>Branch Information</h3>
+            <div class="card-header-with-actions">
+              <h3>Branch Information</h3>
+
+              <!-- Pastor Assignment Section -->
+              <div class="pastor-section" *ngIf="canManageBranches">
+                <div class="pastor-info" *ngIf="branch.pastor">
+                  <div class="pastor-avatar">
+                    <img *ngIf="branch.pastor.avatar_url"
+                         [src]="branch.pastor.avatar_url"
+                         [alt]="branch.pastor.full_name" />
+                    <div *ngIf="!branch.pastor.avatar_url" class="avatar-placeholder">
+                      {{ getPastorInitials(branch.pastor) }}
+                    </div>
+                  </div>
+                  <div class="pastor-details">
+                    <span class="pastor-label">Branch Pastor</span>
+                    <span class="pastor-name">{{ branch.pastor.full_name }}</span>
+                  </div>
+                  <button class="btn-icon-danger" (click)="removePastor()" title="Remove pastor">
+                    <i class="ri-close-line"></i>
+                  </button>
+                </div>
+
+                <button
+                  *ngIf="!branch.pastor"
+                  class="btn-assign-pastor"
+                  (click)="openAssignPastorModal()"
+                >
+                  <i class="ri-user-add-line"></i>
+                  Assign Pastor
+                </button>
+              </div>
+            </div>
 
             <div class="info-grid">
               <div class="info-item" *ngIf="branch.address">
@@ -93,19 +133,195 @@
             </div>
           </div>
 
-          <!-- Members Section -->
-          <div class="members-section">
+          <!-- Tabs Navigation -->
+          <div class="tabs-navigation">
+            <button
+              class="tab-btn"
+              [class.active]="activeTab === 'members'"
+              (click)="switchTab('members')"
+            >
+              <i class="ri-group-line"></i>
+              <span>Members ({{ totalMembers }})</span>
+            </button>
+
+            <button
+              *ngIf="canViewInsights"
+              class="tab-btn"
+              [class.active]="activeTab === 'insights'"
+              (click)="switchTab('insights')"
+            >
+              <i class="ri-line-chart-line"></i>
+              <span>Insights</span>
+            </button>
+          </div>
+
+          <!-- Insights Tab -->
+          <div *ngIf="activeTab === 'insights' && canViewInsights" class="insights-section">
+            <!-- Loading -->
+            <div *ngIf="loadingInsights" class="loading-container">
+              <app-loading-spinner message="Loading insights..."></app-loading-spinner>
+            </div>
+
+            <!-- Insights Content -->
+            <div *ngIf="!loadingInsights && branchInsights" class="insights-content">
+              <!-- Header -->
+              <div class="insights-header">
+                <div>
+                  <h3>Branch Performance Insights</h3>
+                  <p class="insights-updated">
+                    Last updated: {{ branchInsights.last_updated | date:'MMM d, y h:mm a' }}
+                  </p>
+                </div>
+              </div>
+
+              <!-- Stats Grid -->
+              <div class="insights-stats-grid">
+                <!-- Member Growth -->
+                <div class="insight-card">
+                  <div class="insight-icon" style="background: #DDD6FE; color: #7C3AED;">
+                    <i class="ri-user-add-line"></i>
+                  </div>
+                  <div class="insight-info">
+                    <span class="insight-label">New Members (30 days)</span>
+                    <h4 class="insight-value">{{ branchInsights.new_members_last_month }}</h4>
+                    <span class="insight-growth" *ngIf="branchInsights.growth_rate_monthly > 0">
+                      <i class="ri-arrow-up-line"></i>
+                      {{ branchInsights.growth_rate_monthly }}% growth
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Quarterly Growth -->
+                <div class="insight-card">
+                  <div class="insight-icon" style="background: #DBEAFE; color: #3B82F6;">
+                    <i class="ri-bar-chart-line"></i>
+                  </div>
+                  <div class="insight-info">
+                    <span class="insight-label">New Members (90 days)</span>
+                    <h4 class="insight-value">{{ branchInsights.new_members_last_quarter }}</h4>
+                    <span class="insight-growth" *ngIf="branchInsights.growth_rate_quarterly > 0">
+                      <i class="ri-arrow-up-line"></i>
+                      {{ branchInsights.growth_rate_quarterly }}% growth
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Monthly Giving -->
+                <div class="insight-card">
+                  <div class="insight-icon" style="background: #D1FAE5; color: #059669;">
+                    <i class="ri-money-dollar-circle-line"></i>
+                  </div>
+                  <div class="insight-info">
+                    <span class="insight-label">Giving (Last Month)</span>
+                    <h4 class="insight-value">{{ formatCurrency(branchInsights.giving_last_month) }}</h4>
+                    <span class="insight-meta">{{ branchInsights.transactions_last_month }} transactions</span>
+                  </div>
+                </div>
+
+                <!-- Quarterly Giving -->
+                <div class="insight-card">
+                  <div class="insight-icon" style="background: #FED7AA; color: #EA580C;">
+                    <i class="ri-wallet-line"></i>
+                  </div>
+                  <div class="insight-info">
+                    <span class="insight-label">Giving (Last Quarter)</span>
+                    <h4 class="insight-value">{{ formatCurrency(branchInsights.giving_last_quarter) }}</h4>
+                    <span class="insight-meta">Total: {{ formatCurrency(branchInsights.total_giving) }}</span>
+                  </div>
+                </div>
+
+                <!-- Attendance -->
+                <div class="insight-card">
+                  <div class="insight-icon" style="background: #FEF3C7; color: #F59E0B;">
+                    <i class="ri-calendar-check-line"></i>
+                  </div>
+                  <div class="insight-info">
+                    <span class="insight-label">Avg Attendance (30 days)</span>
+                    <h4 class="insight-value">{{ branchInsights.avg_attendance_last_month | number:'1.0-0' }}</h4>
+                    <span class="insight-meta">{{ branchInsights.services_last_month }} services</span>
+                  </div>
+                </div>
+
+                <!-- Total Members -->
+                <div class="insight-card">
+                  <div class="insight-icon" style="background: #E0E7FF; color: #6366F1;">
+                    <i class="ri-group-line"></i>
+                  </div>
+                  <div class="insight-info">
+                    <span class="insight-label">Total Active Members</span>
+                    <h4 class="insight-value">{{ branchInsights.member_count }}</h4>
+                  </div>
+                </div>
+
+                <!-- Giving Participation -->
+                <div class="insight-card">
+                  <div class="insight-icon" style="background: #FCE7F3; color: #EC4899;">
+                    <i class="ri-hand-heart-line"></i>
+                  </div>
+                  <div class="insight-info">
+                    <span class="insight-label">Giving Participation</span>
+                    <h4 class="insight-value">{{ branchInsights.giving_participation_rate }}%</h4>
+                    <span class="insight-meta">{{ branchInsights.unique_givers_last_month }} givers</span>
+                  </div>
+                </div>
+
+                <!-- Events -->
+                <div class="insight-card">
+                  <div class="insight-icon" style="background: #E9D5FF; color: #A855F7;">
+                    <i class="ri-calendar-event-line"></i>
+                  </div>
+                  <div class="insight-info">
+                    <span class="insight-label">Upcoming Events</span>
+                    <h4 class="insight-value">{{ branchInsights.upcoming_events_30d }}</h4>
+                    <span class="insight-meta">{{ branchInsights.past_events_30d }} completed</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- No Insights Available -->
+            <div *ngIf="!loadingInsights && !branchInsights" class="empty-state">
+              <i class="ri-line-chart-line"></i>
+              <h3>No Insights Available</h3>
+              <p>Insights will be available once there is enough data</p>
+            </div>
+          </div>
+
+          <!-- Members Tab -->
+          <div *ngIf="activeTab === 'members'" class="members-section">
             <div class="section-header">
               <h3>Branch Members ({{ totalMembers }})</h3>
-              <button
-                *ngIf="canAssignMembers"
-                class="btn-secondary"
-                (click)="openAssignModal()"
-                [disabled]="loading"
-              >
-                <i class="ri-user-add-line"></i>
-                Assign Member
-              </button>
+              <div class="header-actions">
+                <!-- View Toggle -->
+                <div class="view-toggle">
+                  <button
+                    class="toggle-btn"
+                    [class.active]="viewMode === 'table'"
+                    (click)="toggleView('table')"
+                    title="Table View"
+                  >
+                    <i class="ri-table-line"></i>
+                  </button>
+                  <button
+                    class="toggle-btn"
+                    [class.active]="viewMode === 'card'"
+                    (click)="toggleView('card')"
+                    title="Card View"
+                  >
+                    <i class="ri-layout-grid-line"></i>
+                  </button>
+                </div>
+
+                <button
+                  *ngIf="canAssignMembers"
+                  class="btn-secondary"
+                  (click)="openAssignModal()"
+                  [disabled]="loading"
+                >
+                  <i class="ri-user-add-line"></i>
+                  Assign Member
+                </button>
+              </div>
             </div>
 
             <!-- Loading State -->
@@ -113,8 +329,62 @@
               <app-loading-spinner message="Loading members..."></app-loading-spinner>
             </div>
 
-            <!-- Members Grid -->
-            <div *ngIf="!loading" class="members-grid">
+            <!-- Table View -->
+            <div *ngIf="!loading && viewMode === 'table'" class="table-wrapper">
+              <table class="members-table" *ngIf="branchMembers.length > 0">
+                <thead>
+                  <tr>
+                    <th>Member</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Assigned Date</th>
+                    <th *ngIf="canAssignMembers">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let branchMember of branchMembers">
+                    <td>
+                      <div class="member-cell">
+                        <div class="member-photo-small">
+                          <img [src]="getMemberPhoto(branchMember)" [alt]="getMemberName(branchMember)" />
+                        </div>
+                        <span class="member-name">{{ getMemberName(branchMember) }}</span>
+                      </div>
+                    </td>
+                    <td>{{ branchMember.member?.email || 'N/A' }}</td>
+                    <td>{{ formatPhoneNumber(branchMember.member?.phone_primary || '') }}</td>
+                    <td>{{ branchMember.created_at | date:'MMM d, y' }}</td>
+                    <td *ngIf="canAssignMembers">
+                      <button
+                        class="remove-btn"
+                        (click)="removeMember(branchMember.id)"
+                        title="Remove member from branch"
+                      >
+                        <i class="ri-delete-bin-line"></i>
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <!-- Empty State -->
+              <div *ngIf="branchMembers.length === 0" class="empty-state">
+                <i class="ri-group-line"></i>
+                <h3>No Members Assigned</h3>
+                <p>Assign members to this branch to get started</p>
+                <button
+                  *ngIf="canAssignMembers"
+                  class="btn-primary"
+                  (click)="openAssignModal()"
+                >
+                  <i class="ri-user-add-line"></i>
+                  Assign Member
+                </button>
+              </div>
+            </div>
+
+            <!-- Card View -->
+            <div *ngIf="!loading && viewMode === 'card'" class="members-grid">
               <div *ngFor="let branchMember of branchMembers" class="member-card">
                 <div class="member-photo">
                   <img [src]="getMemberPhoto(branchMember)" [alt]="getMemberName(branchMember)" />
@@ -122,9 +392,11 @@
                 <div class="member-info">
                   <h4>{{ getMemberName(branchMember) }}</h4>
                   <p *ngIf="branchMember.member?.email">{{ branchMember.member?.email }}</p>
-                  <p *ngIf="branchMember.member?.phone_primary">{{ branchMember.member?.phone_primary }}</p>
+                  <p *ngIf="branchMember.member?.phone_primary">
+                    {{ formatPhoneNumber(branchMember.member?.phone_primary) }}
+                  </p>
                   <span class="assigned-date">
-                    Assigned {{ branchMember.assigned_date | date:'MMM d, y' }}
+                    Assigned {{ branchMember.created_at | date:'MMM d, y' }}
                   </span>
                 </div>
                 <button
@@ -239,6 +511,49 @@
         <div *ngIf="filteredMembers.length === 0" class="no-results">
           <i class="ri-user-search-line"></i>
           <p>No members found</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Assign Pastor Modal -->
+<div class="modal-overlay" *ngIf="showAssignPastorModal" (click)="closeAssignPastorModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>Assign Branch Pastor</h2>
+      <button class="close-btn" (click)="closeAssignPastorModal()">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <div class="modal-info-box">
+        <i class="ri-information-line"></i>
+        <p>The selected pastor will receive an email with instructions to set up their account and access the branch dashboard.</p>
+      </div>
+
+      <!-- Pastors List -->
+      <div class="modal-members-list">
+        <div
+          *ngFor="let pastor of availablePastors"
+          class="modal-member-item"
+          (click)="assignPastor(pastor.id, true)"
+        >
+          <div class="member-photo-small">
+            <img [src]="pastor.avatar_url || 'assets/images/default-avatar.png'" [alt]="pastor.full_name" />
+          </div>
+          <div class="member-details">
+            <h4>{{ pastor.full_name }}</h4>
+            <p>{{ pastor.email }}</p>
+          </div>
+          <i class="ri-add-circle-line"></i>
+        </div>
+
+        <div *ngIf="availablePastors.length === 0" class="no-results">
+          <i class="ri-user-search-line"></i>
+          <p>No available pastors</p>
+          <span class="no-results-hint">All pastors are already assigned to branches</span>
         </div>
       </div>
     </div>

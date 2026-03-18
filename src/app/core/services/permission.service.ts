@@ -18,8 +18,16 @@ export class PermissionService {
   }
 
   private hasPermission(permission: string): boolean {
-  return this.userRolesService.hasPermission(permission);
-}
+    return this.userRolesService.hasPermission(permission);
+  }
+
+  hasRole(roles: string | string[]): boolean {
+    const userRole = this.authService.getCurrentUserRole();
+    if (Array.isArray(roles)) {
+      return roles.includes(userRole);
+    }
+    return userRole === roles;
+  }
 
   // Convenience helpers per module
   get members() {
