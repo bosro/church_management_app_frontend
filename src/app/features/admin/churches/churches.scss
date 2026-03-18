@@ -518,3 +518,163 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+// ── Subscription additions ───────────────────────────
+
+.church-subscription {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 0;
+  border-top: 1px solid #F3F4F6;
+  margin-top: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.plan-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  i { font-size: 0.75rem; }
+
+  &.badge-pro { background: #EDE9FE; color: #5B21B6; }
+  &.badge-growth { background: #DBEAFE; color: #1D4ED8; }
+  &.badge-free { background: #F3F4F6; color: #6B7280; }
+}
+
+.expiry-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #6B7280;
+  &.expired { color: #DC2626; }
+  &.expiring { color: #D97706; }
+}
+
+.btn-subscription {
+  background: #EDE9FE !important;
+  color: #5B21B6 !important;
+  &:hover { background: #DDD6FE !important; }
+}
+
+.modal-lg { max-width: 640px !important; }
+
+.modal-subtitle {
+  font-size: 0.875rem;
+  color: #6B7280;
+  margin: 0.25rem 0 0 0;
+}
+
+.usage-summary {
+  background: #F9FAFB;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+
+  h4 {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: #374151;
+    margin: 0 0 0.75rem 0;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+}
+
+.usage-loading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: #6B7280;
+}
+
+.usage-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.usage-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  background: white;
+  border: 1px solid #E5E7EB;
+  border-radius: 20px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #374151;
+  i { font-size: 0.875rem; color: #5B21B6; }
+}
+
+.plan-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.plan-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.875rem;
+  padding: 1rem;
+  border: 2px solid #E5E7EB;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover { border-color: #C4B5FD; }
+  &.selected { border-color: #5B21B6; background: #F5F3FF; }
+
+  input[type="radio"] {
+    margin-top: 0.125rem;
+    accent-color: #5B21B6;
+    flex-shrink: 0;
+  }
+
+  .plan-option-content { flex: 1; }
+
+  .plan-option-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.375rem;
+  }
+
+  .plan-option-name {
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: #111827;
+  }
+
+  .plan-option-price {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #5B21B6;
+  }
+
+  .plan-option-limits {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.8125rem;
+    color: #6B7280;
+    flex-wrap: wrap;
+  }
+}
+
+.spinner-sm {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #E5E7EB;
+  border-top-color: #5B21B6;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+}

@@ -39,6 +39,13 @@ export class UsersList implements OnInit, OnDestroy {
   userToDelete: { id: string; name: string } | null = null;
   isDeleting = false;
 
+  showRoleModal = false;
+  userToChangeRole: { id: string; name: string; currentRole: string } | null =
+    null;
+  selectedNewRole = '';
+  isChangingRole = false;
+  availableRoles: { value: string; label: string }[] = [];
+
   constructor(
     private userRolesService: UserRolesService,
     private authService: AuthService,
@@ -52,10 +59,11 @@ export class UsersList implements OnInit, OnDestroy {
       .pipe(
         filter((ready) => ready),
         take(1),
-        takeUntil(this.destroy$)
+        takeUntil(this.destroy$),
       )
       .subscribe(() => {
         this.checkPermissions();
+        this.availableRoles = this.userRolesService.getAssignableRoles();
         this.currentUserId = this.authService.getUserId();
         this.loadUsers();
       });
@@ -77,6 +85,63 @@ export class UsersList implements OnInit, OnDestroy {
     if (!this.canManageRoles && !this.canManagePermissions) {
       this.router.navigate(['/unauthorized']);
     }
+  }
+
+  openRoleModal(
+    userId: string,
+    userName: string,
+    currentRole: string,
+    event: Event,
+  ): void {
+    event.stopPropagation();
+    if (!this.canManageRoles) {
+      this.errorMessage = 'You do not have permission to change roles';
+      setTimeout(() => (this.errorMessage = ''), 3000);
+      return;
+    }
+    if (userId === this.authService.getUserId()) {
+      this.errorMessage = 'You cannot change your own role';
+      setTimeout(() => (this.errorMessage = ''), 3000);
+      return;
+    }
+    this.userToChangeRole = { id: userId, name: userName, currentRole };
+    this.selectedNewRole = currentRole;
+    this.showRoleModal = true;
+  }
+
+  closeRoleModal(): void {
+    if (this.isChangingRole) return;
+    this.showRoleModal = false;
+    this.userToChangeRole = null;
+    this.selectedNewRole = '';
+  }
+
+  confirmRoleChange(): void {
+    if (!this.userToChangeRole || this.isChangingRole) return;
+    if (this.selectedNewRole === this.userToChangeRole.currentRole) {
+      this.closeRoleModal();
+      return;
+    }
+
+    this.isChangingRole = true;
+
+    this.userRolesService
+      .updateUserRole(this.userToChangeRole.id, this.selectedNewRole)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.successMessage = `Role updated to ${this.getRoleLabel(this.selectedNewRole)} successfully!`;
+          this.loadUsers();
+          setTimeout(() => (this.successMessage = ''), 3000);
+          this.isChangingRole = false;
+          this.closeRoleModal();
+        },
+        error: (err) => {
+          this.errorMessage = err.message || 'Failed to update role';
+          this.isChangingRole = false;
+          this.closeRoleModal();
+        },
+      });
   }
 
   openDeleteModal(userId: string, userName: string, event: Event): void {
@@ -139,7 +204,8 @@ export class UsersList implements OnInit, OnDestroy {
     // Validate church_id before making the call
     const churchId = this.authService.getChurchId();
     if (!churchId) {
-      this.errorMessage = 'Church information not available. Please log out and log in again.';
+      this.errorMessage =
+        'Church information not available. Please log out and log in again.';
       this.loading = false;
       console.error('Church ID is undefined');
       return;

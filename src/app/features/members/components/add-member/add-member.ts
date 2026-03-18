@@ -8,6 +8,7 @@ import { MemberService } from '../../services/member.service';
 import { AuthService } from '../../../../core/services/auth';
 import { MemberCreateInput } from '../../../../models/member.model';
 import { PermissionService } from '../../../../core/services/permission.service';
+import { SubscriptionService } from '../../../../core/services/subscription.service';
 
 @Component({
   selector: 'app-add-member',
@@ -55,12 +56,16 @@ export class AddMember implements OnInit, OnDestroy {
   // Permissions
   canAddMember = false;
 
+  showUpgradeModal = false;
+  upgradeModalTrigger = '';
+
   constructor(
     private fb: FormBuilder,
     private memberService: MemberService,
     private authService: AuthService,
     private router: Router,
     public permissionService: PermissionService,
+    private subscriptionService: SubscriptionService,
   ) {}
 
   ngOnInit(): void {
@@ -79,6 +84,19 @@ export class AddMember implements OnInit, OnDestroy {
 
     if (!this.canAddMember) {
       this.router.navigate(['/unauthorized']);
+    }
+  }
+
+  handleError(error: any): void {
+    if (error.message?.startsWith('QUOTA_EXCEEDED:')) {
+      const parts = error.message.split(':');
+      const limit = parts[3];
+      this.upgradeModalTrigger =
+        `You've reached the ${limit} member limit on your current plan. ` +
+        `Upgrade to add more members.`;
+      this.showUpgradeModal = true;
+    } else {
+      this.errorMessage = error.message || 'An error occurred';
     }
   }
 
@@ -184,11 +202,8 @@ export class AddMember implements OnInit, OnDestroy {
             this.showSuccessAndRedirect(member.id);
           }
         },
-        error: (error) => {
-          this.loading = false;
-          this.errorMessage =
-            error.message || 'Failed to create member. Please try again.';
-          this.scrollToTop();
+        error: (err) => {
+          this.handleError(err);
         },
       });
   }

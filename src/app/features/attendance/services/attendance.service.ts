@@ -24,25 +24,31 @@ export class AttendanceService {
   constructor(
     private supabase: SupabaseService,
     private authService: AuthService,
-    private userRolesService: UserRolesService
+    private userRolesService: UserRolesService,
   ) {}
 
   // ==================== PERMISSIONS ====================
 
-canManageAttendance(): boolean {
-  return this.authService.hasRole(['super_admin', 'church_admin'])
-    || this.userRolesService.hasPermission('attendance.manage');
-}
+  canManageAttendance(): boolean {
+    return (
+      this.authService.hasRole(['super_admin', 'church_admin']) ||
+      this.userRolesService.hasPermission('attendance.manage')
+    );
+  }
 
- canViewAttendance(): boolean {
-  return this.authService.hasRole(['super_admin', 'church_admin'])
-    || this.userRolesService.hasPermission('attendance.view');
-}
+  canViewAttendance(): boolean {
+    return (
+      this.authService.hasRole(['super_admin', 'church_admin']) ||
+      this.userRolesService.hasPermission('attendance.view')
+    );
+  }
 
-canMarkAttendance(): boolean {
-  return this.authService.hasRole(['super_admin', 'church_admin'])
-    || this.userRolesService.hasPermission('attendance.checkin');
-}
+  canMarkAttendance(): boolean {
+    return (
+      this.authService.hasRole(['super_admin', 'church_admin']) ||
+      this.userRolesService.hasPermission('attendance.checkin')
+    );
+  }
 
   // ==================== ATTENDANCE EVENTS ====================
 
@@ -56,6 +62,8 @@ canMarkAttendance(): boolean {
     },
   ): Observable<{ data: AttendanceEvent[]; count: number }> {
     const churchId = this.authService.getChurchId();
+    const isBranchPastor = this.authService.isBranchPastor();
+    const branchId = this.authService.getBranchId();
     const offset = (page - 1) * pageSize;
 
     return from(
@@ -65,31 +73,25 @@ canMarkAttendance(): boolean {
           .select('*', { count: 'exact' })
           .eq('church_id', churchId);
 
-        // Apply filters
-        if (filters?.eventType) {
+        // Branch pastor only sees their branch events
+        if (isBranchPastor && branchId) {
+          query = query.eq('branch_id', branchId);
+        }
+
+        if (filters?.eventType)
           query = query.eq('event_type', filters.eventType);
-        }
-        if (filters?.startDate) {
+        if (filters?.startDate)
           query = query.gte('event_date', filters.startDate);
-        }
-        if (filters?.endDate) {
-          query = query.lte('event_date', filters.endDate);
-        }
+        if (filters?.endDate) query = query.lte('event_date', filters.endDate);
 
         const { data, error, count } = await query
           .order('event_date', { ascending: false })
           .range(offset, offset + pageSize - 1);
 
         if (error) throw new Error(error.message);
-
         return { data: data as AttendanceEvent[], count: count || 0 };
       })(),
-    ).pipe(
-      catchError((err) => {
-        console.error('Error loading attendance events:', err);
-        return throwError(() => err);
-      }),
-    );
+    ).pipe(catchError((err) => throwError(() => err)));
   }
 
   getAttendanceEventById(eventId: string): Observable<AttendanceEvent> {
@@ -126,8 +128,8 @@ canMarkAttendance(): boolean {
   }): Observable<AttendanceEvent> {
     const churchId = this.authService.getChurchId();
     const userId = this.authService.getUserId();
+    const branchId = this.authService.getBranchId(); // auto-set branch
 
-    // Validate event date
     const eventDate = new Date(eventData.event_date);
     if (isNaN(eventDate.getTime())) {
       return throwError(() => new Error('Invalid event date'));
@@ -136,6 +138,7 @@ canMarkAttendance(): boolean {
     return from(
       this.supabase.insert<AttendanceEvent>('attendance_events', {
         church_id: churchId,
+        branch_id: branchId || null, // set if pastor
         event_type: eventData.event_type,
         event_name: eventData.event_name.trim(),
         event_date: eventData.event_date,
@@ -153,10 +156,7 @@ canMarkAttendance(): boolean {
           throw new Error('Failed to create event');
         return data[0];
       }),
-      catchError((err) => {
-        console.error('Error creating event:', err);
-        return throwError(() => err);
-      }),
+      catchError((err) => throwError(() => err)),
     );
   }
 
@@ -539,33 +539,29 @@ canMarkAttendance(): boolean {
 
   getAttendanceStatistics(): Observable<AttendanceStatistics> {
     const churchId = this.authService.getChurchId();
+    const isBranchPastor = this.authService.isBranchPastor();
+    const branchId = this.authService.getBranchId();
 
     return from(
       (async () => {
-        // Total events
-        const { count: totalEvents } = await this.supabase.client
+        let eventsQuery = this.supabase.client
           .from('attendance_events')
-          .select('*', { count: 'exact', head: true })
+          .select('total_attendance', { count: 'exact' })
           .eq('church_id', churchId);
 
-        // Get all events with attendance
-        const { data: events } = await this.supabase.client
-          .from('attendance_events')
-          .select('total_attendance')
-          .eq('church_id', churchId);
-
-        const attendances = events?.map((e) => e.total_attendance) || [];
-        const totalAttendance = attendances.reduce((sum, a) => sum + a, 0);
-        const avgAttendance =
-          events && events.length > 0
-            ? Math.round(totalAttendance / events.length)
-            : 0;
-
-        // Visitors
-        const { count: totalVisitors } = await this.supabase.client
+        let visitorsQuery = this.supabase.client
           .from('visitors')
           .select('*', { count: 'exact', head: true })
           .eq('church_id', churchId);
+
+        // Branch pastor only sees their branch
+        if (isBranchPastor && branchId) {
+          eventsQuery = eventsQuery.eq('branch_id', branchId);
+          visitorsQuery = visitorsQuery.eq('branch_id', branchId);
+        }
+
+        const { data: events, count: totalEvents } = await eventsQuery;
+        const { count: totalVisitors } = await visitorsQuery;
 
         const { count: convertedVisitors } = await this.supabase.client
           .from('visitors')
@@ -573,24 +569,23 @@ canMarkAttendance(): boolean {
           .eq('church_id', churchId)
           .eq('is_converted_to_member', true);
 
+        const attendances = events?.map((e) => e.total_attendance) || [];
+        const totalAttendance = attendances.reduce((sum, a) => sum + a, 0);
+        const avgAttendance = events?.length
+          ? Math.round(totalAttendance / events.length)
+          : 0;
+
         return {
           total_events: totalEvents || 0,
           total_attendance: totalAttendance,
           avg_attendance: avgAttendance,
-          highest_attendance:
-            attendances.length > 0 ? Math.max(...attendances) : 0,
-          lowest_attendance:
-            attendances.length > 0 ? Math.min(...attendances) : 0,
+          highest_attendance: attendances.length ? Math.max(...attendances) : 0,
+          lowest_attendance: attendances.length ? Math.min(...attendances) : 0,
           total_visitors: totalVisitors || 0,
           converted_visitors: convertedVisitors || 0,
         };
       })(),
-    ).pipe(
-      catchError((err) => {
-        console.error('Error loading statistics:', err);
-        return throwError(() => err);
-      }),
-    );
+    ).pipe(catchError((err) => throwError(() => err)));
   }
 
   getAttendanceReport(

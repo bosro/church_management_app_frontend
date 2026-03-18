@@ -1,7 +1,7 @@
 // src/app/features/user-roles/services/user-roles.service.ts
 import { Injectable } from '@angular/core';
 import { Observable, from, throwError, of } from 'rxjs';
-import { map, catchError } from 'rxjs/operators';
+import { map, catchError, switchMap } from 'rxjs/operators';
 import {
   UserPermission,
   RoleTemplate,
@@ -14,6 +14,7 @@ import {
 } from '../../../models/user-role.model';
 import { SupabaseService } from '../../../core/services/supabase';
 import { AuthService } from '../../../core/services/auth';
+import { SubscriptionService } from '../../../core/services/subscription.service';
 
 @Injectable({
   providedIn: 'root',
@@ -24,6 +25,7 @@ export class UserRolesService {
   constructor(
     private supabase: SupabaseService,
     private authService: AuthService,
+    private subscriptionService: SubscriptionService,
   ) {
     this.authService.setUserRolesService(this);
   }
@@ -142,63 +144,62 @@ export class UserRolesService {
   }
 
   private async deleteUserAndPermissions(userId: string): Promise<void> {
-    const churchId = this.authService.getChurchId(); // ← local variable, not this.churchId
+    const requestingUserId = this.getCurrentUserId();
 
-    // Step 1: Nullify user_id on any member records linked to this profile
-    const { error: memberError } = await this.supabase.client
-      .from('members')
-      .update({ user_id: null })
-      .eq('user_id', userId);
+    // Step 1: Call secure DB function — handles users, profiles,
+    // permissions, member links, branch pastor assignments
+    const { error: deleteError } = await this.supabase.client.rpc(
+      'delete_church_user',
+      {
+        p_user_id: userId,
+        p_requesting_user_id: requestingUserId,
+      },
+    );
 
-    if (memberError) throw new Error(memberError.message);
+    if (deleteError) {
+      throw new Error(deleteError.message);
+    }
 
-    // Step 2: Delete all permissions for this user
-    const { error: permError } = await this.supabase.client
-      .from('user_permissions')
-      .delete()
-      .eq('user_id', userId);
+    // Step 2: Delete from Supabase Auth via edge function
+    // Best-effort — DB is already clean even if this fails
+    try {
+      const { error: authDeleteError } =
+        await this.supabase.client.functions.invoke('delete-auth-user', {
+          body: { user_id: userId },
+        });
 
-    if (permError) throw new Error(permError.message);
-
-    // Step 3: Nullify received_by on fee_payments if applicable
-    const { error: feePaymentError } = await this.supabase.client
-      .from('fee_payments')
-      .update({ received_by: null })
-      .eq('received_by', userId);
-
-    if (feePaymentError) throw new Error(feePaymentError.message);
-
-    // Step 4: Delete the profile — scoped to this church
-    const { error: profileError } = await this.supabase.client
-      .from('profiles')
-      .delete()
-      .eq('id', userId)
-      .eq('church_id', churchId); // ← local variable
-
-    if (profileError) throw new Error(profileError.message);
+      if (authDeleteError) {
+        console.warn('Auth user deletion warning:', authDeleteError.message);
+      }
+    } catch (err) {
+      console.warn('Could not delete auth user (non-critical):', err);
+    }
   }
 
-  updateUserRole(userId: string, role: string): Observable<any> {
-    const churchId = this.getChurchId(); // Get fresh churchId
-
+  updateUserRole(userId: string, newRole: string): Observable<void> {
     return from(
-      this.supabase.client
-        .from('users')
-        .update({
-          role,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', userId)
-        .eq('church_id', churchId)
-        .select()
-        .single(),
+      this.supabase.client.rpc('update_user_role', {
+        p_user_id: userId,
+        p_new_role: newRole,
+        p_church_id: this.getChurchId(),
+      }),
     ).pipe(
-      map(({ data, error }) => {
+      map(({ error }) => {
         if (error) throw new Error(error.message);
-        return data;
       }),
       catchError((err) => throwError(() => err)),
     );
+  }
+
+  getAssignableRoles(): { value: string; label: string }[] {
+    return [
+      { value: 'church_admin', label: 'Church Admin' },
+      { value: 'pastor', label: 'Pastor' },
+      { value: 'finance_officer', label: 'Finance Officer' },
+      { value: 'ministry_leader', label: 'Ministry Leader' },
+      { value: 'group_leader', label: 'Group Leader' },
+      { value: 'member', label: 'Member' },
+    ];
   }
 
   deactivateUser(userId: string): Observable<void> {
@@ -321,17 +322,26 @@ export class UserRolesService {
     phone_number: string | null;
     role: string;
   }): Observable<any> {
-    return from(
-      this.supabase.client.functions.invoke('invite-user', {
-        body: {
-          email: userData.email,
-          full_name: userData.full_name,
-          role: userData.role,
-          church_id: this.authService.getChurchId(),
-          phone_number: userData.phone_number,
-        },
+    // Check quota before creating
+    return this.subscriptionService.checkQuota('users').pipe(
+      switchMap((quota) => {
+        if (!quota.allowed) {
+          throw new Error(
+            `QUOTA_EXCEEDED:users:${quota.current}:${quota.limit}`,
+          );
+        }
+        return from(
+          this.supabase.client.functions.invoke('invite-user', {
+            body: {
+              email: userData.email,
+              full_name: userData.full_name,
+              role: userData.role,
+              church_id: this.authService.getChurchId(),
+              phone_number: userData.phone_number,
+            },
+          }),
+        );
       }),
-    ).pipe(
       map(({ data, error }) => {
         if (error) throw new Error(error.message);
         if (data?.error) throw new Error(data.error);
@@ -340,6 +350,7 @@ export class UserRolesService {
       catchError((err) => throwError(() => err)),
     );
   }
+
   private async inviteAndCreateUser(userData: {
     full_name: string;
     email: string;

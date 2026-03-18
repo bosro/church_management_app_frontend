@@ -26,9 +26,13 @@ export class CreateUser implements OnInit, OnDestroy {
     { value: 'church_admin', label: 'Church Admin' },
     { value: 'pastor', label: 'Pastor' },
     { value: 'finance_officer', label: 'Finance Officer' },
+    { value: 'ministry_leader', label: 'Ministry Leader' }, // ADD THIS
     { value: 'group_leader', label: 'Group Leader' },
     { value: 'member', label: 'Member' },
   ];
+
+  showUpgradeModal = false;
+  upgradeModalTrigger = '';
 
   constructor(
     private fb: FormBuilder,
@@ -58,12 +62,32 @@ export class CreateUser implements OnInit, OnDestroy {
     this.userForm = this.fb.group({
       full_name: [
         '',
-        [Validators.required, Validators.minLength(2), Validators.maxLength(100)],
+        [
+          Validators.required,
+          Validators.minLength(2),
+          Validators.maxLength(100),
+        ],
       ],
       email: ['', [Validators.required, Validators.email]],
       phone_number: ['', [Validators.pattern(/^\+?[0-9\s\-().]{7,20}$/)]],
       role: ['member', [Validators.required]],
     });
+  }
+
+  handleError(error: any): void {
+    if (error.message?.startsWith('QUOTA_EXCEEDED:')) {
+      const parts = error.message.split(':');
+      const limit = parts[3];
+      this.upgradeModalTrigger =
+        `You've reached the ${limit} staff user limit on your current plan. ` +
+        `Upgrade to add more users.`;
+      this.showUpgradeModal = true;
+      this.submitting = false;
+    } else {
+      this.errorMessage =
+        error.message || 'Failed to create user. Please try again.';
+      this.submitting = false;
+    }
   }
 
   createUser(): void {
@@ -97,8 +121,7 @@ export class CreateUser implements OnInit, OnDestroy {
           ]);
         },
         error: (error) => {
-          this.errorMessage = error.message || 'Failed to create user. Please try again.';
-          this.submitting = false;
+          this.handleError(error);
         },
       });
   }
@@ -143,6 +166,7 @@ export class CreateUser implements OnInit, OnDestroy {
       church_admin: 'ri-shield-star-line',
       pastor: 'ri-book-open-line',
       finance_officer: 'ri-money-dollar-circle-line',
+      ministry_leader: 'ri-service-line', // ADD THIS
       group_leader: 'ri-group-line',
       member: 'ri-user-line',
     };

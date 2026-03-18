@@ -12,6 +12,8 @@ import { Chart } from './components/chart/chart';
 import { ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { Unauthorized } from './components/unauthorized/unauthorized';
 import { UpcomingEvents } from './components/upcoming-events/upcoming-events';
+import { QuotaGuard } from './components/quota-guard/quota-guard';
+import { UpgradeModal } from './components/upgrade-modal/upgrade-modal';
 
 @NgModule({
   declarations: [
@@ -26,6 +28,8 @@ import { UpcomingEvents } from './components/upcoming-events/upcoming-events';
     Chart,
     Unauthorized,
     UpcomingEvents,
+    QuotaGuard,
+    UpgradeModal,
   ],
   imports: [CommonModule, ReactiveFormsModule, FormsModule],
   exports: [
@@ -40,7 +44,8 @@ import { UpcomingEvents } from './components/upcoming-events/upcoming-events';
     Chart,
     ReactiveFormsModule,
     FormsModule,
-    UpcomingEvents
+    UpcomingEvents,
+    UpgradeModal
   ],
 })
 export class SharedModule {}

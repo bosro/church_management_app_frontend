@@ -1,7 +1,7 @@
 // src/app/features/members/services/member.service.ts
 import { Injectable } from '@angular/core';
 import { Observable, from, of, throwError } from 'rxjs';
-import { map, catchError } from 'rxjs/operators';
+import { map, catchError, switchMap } from 'rxjs/operators';
 import { SupabaseService } from '../../../core/services/supabase';
 import { AuthService } from '../../../core/services/auth';
 import {
@@ -13,21 +13,25 @@ import {
   MemberUpdateInput,
   MemberListResult,
 } from '../../../models/member.model';
+import { SubscriptionService } from '../../../core/services/subscription.service';
 
 @Injectable({
   providedIn: 'root',
 })
 export class MemberService {
-  private churchId?: string;
-
   constructor(
     private supabase: SupabaseService,
     private authService: AuthService,
-  ) {
-    this.churchId = this.authService.getChurchId();
+    private subscriptionService: SubscriptionService,
+  ) {}
+
+  // Always get fresh values — never store in constructor
+  private getChurchId(): string {
+    const id = this.authService.getChurchId();
+    if (!id) throw new Error('Church ID not found. Please log in again.');
+    return id;
   }
 
-  // Get all members with filters and pagination
   getMembers(
     filters: MemberSearchFilters = {},
     page: number = 1,
@@ -41,61 +45,56 @@ export class MemberService {
     page: number,
     pageSize: number,
   ): Promise<MemberListResult> {
+    const churchId = this.getChurchId();
+    const isBranchPastor = this.authService.isBranchPastor();
+    const branchId = this.authService.getBranchId();
+
     let query = this.supabase.client
       .from('members')
       .select('*', { count: 'exact' })
-      .eq('church_id', this.churchId);
+      .eq('church_id', churchId);
 
-    // Apply filters
+    // Branch pastor only sees their branch members
+    if (isBranchPastor && branchId) {
+      query = query.eq('branch_id', branchId);
+    }
+
     if (filters.search_term) {
       query = query.or(
         `first_name.ilike.%${filters.search_term}%,last_name.ilike.%${filters.search_term}%,email.ilike.%${filters.search_term}%,phone_primary.ilike.%${filters.search_term}%,member_number.ilike.%${filters.search_term}%`,
       );
     }
-
-    if (filters.gender_filter) {
+    if (filters.gender_filter)
       query = query.eq('gender', filters.gender_filter);
-    }
-
-    if (filters.status_filter) {
+    if (filters.status_filter)
       query = query.eq('membership_status', filters.status_filter);
-    }
-
-    if (filters.branch_filter) {
+    if (filters.branch_filter)
       query = query.eq('branch_id', filters.branch_filter);
-    }
 
-    // Pagination
-    const from = (page - 1) * pageSize;
-    const to = from + pageSize - 1;
+    const offset = (page - 1) * pageSize;
+    const { data, error, count } = await query
+      .order('created_at', { ascending: false })
+      .range(offset, offset + pageSize - 1);
 
-    query = query.order('created_at', { ascending: false }).range(from, to);
-
-    const { data, error, count } = await query;
-
-    if (error) {
-      throw new Error(error.message);
-    }
-
-    const totalPages = count ? Math.ceil(count / pageSize) : 0;
+    if (error) throw new Error(error.message);
 
     return {
       data: (data || []) as Member[],
       count: count || 0,
       page,
       pageSize,
-      totalPages,
+      totalPages: count ? Math.ceil(count / pageSize) : 0,
     };
   }
 
-  // Get single member by ID
   getMemberById(id: string): Observable<Member> {
+    const churchId = this.getChurchId();
     return from(
       this.supabase.client
         .from('members')
         .select('*')
         .eq('id', id)
-        .eq('church_id', this.churchId)
+        .eq('church_id', churchId)
         .single(),
     ).pipe(
       map(({ data, error }) => {
@@ -107,20 +106,34 @@ export class MemberService {
     );
   }
 
-  // Create new member
   createMember(memberData: MemberCreateInput): Observable<Member> {
-    const data = {
-      ...memberData,
-      church_id: this.churchId,
-      membership_status: 'active' as const,
-      is_new_convert: memberData.is_new_convert || false,
-      is_visitor: memberData.is_visitor || false,
-    };
+    const churchId = this.getChurchId();
+    const branchId = this.authService.getBranchId();
 
-    return from(
-      this.supabase.client.from('members').insert(data).select().single(),
-    ).pipe(
-      map(({ data: member, error }) => {
+    // Check quota before inserting
+    return this.subscriptionService.checkQuota('members').pipe(
+      switchMap((quota) => {
+        if (!quota.allowed) {
+          throw new Error(
+            `QUOTA_EXCEEDED:members:${quota.current}:${quota.limit}`,
+          );
+        }
+        return from(
+          this.supabase.client
+            .from('members')
+            .insert({
+              ...memberData,
+              church_id: churchId,
+              branch_id: memberData.branch_id || branchId || null,
+              membership_status: 'active' as const,
+              is_new_convert: memberData.is_new_convert || false,
+              is_visitor: memberData.is_visitor || false,
+            })
+            .select()
+            .single(),
+        );
+      }),
+      map(({ data: member, error }: any) => {
         if (error) throw new Error(error.message);
         if (!member) throw new Error('Failed to create member');
         return member as Member;
@@ -129,19 +142,14 @@ export class MemberService {
     );
   }
 
-  // Update existing member
   updateMember(id: string, memberData: MemberUpdateInput): Observable<Member> {
-    const data = {
-      ...memberData,
-      updated_at: new Date().toISOString(),
-    };
-
+    const churchId = this.getChurchId();
     return from(
       this.supabase.client
         .from('members')
-        .update(data)
+        .update({ ...memberData, updated_at: new Date().toISOString() })
         .eq('id', id)
-        .eq('church_id', this.churchId)
+        .eq('church_id', churchId)
         .select()
         .single(),
     ).pipe(
@@ -154,8 +162,8 @@ export class MemberService {
     );
   }
 
-  // Delete (soft delete - set to inactive)
   deleteMember(id: string): Observable<void> {
+    const churchId = this.getChurchId();
     return from(
       this.supabase.client
         .from('members')
@@ -164,7 +172,7 @@ export class MemberService {
           updated_at: new Date().toISOString(),
         })
         .eq('id', id)
-        .eq('church_id', this.churchId),
+        .eq('church_id', churchId),
     ).pipe(
       map(({ error }) => {
         if (error) throw new Error(error.message);
@@ -173,26 +181,21 @@ export class MemberService {
     );
   }
 
-  // Upload member photo
   uploadMemberPhoto(memberId: string, file: File): Observable<string> {
     return from(this.uploadPhoto(memberId, file));
   }
 
   private async uploadPhoto(memberId: string, file: File): Promise<string> {
+    const churchId = this.getChurchId();
     const fileExt = file.name.split('.').pop();
     const fileName = `${memberId}_${Date.now()}.${fileExt}`;
-    const filePath = `members/${this.churchId}/${fileName}`;
+    const filePath = `members/${churchId}/${fileName}`;
 
     const { error: uploadError } = await this.supabase.client.storage
       .from('member-photos')
-      .upload(filePath, file, {
-        cacheControl: '3600',
-        upsert: true,
-      });
+      .upload(filePath, file, { cacheControl: '3600', upsert: true });
 
-    if (uploadError) {
-      throw new Error(uploadError.message);
-    }
+    if (uploadError) throw new Error(uploadError.message);
 
     const { data } = this.supabase.client.storage
       .from('member-photos')
@@ -201,22 +204,24 @@ export class MemberService {
     return data.publicUrl;
   }
 
-  // Get member statistics - FIXED
   getMemberStatistics(): Observable<MemberStatistics> {
+    const churchId = this.getChurchId();
+    const isBranchPastor = this.authService.isBranchPastor();
+    const branchId = this.authService.getBranchId();
+
+    // Branch pastors get branch-level stats, admins get church-wide
+    if (isBranchPastor && branchId) {
+      return from(this.fetchBranchMemberStats(churchId, branchId));
+    }
+
     return from(
       this.supabase.client.rpc('get_membership_stats', {
-        church_uuid: this.churchId,
+        church_uuid: churchId,
       }),
     ).pipe(
       map(({ data, error }) => {
-        if (error) {
-          console.error('Error fetching statistics:', error);
-          throw new Error(error.message);
-        }
-
-        // Parse the JSON response
+        if (error) throw new Error(error.message);
         const stats = typeof data === 'string' ? JSON.parse(data) : data;
-
         return {
           total_members: stats.total_members || 0,
           active_members: stats.active_members || 0,
@@ -228,9 +233,8 @@ export class MemberService {
           avg_age: stats.avg_age || undefined,
         } as MemberStatistics;
       }),
-      catchError((err) => {
-        console.error('Error fetching statistics:', err);
-        return of({
+      catchError(() =>
+        of({
           total_members: 0,
           active_members: 0,
           inactive_members: 0,
@@ -238,12 +242,45 @@ export class MemberService {
           new_members_this_year: 0,
           male_members: 0,
           female_members: 0,
-        } as MemberStatistics);
-      }),
+        } as MemberStatistics),
+      ),
     );
   }
 
-  // Export members to CSV - FIXED
+  private async fetchBranchMemberStats(
+    churchId: string,
+    branchId: string,
+  ): Promise<MemberStatistics> {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+      .toISOString()
+      .split('T')[0];
+    const startOfYear = new Date(now.getFullYear(), 0, 1)
+      .toISOString()
+      .split('T')[0];
+
+    const { data: members } = await this.supabase.client
+      .from('members')
+      .select('membership_status, gender, created_at')
+      .eq('church_id', churchId)
+      .eq('branch_id', branchId);
+
+    const all = members || [];
+    return {
+      total_members: all.length,
+      active_members: all.filter((m) => m.membership_status === 'active')
+        .length,
+      inactive_members: all.filter((m) => m.membership_status === 'inactive')
+        .length,
+      new_members_this_month: all.filter((m) => m.created_at >= startOfMonth)
+        .length,
+      new_members_this_year: all.filter((m) => m.created_at >= startOfYear)
+        .length,
+      male_members: all.filter((m) => m.gender === 'male').length,
+      female_members: all.filter((m) => m.gender === 'female').length,
+    };
+  }
+
   exportMembersToCSV(filters: MemberSearchFilters = {}): Observable<Blob> {
     return this.getMembers(filters, 1, 10000).pipe(
       map(({ data: members }) => {
@@ -263,7 +300,6 @@ export class MemberService {
           'Join Date',
           'Status',
         ];
-
         const rows = members.map((m) => [
           this.escapeCsvValue(m.member_number),
           this.escapeCsvValue(m.first_name),
@@ -280,121 +316,71 @@ export class MemberService {
           this.escapeCsvValue(m.join_date),
           this.escapeCsvValue(m.membership_status),
         ]);
-
-        const csv = [
-          headers.join(','),
-          ...rows.map((row) => row.join(',')),
-        ].join('\n');
-
+        const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join(
+          '\n',
+        );
         return new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       }),
     );
   }
 
-  // Helper to escape CSV values
   private escapeCsvValue(value: string | undefined | null): string {
     if (!value) return '';
-
-    const stringValue = String(value);
-
-    // If value contains comma, quote, or newline, wrap in quotes and escape internal quotes
-    if (
-      stringValue.includes(',') ||
-      stringValue.includes('"') ||
-      stringValue.includes('\n')
-    ) {
-      return `"${stringValue.replace(/"/g, '""')}"`;
+    const s = String(value);
+    if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+      return `"${s.replace(/"/g, '""')}"`;
     }
-
-    return stringValue;
+    return s;
   }
 
-  // Import members from CSV - FIXED
   importMembersFromCSV(file: File): Observable<ImportResult> {
     return from(this.processCSVImport(file));
   }
 
   private async processCSVImport(file: File): Promise<ImportResult> {
+    const churchId = this.getChurchId();
+    const branchId = this.authService.getBranchId();
     const text = await file.text();
     const lines = text
       .split('\n')
-      .map((line) => line.trim())
-      .filter((line) => line && !line.startsWith('#'));
+      .map((l) => l.trim())
+      .filter((l) => l && !l.startsWith('#'));
 
-    if (lines.length < 2) {
-      throw new Error('CSV file is empty or invalid');
-    }
+    if (lines.length < 2) throw new Error('CSV file is empty or invalid');
 
-    const headers = this.parseCSVLine(lines[0]);
-    const results: ImportResult = {
-      success: 0,
-      failed: 0,
-      errors: [],
-    };
+    const results: ImportResult = { success: 0, failed: 0, errors: [] };
 
     for (let i = 1; i < lines.length; i++) {
       try {
         const values = this.parseCSVLine(lines[i]);
+        if (values.length < 2) throw new Error('Insufficient data');
 
-        if (values.length < 2) {
-          throw new Error(
-            'Insufficient data - at least first and last name required',
-          );
-        }
-
-        const memberData: MemberCreateInput = {
+        const memberData: any = {
           first_name: values[0]?.trim(),
           last_name: values[1]?.trim(),
           email: values[2]?.trim() || undefined,
           phone_primary: values[3]?.trim() || undefined,
-          gender: (values[4]?.trim().toLowerCase() as any) || undefined,
+          gender: values[4]?.trim().toLowerCase() || undefined,
           date_of_birth: values[5]?.trim() || undefined,
           address: values[6]?.trim() || undefined,
           city: values[7]?.trim() || undefined,
           join_date:
             values[8]?.trim() || new Date().toISOString().split('T')[0],
+          church_id: churchId,
+          branch_id: branchId || null, // auto-assign to pastor's branch
+          membership_status: 'active',
           is_new_convert: false,
           is_visitor: false,
         };
 
-        // Validate required fields
         if (!memberData.first_name || !memberData.last_name) {
           throw new Error('First name and last name are required');
         }
 
-        // Validate email format if provided
-        if (memberData.email && !this.isValidEmail(memberData.email)) {
-          throw new Error('Invalid email format');
-        }
-
-        // Validate phone format if provided
-        if (
-          memberData.phone_primary &&
-          !this.isValidPhone(memberData.phone_primary)
-        ) {
-          throw new Error('Invalid phone format (should be 10 digits)');
-        }
-
-        // Validate date format if provided
-        if (
-          memberData.date_of_birth &&
-          !this.isValidDate(memberData.date_of_birth)
-        ) {
-          throw new Error('Invalid date format (should be YYYY-MM-DD)');
-        }
-
-        const insertData = {
-          ...memberData,
-          church_id: this.churchId,
-          membership_status: 'active' as const,
-        };
-
         const { error } = await this.supabase.client
           .from('members')
-          .insert(insertData);
-
+          .insert(memberData);
         if (error) throw error;
-
         results.success++;
       } catch (error: any) {
         results.failed++;
@@ -405,72 +391,52 @@ export class MemberService {
         });
       }
     }
-
     return results;
   }
 
-  // Parse CSV line handling quoted values
   private parseCSVLine(line: string): string[] {
     const values: string[] = [];
     let current = '';
     let inQuotes = false;
-
     for (let i = 0; i < line.length; i++) {
       const char = line[i];
-      const nextChar = line[i + 1];
-
       if (char === '"') {
-        if (inQuotes && nextChar === '"') {
-          // Escaped quote
+        if (inQuotes && line[i + 1] === '"') {
           current += '"';
-          i++; // Skip next quote
-        } else {
-          // Toggle quote state
-          inQuotes = !inQuotes;
-        }
+          i++;
+        } else inQuotes = !inQuotes;
       } else if (char === ',' && !inQuotes) {
-        // End of value
         values.push(current);
         current = '';
       } else {
         current += char;
       }
     }
-
-    // Add last value
     values.push(current);
-
     return values;
   }
 
-  // Validation helpers
-  private isValidEmail(email: string): boolean {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  }
-
-  private isValidPhone(phone: string): boolean {
-    return /^0[0-9]{9}$/.test(phone);
-  }
-
-  private isValidDate(date: string): boolean {
-    return /^\d{4}-\d{2}-\d{2}$/.test(date) && !isNaN(Date.parse(date));
-  }
-
-  // Search members
   searchMembers(query: string, limit: number = 10): Observable<Member[]> {
-    return from(
-      this.supabase.client
-        .from('members')
-        .select(
-          'id, first_name, middle_name, last_name, member_number, photo_url',
-        )
-        .eq('church_id', this.churchId)
-        .eq('membership_status', 'active')
-        .or(
-          `first_name.ilike.%${query}%,last_name.ilike.%${query}%,member_number.ilike.%${query}%`,
-        )
-        .limit(limit),
-    ).pipe(
+    const churchId = this.getChurchId();
+    const isBranchPastor = this.authService.isBranchPastor();
+    const branchId = this.authService.getBranchId();
+
+    let q = this.supabase.client
+      .from('members')
+      .select(
+        'id, first_name, middle_name, last_name, member_number, photo_url',
+      )
+      .eq('church_id', churchId)
+      .eq('membership_status', 'active')
+      .or(
+        `first_name.ilike.%${query}%,last_name.ilike.%${query}%,member_number.ilike.%${query}%`,
+      );
+
+    if (isBranchPastor && branchId) {
+      q = q.eq('branch_id', branchId);
+    }
+
+    return from(q.limit(limit)).pipe(
       map(({ data, error }) => {
         if (error) throw new Error(error.message);
         return (data || []) as Member[];
@@ -478,16 +444,12 @@ export class MemberService {
     );
   }
 
-  // Public search for QR check-in (NO AUTH REQUIRED)
   searchMembersPublic(
     churchId: string,
     query: string,
-    limit: number = 10,
+    limit = 10,
   ): Observable<Member[]> {
-    if (!query || query.length < 2) {
-      return of([]);
-    }
-
+    if (!query || query.length < 2) return of([]);
     return from(
       this.supabase.client
         .from('members')
@@ -506,14 +468,10 @@ export class MemberService {
         if (error) throw new Error(error.message);
         return (data || []) as Member[];
       }),
-      catchError((err) => {
-        console.error('Public member search error:', err);
-        return of([]);
-      }),
+      catchError(() => of([])),
     );
   }
 
-  // Get member by ID (public - for QR check-in)
   getMemberByIdPublic(memberId: string): Observable<Member | null> {
     return from(
       this.supabase.client
@@ -525,16 +483,10 @@ export class MemberService {
         .single(),
     ).pipe(
       map(({ data, error }) => {
-        if (error) {
-          console.error('Error fetching member:', error);
-          return null;
-        }
+        if (error) return null;
         return data as Member;
       }),
-      catchError((err) => {
-        console.error('Public member fetch error:', err);
-        return of(null);
-      }),
+      catchError(() => of(null)),
     );
   }
 
@@ -542,40 +494,29 @@ export class MemberService {
     startDate: string,
     endDate: string,
   ): Observable<Member[]> {
+    const churchId = this.getChurchId();
     return from(
       this.supabase.client
         .from('members')
         .select('*')
-        .eq('church_id', this.churchId)
+        .eq('church_id', churchId)
         .eq('membership_status', 'active')
         .not('date_of_birth', 'is', null)
         .order('date_of_birth', { ascending: true }),
     ).pipe(
       map(({ data, error }) => {
         if (error) throw new Error(error.message);
-
-        // Filter by upcoming birthdays in JavaScript
         const start = new Date(startDate);
         const end = new Date(endDate);
         const currentYear = new Date().getFullYear();
-
         return (data || []).filter((member: any) => {
           if (!member.date_of_birth) return false;
-
-          const birthDate = new Date(member.date_of_birth);
-          const thisYearBirthday = new Date(
-            currentYear,
-            birthDate.getMonth(),
-            birthDate.getDate(),
-          );
-
-          return thisYearBirthday >= start && thisYearBirthday <= end;
+          const d = new Date(member.date_of_birth);
+          const thisYear = new Date(currentYear, d.getMonth(), d.getDate());
+          return thisYear >= start && thisYear <= end;
         }) as Member[];
       }),
-      catchError((err) => {
-        console.error('Error fetching birthday members:', err);
-        return of([]);
-      }),
+      catchError(() => of([])),
     );
   }
 }

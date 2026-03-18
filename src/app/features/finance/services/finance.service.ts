@@ -181,52 +181,56 @@ export class FinanceService {
     return from(this.fetchGivingTransactions(page, pageSize, filters));
   }
 
+  private getBranchId(): string | undefined {
+    return this.authService.getBranchId();
+  }
+
+  private isBranchPastor(): boolean {
+    return this.authService.isBranchPastor();
+  }
+
+  // REPLACE fetchGivingTransactions()
   private async fetchGivingTransactions(
     page: number,
     pageSize: number,
     filters?: any,
   ): Promise<{ data: any[]; count: number }> {
-    const churchId = this.getChurchId(); // ✅ Fresh church_id
+    const churchId = this.getChurchId();
+    const isBranchPastor = this.isBranchPastor();
+    const branchId = this.getBranchId();
     const offset = (page - 1) * pageSize;
 
     let query = this.supabase.client
       .from('giving_transactions')
       .select(
-        `
-        *,
-        category:giving_categories(id, name),
-        member:members(id, first_name, last_name, member_number, photo_url)
-      `,
+        `*,
+      category:giving_categories(id, name),
+      member:members(id, first_name, last_name, member_number, photo_url)`,
         { count: 'exact' },
       )
       .eq('church_id', churchId);
 
-    // Apply filters
-    if (filters?.startDate) {
-      query = query.gte('transaction_date', filters.startDate);
-    }
-    if (filters?.endDate) {
-      query = query.lte('transaction_date', filters.endDate);
-    }
-    if (filters?.categoryId) {
-      query = query.eq('category_id', filters.categoryId);
-    }
-    if (filters?.memberId) {
-      query = query.eq('member_id', filters.memberId);
-    }
-    if (filters?.paymentMethod) {
-      query = query.eq('payment_method', filters.paymentMethod);
+    // Branch pastor only sees their branch transactions
+    if (isBranchPastor && branchId) {
+      query = query.eq('branch_id', branchId);
     }
 
-    query = query
+    if (filters?.startDate)
+      query = query.gte('transaction_date', filters.startDate);
+    if (filters?.endDate)
+      query = query.lte('transaction_date', filters.endDate);
+    if (filters?.categoryId)
+      query = query.eq('category_id', filters.categoryId);
+    if (filters?.memberId) query = query.eq('member_id', filters.memberId);
+    if (filters?.paymentMethod)
+      query = query.eq('payment_method', filters.paymentMethod);
+
+    const { data, error, count } = await query
       .order('transaction_date', { ascending: false })
       .order('created_at', { ascending: false })
       .range(offset, offset + pageSize - 1);
 
-    const { data, error, count } = await query;
-
     if (error) throw new Error(error.message);
-
     return { data: data || [], count: count || 0 };
   }
 
@@ -256,8 +260,9 @@ export class FinanceService {
   }
 
   createGivingTransaction(transactionData: any): Observable<GivingTransaction> {
-    const churchId = this.getChurchId(); // ✅ Fresh church_id
-    const currentUserId = this.getCurrentUserId(); // ✅ Fresh user_id
+    const churchId = this.getChurchId();
+    const currentUserId = this.getCurrentUserId();
+    const branchId = this.getBranchId(); // auto-set branch
     const currentYear = new Date(
       transactionData.transaction_date,
     ).getFullYear();
@@ -267,6 +272,7 @@ export class FinanceService {
         .from('giving_transactions')
         .insert({
           church_id: churchId,
+          branch_id: branchId || null, // set if pastor
           member_id: transactionData.member_id || null,
           category_id: transactionData.category_id,
           amount: transactionData.amount,
@@ -659,8 +665,15 @@ export class FinanceService {
   // ==================== STATISTICS & REPORTS ====================
 
   getGivingStatistics(fiscalYear?: number): Observable<GivingStatistics> {
-    const churchId = this.getChurchId(); // ✅ Fresh church_id
+    const churchId = this.getChurchId();
+    const isBranchPastor = this.isBranchPastor();
+    const branchId = this.getBranchId();
     const year = fiscalYear || new Date().getFullYear();
+
+    // Branch pastor gets branch-level stats calculated directly
+    if (isBranchPastor && branchId) {
+      return from(this.fetchBranchGivingStats(churchId, branchId, year));
+    }
 
     return from(
       this.supabase.client.rpc('get_giving_stats', {
@@ -670,16 +683,38 @@ export class FinanceService {
     ).pipe(
       map(({ data, error }) => {
         if (error) throw new Error(error.message);
-
-        // The RPC returns an array with one object, extract it
-        if (Array.isArray(data) && data.length > 0) {
+        if (Array.isArray(data) && data.length > 0)
           return data[0] as GivingStatistics;
-        }
-
         return data as GivingStatistics;
       }),
       catchError((err) => throwError(() => err)),
     );
+  }
+
+  private async fetchBranchGivingStats(
+    churchId: string,
+    branchId: string,
+    year: number,
+  ): Promise<GivingStatistics> {
+    const { data } = await this.supabase.client
+      .from('giving_transactions')
+      .select('amount, category_id')
+      .eq('church_id', churchId)
+      .eq('branch_id', branchId)
+      .eq('fiscal_year', year);
+
+    const transactions = data || [];
+    const amounts = transactions.map((t) => t.amount);
+    const total = amounts.reduce((sum, a) => sum + a, 0);
+
+    return {
+      total_giving: total,
+      total_tithes: 0, // would need category lookup
+      total_offerings: 0,
+      total_transactions: transactions.length,
+      avg_giving: transactions.length ? total / transactions.length : 0,
+      highest_giving: amounts.length ? Math.max(...amounts) : 0,
+    };
   }
 
   getGivingTrends(monthsBack: number = 12): Observable<GivingTrend[]> {

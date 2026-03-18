@@ -1,19 +1,26 @@
 // src/app/features/forms/services/forms.service.ts
 import { Injectable } from '@angular/core';
 import { Observable, from, throwError } from 'rxjs';
-import { map, catchError } from 'rxjs/operators';
+import { map, catchError, switchMap } from 'rxjs/operators';
 
-import { FormTemplate, FormSubmission, SubmissionStatus, FormStatistics } from '../../../models/form.model';
+import {
+  FormTemplate,
+  FormSubmission,
+  SubmissionStatus,
+  FormStatistics,
+} from '../../../models/form.model';
 import { SupabaseService } from '../../../core/services/supabase';
 import { AuthService } from '../../../core/services/auth';
+import { SubscriptionService } from '../../../core/services/subscription.service';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class FormsService {
   constructor(
     private supabase: SupabaseService,
-    private authService: AuthService
+    private authService: AuthService,
+    private subscriptionService: SubscriptionService,
   ) {}
 
   // ==================== PERMISSIONS ====================
@@ -35,8 +42,8 @@ export class FormsService {
 
   getFormTemplates(
     page: number = 1,
-    pageSize: number = 20
-  ): Observable<{ data: FormTemplate[], count: number }> {
+    pageSize: number = 20,
+  ): Observable<{ data: FormTemplate[]; count: number }> {
     const churchId = this.authService.getChurchId();
     const offset = (page - 1) * pageSize;
 
@@ -44,10 +51,13 @@ export class FormsService {
       (async () => {
         const { data, error, count } = await this.supabase.client
           .from('form_templates')
-          .select(`
+          .select(
+            `
             *,
             submission_count:form_submissions(count)
-          `, { count: 'exact' })
+          `,
+            { count: 'exact' },
+          )
           .eq('church_id', churchId)
           .eq('is_active', true)
           .order('created_at', { ascending: false })
@@ -57,16 +67,16 @@ export class FormsService {
 
         const templates = (data || []).map((template: any) => ({
           ...template,
-          submission_count: template.submission_count?.[0]?.count || 0
+          submission_count: template.submission_count?.[0]?.count || 0,
         }));
 
         return { data: templates as FormTemplate[], count: count || 0 };
-      })()
+      })(),
     ).pipe(
-      catchError(err => {
+      catchError((err) => {
         console.error('Error loading form templates:', err);
         return throwError(() => err);
-      })
+      }),
     );
   }
 
@@ -76,18 +86,19 @@ export class FormsService {
     return from(
       this.supabase.query<FormTemplate>('form_templates', {
         filters: { id: templateId, church_id: churchId },
-        limit: 1
-      })
+        limit: 1,
+      }),
     ).pipe(
       map(({ data, error }) => {
         if (error) throw new Error(error.message);
-        if (!data || data.length === 0) throw new Error('Form template not found');
+        if (!data || data.length === 0)
+          throw new Error('Form template not found');
         return data[0];
       }),
-      catchError(err => {
+      catchError((err) => {
         console.error('Error loading form template:', err);
         return throwError(() => err);
-      })
+      }),
     );
   }
 
@@ -99,25 +110,34 @@ export class FormsService {
     const churchId = this.authService.getChurchId();
     const userId = this.authService.getUserId();
 
-    return from(
-      this.supabase.insert<FormTemplate>('form_templates', {
-        church_id: churchId,
-        title: templateData.title,
-        description: templateData.description || null,
-        form_fields: templateData.form_fields,
-        created_by: userId,
-        is_active: true
-      })
-    ).pipe(
+    return this.subscriptionService.checkQuota('forms').pipe(
+      switchMap((quota) => {
+        if (!quota.allowed) {
+          throw new Error(
+            `QUOTA_EXCEEDED:forms:${quota.current}:${quota.limit}`,
+          );
+        }
+        return from(
+          this.supabase.insert<FormTemplate>('form_templates', {
+            church_id: churchId,
+            title: templateData.title,
+            description: templateData.description || null,
+            form_fields: templateData.form_fields,
+            created_by: userId,
+            is_active: true,
+          }),
+        );
+      }),
       map(({ data, error }) => {
         if (error) throw new Error(error.message);
-        if (!data || data.length === 0) throw new Error('Failed to create form template');
+        if (!data || data.length === 0)
+          throw new Error('Failed to create form template');
         return data[0];
       }),
-      catchError(err => {
+      catchError((err) => {
         console.error('Error creating form template:', err);
         return throwError(() => err);
-      })
+      }),
     );
   }
 
@@ -128,7 +148,7 @@ export class FormsService {
       description?: string;
       form_fields?: any[];
       is_active?: boolean;
-    }
+    },
   ): Observable<FormTemplate> {
     const churchId = this.authService.getChurchId();
 
@@ -145,21 +165,26 @@ export class FormsService {
           throw new Error('Form template not found or access denied');
         }
 
-        return this.supabase.update<FormTemplate>('form_templates', templateId, {
-          ...templateData,
-          updated_at: new Date().toISOString()
-        });
-      })()
+        return this.supabase.update<FormTemplate>(
+          'form_templates',
+          templateId,
+          {
+            ...templateData,
+            updated_at: new Date().toISOString(),
+          },
+        );
+      })(),
     ).pipe(
       map(({ data, error }) => {
         if (error) throw new Error(error.message);
-        if (!data || data.length === 0) throw new Error('Failed to update form template');
+        if (!data || data.length === 0)
+          throw new Error('Failed to update form template');
         return data[0];
       }),
-      catchError(err => {
+      catchError((err) => {
         console.error('Error updating form template:', err);
         return throwError(() => err);
-      })
+      }),
     );
   }
 
@@ -179,19 +204,23 @@ export class FormsService {
           throw new Error('Form template not found or access denied');
         }
 
-        return this.supabase.update<FormTemplate>('form_templates', templateId, {
-          is_active: false,
-          updated_at: new Date().toISOString()
-        });
-      })()
+        return this.supabase.update<FormTemplate>(
+          'form_templates',
+          templateId,
+          {
+            is_active: false,
+            updated_at: new Date().toISOString(),
+          },
+        );
+      })(),
     ).pipe(
       map(({ error }) => {
         if (error) throw new Error(error.message);
       }),
-      catchError(err => {
+      catchError((err) => {
         console.error('Error deleting form template:', err);
         return throwError(() => err);
-      })
+      }),
     );
   }
 
@@ -200,70 +229,77 @@ export class FormsService {
   getFormSubmissions(
     templateId: string,
     page: number = 1,
-    pageSize: number = 50
-  ): Observable<{ data: FormSubmission[], count: number }> {
+    pageSize: number = 50,
+  ): Observable<{ data: FormSubmission[]; count: number }> {
+    const isBranchPastor = this.authService.isBranchPastor();
+    const branchId = this.authService.getBranchId();
     const offset = (page - 1) * pageSize;
 
     return from(
       (async () => {
-        const { data, error, count } = await this.supabase.client
+        let query = this.supabase.client
           .from('form_submissions')
-          .select(`
-            *,
-            member:members(id, first_name, last_name, email, phone_primary, member_number, photo_url)
-          `, { count: 'exact' })
-          .eq('form_id', templateId)  // Changed from form_template_id to form_id
+          .select(
+            `
+          *,
+          member:members(id, first_name, last_name, email,
+            phone_primary, member_number, photo_url)
+        `,
+            { count: 'exact' },
+          )
+          .eq('form_id', templateId)
           .order('submitted_at', { ascending: false })
           .range(offset, offset + pageSize - 1);
 
+        // If branch pastor, only see submissions from their branch members
+        if (isBranchPastor && branchId) {
+          query = query.eq('members.branch_id', branchId);
+        }
+
+        const { data, error, count } = await query;
         if (error) throw new Error(error.message);
 
-        // Add default status since it's not in the database
         const submissions = (data || []).map((sub: any) => ({
           ...sub,
-          status: 'submitted' as SubmissionStatus  // Default status
+          status: 'submitted' as SubmissionStatus,
         }));
 
         return { data: submissions, count: count || 0 };
-      })()
-    ).pipe(
-      catchError(err => {
-        console.error('Error loading form submissions:', err);
-        return throwError(() => err);
-      })
-    );
+      })(),
+    ).pipe(catchError((err) => throwError(() => err)));
   }
 
   submitForm(
     templateId: string,
     submissionData: Record<string, any>,
-    memberId?: string
+    memberId?: string,
   ): Observable<FormSubmission> {
     const userId = this.authService.getUserId();
 
     return from(
       this.supabase.insert<FormSubmission>('form_submissions', {
-        form_id: templateId,  // Changed from form_template_id to form_id
+        form_id: templateId, // Changed from form_template_id to form_id
         member_id: memberId || userId,
         submission_data: submissionData,
-        submitted_at: new Date().toISOString()
-      })
+        submitted_at: new Date().toISOString(),
+      }),
     ).pipe(
       map(({ data, error }) => {
         if (error) throw new Error(error.message);
-        if (!data || data.length === 0) throw new Error('Failed to submit form');
+        if (!data || data.length === 0)
+          throw new Error('Failed to submit form');
         return { ...data[0], status: 'submitted' as SubmissionStatus };
       }),
-      catchError(err => {
+      catchError((err) => {
         console.error('Error submitting form:', err);
         return throwError(() => err);
-      })
+      }),
     );
   }
 
   updateSubmissionStatus(
     submissionId: string,
-    status: SubmissionStatus
+    status: SubmissionStatus,
   ): Observable<FormSubmission> {
     // Since status is not in the database, we'll store it in local state
     // or you can add a metadata JSONB column to store extra info
@@ -274,30 +310,28 @@ export class FormsService {
         .from('form_submissions')
         .select('*')
         .eq('id', submissionId)
-        .single()
+        .single(),
     ).pipe(
       map(({ data, error }) => {
         if (error) throw new Error(error.message);
         return { ...data, status } as FormSubmission;
       }),
-      catchError(err => {
+      catchError((err) => {
         console.error('Error updating submission status:', err);
         return throwError(() => err);
-      })
+      }),
     );
   }
 
   deleteSubmission(submissionId: string): Observable<void> {
-    return from(
-      this.supabase.delete('form_submissions', submissionId)
-    ).pipe(
+    return from(this.supabase.delete('form_submissions', submissionId)).pipe(
       map(({ error }) => {
         if (error) throw new Error(error.message);
       }),
-      catchError(err => {
+      catchError((err) => {
         console.error('Error deleting submission:', err);
         return throwError(() => err);
-      })
+      }),
     );
   }
 
@@ -311,11 +345,18 @@ export class FormsService {
         }
 
         const allKeys = new Set<string>();
-        data.forEach(submission => {
-          Object.keys(submission.submission_data).forEach(key => allKeys.add(key));
+        data.forEach((submission) => {
+          Object.keys(submission.submission_data).forEach((key) =>
+            allKeys.add(key),
+          );
         });
 
-        const headers = ['Submitted At', 'Member', 'IP Address', ...Array.from(allKeys)];
+        const headers = [
+          'Submitted At',
+          'Member',
+          'IP Address',
+          ...Array.from(allKeys),
+        ];
 
         const rows = data.map((submission: any) => {
           const memberName = submission.member
@@ -325,12 +366,12 @@ export class FormsService {
           const row = [
             new Date(submission.submitted_at).toLocaleString(),
             memberName,
-            submission.ip_address || 'N/A'
+            submission.ip_address || 'N/A',
           ];
 
-          allKeys.forEach(key => {
+          allKeys.forEach((key) => {
             const value = submission.submission_data[key];
-            row.push(Array.isArray(value) ? value.join('; ') : (value || ''));
+            row.push(Array.isArray(value) ? value.join('; ') : value || '');
           });
 
           return row;
@@ -338,15 +379,15 @@ export class FormsService {
 
         const csv = [
           headers.join(','),
-          ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+          ...rows.map((row) => row.map((cell) => `"${cell}"`).join(',')),
         ].join('\n');
 
         return new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       }),
-      catchError(err => {
+      catchError((err) => {
         console.error('Error exporting submissions:', err);
         return throwError(() => err);
-      })
+      }),
     );
   }
 
@@ -361,9 +402,9 @@ export class FormsService {
           pending_submissions: data.length,
           reviewed_submissions: 0,
           approved_submissions: 0,
-          rejected_submissions: 0
+          rejected_submissions: 0,
         };
-      })
+      }),
     );
   }
 }

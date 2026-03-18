@@ -39,6 +39,9 @@ export class CreateEvent implements OnInit, OnDestroy {
   // Permissions
   canManageEvents = false;
 
+  showUpgradeModal = false;
+  upgradeModalTrigger = '';
+
   constructor(
     private fb: FormBuilder,
     private eventsService: EventsService,
@@ -88,6 +91,30 @@ export class CreateEvent implements OnInit, OnDestroy {
       registration_required: [false],
       is_public: [true],
     });
+  }
+
+  handleError(error: any, resourceLabel: string = 'item'): void {
+    if (error.message?.startsWith('QUOTA_EXCEEDED:')) {
+      const parts = error.message.split(':');
+      const resource = parts[1];
+      const limit = parts[3];
+
+      const labels: Record<string, string> = {
+        events: 'active event',
+        ministries: 'department',
+        forms: 'form',
+      };
+
+      const label = labels[resource] || resourceLabel;
+      this.upgradeModalTrigger =
+        `You've reached the ${limit} ${label} limit on your current plan. ` +
+        `Upgrade to create more.`;
+      this.showUpgradeModal = true;
+      this.loading = false;
+    } else {
+      this.errorMessage = error.message || 'An error occurred';
+      this.loading = false;
+    }
   }
 
   onSubmit(): void {
@@ -157,12 +184,11 @@ export class CreateEvent implements OnInit, OnDestroy {
             this.router.navigate(['main/events', event.id]);
           }, 1500);
         },
-        error: (error) => {
+
+        error: (err) => {
           this.loading = false;
-          this.errorMessage =
-            error.message || 'Failed to create event. Please try again.';
+          this.handleError(err);
           this.scrollToTop();
-          console.error('Error creating event:', error);
         },
       });
   }

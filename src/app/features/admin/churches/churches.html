@@ -26,12 +26,7 @@
   <div class="search-section">
     <div class="search-box">
       <i class="ri-search-line"></i>
-      <input
-        type="text"
-        placeholder="Search churches..."
-        [(ngModel)]="searchTerm"
-        (input)="onSearchChange()"
-      />
+      <input type="text" placeholder="Search churches..." [(ngModel)]="searchTerm" (input)="onSearchChange()" />
     </div>
   </div>
 
@@ -79,7 +74,22 @@
         </div>
       </div>
 
+      <div class="church-subscription">
+        <span class="plan-badge" [ngClass]="getPlanBadgeClass(church.subscription_plan || 'free')">
+          <i class="ri-vip-crown-line"></i>
+          {{ getPlanName(church.subscription_plan || 'free') }}
+        </span>
+        <span class="expiry-label" [class.expired]="isExpired(church)"
+          [class.expiring]="!isExpired(church) && church.subscription_expires_at">
+          {{ getExpiryLabel(church) }}
+        </span>
+      </div>
+
       <div class="church-actions">
+        <button class="btn btn-subscription" (click)="openSubscriptionModal(church)" title="Manage subscription">
+          <i class="ri-vip-crown-line"></i>
+          Subscription
+        </button>
         <button class="btn btn-secondary" (click)="openEditModal(church)">
           <i class="ri-edit-line"></i>
           Edit
@@ -112,24 +122,14 @@
     <div class="modal-body">
       <div class="form-group">
         <label for="name">Church Name *</label>
-        <input
-          id="name"
-          type="text"
-          [(ngModel)]="churchForm.name"
-          class="form-control"
-          placeholder="Enter church name"
-        />
+        <input id="name" type="text" [(ngModel)]="churchForm.name" class="form-control"
+          placeholder="Enter church name" />
       </div>
 
       <div class="form-group">
         <label for="location">Location *</label>
-        <input
-          id="location"
-          type="text"
-          [(ngModel)]="churchForm.location"
-          class="form-control"
-          placeholder="City, Country"
-        />
+        <input id="location" type="text" [(ngModel)]="churchForm.location" class="form-control"
+          placeholder="City, Country" />
       </div>
 
       <div class="form-group">
@@ -146,24 +146,14 @@
 
       <div class="form-group">
         <label for="email">Contact Email</label>
-        <input
-          id="email"
-          type="email"
-          [(ngModel)]="churchForm.contact_email"
-          class="form-control"
-          placeholder="church@example.com"
-        />
+        <input id="email" type="email" [(ngModel)]="churchForm.contact_email" class="form-control"
+          placeholder="church@example.com" />
       </div>
 
       <div class="form-group">
         <label for="phone">Contact Phone</label>
-        <input
-          id="phone"
-          type="tel"
-          [(ngModel)]="churchForm.contact_phone"
-          class="form-control"
-          placeholder="+233 XX XXX XXXX"
-        />
+        <input id="phone" type="tel" [(ngModel)]="churchForm.contact_phone" class="form-control"
+          placeholder="+233 XX XXX XXXX" />
       </div>
 
       <div *ngIf="errorMessage" class="alert alert-error">
@@ -197,24 +187,14 @@
     <div class="modal-body">
       <div class="form-group">
         <label for="edit-name">Church Name *</label>
-        <input
-          id="edit-name"
-          type="text"
-          [(ngModel)]="churchForm.name"
-          class="form-control"
-          placeholder="Enter church name"
-        />
+        <input id="edit-name" type="text" [(ngModel)]="churchForm.name" class="form-control"
+          placeholder="Enter church name" />
       </div>
 
       <div class="form-group">
         <label for="edit-location">Location *</label>
-        <input
-          id="edit-location"
-          type="text"
-          [(ngModel)]="churchForm.location"
-          class="form-control"
-          placeholder="City, Country"
-        />
+        <input id="edit-location" type="text" [(ngModel)]="churchForm.location" class="form-control"
+          placeholder="City, Country" />
       </div>
 
       <div class="form-group">
@@ -231,41 +211,30 @@
 
       <div class="form-group">
         <label for="edit-email">Contact Email</label>
-        <input
-          id="edit-email"
-          type="email"
-          [(ngModel)]="churchForm.contact_email"
-          class="form-control"
-          placeholder="church@example.com"
-        />
+        <input id="edit-email" type="email" [(ngModel)]="churchForm.contact_email" class="form-control"
+          placeholder="church@example.com" />
       </div>
 
       <div class="form-group">
         <label for="edit-phone">Contact Phone</label>
-        <input
-          id="edit-phone"
-          type="tel"
-          [(ngModel)]="churchForm.contact_phone"
-          class="form-control"
-          placeholder="+233 XX XXX XXXX"
-        />
+        <input id="edit-phone" type="tel" [(ngModel)]="churchForm.contact_phone" class="form-control"
+          placeholder="+233 XX XXX XXXX" />
       </div>
 
       <div class="form-group">
-  <label>Enabled Features</label>
-  <div class="feature-toggles">
-    <label class="checkbox-label">
-      <input type="checkbox"
-             [checked]="churchForm.enabled_features.includes('reports')"
-             (change)="toggleFeature('reports', $event)" />
-      <span>Reports Module</span>
-    </label>
-    <!-- add more features here as you build them -->
-  </div>
-  <small class="help-text">
-    Enable or disable entire modules for this church
-  </small>
-</div>
+        <label>Enabled Features</label>
+        <div class="feature-toggles">
+          <label class="checkbox-label">
+            <input type="checkbox" [checked]="churchForm.enabled_features.includes('reports')"
+              (change)="toggleFeature('reports', $event)" />
+            <span>Reports Module</span>
+          </label>
+          <!-- add more features here as you build them -->
+        </div>
+        <small class="help-text">
+          Enable or disable entire modules for this church
+        </small>
+      </div>
 
       <div *ngIf="errorMessage" class="alert alert-error">
         <i class="ri-error-warning-line"></i>
@@ -280,6 +249,136 @@
       <button class="btn btn-primary" (click)="updateChurch()" [disabled]="processing">
         <i class="ri-save-line"></i>
         {{ processing ? 'Updating...' : 'Update Church' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+
+<!-- Subscription Modal -->
+<div class="modal-overlay" *ngIf="showSubscriptionModal" (click)="closeSubscriptionModal()">
+  <div class="modal-content modal-lg" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div>
+        <h2><i class="ri-vip-crown-line"></i> Manage Subscription</h2>
+        <p class="modal-subtitle">{{ selectedChurchForSub?.name }}</p>
+      </div>
+      <button class="close-btn" (click)="closeSubscriptionModal()">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <!-- Current Usage -->
+      <div class="usage-summary">
+        <h4>Current Usage</h4>
+        <div *ngIf="loadingUsage" class="usage-loading">
+          <div class="spinner-sm"></div> Loading usage...
+        </div>
+        <div *ngIf="!loadingUsage && churchUsage" class="usage-pills">
+          <span class="usage-pill">
+            <i class="ri-group-line"></i>
+            {{ churchUsage.members }} members
+          </span>
+          <span class="usage-pill">
+            <i class="ri-building-2-line"></i>
+            {{ churchUsage.branches }} branches
+          </span>
+          <span class="usage-pill">
+            <i class="ri-user-settings-line"></i>
+            {{ churchUsage.users }} users
+          </span>
+          <span class="usage-pill">
+            <i class="ri-calendar-event-line"></i>
+            {{ churchUsage.events }} events
+          </span>
+          <span class="usage-pill">
+            <i class="ri-team-line"></i>
+            {{ churchUsage.ministries }} departments
+          </span>
+          <span class="usage-pill">
+            <i class="ri-file-list-3-line"></i>
+            {{ churchUsage.forms }} forms
+          </span>
+        </div>
+      </div>
+
+      <!-- Plan Selection -->
+      <div class="form-group">
+        <label>Select Plan</label>
+        <div class="plan-options">
+          <label
+            *ngFor="let plan of availablePlans"
+            class="plan-option"
+            [class.selected]="subscriptionForm.plan_id === plan.id">
+            <input
+              type="radio"
+              [value]="plan.id"
+              [(ngModel)]="subscriptionForm.plan_id"
+            />
+            <div class="plan-option-content">
+              <div class="plan-option-header">
+                <span class="plan-option-name">{{ plan.name }}</span>
+                <span class="plan-option-price">
+                  {{ plan.price_monthly === 0 ? 'Free' : 'GHS ' + plan.price_monthly + '/mo' }}
+                </span>
+              </div>
+              <div class="plan-option-limits">
+                <span>{{ plan.max_members ?? '∞' }} members</span>
+                <span>{{ plan.max_branches ?? '∞' }} branches</span>
+                <span>{{ plan.max_users ?? '∞' }} users</span>
+              </div>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <!-- Duration -->
+      <div class="form-group" *ngIf="subscriptionForm.plan_id !== 'free'">
+        <label>Duration</label>
+        <select [(ngModel)]="subscriptionForm.duration_months" class="form-control">
+          <option *ngFor="let opt of durationOptions" [value]="opt.value">
+            {{ opt.label }}
+          </option>
+        </select>
+      </div>
+
+      <!-- Payment Reference -->
+      <div class="form-group" *ngIf="subscriptionForm.plan_id !== 'free'">
+        <label>Payment Reference</label>
+        <input
+          type="text"
+          class="form-control"
+          [(ngModel)]="subscriptionForm.payment_reference"
+          placeholder="e.g. MOMO-12345 or Bank ref"
+        />
+        <small class="help-text">Record the payment reference for tracking</small>
+      </div>
+
+      <!-- Billing Email -->
+      <div class="form-group">
+        <label>Billing Email</label>
+        <input
+          type="email"
+          class="form-control"
+          [(ngModel)]="subscriptionForm.billing_email"
+          placeholder="billing@church.com"
+        />
+      </div>
+
+      <div *ngIf="errorMessage" class="alert alert-error" style="margin-top:1rem;">
+        <i class="ri-error-warning-line"></i>
+        <span>{{ errorMessage }}</span>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-secondary" (click)="closeSubscriptionModal()" [disabled]="processing">
+        Cancel
+      </button>
+      <button class="btn btn-primary" (click)="saveSubscription()" [disabled]="processing">
+        <i class="ri-save-line"></i>
+        {{ processing ? 'Saving...' : 'Save Subscription' }}
       </button>
     </div>
   </div>
