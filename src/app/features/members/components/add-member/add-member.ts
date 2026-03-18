@@ -7,6 +7,7 @@ import { takeUntil } from 'rxjs/operators';
 import { MemberService } from '../../services/member.service';
 import { AuthService } from '../../../../core/services/auth';
 import { MemberCreateInput } from '../../../../models/member.model';
+import { PermissionService } from '../../../../core/services/permission.service';
 
 @Component({
   selector: 'app-add-member',
@@ -59,6 +60,7 @@ export class AddMember implements OnInit, OnDestroy {
     private memberService: MemberService,
     private authService: AuthService,
     private router: Router,
+    public permissionService: PermissionService,
   ) {}
 
   ngOnInit(): void {
@@ -72,8 +74,8 @@ export class AddMember implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-    const adminRoles = ['super_admin', 'church_admin', 'pastor'];
-    this.canAddMember = this.authService.hasRole(adminRoles);
+    this.canAddMember =
+      this.permissionService.isAdmin || this.permissionService.members.create;
 
     if (!this.canAddMember) {
       this.router.navigate(['/unauthorized']);

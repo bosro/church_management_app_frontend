@@ -23,7 +23,8 @@
               <i class="ri-qr-code-line"></i>
               <span>QR Code</span>
             </button>
-            <button class="btn-secondary" (click)="toggleBulkMode()" [class.active]="bulkCheckInMode">
+            <button class="btn-secondary" (click)="toggleBulkMode()" [class.active]="bulkCheckInMode"
+              *ngIf="permissionService.isAdmin || permissionService.attendance.checkin">
               <i class="ri-checkbox-multiple-line"></i>
               <span>{{ bulkCheckInMode ? 'Cancel Bulk' : 'Bulk Check-in' }}</span>
             </button>
@@ -173,7 +174,8 @@
                       </p>
                     </div>
                   </div>
-                  <button class="btn-remove" (click)="removeAttendance(record.id)" title="Remove">
+                  <button class="btn-remove" (click)="removeAttendance(record.id)" title="Remove"
+                    *ngIf="permissionService.isAdmin || permissionService.attendance.manage">
                     <i class="ri-close-line"></i>
                   </button>
                 </div>

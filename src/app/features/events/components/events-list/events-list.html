@@ -13,7 +13,8 @@
             <h1>Events</h1>
             <p class="subtitle">Manage church events and registrations</p>
           </div>
-          <button class="btn-primary" (click)="createEvent()">
+          <button class="btn-primary" (click)="createEvent()"
+            *ngIf="permissionService.isAdmin || permissionService.events.create">
             <i class="ri-add-line"></i>
             <span>Create Event</span>
           </button>
@@ -101,10 +102,14 @@
                 <span class="date-year">{{ event.start_date | date:'yyyy' }}</span>
               </div>
               <div class="event-actions">
-                <button class="btn-icon-small" (click)="editEvent(event.id, $event)">
+                <button class="btn-icon-small" (click)="editEvent(event.id, $event)"
+                  *ngIf="permissionService.isAdmin || permissionService.events.edit">
                   <i class="ri-edit-line"></i>
                 </button>
-                <button class="btn-icon-small btn-danger" (click)="deleteEvent(event.id, $event)">
+
+                <!-- Delete button on each card — delete permission -->
+                <button class="btn-icon-small btn-danger" (click)="deleteEvent(event.id, $event)"
+                  *ngIf="permissionService.isAdmin || permissionService.events.delete">
                   <i class="ri-delete-bin-line"></i>
                 </button>
               </div>
@@ -163,7 +168,8 @@
             <i class="ri-calendar-line"></i>
             <h3>No Events Found</h3>
             <p>Create your first event to get started</p>
-            <button class="btn-primary" (click)="createEvent()">
+            <button class="btn-primary" (click)="createEvent()"
+              *ngIf="permissionService.isAdmin || permissionService.events.create">
               <i class="ri-add-line"></i>
               Create Event
             </button>
@@ -205,4 +211,3 @@
     </div>
   </div>
 </div>
-

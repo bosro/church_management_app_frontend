@@ -4,7 +4,11 @@ import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { CommunicationsService } from '../../../services/communications';
-import { Communication, CommunicationStatistics } from '../../../../../models/communication.model';
+import {
+  Communication,
+  CommunicationStatistics,
+} from '../../../../../models/communication.model';
+import { PermissionService } from '../../../../../core/services/permission.service';
 
 @Component({
   selector: 'app-communications-list',
@@ -33,7 +37,8 @@ export class CommunicationsList implements OnInit, OnDestroy {
 
   constructor(
     private communicationsService: CommunicationsService,
-    private router: Router
+    private router: Router,
+    public permissionService: PermissionService,
   ) {}
 
   ngOnInit(): void {
@@ -48,10 +53,20 @@ export class CommunicationsList implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-    this.canManageCommunications = this.communicationsService.canManageCommunications();
-    this.canSendCommunications = this.communicationsService.canSendCommunications();
+    const canView =
+      this.permissionService.isAdmin ||
+      this.permissionService.communications.view;
 
-    if (!this.communicationsService.canViewCommunications()) {
+    this.canManageCommunications =
+      this.permissionService.isAdmin ||
+      this.permissionService.communications.templates ||
+      this.permissionService.communications.bulk;
+
+    this.canSendCommunications =
+      this.permissionService.isAdmin ||
+      this.permissionService.communications.send;
+
+    if (!canView) {
       this.router.navigate(['/unauthorized']);
     }
   }
@@ -74,7 +89,7 @@ export class CommunicationsList implements OnInit, OnDestroy {
           this.errorMessage = error.message || 'Failed to load communications';
           this.loading = false;
           console.error('Error loading communications:', error);
-        }
+        },
       });
   }
 
@@ -88,7 +103,7 @@ export class CommunicationsList implements OnInit, OnDestroy {
         },
         error: (error) => {
           console.error('Error loading statistics:', error);
-        }
+        },
       });
   }
 
@@ -117,7 +132,9 @@ export class CommunicationsList implements OnInit, OnDestroy {
       return;
     }
 
-    const communication = this.communications.find(c => c.id === communicationId);
+    const communication = this.communications.find(
+      (c) => c.id === communicationId,
+    );
     if (!communication) return;
 
     const confirmMessage = `Are you sure you want to send "${communication.title}"? This will send ${communication.communication_type === 'both' ? 'SMS and Email' : communication.communication_type.toUpperCase()} to ${communication.target_audience} members.`;
@@ -142,7 +159,7 @@ export class CommunicationsList implements OnInit, OnDestroy {
         error: (error) => {
           this.errorMessage = error.message || 'Failed to send communication';
           console.error('Send error:', error);
-        }
+        },
       });
   }
 
@@ -154,7 +171,9 @@ export class CommunicationsList implements OnInit, OnDestroy {
       return;
     }
 
-    const communication = this.communications.find(c => c.id === communicationId);
+    const communication = this.communications.find(
+      (c) => c.id === communicationId,
+    );
     if (!communication) return;
 
     if (communication.status === 'sent') {
@@ -182,7 +201,7 @@ export class CommunicationsList implements OnInit, OnDestroy {
         error: (error) => {
           this.errorMessage = error.message || 'Failed to delete communication';
           console.error('Delete error:', error);
-        }
+        },
       });
   }
 
@@ -210,7 +229,7 @@ export class CommunicationsList implements OnInit, OnDestroy {
       scheduled: 'status-scheduled',
       sending: 'status-sending',
       sent: 'status-sent',
-      failed: 'status-failed'
+      failed: 'status-failed',
     };
     return classes[status] || 'status-draft';
   }
@@ -221,7 +240,7 @@ export class CommunicationsList implements OnInit, OnDestroy {
       scheduled: 'Scheduled',
       sending: 'Sending',
       sent: 'Sent',
-      failed: 'Failed'
+      failed: 'Failed',
     };
     return labels[status] || status;
   }
@@ -230,7 +249,7 @@ export class CommunicationsList implements OnInit, OnDestroy {
     const icons: Record<string, string> = {
       sms: 'ri-message-3-line',
       email: 'ri-mail-line',
-      both: 'ri-notification-line'
+      both: 'ri-notification-line',
     };
     return icons[type] || 'ri-message-line';
   }
@@ -239,7 +258,7 @@ export class CommunicationsList implements OnInit, OnDestroy {
     const labels: Record<string, string> = {
       sms: 'SMS',
       email: 'Email',
-      both: 'SMS & Email'
+      both: 'SMS & Email',
     };
     return labels[type] || type;
   }

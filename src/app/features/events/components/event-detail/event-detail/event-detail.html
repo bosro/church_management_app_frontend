@@ -20,15 +20,22 @@
               <i class="ri-arrow-left-line"></i>
             </button>
             <div class="header-actions">
-              <button class="btn-secondary" (click)="exportRegistrations()">
+              <button class="btn-secondary" (click)="exportRegistrations()"
+                *ngIf="permissionService.isAdmin || permissionService.events.view">
                 <i class="ri-download-line"></i>
                 Export
               </button>
-              <button class="btn-secondary" (click)="editEvent()">
+
+              <!-- Edit — edit permission -->
+              <button class="btn-secondary" (click)="editEvent()"
+                *ngIf="permissionService.isAdmin || permissionService.events.edit">
                 <i class="ri-edit-line"></i>
                 Edit
               </button>
-              <button class="btn-danger" (click)="deleteEvent()">
+
+              <!-- Delete — delete permission -->
+              <button class="btn-danger" (click)="deleteEvent()"
+                *ngIf="permissionService.isAdmin || permissionService.events.delete">
                 <i class="ri-delete-bin-line"></i>
                 Delete
               </button>
@@ -167,7 +174,8 @@
           <div class="registrations-section">
             <div class="section-header">
               <h2>Registrations</h2>
-              <button class="btn-primary" (click)="toggleRegistrationForm()">
+              <button class="btn-primary" (click)="toggleRegistrationForm()"
+                *ngIf="permissionService.isAdmin || permissionService.events.edit">
                 <i [class]="showRegistrationForm ? 'ri-close-line' : 'ri-add-line'"></i>
                 <span>{{ showRegistrationForm ? 'Cancel' : 'Add Registration' }}</span>
               </button>
@@ -316,12 +324,14 @@
                   </div>
 
                   <div class="registration-actions">
-                    <button *ngIf="!registration.checked_in" class="btn-action btn-checkin"
+                    <button *ngIf="!registration.checked_in &&
+               (permissionService.isAdmin || permissionService.events.edit)" class="btn-action btn-checkin"
                       (click)="checkInRegistration(registration.id)">
                       <i class="ri-checkbox-circle-line"></i>
                       Check In
                     </button>
-                    <button class="btn-action btn-cancel" (click)="cancelRegistration(registration.id)">
+                    <button class="btn-action btn-cancel" (click)="cancelRegistration(registration.id)"
+                      *ngIf="permissionService.isAdmin || permissionService.events.edit">
                       <i class="ri-close-circle-line"></i>
                       Cancel
                     </button>
@@ -342,5 +352,3 @@
     </div>
   </div>
 </div>
-
-

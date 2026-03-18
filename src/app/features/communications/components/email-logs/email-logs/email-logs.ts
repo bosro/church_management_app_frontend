@@ -5,6 +5,7 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { CommunicationsService } from '../../../services/communications';
 import { EmailLog } from '../../../../../models/communication.model';
+import { PermissionService } from '../../../../../core/services/permission.service';
 
 @Component({
   selector: 'app-email-logs',
@@ -30,7 +31,8 @@ export class EmailLogs implements OnInit, OnDestroy {
 
   constructor(
     private communicationsService: CommunicationsService,
-    private router: Router
+    private router: Router,
+    public permissionService: PermissionService,
   ) {}
 
   ngOnInit(): void {
@@ -44,7 +46,9 @@ export class EmailLogs implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-    this.canViewCommunications = this.communicationsService.canViewCommunications();
+    this.canViewCommunications =
+      this.permissionService.isAdmin ||
+      this.permissionService.communications.view;
 
     if (!this.canViewCommunications) {
       this.router.navigate(['/unauthorized']);
@@ -69,7 +73,7 @@ export class EmailLogs implements OnInit, OnDestroy {
           this.errorMessage = error.message || 'Failed to load email logs';
           this.loading = false;
           console.error('Error loading email logs:', error);
-        }
+        },
       });
   }
 
@@ -100,7 +104,7 @@ export class EmailLogs implements OnInit, OnDestroy {
       delivered: 'status-delivered',
       opened: 'status-opened',
       failed: 'status-failed',
-      pending: 'status-pending'
+      pending: 'status-pending',
     };
     return classes[status] || 'status-pending';
   }

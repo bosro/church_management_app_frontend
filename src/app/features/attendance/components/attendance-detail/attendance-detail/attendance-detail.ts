@@ -4,7 +4,11 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { AttendanceService } from '../../../services/attendance.service';
-import { AttendanceEvent, AttendanceRecord } from '../../../../../models/attendance.model';
+import {
+  AttendanceEvent,
+  AttendanceRecord,
+} from '../../../../../models/attendance.model';
+import { PermissionService } from '../../../../../core/services/permission.service';
 
 @Component({
   selector: 'app-attendance-detail',
@@ -28,7 +32,8 @@ export class AttendanceDetail implements OnInit, OnDestroy {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private attendanceService: AttendanceService
+    private attendanceService: AttendanceService,
+    public permissionService: PermissionService,
   ) {}
 
   ngOnInit(): void {
@@ -45,12 +50,19 @@ export class AttendanceDetail implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-    this.canManageAttendance = this.attendanceService.canManageAttendance();
-    this.canMarkAttendance = this.attendanceService.canMarkAttendance();
-
-    if (!this.attendanceService.canViewAttendance()) {
+    if (
+      !this.permissionService.isAdmin &&
+      !this.permissionService.attendance.view
+    ) {
       this.router.navigate(['/unauthorized']);
+      return;
     }
+    this.canManageAttendance =
+      this.permissionService.isAdmin ||
+      this.permissionService.attendance.manage;
+    this.canMarkAttendance =
+      this.permissionService.isAdmin ||
+      this.permissionService.attendance.checkin;
   }
 
   private loadEventDetails(): void {
@@ -70,7 +82,7 @@ export class AttendanceDetail implements OnInit, OnDestroy {
           this.errorMessage = error.message || 'Failed to load event';
           this.loading = false;
           console.error('Error loading event:', error);
-        }
+        },
       });
 
     // Load attendance records
@@ -87,7 +99,7 @@ export class AttendanceDetail implements OnInit, OnDestroy {
         },
         error: (error) => {
           console.error('Error loading records:', error);
-        }
+        },
       });
   }
 
@@ -120,7 +132,7 @@ export class AttendanceDetail implements OnInit, OnDestroy {
         error: (error) => {
           this.errorMessage = error.message || 'Failed to export report';
           console.error('Export error:', error);
-        }
+        },
       });
   }
 
@@ -132,9 +144,10 @@ export class AttendanceDetail implements OnInit, OnDestroy {
 
     if (!this.event) return;
 
-    const confirmMessage = this.event.total_attendance > 0
-      ? `This event has ${this.event.total_attendance} attendance records. Are you sure you want to delete it?`
-      : 'Are you sure you want to delete this event?';
+    const confirmMessage =
+      this.event.total_attendance > 0
+        ? `This event has ${this.event.total_attendance} attendance records. Are you sure you want to delete it?`
+        : 'Are you sure you want to delete this event?';
 
     if (!confirm(confirmMessage)) {
       return;
@@ -150,7 +163,7 @@ export class AttendanceDetail implements OnInit, OnDestroy {
         error: (error) => {
           this.errorMessage = error.message || 'Failed to delete event';
           console.error('Delete error:', error);
-        }
+        },
       });
   }
 
@@ -179,7 +192,7 @@ export class AttendanceDetail implements OnInit, OnDestroy {
       day: 'numeric',
       year: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     });
   }
 
@@ -194,10 +207,15 @@ export class AttendanceDetail implements OnInit, OnDestroy {
   }
 
   calculateAttendanceRate(): number {
-    if (!this.event?.expected_attendance || this.event.expected_attendance === 0) {
+    if (
+      !this.event?.expected_attendance ||
+      this.event.expected_attendance === 0
+    ) {
       return 0;
     }
-    return Math.round((this.event.total_attendance / this.event.expected_attendance) * 100);
+    return Math.round(
+      (this.event.total_attendance / this.event.expected_attendance) * 100,
+    );
   }
 
   getAttendanceRateClass(): string {

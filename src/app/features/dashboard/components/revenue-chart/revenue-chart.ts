@@ -180,3 +180,5 @@ export class RevenueChart implements OnInit, AfterViewInit, OnChanges {
     return `₵${value.toFixed(0)}`;
   }
 }
+
+

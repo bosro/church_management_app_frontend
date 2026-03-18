@@ -1,0 +1,134 @@
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+  <div class="dashboard-content">
+    <app-header></app-header>
+    <div class="dashboard-body">
+      <div class="fee-report-container">
+
+        <div class="page-header no-print">
+          <div class="header-left">
+            <button class="back-btn" (click)="router.navigate(['main/reports'])">
+              <i class="ri-arrow-left-line"></i>
+            </button>
+            <div>
+              <h1>Fee Outstanding Report</h1>
+              <p class="subtitle">{{ selectedTerm }} — {{ selectedYear }}</p>
+            </div>
+          </div>
+          <button class="btn-primary" (click)="printReport()">
+            <i class="ri-printer-line"></i>
+            Print Report
+          </button>
+        </div>
+
+        <div *ngIf="errorMessage" class="error-alert no-print">
+          <i class="ri-error-warning-line"></i>
+          {{ errorMessage }}
+        </div>
+
+        <!-- Filters -->
+        <div class="filters-bar no-print">
+          <select [(ngModel)]="selectedYear" (change)="onFilterChange()" class="filter-select">
+            <option *ngFor="let y of academicYears" [value]="y">{{ y }}</option>
+          </select>
+          <select [(ngModel)]="selectedTerm" (change)="onFilterChange()" class="filter-select">
+            <option *ngFor="let t of terms" [value]="t">{{ t }}</option>
+          </select>
+          <select [(ngModel)]="selectedClassId" (change)="onFilterChange()" class="filter-select">
+            <option value="">All Classes</option>
+            <option *ngFor="let c of classes" [value]="c.id">{{ c.name }}</option>
+          </select>
+        </div>
+
+        <!-- Loading -->
+        <div *ngIf="loading" class="loading-container no-print">
+          <div class="spinner"></div>
+          <p>Loading report...</p>
+        </div>
+
+        <!-- Summary Cards -->
+        <div *ngIf="!loading" class="summary-cards">
+          <div class="summary-card">
+            <p class="card-label">Total Due</p>
+            <p class="card-value">{{ formatCurrency(grandTotalDue) }}</p>
+          </div>
+          <div class="summary-card paid">
+            <p class="card-label">Total Collected</p>
+            <p class="card-value">{{ formatCurrency(grandTotalPaid) }}</p>
+          </div>
+          <div class="summary-card outstanding">
+            <p class="card-label">Total Outstanding</p>
+            <p class="card-value">{{ formatCurrency(grandTotalBalance) }}</p>
+          </div>
+          <div class="summary-card">
+            <p class="card-label">Students with Balance</p>
+            <p class="card-value">{{ studentSummaries.length }}</p>
+          </div>
+        </div>
+
+        <!-- Report Table -->
+        <div *ngIf="!loading" class="report-card">
+          <div class="report-title print-only">
+            <h2>Fee Outstanding Report</h2>
+            <p>{{ selectedTerm }} — {{ selectedYear }}</p>
+          </div>
+
+          <table class="report-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Student</th>
+                <th>Student No.</th>
+                <th>Class</th>
+                <th>Total Due</th>
+                <th>Total Paid</th>
+                <th>Balance</th>
+                <th class="no-print">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let summary of studentSummaries; let i = index"
+                  (click)="viewStudent(summary.student?.id)"
+                  class="table-row">
+                <td>{{ i + 1 }}</td>
+                <td>{{ getStudentName(summary.student) }}</td>
+                <td>{{ summary.student?.student_number }}</td>
+                <td>{{ summary.student?.class?.name }}</td>
+                <td>{{ formatCurrency(summary.totalDue) }}</td>
+                <td>{{ formatCurrency(summary.totalPaid) }}</td>
+                <td class="balance-cell">
+                  <strong>{{ formatCurrency(summary.totalBalance) }}</strong>
+                </td>
+                <td class="no-print">
+                  <button class="btn-pay"
+                          (click)="recordPayment(summary.student?.id); $event.stopPropagation()"
+                          *ngIf="permissionService.school.fees">
+                    <i class="ri-money-dollar-circle-line"></i>
+                    Pay
+                  </button>
+                </td>
+              </tr>
+
+              <tr *ngIf="studentSummaries.length === 0">
+                <td colspan="8" class="empty-state">
+                  <i class="ri-checkbox-circle-line" style="color: #10B981;"></i>
+                  <p>All fees are cleared for this term!</p>
+                </td>
+              </tr>
+            </tbody>
+            <tfoot *ngIf="studentSummaries.length > 0">
+              <tr class="grand-total-row">
+                <td colspan="4"><strong>GRAND TOTAL</strong></td>
+                <td><strong>{{ formatCurrency(grandTotalDue) }}</strong></td>
+                <td><strong>{{ formatCurrency(grandTotalPaid) }}</strong></td>
+                <td><strong>{{ formatCurrency(grandTotalBalance) }}</strong></td>
+                <td class="no-print"></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>

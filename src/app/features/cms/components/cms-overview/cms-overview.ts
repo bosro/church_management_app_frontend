@@ -5,6 +5,7 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { CmsService } from '../../services/cms';
 import { CmsStatistics } from '../../../../models/cms.model';
+import { PermissionService } from '../../../../core/services/permission.service';
 
 @Component({
   selector: 'app-cms-overview',
@@ -25,7 +26,8 @@ export class CmsOverview implements OnInit, OnDestroy {
 
   constructor(
     private cmsService: CmsService,
-    private router: Router
+    private router: Router,
+    public permissionService: PermissionService,
   ) {}
 
   ngOnInit(): void {
@@ -39,8 +41,11 @@ export class CmsOverview implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-    this.canManageContent = this.cmsService.canManageContent();
-    this.canViewContent = this.cmsService.canViewContent();
+    this.canViewContent =
+      this.permissionService.isAdmin || this.permissionService.settings.view;
+
+    this.canManageContent =
+      this.permissionService.isAdmin || this.permissionService.settings.manage;
 
     if (!this.canViewContent) {
       this.router.navigate(['/unauthorized']);
@@ -63,7 +68,7 @@ export class CmsOverview implements OnInit, OnDestroy {
           this.errorMessage = error.message || 'Failed to load statistics';
           this.loading = false;
           console.error('Error loading statistics:', error);
-        }
+        },
       });
   }
 

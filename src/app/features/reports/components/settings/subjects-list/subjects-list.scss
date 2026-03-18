@@ -1,0 +1,74 @@
+@use '../../../reports-shared' as *;
+
+.subjects-container {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.filter-bar {
+  margin-bottom: 20px;
+}
+
+.class-subjects-card {
+  background: white;
+  border: 1px solid #E5E7EB;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+
+  .class-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 20px;
+    background: #F9FAFB;
+    border-bottom: 1px solid #E5E7EB;
+
+    h3 { font-size: 15px; font-weight: 600; color: #111827; margin: 0; }
+
+    .subject-count {
+      font-size: 12px;
+      color: #6B7280;
+      background: #E5E7EB;
+      padding: 2px 8px;
+      border-radius: 100px;
+    }
+  }
+
+  .subjects-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 16px 20px;
+  }
+
+  .subject-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #F3F4F6;
+    border: 1px solid #E5E7EB;
+    border-radius: 8px;
+    padding: 8px 12px;
+    transition: all 0.2s;
+
+    &:hover { background: #EEF2FF; border-color: #C7D2FE; }
+
+    .subject-info {
+      .subject-name { font-size: 13px; font-weight: 500; color: #374151; display: block; }
+      .teacher-name { font-size: 11px; color: #9CA3AF; display: block; }
+    }
+
+    .subject-actions {
+      display: flex;
+      gap: 2px;
+      margin-left: 4px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    &:hover .subject-actions { opacity: 1; }
+  }
+}

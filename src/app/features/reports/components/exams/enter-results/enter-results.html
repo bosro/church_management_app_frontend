@@ -1,0 +1,142 @@
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+  <div class="dashboard-content">
+    <app-header></app-header>
+    <div class="dashboard-body">
+      <div class="enter-results-container">
+
+        <div class="page-header">
+          <div class="header-left">
+            <button class="back-btn" (click)="goBack()">
+              <i class="ri-arrow-left-line"></i>
+            </button>
+            <div>
+              <h1>{{ exam?.exam_name || 'Enter Results' }}</h1>
+              <p class="subtitle" *ngIf="exam">
+                {{ exam.class?.name }} — {{ exam.term }} {{ exam.academic_year }}
+              </p>
+            </div>
+          </div>
+          <button class="btn-primary" (click)="saveResults()"
+                  [disabled]="saving || loading">
+            <span *ngIf="!saving">
+              <i class="ri-save-line"></i> Save Results
+            </span>
+            <span *ngIf="saving">
+              <i class="ri-loader-4-line spin"></i> Saving...
+            </span>
+          </button>
+        </div>
+
+        <div *ngIf="successMessage" class="success-alert">
+          <i class="ri-checkbox-circle-line"></i>
+          {{ successMessage }}
+        </div>
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i>
+          {{ errorMessage }}
+        </div>
+
+        <!-- Loading -->
+        <div *ngIf="loading" class="loading-container">
+          <div class="spinner"></div>
+          <p>Loading exam data...</p>
+        </div>
+
+        <!-- No subjects warning -->
+        <div *ngIf="!loading && subjects.length === 0" class="warning-alert">
+          <i class="ri-error-warning-line"></i>
+          No subjects found for this class.
+          <a (click)="router.navigate(['main/reports/settings/subjects'])">
+            Add subjects first.
+          </a>
+        </div>
+
+        <!-- Results Table -->
+        <div *ngIf="!loading && subjects.length > 0" class="results-table-wrapper">
+          <div class="table-scroll">
+            <table class="results-table">
+              <thead>
+                <tr>
+                  <th class="sticky-col">Student</th>
+                  <th *ngFor="let subject of subjects" class="subject-col">
+                    {{ subject.name }}
+                    <span class="total-marks">/{{ exam?.total_marks }}</span>
+                  </th>
+                  <th class="total-col">Total</th>
+                  <th class="avg-col">Avg</th>
+                  <th class="grade-col">Grade</th>
+                  <th class="action-col"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of resultRows">
+                  <td class="sticky-col student-cell">
+                    <div>
+                      <p class="student-name">{{ getStudentName(row.student) }}</p>
+                      <p class="student-num">{{ row.student.student_number }}</p>
+                    </div>
+                  </td>
+                  <td *ngFor="let subject of subjects" class="score-cell">
+                    <input
+                      type="number"
+                      [(ngModel)]="row.scores[subject.id]"
+                      (ngModelChange)="updateTotals(row)"
+                      [min]="0"
+                      [max]="exam?.total_marks ?? null"
+                      class="score-input"
+                      placeholder="—"
+                    />
+                  </td>
+                  <td class="total-cell">
+                    <strong>{{ row.total | number:'1.0-1' }}</strong>
+                  </td>
+                  <td class="avg-cell">
+                    {{ row.average | number:'1.0-1' }}
+                  </td>
+                  <td class="grade-cell">
+                    <span class="grade-badge">
+                      {{ getGrade(row.average) }}
+                    </span>
+                  </td>
+                  <td class="action-cell">
+                    <button class="btn-icon-small"
+                            (click)="viewReportCard(row.student.id)"
+                            title="View Report Card">
+                      <i class="ri-file-chart-line"></i>
+                    </button>
+                  </td>
+                </tr>
+
+                <tr *ngIf="resultRows.length === 0">
+                  <td [attr.colspan]="subjects.length + 5" class="empty-state">
+                    <i class="ri-user-line"></i>
+                    <p>No active students in this class</p>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="save-footer">
+            <p class="save-hint">
+              <i class="ri-information-line"></i>
+              Click "Save Results" to store all scores.
+              Empty cells will not be saved.
+            </p>
+            <button class="btn-primary" (click)="saveResults()"
+                    [disabled]="saving">
+              <span *ngIf="!saving">
+                <i class="ri-save-line"></i> Save All Results
+              </span>
+              <span *ngIf="saving">
+                <i class="ri-loader-4-line spin"></i> Saving...
+              </span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>

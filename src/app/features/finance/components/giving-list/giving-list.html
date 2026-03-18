@@ -14,11 +14,14 @@
             <p class="subtitle">View and manage all giving records</p>
           </div>
           <div class="header-actions">
-            <button class="btn-secondary" (click)="exportReport()">
+            <button class="btn-secondary" (click)="exportReport()"
+              *ngIf="permissionService.isAdmin || permissionService.finance.reports">
               <i class="ri-download-line"></i>
               <span>Export</span>
             </button>
-            <button class="btn-primary" (click)="recordGiving()">
+            <button class="btn-primary" (click)="recordGiving()" *ngIf="permissionService.isAdmin ||
+               permissionService.finance.record ||
+               permissionService.finance.manage">
               <i class="ri-add-line"></i>
               <span>Record Giving</span>
             </button>
@@ -93,7 +96,9 @@
                   <th>Amount</th>
                   <th>Payment Method</th>
                   <th>Reference</th>
-                  <th>Actions</th>
+                  <th *ngIf="permissionService.isAdmin || permissionService.finance.manage">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -137,7 +142,8 @@
                     </span>
                   </td>
                   <td>
-                    <button class="btn-delete" (click)="deleteTransaction(transaction.id, $event)" title="Delete">
+                    <button class="btn-delete" (click)="deleteTransaction(transaction.id, $event)" title="Delete"
+                      *ngIf="permissionService.isAdmin || permissionService.finance.manage">
                       <i class="ri-delete-bin-line"></i>
                     </button>
                   </td>
@@ -176,5 +182,3 @@
     </div>
   </div>
 </div>
-
-

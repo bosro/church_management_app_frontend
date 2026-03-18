@@ -5,6 +5,7 @@ import { Subject } from 'rxjs';
 import { takeUntil, finalize } from 'rxjs/operators';
 import { SermonsService } from '../../services/sermons';
 import { Sermon, SermonSeries, SermonStatistics } from '../../../../models/sermon.model';
+import { PermissionService } from '../../../../core/services/permission.service';
 
 @Component({
   selector: 'app-sermons-list',
@@ -36,7 +37,8 @@ export class SermonsList implements OnInit, OnDestroy {
 
   constructor(
     private sermonsService: SermonsService,
-    private router: Router
+    private router: Router,
+    public permissionService: PermissionService
   ) {}
 
   ngOnInit(): void {
@@ -52,9 +54,24 @@ export class SermonsList implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-    this.canManageSermons = this.sermonsService.canManageSermons();
-    this.canManageSeries = this.sermonsService.canManageSeries();
+  const canView =
+    this.permissionService.isAdmin ||
+    this.permissionService.sermons.view;
+
+  this.canManageSermons =
+    this.permissionService.isAdmin ||
+    this.permissionService.sermons.upload ||
+    this.permissionService.sermons.edit ||
+    this.permissionService.sermons.delete;
+
+  this.canManageSeries =
+    this.permissionService.isAdmin ||
+    this.permissionService.sermons.edit;
+
+  if (!canView) {
+    this.router.navigate(['/unauthorized']);
   }
+}
 
   loadStatistics(): void {
     this.loadingStats = true;
@@ -265,3 +282,8 @@ export class SermonsList implements OnInit, OnDestroy {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }
+
+
+
+
+

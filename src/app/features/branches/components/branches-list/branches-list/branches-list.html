@@ -14,20 +14,13 @@
             <p class="subtitle">Manage church branches and locations</p>
           </div>
           <div class="header-actions">
-            <button
-              class="btn-secondary"
-              (click)="exportBranches()"
-              [disabled]="branches.length === 0 || loading"
-            >
+            <button class="btn-secondary" (click)="exportBranches()" *ngIf="canViewBranches"
+              [disabled]="branches.length === 0 || loading">
               <i class="ri-download-line"></i>
               Export CSV
             </button>
-            <button
-              *ngIf="canManageBranches"
-              class="btn-primary"
-              (click)="createBranch()"
-              [disabled]="loading"
-            >
+
+            <button *ngIf="canManageBranches" class="btn-primary" (click)="createBranch()" [disabled]="loading">
               <i class="ri-add-line"></i>
               Add Branch
             </button>
@@ -95,28 +88,17 @@
 
         <!-- Branches Grid -->
         <div *ngIf="!loading" class="branches-grid">
-          <div
-            *ngFor="let branch of branches"
-            class="branch-card"
-            (click)="viewBranch(branch.id)"
-          >
+          <div *ngFor="let branch of branches" class="branch-card" (click)="viewBranch(branch.id)">
             <div class="card-header">
               <div class="branch-icon">
                 <i class="ri-building-line"></i>
               </div>
               <div class="card-actions" *ngIf="canManageBranches">
-                <button
-                  class="btn-icon-small"
-                  (click)="editBranch(branch.id, $event)"
-                  title="Edit branch"
-                >
+                <button class="btn-icon-small" (click)="editBranch(branch.id, $event)" title="Edit branch">
                   <i class="ri-edit-line"></i>
                 </button>
-                <button
-                  class="btn-icon-small btn-danger"
-                  (click)="deleteBranch(branch.id, $event)"
-                  title="Delete branch"
-                >
+                <button class="btn-icon-small btn-danger" (click)="deleteBranch(branch.id, $event)"
+                  title="Delete branch">
                   <i class="ri-delete-bin-line"></i>
                 </button>
               </div>
@@ -170,11 +152,7 @@
             <i class="ri-building-line"></i>
             <h3>No Branches Yet</h3>
             <p>Create your first branch to manage multiple locations</p>
-            <button
-              *ngIf="canManageBranches"
-              class="btn-primary"
-              (click)="createBranch()"
-            >
+            <button *ngIf="canManageBranches" class="btn-primary" (click)="createBranch()">
               <i class="ri-add-line"></i>
               Add Branch
             </button>
@@ -183,11 +161,7 @@
 
         <!-- Pagination -->
         <div class="pagination" *ngIf="totalPages > 1 && !loading">
-          <button
-            class="pagination-btn"
-            [disabled]="currentPage === 1"
-            (click)="previousPage()"
-          >
+          <button class="pagination-btn" [disabled]="currentPage === 1" (click)="previousPage()">
             <i class="ri-arrow-left-s-line"></i>
             Previous
           </button>
@@ -198,11 +172,7 @@
             </span>
           </div>
 
-          <button
-            class="pagination-btn"
-            [disabled]="currentPage === totalPages"
-            (click)="nextPage()"
-          >
+          <button class="pagination-btn" [disabled]="currentPage === totalPages" (click)="nextPage()">
             Next
             <i class="ri-arrow-right-s-line"></i>
           </button>
@@ -211,3 +181,6 @@
     </div>
   </div>
 </div>
+
+
+

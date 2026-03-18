@@ -15,6 +15,7 @@ import {
   TIMEZONES,
   CURRENCIES,
 } from '../../../../models/setting.model';
+import { PermissionService } from '../../../../core/services/permission.service';
 
 interface MemberProfile {
   id: string;
@@ -86,6 +87,7 @@ export class Settings implements OnInit, OnDestroy {
     private settingsService: SettingsService,
     private authService: AuthService,
     private supabase: SupabaseService,
+    public permissionService: PermissionService,
   ) {}
 
   ngOnInit(): void {
@@ -128,11 +130,14 @@ export class Settings implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-    this.canManageSettings = this.settingsService.canManageSettings();
+    this.canManageSettings =
+      this.permissionService.isAdmin || this.permissionService.settings.manage;
+
     this.canManageFinanceSettings =
-      this.settingsService.canManageFinanceSettings();
+      this.permissionService.isAdmin || this.permissionService.finance.manage;
+
     this.canManageSecuritySettings =
-      this.settingsService.canManageSecuritySettings();
+      this.permissionService.isAdmin || this.permissionService.settings.manage;
   }
 
   private initForms(): void {
@@ -295,7 +300,6 @@ export class Settings implements OnInit, OnDestroy {
         profile.emergency_contact_relationship || '',
     });
   }
-
 
   // ✅ Add this helper method to the class
   private prepareUpdateData(formValue: any): any {

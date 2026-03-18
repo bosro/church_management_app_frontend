@@ -9,21 +9,21 @@
       <div class="users-container">
         <!-- Page Header -->
         <div class="page-header">
-  <div class="header-left">
-    <h1>User Roles & Permissions</h1>
-    <p class="subtitle">Manage user access and permissions</p>
-  </div>
-  <div class="header-actions">
-    <button class="btn-secondary-outline" (click)="viewRoleTemplates()" [disabled]="!canManageRoles">
-      <i class="ri-shield-user-line"></i>
-      <span class="desktop-only">Role Templates</span>
-    </button>
-    <button class="btn-primary" (click)="createUser()" [disabled]="!canManagePermissions">
-      <i class="ri-user-add-line"></i>
-      <span class="desktop-only">Create User</span>
-    </button>
-  </div>
-</div>
+          <div class="header-left">
+            <h1>User Roles & Permissions</h1>
+            <p class="subtitle">Manage user access and permissions</p>
+          </div>
+          <div class="header-actions">
+            <button class="btn-secondary-outline" (click)="viewRoleTemplates()" [disabled]="!canManageRoles">
+              <i class="ri-shield-user-line"></i>
+              <span class="desktop-only">Role Templates</span>
+            </button>
+            <button class="btn-primary" (click)="createUser()" [disabled]="!canManagePermissions">
+              <i class="ri-user-add-line"></i>
+              <span class="desktop-only">Create User</span>
+            </button>
+          </div>
+        </div>
 
         <!-- Success Message -->
         <div *ngIf="successMessage" class="success-alert">
@@ -86,6 +86,15 @@
                 <i class="ri-settings-3-line"></i>
                 <span>Manage Permissions</span>
               </button>
+
+              <button
+                class="btn-delete"
+                (click)="openDeleteModal(user.id, user.full_name, $event)"
+                *ngIf="canDeleteUser && user.id !== currentUserId"
+                title="Delete user and all their permissions">
+                <i class="ri-delete-bin-line"></i>
+                <span class="desktop-only">Delete</span>
+              </button>
             </div>
           </div>
 
@@ -117,6 +126,56 @@
             <i class="ri-arrow-right-s-line"></i>
           </button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div class="modal-overlay" *ngIf="showDeleteModal" (click)="closeDeleteModal()">
+    <div class="modal-container" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-icon-wrapper danger">
+          <i class="ri-error-warning-line"></i>
+        </div>
+        <button class="modal-close-btn" (click)="closeDeleteModal()" [disabled]="isDeleting">
+          <i class="ri-close-line"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <h2>Delete User</h2>
+        <p class="modal-description">
+          Are you sure you want to permanently delete <strong>{{ userToDelete?.name }}</strong>?
+        </p>
+        <div class="modal-warning">
+          <i class="ri-alert-line"></i>
+          <div>
+            <p class="warning-title">This action cannot be undone</p>
+            <p class="warning-text">This will permanently remove their profile and all permissions you have granted them.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button
+          class="btn-cancel"
+          (click)="closeDeleteModal()"
+          [disabled]="isDeleting">
+          Cancel
+        </button>
+        <button
+          class="btn-delete-confirm"
+          (click)="confirmDelete()"
+          [disabled]="isDeleting">
+          <span *ngIf="!isDeleting">
+            <i class="ri-delete-bin-line"></i>
+            Delete User
+          </span>
+          <span *ngIf="isDeleting" class="deleting-state">
+            <div class="btn-spinner"></div>
+            Deleting...
+          </span>
+        </button>
       </div>
     </div>
   </div>

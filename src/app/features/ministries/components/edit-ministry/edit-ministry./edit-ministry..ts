@@ -6,6 +6,7 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { Ministry, DAYS_OF_WEEK } from '../../../../../models/ministry.model';
 import { MinistryService } from '../../../services/ministry.service';
+import { PermissionService } from '../../../../../core/services/permission.service';
 
 @Component({
   selector: 'app-edit-ministry',
@@ -33,7 +34,8 @@ export class EditMinistry implements OnInit, OnDestroy {
     private fb: FormBuilder,
     private ministryService: MinistryService,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    public permissionService: PermissionService,
   ) {}
 
   ngOnInit(): void {
@@ -55,7 +57,9 @@ export class EditMinistry implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-    this.canManageMinistries = this.ministryService.canManageMinistries();
+    this.canManageMinistries =
+      this.permissionService.isAdmin ||
+      this.permissionService.ministries.manage;
 
     if (!this.canManageMinistries) {
       this.router.navigate(['/unauthorized']);
@@ -64,11 +68,21 @@ export class EditMinistry implements OnInit, OnDestroy {
 
   private initForm(): void {
     this.ministryForm = this.fb.group({
-      name: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(100)]],
+      name: [
+        '',
+        [
+          Validators.required,
+          Validators.minLength(2),
+          Validators.maxLength(100),
+        ],
+      ],
       description: ['', [Validators.maxLength(500)]],
       meeting_day: [''],
-      meeting_time: ['', [Validators.pattern(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/)]],
-      meeting_location: ['', [Validators.maxLength(200)]]
+      meeting_time: [
+        '',
+        [Validators.pattern(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/)],
+      ],
+      meeting_location: ['', [Validators.maxLength(200)]],
     });
   }
 
@@ -89,7 +103,7 @@ export class EditMinistry implements OnInit, OnDestroy {
           this.errorMessage = error.message || 'Failed to load ministry';
           this.loadingMinistry = false;
           console.error('Load ministry error:', error);
-        }
+        },
       });
   }
 
@@ -99,7 +113,7 @@ export class EditMinistry implements OnInit, OnDestroy {
       description: ministry.description || '',
       meeting_day: ministry.meeting_day || '',
       meeting_time: ministry.meeting_time || '',
-      meeting_location: ministry.meeting_location || ''
+      meeting_location: ministry.meeting_location || '',
     });
   }
 
@@ -131,16 +145,19 @@ export class EditMinistry implements OnInit, OnDestroy {
         },
         error: (error) => {
           this.loading = false;
-          this.errorMessage = error.message || 'Failed to update ministry. Please try again.';
+          this.errorMessage =
+            error.message || 'Failed to update ministry. Please try again.';
           this.scrollToTop();
           console.error('Update ministry error:', error);
-        }
+        },
       });
   }
 
   cancel(): void {
     if (this.ministryForm.dirty) {
-      if (confirm('You have unsaved changes. Are you sure you want to leave?')) {
+      if (
+        confirm('You have unsaved changes. Are you sure you want to leave?')
+      ) {
         this.router.navigate(['main/ministries', this.ministryId]);
       }
     } else {
@@ -149,7 +166,7 @@ export class EditMinistry implements OnInit, OnDestroy {
   }
 
   private markFormGroupTouched(formGroup: FormGroup): void {
-    Object.keys(formGroup.controls).forEach(key => {
+    Object.keys(formGroup.controls).forEach((key) => {
       const control = formGroup.get(key);
       control?.markAsTouched();
 

@@ -24,7 +24,6 @@
       </div>
 
       <!-- Dashboard Content -->
-      <!-- ✅ CHANGED: Dynamic grid class based on role -->
       <div *ngIf="!loading && !hasError" class="dashboard-grid" [class.admin-layout]="canViewQuickActions"
         [class.member-layout]="!canViewQuickActions">
 
@@ -52,16 +51,12 @@
           <app-birthday-list [birthdays]="upcomingBirthdays" [canViewAge]="canViewAge"
             [canViewAll]="canViewAllBirthdays" (viewAll)="viewAllBirthdays()"
             (viewMember)="viewMember($event)"></app-birthday-list>
-
-          <!-- Upcoming Events -->
-          <app-upcoming-events [events]="upcomingEvents" [canViewAll]="canViewAllEvents" (viewAll)="viewAllEvents()"
-            (viewEvent)="viewEvent($event)"></app-upcoming-events>
         </div>
 
-        <!-- Right Sidebar - Only show for Admin/Pastor -->
-        <div class="dashboard-sidebar" *ngIf="canViewQuickActions">
-          <!-- Quick Actions -->
-          <div class="quick-actions-card">
+        <!-- Right Sidebar -->
+        <div class="dashboard-sidebar">
+          <!-- Quick Actions - Only show for Admin/Pastor -->
+          <div class="quick-actions-card" *ngIf="canViewQuickActions">
             <h3>Quick Actions</h3>
             <div class="action-grid">
               <button class="action-btn action-purple" (click)="navigateToAddMembers()" [disabled]="!canAddMembers"
@@ -90,8 +85,12 @@
             </div>
           </div>
 
-          <!-- Pastors -->
-          <div class="team-card" *ngIf="pastors.length > 0">
+          <!-- Upcoming Events - Moved to right sidebar -->
+          <app-upcoming-events [events]="upcomingEvents" [canViewAll]="canViewAllEvents" (viewAll)="viewAllEvents()"
+            (viewEvent)="viewEvent($event)"></app-upcoming-events>
+
+          <!-- Pastors - Only show for Admin/Pastor -->
+          <div class="team-card" *ngIf="canViewQuickActions && pastors.length > 0">
             <h3>Pastors</h3>
             <div class="team-list">
               <div *ngFor="let pastor of pastors" class="team-member">
@@ -106,8 +105,8 @@
             </div>
           </div>
 
-          <!-- Shepherds -->
-          <div class="team-card" *ngIf="shepherds.length > 0">
+          <!-- Shepherds - Only show for Admin/Pastor -->
+          <div class="team-card" *ngIf="canViewQuickActions && shepherds.length > 0">
             <h3>Group Leaders</h3>
             <div class="team-list">
               <div *ngFor="let shepherd of shepherds" class="team-member">
@@ -126,9 +125,3 @@
     </div>
   </div>
 </div>
-
-
-
-
-
-

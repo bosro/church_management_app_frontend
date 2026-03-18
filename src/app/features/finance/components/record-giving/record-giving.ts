@@ -8,6 +8,7 @@ import { FinanceService } from '../../services/finance.service';
 import { MemberService } from '../../../members/services/member.service';
 import { GivingCategory, PaymentMethod } from '../../../../models/giving.model';
 import { Member } from '../../../../models/member.model';
+import { PermissionService } from '../../../../core/services/permission.service';
 
 @Component({
   selector: 'app-record-giving',
@@ -52,7 +53,8 @@ export class RecordGiving implements OnInit, OnDestroy {
     private fb: FormBuilder,
     private financeService: FinanceService,
     private memberService: MemberService,
-    private router: Router
+    private router: Router,
+     public permissionService: PermissionService
   ) {}
 
   ngOnInit(): void {
@@ -68,12 +70,15 @@ export class RecordGiving implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-    this.canManageFinance = this.financeService.canManageFinance();
+  this.canManageFinance =
+    this.permissionService.isAdmin ||
+    this.permissionService.finance.record ||
+    this.permissionService.finance.manage;
 
-    if (!this.canManageFinance) {
-      this.router.navigate(['/unauthorized']);
-    }
+  if (!this.canManageFinance) {
+    this.router.navigate(['/unauthorized']);
   }
+}
 
   private initForm(): void {
     const today = new Date().toISOString().split('T')[0];
@@ -239,3 +244,10 @@ export class RecordGiving implements OnInit, OnDestroy {
     }
   }
 }
+
+
+
+
+
+
+

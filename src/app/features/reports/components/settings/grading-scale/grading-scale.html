@@ -1,0 +1,108 @@
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+  <div class="dashboard-content">
+    <app-header></app-header>
+    <div class="dashboard-body">
+      <div class="grading-container">
+
+        <div class="page-header">
+          <div class="header-left">
+            <button class="back-btn" (click)="router.navigate(['main/reports'])">
+              <i class="ri-arrow-left-line"></i>
+            </button>
+            <div>
+              <h1>Grading Scale</h1>
+              <p class="subtitle">Configure the grading system</p>
+            </div>
+          </div>
+          <div class="header-actions" *ngIf="hasScale">
+            <button class="btn-secondary" (click)="addGrade()">
+              <i class="ri-add-line"></i>
+              Add Grade
+            </button>
+            <button class="btn-primary" (click)="saveScale()" [disabled]="saving">
+              <span *ngIf="!saving">
+                <i class="ri-save-line"></i> Save Scale
+              </span>
+              <span *ngIf="saving">
+                <i class="ri-loader-4-line spin"></i> Saving...
+              </span>
+            </button>
+          </div>
+        </div>
+
+        <div *ngIf="successMessage" class="success-alert">
+          <i class="ri-checkbox-circle-line"></i>
+          {{ successMessage }}
+        </div>
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i>
+          {{ errorMessage }}
+        </div>
+
+        <div *ngIf="loading" class="loading-container">
+          <div class="spinner"></div>
+          <p>Loading grading scale...</p>
+        </div>
+
+        <!-- No scale yet -->
+        <div *ngIf="!loading && !hasScale" class="empty-state">
+          <i class="ri-award-line"></i>
+          <h3>No Grading Scale Set Up</h3>
+          <p>Load the default 1-9 grading scale or create your own</p>
+          <button class="btn-primary" (click)="initializeDefault()" [disabled]="saving">
+            <i class="ri-magic-line"></i>
+            Load Default Scale (1-9)
+          </button>
+        </div>
+
+        <!-- Scale Table -->
+        <div *ngIf="!loading && hasScale" class="scale-card">
+          <p class="scale-hint">
+            <i class="ri-information-line"></i>
+            Edit scores and labels directly. Grade 1 = highest, 9 = lowest.
+          </p>
+
+          <table class="scale-table">
+            <thead>
+              <tr>
+                <th>Grade</th>
+                <th>Min Score (%)</th>
+                <th>Max Score (%)</th>
+                <th>Label</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let scale of scales; let i = index">
+                <td>
+                  <input type="text" [(ngModel)]="scale.grade"
+                         class="grade-input" placeholder="e.g. 1" />
+                </td>
+                <td>
+                  <input type="number" [(ngModel)]="scale.min_score"
+                         min="0" max="100" class="score-input" />
+                </td>
+                <td>
+                  <input type="number" [(ngModel)]="scale.max_score"
+                         min="0" max="100" class="score-input" />
+                </td>
+                <td>
+                  <input type="text" [(ngModel)]="scale.label"
+                         class="label-input" placeholder="e.g. Excellent" />
+                </td>
+                <td>
+                  <button class="btn-icon-small btn-danger"
+                          (click)="removeGrade(i)" title="Remove">
+                    <i class="ri-delete-bin-line"></i>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>

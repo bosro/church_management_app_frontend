@@ -5,6 +5,8 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { FinanceService, GivingStatistics, TopGiver } from '../../services/finance.service';
 import { Router } from '@angular/router';
+import { PermissionService } from '../../../../core/services/permission.service';
+import { Location } from '@angular/common';
 
 @Component({
   selector: 'app-finance-reports',
@@ -33,7 +35,9 @@ export class FinanceReports implements OnInit, OnDestroy {
 
   constructor(
     private financeService: FinanceService,
-    private router: Router
+    private router: Router,
+     public permissionService: PermissionService,
+      private location: Location
   ) {
     // Generate year options (current year and 9 years back)
     const currentYear = new Date().getFullYear();
@@ -53,12 +57,15 @@ export class FinanceReports implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-    this.canViewFinance = this.financeService.canViewFinance();
+  this.canViewFinance =
+    this.permissionService.isAdmin ||
+    this.permissionService.finance.view ||
+    this.permissionService.finance.reports;
 
-    if (!this.canViewFinance) {
-      this.router.navigate(['/unauthorized']);
-    }
+  if (!this.canViewFinance) {
+    this.router.navigate(['/unauthorized']);
   }
+}
 
   loadReports(): void {
     this.loading = true;
@@ -168,4 +175,15 @@ export class FinanceReports implements OnInit, OnDestroy {
       currency: currency
     }).format(amount || 0);
   }
+
+  goBack(): void {
+  this.location.back();
 }
+}
+
+
+
+
+
+
+

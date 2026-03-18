@@ -3,10 +3,11 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { BranchesService } from '../../services/branches';
 import { MemberService } from '../../../members/services/member.service';
-import { Branch, BranchMember } from '../../../../models/branch.model';
+import { Branch, BranchMember, BranchInsights, BranchPastor } from '../../../../models/branch.model';
 import { Member } from '../../../../models/member.model';
+import { PermissionService } from '../../../../core/services/permission.service';
+import { BranchesService } from '../../services/branches';
 
 @Component({
   selector: 'app-branch-detail',
@@ -20,11 +21,19 @@ export class BranchDetail implements OnInit, OnDestroy {
   branchId: string = '';
   branch: Branch | null = null;
   branchMembers: BranchMember[] = [];
+  branchInsights: BranchInsights | null = null;
   allMembers: Member[] = [];
+  availablePastors: BranchPastor[] = [];
+
   loading = false;
   loadingBranch = true;
+  loadingInsights = false;
   errorMessage = '';
   successMessage = '';
+
+  // View Mode
+  viewMode: 'table' | 'card' = 'table';
+  activeTab: 'members' | 'insights' = 'members';
 
   // Pagination
   currentPage = 1;
@@ -32,20 +41,23 @@ export class BranchDetail implements OnInit, OnDestroy {
   totalMembers = 0;
   totalPages = 0;
 
-  // Assignment Modal
+  // Modals
   showAssignModal = false;
+  showAssignPastorModal = false;
   searchTerm = '';
   filteredMembers: Member[] = [];
 
   // Permissions
   canManageBranches = false;
   canAssignMembers = false;
+  canViewInsights = false;
 
   constructor(
     private branchesService: BranchesService,
     private membersService: MemberService,
     private router: Router,
     private route: ActivatedRoute,
+    public permissionService: PermissionService,
   ) {}
 
   ngOnInit(): void {
@@ -55,6 +67,10 @@ export class BranchDetail implements OnInit, OnDestroy {
       this.loadBranch();
       this.loadBranchMembers();
       this.loadAllMembers();
+
+      if (this.canViewInsights) {
+        this.loadBranchInsights();
+      }
     } else {
       this.errorMessage = 'Invalid branch ID';
       this.loadingBranch = false;
@@ -67,10 +83,20 @@ export class BranchDetail implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-    this.canManageBranches = this.branchesService.canManageBranches();
-    this.canAssignMembers = this.branchesService.canAssignMembers();
+    this.canManageBranches =
+      this.permissionService.isAdmin || this.permissionService.branches.manage;
 
-    if (!this.branchesService.canViewBranches()) {
+    this.canAssignMembers =
+      this.permissionService.isAdmin || this.permissionService.branches.assign;
+
+    this.canViewInsights =
+      this.permissionService.isAdmin ||
+      this.permissionService.hasRole(['church_admin']);
+
+    const canView =
+      this.permissionService.isAdmin || this.permissionService.branches.view;
+
+    if (!canView) {
       this.router.navigate(['/unauthorized']);
     }
   }
@@ -91,6 +117,123 @@ export class BranchDetail implements OnInit, OnDestroy {
           this.errorMessage = error.message || 'Failed to load branch';
           this.loadingBranch = false;
           console.error('Load branch error:', error);
+        },
+      });
+  }
+
+  private loadBranchInsights(): void {
+    this.loadingInsights = true;
+
+    this.branchesService
+      .getBranchInsights(this.branchId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (insights) => {
+          this.branchInsights = insights;
+          this.loadingInsights = false;
+        },
+        error: (error) => {
+          console.error('Error loading insights:', error);
+          this.loadingInsights = false;
+        },
+      });
+  }
+
+  switchTab(tab: 'members' | 'insights'): void {
+    this.activeTab = tab;
+  }
+
+  openAssignPastorModal(): void {
+    if (!this.canManageBranches) {
+      this.errorMessage = 'You do not have permission to assign pastors';
+      return;
+    }
+
+    if (this.branch?.pastor_id) {
+      this.errorMessage = 'This branch already has an assigned pastor';
+      return;
+    }
+
+    this.showAssignPastorModal = true;
+    this.loadAvailablePastors();
+  }
+
+  closeAssignPastorModal(): void {
+    this.showAssignPastorModal = false;
+  }
+
+  private loadAvailablePastors(): void {
+    this.branchesService
+      .getAvailablePastors()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (pastors) => {
+          this.availablePastors = pastors;
+        },
+        error: (error) => {
+          console.error('Error loading pastors:', error);
+          this.errorMessage = 'Failed to load available pastors';
+        },
+      });
+  }
+
+  assignPastor(pastorId: string, sendEmail: boolean = true): void {
+    if (!this.canManageBranches) {
+      this.errorMessage = 'You do not have permission to assign pastors';
+      return;
+    }
+
+    this.branchesService
+      .assignBranchPastor({
+        user_id: pastorId,
+        branch_id: this.branchId,
+        send_welcome_email: sendEmail,
+      })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.successMessage = sendEmail
+            ? 'Pastor assigned successfully! Welcome email sent.'
+            : 'Pastor assigned successfully!';
+          this.loadBranch();
+          this.closeAssignPastorModal();
+
+          setTimeout(() => {
+            this.successMessage = '';
+          }, 5000);
+        },
+        error: (error) => {
+          this.errorMessage = error.message || 'Failed to assign pastor';
+          console.error('Assign pastor error:', error);
+        },
+      });
+  }
+
+  removePastor(): void {
+    if (!this.canManageBranches) {
+      this.errorMessage = 'You do not have permission to remove pastors';
+      return;
+    }
+
+    if (!confirm('Are you sure you want to remove the pastor from this branch?')) {
+      return;
+    }
+
+    this.branchesService
+      .removeBranchPastor(this.branchId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.successMessage = 'Pastor removed successfully!';
+          this.loadBranch();
+
+          setTimeout(() => {
+            this.successMessage = '';
+          }, 3000);
+        },
+        error: (error) => {
+          this.errorMessage = error.message || 'Failed to remove pastor';
+          console.error('Remove pastor error:', error);
         },
       });
   }
@@ -130,7 +273,10 @@ export class BranchDetail implements OnInit, OnDestroy {
       });
   }
 
-  // Navigation
+  toggleView(mode: 'table' | 'card'): void {
+    this.viewMode = mode;
+  }
+
   goBack(): void {
     this.router.navigate(['main/branches']);
   }
@@ -143,7 +289,6 @@ export class BranchDetail implements OnInit, OnDestroy {
     this.router.navigate(['main/branches', this.branchId, 'edit']);
   }
 
-  // Member Assignment
   openAssignModal(): void {
     if (!this.canAssignMembers) {
       this.errorMessage = 'You do not have permission to assign members';
@@ -186,7 +331,12 @@ export class BranchDetail implements OnInit, OnDestroy {
         next: () => {
           this.successMessage = 'Member assigned successfully!';
           this.loadBranchMembers();
-          this.loadBranch(); // Reload to update member count
+          this.loadBranch();
+
+          if (this.canViewInsights && this.activeTab === 'insights') {
+            this.loadBranchInsights();
+          }
+
           this.closeAssignModal();
 
           setTimeout(() => {
@@ -200,8 +350,10 @@ export class BranchDetail implements OnInit, OnDestroy {
       });
   }
 
-  removeMember(branchMemberId: string, event: MouseEvent): void {
-    event.stopPropagation();
+  removeMember(branchMemberId: string, event?: MouseEvent): void {
+    if (event) {
+      event.stopPropagation();
+    }
 
     if (!this.canAssignMembers) {
       this.errorMessage = 'You do not have permission to remove members';
@@ -219,7 +371,11 @@ export class BranchDetail implements OnInit, OnDestroy {
         next: () => {
           this.successMessage = 'Member removed successfully!';
           this.loadBranchMembers();
-          this.loadBranch(); // Reload to update member count
+          this.loadBranch();
+
+          if (this.canViewInsights && this.activeTab === 'insights') {
+            this.loadBranchInsights();
+          }
 
           setTimeout(() => {
             this.successMessage = '';
@@ -232,7 +388,6 @@ export class BranchDetail implements OnInit, OnDestroy {
       });
   }
 
-  // Pagination
   previousPage(): void {
     if (this.currentPage > 1) {
       this.currentPage--;
@@ -249,13 +404,12 @@ export class BranchDetail implements OnInit, OnDestroy {
     }
   }
 
-  // Helper Methods
   getMemberName(branchMember: BranchMember): string {
     if (branchMember.member) {
       const parts = [
         branchMember.member.first_name,
         branchMember.member.middle_name,
-        branchMember.member.last_name
+        branchMember.member.last_name,
       ].filter(Boolean);
       return parts.join(' ');
     }
@@ -264,6 +418,27 @@ export class BranchDetail implements OnInit, OnDestroy {
 
   getMemberPhoto(branchMember: BranchMember): string {
     return branchMember.member?.photo_url || 'assets/images/default-avatar.png';
+  }
+
+  formatPhoneNumber(phone?: string): string {
+    if (!phone) return 'N/A';
+    return phone;
+  }
+
+  formatCurrency(amount: number, currency: string = 'GHS'): string {
+    return new Intl.NumberFormat('en-GH', {
+      style: 'currency',
+      currency: currency,
+    }).format(amount);
+  }
+
+  getPastorInitials(pastor?: BranchPastor): string {
+    if (!pastor) return '?';
+    const names = pastor.full_name.split(' ');
+    if (names.length >= 2) {
+      return `${names[0].charAt(0)}${names[names.length - 1].charAt(0)}`.toUpperCase();
+    }
+    return pastor.full_name.charAt(0).toUpperCase();
   }
 
   private scrollToTop(): void {

@@ -18,7 +18,8 @@
               <p class="subtitle">Manage your blog content</p>
             </div>
           </div>
-          <button class="btn-primary" (click)="createBlogPost()">
+          <button class="btn-primary" (click)="createBlogPost()"
+            *ngIf="permissionService.isAdmin || permissionService.settings.manage">
             <i class="ri-add-line"></i>
             Create Post
           </button>
@@ -37,19 +38,11 @@
 
         <!-- Category Filter -->
         <div class="filter-bar">
-          <button
-            class="filter-btn"
-            [class.active]="!selectedCategory"
-            (click)="clearFilter()"
-          >
+          <button class="filter-btn" [class.active]="!selectedCategory" (click)="clearFilter()">
             All Posts
           </button>
-          <button
-            *ngFor="let category of categories"
-            class="filter-btn"
-            [class.active]="selectedCategory === category"
-            (click)="filterByCategory(category)"
-          >
+          <button *ngFor="let category of categories" class="filter-btn" [class.active]="selectedCategory === category"
+            (click)="filterByCategory(category)">
             {{ category }}
           </button>
         </div>
@@ -85,11 +78,8 @@
 
               <div class="card-footer">
                 <div class="author-info">
-                  <img
-                    [src]="post.author?.avatar_url || 'assets/images/default-avatar.png'"
-                    [alt]="post.author?.full_name"
-                    class="author-avatar"
-                  />
+                  <img [src]="post.author?.avatar_url || 'assets/images/default-avatar.png'"
+                    [alt]="post.author?.full_name" class="author-avatar" />
                   <div>
                     <p class="author-name">{{ post.author?.full_name || 'Unknown' }}</p>
                     <p class="post-date">{{ post.updated_at | date:'MMM d, y' }}</p>
@@ -97,18 +87,17 @@
                 </div>
 
                 <div class="card-actions">
-                  <button
-                    class="btn-icon"
-                    [class.published]="post.is_published"
-                    (click)="togglePublish(post, $event)"
-                    [title]="post.is_published ? 'Unpublish' : 'Publish'"
-                  >
+                  <button class="btn-icon" [class.published]="post.is_published" (click)="togglePublish(post, $event)"
+                    *ngIf="permissionService.isAdmin || permissionService.settings.manage"
+                    [title]="post.is_published ? 'Unpublish' : 'Publish'">
                     <i [class]="post.is_published ? 'ri-eye-off-line' : 'ri-eye-line'"></i>
                   </button>
-                  <button class="btn-icon" (click)="editBlogPost(post.id, $event)" title="Edit">
+                  <button class="btn-icon" (click)="editBlogPost(post.id, $event)"
+                    *ngIf="permissionService.isAdmin || permissionService.settings.manage" title="Edit">
                     <i class="ri-edit-line"></i>
                   </button>
-                  <button class="btn-icon btn-danger" (click)="deleteBlogPost(post.id, $event)" title="Delete">
+                  <button class="btn-icon btn-danger" (click)="deleteBlogPost(post.id, $event)"
+                    *ngIf="permissionService.isAdmin || permissionService.settings.manage" title="Delete">
                     <i class="ri-delete-bin-line"></i>
                   </button>
                 </div>
@@ -122,7 +111,8 @@
             <h3>No Blog Posts</h3>
             <p *ngIf="selectedCategory">No posts found in this category</p>
             <p *ngIf="!selectedCategory">Create your first blog post to get started</p>
-            <button class="btn-primary" (click)="createBlogPost()" *ngIf="!selectedCategory">
+            <button class="btn-primary" (click)="createBlogPost()"
+              *ngIf="!selectedCategory && (permissionService.isAdmin || permissionService.settings.manage)">
               <i class="ri-add-line"></i>
               Create Post
             </button>
@@ -131,11 +121,7 @@
 
         <!-- Pagination -->
         <div class="pagination" *ngIf="totalPages > 1 && !loading">
-          <button
-            class="pagination-btn"
-            [disabled]="currentPage === 1"
-            (click)="previousPage()"
-          >
+          <button class="pagination-btn" [disabled]="currentPage === 1" (click)="previousPage()">
             <i class="ri-arrow-left-s-line"></i>
             Previous
           </button>
@@ -146,11 +132,7 @@
             </span>
           </div>
 
-          <button
-            class="pagination-btn"
-            [disabled]="currentPage === totalPages"
-            (click)="nextPage()"
-          >
+          <button class="pagination-btn" [disabled]="currentPage === totalPages" (click)="nextPage()">
             Next
             <i class="ri-arrow-right-s-line"></i>
           </button>
@@ -159,4 +141,3 @@
     </div>
   </div>
 </div>
-

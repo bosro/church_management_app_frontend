@@ -74,7 +74,6 @@
   to { transform: rotate(360deg); }
 }
 
-// ✅ CHANGED: Dynamic grid based on role
 .dashboard-grid {
   display: grid;
   gap: 24px;
@@ -88,9 +87,13 @@
     }
   }
 
-  // Member view - full width
+  // Member view - two columns (upcoming events on right)
   &.member-layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 320px;
+
+    @media (max-width: 1200px) {
+      grid-template-columns: 1fr;
+    }
   }
 
   @media (max-width: 768px) {

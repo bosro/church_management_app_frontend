@@ -1,0 +1,171 @@
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+  <div class="dashboard-content">
+    <app-header></app-header>
+    <div class="dashboard-body">
+      <div class="students-container">
+
+        <!-- Page Header -->
+        <div class="page-header">
+          <div class="header-left">
+            <button class="back-btn" (click)="router.navigate(['main/reports'])">
+              <i class="ri-arrow-left-line"></i>
+            </button>
+            <div>
+              <h1>Students</h1>
+              <p class="subtitle">{{ totalStudents }} students enrolled</p>
+            </div>
+          </div>
+          <button class="btn-primary" (click)="addStudent()"
+                  *ngIf="permissionService.school.manage">
+            <i class="ri-user-add-line"></i>
+            Add Student
+          </button>
+        </div>
+
+        <!-- Alerts -->
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i>
+          <span>{{ errorMessage }}</span>
+        </div>
+
+        <!-- Filters -->
+        <div class="filters-card">
+          <form [formGroup]="filterForm" class="filters-form">
+            <div class="filter-group search-group">
+              <i class="ri-search-line search-icon"></i>
+              <input type="text" formControlName="search"
+                     placeholder="Search by name or student number..."
+                     class="search-input" />
+            </div>
+            <div class="filter-group">
+              <select formControlName="classId" class="filter-select">
+                <option value="">All Classes</option>
+                <option *ngFor="let class of classes" [value]="class.id">
+                  {{ class.name }}
+                </option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <select formControlName="isActive" class="filter-select">
+                <option value="true">Active</option>
+                <option value="false">Inactive</option>
+                <option value="">All</option>
+              </select>
+            </div>
+            <button type="button" class="btn-clear"
+                    *ngIf="filterForm.dirty" (click)="clearFilters()">
+              <i class="ri-close-line"></i> Clear
+            </button>
+          </form>
+        </div>
+
+        <!-- Loading -->
+        <div *ngIf="loading" class="loading-container">
+          <div class="spinner"></div>
+          <p>Loading students...</p>
+        </div>
+
+        <!-- Table -->
+        <div *ngIf="!loading" class="table-card">
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Student</th>
+                  <th>Student No.</th>
+                  <th>Class</th>
+                  <th>Gender</th>
+                  <th>Parent/Guardian</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let student of students"
+                    class="table-row" (click)="viewStudent(student.id)">
+                  <td>
+                    <div class="student-cell">
+                      <div class="avatar">
+                        <img *ngIf="student.photo_url"
+                             [src]="student.photo_url"
+                             [alt]="getFullName(student)" />
+                        <div *ngIf="!student.photo_url" class="avatar-placeholder">
+                          {{ getInitials(student) }}
+                        </div>
+                      </div>
+                      <div>
+                        <p class="student-name">{{ getFullName(student) }}</p>
+                        <p class="student-dob" *ngIf="student.date_of_birth">
+                          {{ student.date_of_birth | date:'MMM d, y' }}
+                        </p>
+                      </div>
+                    </div>
+                  </td>
+                  <td><span class="student-number">{{ student.student_number }}</span></td>
+                  <td>{{ student.class?.name || '—' }}</td>
+                  <td class="capitalize">{{ student.gender || '—' }}</td>
+                  <td>
+                    <div *ngIf="student.parent_name">
+                      <p class="parent-name">{{ student.parent_name }}</p>
+                      <p class="parent-phone">{{ student.parent_phone }}</p>
+                    </div>
+                    <span *ngIf="!student.parent_name">—</span>
+                  </td>
+                  <td>
+                    <span class="status-badge"
+                          [class.active]="student.is_active"
+                          [class.inactive]="!student.is_active">
+                      {{ student.is_active ? 'Active' : 'Inactive' }}
+                    </span>
+                  </td>
+                  <td>
+                    <div class="action-buttons">
+                      <button class="btn-icon-small"
+                              (click)="editStudent(student.id, $event)"
+                              *ngIf="permissionService.school.manage"
+                              title="Edit">
+                        <i class="ri-edit-line"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+
+                <tr *ngIf="students.length === 0">
+                  <td colspan="7" class="empty-state">
+                    <i class="ri-user-line"></i>
+                    <p>No students found</p>
+                    <button class="btn-primary-small"
+                            (click)="addStudent()"
+                            *ngIf="permissionService.school.manage">
+                      Add First Student
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination -->
+          <div class="pagination" *ngIf="totalPages > 1">
+            <button class="pagination-btn"
+                    [disabled]="currentPage === 1"
+                    (click)="previousPage()">
+              <i class="ri-arrow-left-s-line"></i> Previous
+            </button>
+            <span class="page-info">
+              Page {{ currentPage }} of {{ totalPages }}
+              ({{ totalStudents }} students)
+            </span>
+            <button class="pagination-btn"
+                    [disabled]="currentPage === totalPages"
+                    (click)="nextPage()">
+              Next <i class="ri-arrow-right-s-line"></i>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>

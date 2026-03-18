@@ -1,0 +1,152 @@
+@use '../../../reports-shared' as *;
+
+.student-detail-container {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+
+  .header-actions { display: flex; gap: 10px; }
+}
+
+.profile-card {
+  background: white;
+  border: 1px solid #E5E7EB;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 20px;
+  display: flex;
+  gap: 32px;
+  flex-wrap: wrap;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+
+  .profile-left {
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+    flex-shrink: 0;
+
+    .profile-avatar {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      overflow: hidden;
+      flex-shrink: 0;
+      border: 3px solid #EEF2FF;
+
+      img { width: 100%; height: 100%; object-fit: cover; }
+
+      .avatar-large {
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, #4F46E5, #7C3AED);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 26px;
+        font-weight: 700;
+        border-radius: 50%;
+      }
+    }
+
+    .profile-info {
+      h1 { font-size: 20px; font-weight: 700; color: #111827; margin: 0 0 4px; }
+
+      .student-number {
+        font-size: 13px;
+        font-family: monospace;
+        background: #F3F4F6;
+        padding: 2px 8px;
+        border-radius: 4px;
+        color: #6B7280;
+        margin-bottom: 8px;
+        display: inline-block;
+      }
+
+      .class-badge {
+        display: inline-flex;
+        background: #EEF2FF;
+        color: #4F46E5;
+        padding: 3px 10px;
+        border-radius: 100px;
+        font-size: 12px;
+        font-weight: 500;
+        margin-right: 6px;
+      }
+
+      .status-badge {
+        display: inline-flex;
+        padding: 3px 10px;
+        border-radius: 100px;
+        font-size: 12px;
+        font-weight: 500;
+
+        &.active { background: #D1FAE5; color: #065F46; }
+        &.inactive { background: #F3F4F6; color: #6B7280; }
+      }
+    }
+  }
+
+  .profile-details {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+
+    .detail-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+
+      i { color: #6366F1; font-size: 18px; margin-top: 2px; flex-shrink: 0; }
+
+      .label { font-size: 11px; color: #9CA3AF; text-transform: uppercase; margin: 0 0 2px; }
+      .value { font-size: 14px; color: #111827; font-weight: 500; margin: 0; }
+    }
+  }
+}
+
+.fee-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+
+  .summary-card {
+    background: white;
+    border: 1px solid #E5E7EB;
+    border-radius: 10px;
+    padding: 16px 20px;
+
+    .summary-label { font-size: 12px; color: #6B7280; margin: 0 0 6px; }
+    .summary-value { font-size: 20px; font-weight: 700; color: #111827; margin: 0; }
+
+    &.paid .summary-value { color: #059669; }
+    &.outstanding .summary-value { color: #DC2626; }
+  }
+}
+
+.receipt-number {
+  font-family: monospace;
+  font-size: 13px;
+  background: #F3F4F6;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.total-row td {
+  background: #F9FAFB;
+  font-size: 14px;
+  border-top: 2px solid #E5E7EB;
+}
+
+.status-paid { background: #D1FAE5; color: #065F46; }
+.status-partial { background: #FEF3C7; color: #92400E; }
+.status-unpaid { background: #FEE2E2; color: #991B1B; }

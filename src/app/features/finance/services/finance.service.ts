@@ -1,4 +1,3 @@
-// src/app/features/finance/services/finance.service.ts
 import { Injectable } from '@angular/core';
 import { Observable, from, throwError } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
@@ -37,15 +36,26 @@ export interface GivingTrend {
   providedIn: 'root',
 })
 export class FinanceService {
-  private churchId?: string;
-  private currentUserId?: string;
-
   constructor(
     private supabase: SupabaseService,
     private authService: AuthService,
-  ) {
-    this.churchId = this.authService.getChurchId();
-    this.currentUserId = this.authService.getUserId();
+  ) {}
+
+  // ✅ FIXED: Always get fresh church_id and user_id
+  private getChurchId(): string {
+    const churchId = this.authService.getChurchId();
+    if (!churchId) {
+      throw new Error('Church ID not found. Please log in again.');
+    }
+    return churchId;
+  }
+
+  private getCurrentUserId(): string {
+    const userId = this.authService.getUserId();
+    if (!userId) {
+      throw new Error('User ID not found. Please log in again.');
+    }
+    return userId;
   }
 
   // ==================== PERMISSIONS ====================
@@ -68,11 +78,13 @@ export class FinanceService {
   // ==================== GIVING CATEGORIES ====================
 
   getGivingCategories(): Observable<GivingCategory[]> {
+    const churchId = this.getChurchId(); // ✅ Fresh church_id
+
     return from(
       this.supabase.client
         .from('giving_categories')
         .select('*')
-        .eq('church_id', this.churchId)
+        .eq('church_id', churchId)
         .eq('is_active', true)
         .order('name', { ascending: true }),
     ).pipe(
@@ -88,11 +100,13 @@ export class FinanceService {
     name: string;
     description?: string;
   }): Observable<GivingCategory> {
+    const churchId = this.getChurchId(); // ✅ Fresh church_id
+
     return from(
       this.supabase.client
         .from('giving_categories')
         .insert({
-          church_id: this.churchId,
+          church_id: churchId,
           name: categoryData.name,
           description: categoryData.description,
           is_active: true,
@@ -112,6 +126,8 @@ export class FinanceService {
     categoryId: string,
     categoryData: { name?: string; description?: string },
   ): Observable<GivingCategory> {
+    const churchId = this.getChurchId(); // ✅ Fresh church_id
+
     return from(
       this.supabase.client
         .from('giving_categories')
@@ -120,7 +136,7 @@ export class FinanceService {
           description: categoryData.description,
         })
         .eq('id', categoryId)
-        .eq('church_id', this.churchId)
+        .eq('church_id', churchId)
         .select()
         .single(),
     ).pipe(
@@ -133,12 +149,14 @@ export class FinanceService {
   }
 
   deleteGivingCategory(categoryId: string): Observable<void> {
+    const churchId = this.getChurchId(); // ✅ Fresh church_id
+
     return from(
       this.supabase.client
         .from('giving_categories')
         .update({ is_active: false })
         .eq('id', categoryId)
-        .eq('church_id', this.churchId),
+        .eq('church_id', churchId),
     ).pipe(
       map(({ error }) => {
         if (error) throw new Error(error.message);
@@ -168,6 +186,7 @@ export class FinanceService {
     pageSize: number,
     filters?: any,
   ): Promise<{ data: any[]; count: number }> {
+    const churchId = this.getChurchId(); // ✅ Fresh church_id
     const offset = (page - 1) * pageSize;
 
     let query = this.supabase.client
@@ -180,7 +199,7 @@ export class FinanceService {
       `,
         { count: 'exact' },
       )
-      .eq('church_id', this.churchId);
+      .eq('church_id', churchId);
 
     // Apply filters
     if (filters?.startDate) {
@@ -212,6 +231,8 @@ export class FinanceService {
   }
 
   getGivingTransactionById(transactionId: string): Observable<any> {
+    const churchId = this.getChurchId(); // ✅ Fresh church_id
+
     return from(
       this.supabase.client
         .from('giving_transactions')
@@ -223,7 +244,7 @@ export class FinanceService {
         `,
         )
         .eq('id', transactionId)
-        .eq('church_id', this.churchId)
+        .eq('church_id', churchId)
         .single(),
     ).pipe(
       map(({ data, error }) => {
@@ -235,6 +256,8 @@ export class FinanceService {
   }
 
   createGivingTransaction(transactionData: any): Observable<GivingTransaction> {
+    const churchId = this.getChurchId(); // ✅ Fresh church_id
+    const currentUserId = this.getCurrentUserId(); // ✅ Fresh user_id
     const currentYear = new Date(
       transactionData.transaction_date,
     ).getFullYear();
@@ -243,7 +266,7 @@ export class FinanceService {
       this.supabase.client
         .from('giving_transactions')
         .insert({
-          church_id: this.churchId,
+          church_id: churchId,
           member_id: transactionData.member_id || null,
           category_id: transactionData.category_id,
           amount: transactionData.amount,
@@ -253,7 +276,7 @@ export class FinanceService {
           transaction_date: transactionData.transaction_date,
           fiscal_year: currentYear,
           notes: transactionData.notes || null,
-          recorded_by: this.currentUserId,
+          recorded_by: currentUserId,
         })
         .select()
         .single(),
@@ -270,6 +293,8 @@ export class FinanceService {
     transactionId: string,
     transactionData: any,
   ): Observable<GivingTransaction> {
+    const churchId = this.getChurchId(); // ✅ Fresh church_id
+
     return from(
       this.supabase.client
         .from('giving_transactions')
@@ -285,7 +310,7 @@ export class FinanceService {
           updated_at: new Date().toISOString(),
         })
         .eq('id', transactionId)
-        .eq('church_id', this.churchId)
+        .eq('church_id', churchId)
         .select()
         .single(),
     ).pipe(
@@ -298,12 +323,14 @@ export class FinanceService {
   }
 
   deleteGivingTransaction(transactionId: string): Observable<void> {
+    const churchId = this.getChurchId(); // ✅ Fresh church_id
+
     return from(
       this.supabase.client
         .from('giving_transactions')
         .delete()
         .eq('id', transactionId)
-        .eq('church_id', this.churchId),
+        .eq('church_id', churchId),
     ).pipe(
       map(({ error }) => {
         if (error) throw new Error(error.message);
@@ -331,6 +358,7 @@ export class FinanceService {
     pageSize: number,
     filters?: any,
   ): Promise<{ data: any[]; count: number }> {
+    const churchId = this.getChurchId(); // ✅ Fresh church_id
     const offset = (page - 1) * pageSize;
 
     let query = this.supabase.client
@@ -343,7 +371,7 @@ export class FinanceService {
     `,
         { count: 'exact' },
       )
-      .eq('church_id', this.churchId);
+      .eq('church_id', churchId);
 
     if (filters?.memberId) {
       query = query.eq('member_id', filters.memberId);
@@ -367,6 +395,8 @@ export class FinanceService {
   }
 
   getPledgeById(pledgeId: string): Observable<any> {
+    const churchId = this.getChurchId(); // ✅ Fresh church_id
+
     return from(
       this.supabase.client
         .from('pledges')
@@ -378,7 +408,7 @@ export class FinanceService {
       `,
         )
         .eq('id', pledgeId)
-        .eq('church_id', this.churchId)
+        .eq('church_id', churchId)
         .single(),
     ).pipe(
       map(({ data, error }) => {
@@ -390,8 +420,10 @@ export class FinanceService {
   }
 
   createPledge(pledgeData: any): Observable<Pledge> {
+    const churchId = this.getChurchId(); // ✅ Fresh church_id
+
     const insertData: any = {
-      church_id: this.churchId,
+      church_id: churchId,
       category_id: pledgeData.category_id || null,
       pledge_amount: pledgeData.pledge_amount,
       amount_paid: 0,
@@ -424,6 +456,8 @@ export class FinanceService {
   }
 
   updatePledge(pledgeId: string, pledgeData: any): Observable<Pledge> {
+    const churchId = this.getChurchId(); // ✅ Fresh church_id
+
     return from(
       this.supabase.client
         .from('pledges')
@@ -438,7 +472,7 @@ export class FinanceService {
           updated_at: new Date().toISOString(),
         })
         .eq('id', pledgeId)
-        .eq('church_id', this.churchId)
+        .eq('church_id', churchId)
         .select()
         .single(),
     ).pipe(
@@ -450,96 +484,15 @@ export class FinanceService {
     );
   }
 
-  private async processePledgePayment(
-    pledgeId: string,
-    amount: number,
-  ): Promise<Pledge> {
-    // Get current pledge
-    const { data: pledge, error: fetchError } = await this.supabase.client
-      .from('pledges')
-      .select('*')
-      .eq('id', pledgeId)
-      .eq('church_id', this.churchId)
-      .single();
-
-    if (fetchError) throw new Error(fetchError.message);
-    if (!pledge) throw new Error('Pledge not found');
-
-    const newAmountPaid = pledge.amount_paid + amount;
-    const isFulfilled = newAmountPaid >= pledge.pledge_amount;
-
-    // Update pledge
-    const { data: updatedPledge, error: updateError } =
-      await this.supabase.client
-        .from('pledges')
-        .update({
-          amount_paid: newAmountPaid,
-          is_fulfilled: isFulfilled,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', pledgeId)
-        .eq('church_id', this.churchId)
-        .select()
-        .single();
-
-    if (updateError) throw new Error(updateError.message);
-    return updatedPledge as Pledge;
-  }
-
-  private async removePledgePayment(
-    paymentId: string,
-    pledgeId: string,
-  ): Promise<void> {
-    // Get the payment to subtract from pledge
-    const { data: payment, error: fetchError } = await this.supabase.client
-      .from('pledge_payments')
-      .select('amount')
-      .eq('id', paymentId)
-      .eq('church_id', this.churchId)
-      .single();
-
-    if (fetchError) throw new Error(fetchError.message);
-
-    // Delete the payment
-    const { error: deleteError } = await this.supabase.client
-      .from('pledge_payments')
-      .delete()
-      .eq('id', paymentId)
-      .eq('church_id', this.churchId);
-
-    if (deleteError) throw new Error(deleteError.message);
-
-    // Update pledge amount_paid
-    const { data: pledge, error: pledgeError } = await this.supabase.client
-      .from('pledges')
-      .select('amount_paid, pledge_amount')
-      .eq('id', pledgeId)
-      .eq('church_id', this.churchId)
-      .single();
-
-    if (pledgeError) throw new Error(pledgeError.message);
-
-    const newAmountPaid = Math.max(0, pledge.amount_paid - payment.amount);
-    const isFulfilled = newAmountPaid >= pledge.pledge_amount;
-
-    await this.supabase.client
-      .from('pledges')
-      .update({
-        amount_paid: newAmountPaid,
-        is_fulfilled: isFulfilled,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', pledgeId)
-      .eq('church_id', this.churchId);
-  }
-
   deletePledge(pledgeId: string): Observable<void> {
+    const churchId = this.getChurchId(); // ✅ Fresh church_id
+
     return from(
       this.supabase.client
         .from('pledges')
         .delete()
         .eq('id', pledgeId)
-        .eq('church_id', this.churchId),
+        .eq('church_id', churchId),
     ).pipe(
       map(({ error }) => {
         if (error) throw new Error(error.message);
@@ -551,12 +504,14 @@ export class FinanceService {
   // ==================== PLEDGE PAYMENTS ====================
 
   getPledgePayments(pledgeId: string): Observable<any[]> {
+    const churchId = this.getChurchId(); // ✅ Fresh church_id
+
     return from(
       this.supabase.client
         .from('pledge_payments')
         .select('*')
         .eq('pledge_id', pledgeId)
-        .eq('church_id', this.churchId)
+        .eq('church_id', churchId)
         .order('payment_date', { ascending: false }),
     ).pipe(
       map(({ data, error }) => {
@@ -585,12 +540,15 @@ export class FinanceService {
     pledgeId: string,
     paymentData: any,
   ): Promise<any> {
+    const churchId = this.getChurchId(); // ✅ Fresh church_id
+    const currentUserId = this.getCurrentUserId(); // ✅ Fresh user_id
+
     // Get current pledge
     const { data: pledge, error: fetchError } = await this.supabase.client
       .from('pledges')
       .select('*')
       .eq('id', pledgeId)
-      .eq('church_id', this.churchId)
+      .eq('church_id', churchId)
       .single();
 
     if (fetchError) throw new Error(fetchError.message);
@@ -609,14 +567,14 @@ export class FinanceService {
       .from('pledge_payments')
       .insert({
         pledge_id: pledgeId,
-        church_id: this.churchId,
+        church_id: churchId,
         amount: paymentData.amount,
         currency: paymentData.currency,
         payment_date: paymentData.payment_date,
         payment_method: paymentData.payment_method,
         transaction_reference: paymentData.transaction_reference || null,
         notes: paymentData.notes || null,
-        recorded_by: this.currentUserId,
+        recorded_by: currentUserId,
       })
       .select()
       .single();
@@ -636,7 +594,7 @@ export class FinanceService {
           updated_at: new Date().toISOString(),
         })
         .eq('id', pledgeId)
-        .eq('church_id', this.churchId)
+        .eq('church_id', churchId)
         .select()
         .single();
 
@@ -649,21 +607,71 @@ export class FinanceService {
     return from(this.removePledgePayment(paymentId, pledgeId));
   }
 
+  private async removePledgePayment(
+    paymentId: string,
+    pledgeId: string,
+  ): Promise<void> {
+    const churchId = this.getChurchId(); // ✅ Fresh church_id
+
+    // Get the payment to subtract from pledge
+    const { data: payment, error: fetchError } = await this.supabase.client
+      .from('pledge_payments')
+      .select('amount')
+      .eq('id', paymentId)
+      .eq('church_id', churchId)
+      .single();
+
+    if (fetchError) throw new Error(fetchError.message);
+
+    // Delete the payment
+    const { error: deleteError } = await this.supabase.client
+      .from('pledge_payments')
+      .delete()
+      .eq('id', paymentId)
+      .eq('church_id', churchId);
+
+    if (deleteError) throw new Error(deleteError.message);
+
+    // Update pledge amount_paid
+    const { data: pledge, error: pledgeError } = await this.supabase.client
+      .from('pledges')
+      .select('amount_paid, pledge_amount')
+      .eq('id', pledgeId)
+      .eq('church_id', churchId)
+      .single();
+
+    if (pledgeError) throw new Error(pledgeError.message);
+
+    const newAmountPaid = Math.max(0, pledge.amount_paid - payment.amount);
+    const isFulfilled = newAmountPaid >= pledge.pledge_amount;
+
+    await this.supabase.client
+      .from('pledges')
+      .update({
+        amount_paid: newAmountPaid,
+        is_fulfilled: isFulfilled,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', pledgeId)
+      .eq('church_id', churchId);
+  }
+
   // ==================== STATISTICS & REPORTS ====================
 
   getGivingStatistics(fiscalYear?: number): Observable<GivingStatistics> {
+    const churchId = this.getChurchId(); // ✅ Fresh church_id
     const year = fiscalYear || new Date().getFullYear();
 
     return from(
       this.supabase.client.rpc('get_giving_stats', {
-        church_uuid: this.churchId,
+        church_uuid: churchId,
         fiscal_year: year,
       }),
     ).pipe(
       map(({ data, error }) => {
         if (error) throw new Error(error.message);
 
-        // FIX: The RPC returns an array with one object, extract it
+        // The RPC returns an array with one object, extract it
         if (Array.isArray(data) && data.length > 0) {
           return data[0] as GivingStatistics;
         }
@@ -675,9 +683,11 @@ export class FinanceService {
   }
 
   getGivingTrends(monthsBack: number = 12): Observable<GivingTrend[]> {
+    const churchId = this.getChurchId(); // ✅ Fresh church_id
+
     return from(
       this.supabase.client.rpc('get_giving_trends', {
-        church_uuid: this.churchId,
+        church_uuid: churchId,
         months_back: monthsBack,
       }),
     ).pipe(
@@ -693,26 +703,23 @@ export class FinanceService {
     limit: number = 10,
     fiscalYear?: number,
   ): Observable<TopGiver[]> {
+    const churchId = this.getChurchId(); // ✅ Fresh church_id
     const year = fiscalYear || new Date().getFullYear();
 
     return from(
       this.supabase.client.rpc('get_top_givers', {
-        church_uuid: this.churchId,
+        church_uuid: churchId,
         fiscal_year: year,
         result_limit: limit,
       }),
     ).pipe(
       map(({ data, error }) => {
         if (error) throw new Error(error.message);
-
-        // This already returns an array, so it's fine
         return (data || []) as TopGiver[];
       }),
       catchError((err) => throwError(() => err)),
     );
   }
-
-  
 
   getMemberGivingHistory(
     memberId: string,
@@ -822,11 +829,13 @@ export class FinanceService {
   }
 
   getMonthlyGivingData(year: number): Observable<any[]> {
+    const churchId = this.getChurchId(); // ✅ Fresh church_id
+
     return from(
       this.supabase.client
         .from('monthly_giving_summary')
         .select('*')
-        .eq('church_id', this.churchId)
+        .eq('church_id', churchId)
         .eq('year', year)
         .order('month', { ascending: true }),
     ).pipe(

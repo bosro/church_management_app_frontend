@@ -5,6 +5,7 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { CommunicationsService } from '../../../services/communications';
 import { SmsLog } from '../../../../../models/communication.model';
+import { PermissionService } from '../../../../../core/services/permission.service';
 
 @Component({
   selector: 'app-sms-logs',
@@ -30,7 +31,8 @@ export class SmsLogs implements OnInit, OnDestroy {
 
   constructor(
     private communicationsService: CommunicationsService,
-    private router: Router
+    private router: Router,
+    public permissionService: PermissionService,
   ) {}
 
   ngOnInit(): void {
@@ -44,7 +46,9 @@ export class SmsLogs implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-    this.canViewCommunications = this.communicationsService.canViewCommunications();
+    this.canViewCommunications =
+      this.permissionService.isAdmin ||
+      this.permissionService.communications.view;
 
     if (!this.canViewCommunications) {
       this.router.navigate(['/unauthorized']);
@@ -69,7 +73,7 @@ export class SmsLogs implements OnInit, OnDestroy {
           this.errorMessage = error.message || 'Failed to load SMS logs';
           this.loading = false;
           console.error('Error loading SMS logs:', error);
-        }
+        },
       });
   }
 
@@ -99,7 +103,7 @@ export class SmsLogs implements OnInit, OnDestroy {
       sent: 'status-sent',
       delivered: 'status-delivered',
       failed: 'status-failed',
-      pending: 'status-pending'
+      pending: 'status-pending',
     };
     return classes[status] || 'status-pending';
   }

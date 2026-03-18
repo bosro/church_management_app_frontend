@@ -6,6 +6,7 @@ import { Subject } from 'rxjs';
 import { takeUntil, debounceTime } from 'rxjs/operators';
 import { EventsService } from '../../services/events';
 import { ChurchEvent, EventCategory } from '../../../../models/event.model';
+import { PermissionService } from '../../../../core/services/permission.service';
 
 @Component({
   selector: 'app-events-list',
@@ -56,7 +57,8 @@ export class EventsList implements OnInit, OnDestroy {
 
   constructor(
     private eventsService: EventsService,
-    private router: Router
+    private router: Router,
+    public permissionService: PermissionService,
   ) {}
 
   ngOnInit(): void {
@@ -72,7 +74,19 @@ export class EventsList implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-    this.canManageEvents = this.eventsService.canManageEvents();
+    // View is open to anyone with events.view permission
+    const canView =
+      this.permissionService.isAdmin || this.permissionService.events.view;
+
+    this.canManageEvents =
+      this.permissionService.isAdmin ||
+      this.permissionService.events.create ||
+      this.permissionService.events.edit ||
+      this.permissionService.events.delete;
+
+    if (!canView) {
+      this.router.navigate(['/unauthorized']);
+    }
   }
 
   private setupFilterListeners(): void {
@@ -162,7 +176,8 @@ export class EventsList implements OnInit, OnDestroy {
     this.router.navigate(['main/events', eventId]);
   }
 
-  editEvent(eventId: string, event: MouseEvent): void {  // Changed parameter type
+  editEvent(eventId: string, event: MouseEvent): void {
+    // Changed parameter type
     event.stopPropagation();
 
     if (!this.canManageEvents) {
@@ -173,7 +188,8 @@ export class EventsList implements OnInit, OnDestroy {
     this.router.navigate(['main/events', eventId, 'edit']);
   }
 
-  deleteEvent(eventId: string, event: MouseEvent): void {  // Changed parameter type
+  deleteEvent(eventId: string, event: MouseEvent): void {
+    // Changed parameter type
     event.stopPropagation();
 
     if (!this.canManageEvents) {
@@ -181,7 +197,8 @@ export class EventsList implements OnInit, OnDestroy {
       return;
     }
 
-    const confirmMessage = 'Are you sure you want to delete this event? All registrations will also be deleted.';
+    const confirmMessage =
+      'Are you sure you want to delete this event? All registrations will also be deleted.';
 
     if (!confirm(confirmMessage)) {
       return;
@@ -293,5 +310,3 @@ export class EventsList implements OnInit, OnDestroy {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }
-
-

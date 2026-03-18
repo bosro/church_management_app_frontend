@@ -20,7 +20,6 @@ import {
   UserRole,
 } from '../../models/user.model';
 import { SupabaseService } from './supabase';
-import { Church } from '../../models/church.model';
 
 @Injectable({
   providedIn: 'root',
@@ -36,6 +35,9 @@ export class AuthService {
   public authReady$ = this.authReadySubject.asObservable();
 
   private userRolesService?: any; // lazy loaded to avoid circular dep
+
+  private churchFeaturesSubject = new BehaviorSubject<string[]>([]);
+  churchFeatures$ = this.churchFeaturesSubject.asObservable();
 
   constructor(
     private supabase: SupabaseService,
@@ -59,6 +61,9 @@ export class AuthService {
       .subscribe(async (user) => {
         if (user) {
           await this.loadUserProfile(user.id);
+
+          await this.loadChurchFeatures();
+
           // Load permissions on page refresh too
           if (this.userRolesService) {
             await this.userRolesService.loadCurrentUserPermissions();
@@ -98,7 +103,10 @@ export class AuthService {
     return !!this.supabase.currentUser;
   }
 
-  // Sign In with Email & Password
+  // Add this method to your AuthService class
+  getCurrentUserRole(): string {
+    return this.currentProfile?.role || '';
+  }
   signIn(email: string, password: string): Observable<AuthResponse> {
     this.loadingSubject.next(true);
 
@@ -120,21 +128,24 @@ export class AuthService {
 
         const userProfile = profile[0];
 
-        // console.log(
-        //   'Auth user email_confirmed_at:',
-        //   data.user?.email_confirmed_at,
-        // );
-        // console.log('User role:', userProfile.role);
-
         // Check approval status FIRST
         const approvalStatus = userProfile.approval_status || 'pending';
 
+        // if (approvalStatus === 'pending') {
+        //   await this.supabase.client.auth.signOut();
+        //   throw new Error(
+        //     'Your account is pending admin approval. You will receive an email once approved.',
+        //   );
+        // }
+
         if (approvalStatus === 'pending') {
-          await this.supabase.client.auth.signOut();
-          throw new Error(
-            'Your account is pending admin approval. You will receive an email once approved.',
-          );
-        }
+  await this.supabase.client.auth.signOut();
+  throw new Error(
+    'Please confirm your email address first. ' +
+    'Check your inbox for a confirmation link. ' +
+    'Once confirmed you can sign in immediately.'
+  );
+}
 
         if (approvalStatus === 'rejected') {
           await this.supabase.client.auth.signOut();
@@ -154,7 +165,6 @@ export class AuthService {
         const isAdmin = adminRoles.includes(userProfile.role);
 
         // Check email verification - BYPASS for admins
-        // Use data.user.email_confirmed_at from auth, not userProfile.email_verified
         if (!isAdmin && !data.user?.email_confirmed_at) {
           await this.supabase.client.auth.signOut();
           throw new Error(
@@ -162,9 +172,19 @@ export class AuthService {
           );
         }
 
+        // Set profile BEFORE loading permissions so hasRole() works correctly
+        this.currentProfileSubject.next(userProfile);
+
+        await this.loadChurchFeatures();
+
+        // Load permissions for this user
         if (this.userRolesService) {
           await this.userRolesService.loadCurrentUserPermissions();
         }
+
+        // Signal that auth + permissions are fully ready
+        // This unblocks PermissionGuard and RoleGuard which wait on authReady$
+        this.authReadySubject.next(true);
 
         return {
           user: userProfile,
@@ -182,55 +202,85 @@ export class AuthService {
     );
   }
 
+  // Call this inside initializeAuth() and signIn()
+  private async loadChurchFeatures(): Promise<void> {
+    const churchId = this.getChurchId();
+    if (!churchId) return;
+
+    const { data, error } = await this.supabase.client
+      .from('churches')
+      .select('enabled_features')
+      .eq('id', churchId)
+      .single();
+
+    if (!error && data) {
+      this.churchFeaturesSubject.next(data.enabled_features || []);
+    }
+  }
+
+  hasChurchFeature(feature: string): boolean {
+    return this.churchFeaturesSubject.value.includes(feature);
+  }
+
   /**
    * Handle member signup (joining existing church)
    */
-  private async handleMemberSignup(
-    data: any,
-    signUpData: SignUpData,
-  ): Promise<any> {
-    // Check if a pre-created user record exists for this email in this church
-    const { data: existingUser } = await this.supabase.client
+ private async handleMemberSignup(
+  data: any,
+  signUpData: SignUpData,
+): Promise<any> {
+  // Check if a pre-created user record exists for this email in this church
+  const { data: existingUser } = await this.supabase.client
+    .from('users')
+    .select('id')
+    .eq('email', signUpData.email)
+    .eq('church_id', signUpData.church_id!)
+    .neq('id', data.user.id)
+    .maybeSingle();
+
+  if (existingUser) {
+    await this.supabase.client
       .from('users')
-      .select('id')
+      .update({ id: data.user.id, updated_at: new Date().toISOString() })
       .eq('email', signUpData.email)
-      .eq('church_id', signUpData.church_id!)
-      .neq('id', data.user.id)
-      .maybeSingle(); // ← was .single()
+      .eq('church_id', signUpData.church_id!);
 
-    if (existingUser) {
-      // Update the pre-created record to use the real auth UID
-      await this.supabase.client
-        .from('users')
-        .update({ id: data.user.id, updated_at: new Date().toISOString() })
-        .eq('email', signUpData.email)
-        .eq('church_id', signUpData.church_id!);
-
-      // ← ADD HERE: reconcile the members row that was created with a null user_id
-      await this.supabase.client
-        .from('members')
-        .update({ user_id: data.user.id })
-        .eq('email', signUpData.email)
-        .is('user_id', null);
-    }
-
-    // Continue with normal member signup
-    const result = await this.supabase.callFunction('create_member_signup', {
-      p_user_id: data.user.id,
-      p_full_name: signUpData.full_name,
-      p_email: signUpData.email,
-      p_phone: signUpData.phone,
-      p_church_id: signUpData.church_id,
-    });
-
-    return {
-      ...data,
-      needsEmailConfirmation: !data.user.email_confirmed_at,
-      pendingApproval: false,
-      message: 'Welcome! Please check your email to confirm your account.',
-    };
+    await this.supabase.client
+      .from('members')
+      .update({ user_id: data.user.id })
+      .eq('email', signUpData.email)
+      .is('user_id', null);
   }
 
+  // ✅ ADD THIS — ensure profile is set to pending until email confirmed
+  // The DB trigger will flip this to approved once email is confirmed
+  await this.supabase.client
+    .from('profiles')
+    .update({
+      approval_status: 'pending',
+      is_active: false,
+      church_id: signUpData.church_id,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', data.user.id);
+
+  const result = await this.supabase.callFunction('create_member_signup', {
+    p_user_id: data.user.id,
+    p_full_name: signUpData.full_name,
+    p_email: signUpData.email,
+    p_phone: signUpData.phone,
+    p_church_id: signUpData.church_id,
+  });
+
+  return {
+    ...data,
+    needsEmailConfirmation: !data.user.email_confirmed_at,
+    pendingApproval: false,
+    // ✅ Updated message — no mention of admin approval
+    message:
+      'Account created! Please check your email and click the confirmation link to activate your account. You can sign in immediately after confirming.',
+  };
+}
   /**
    * Handle admin/pastor signup (creating new church or requesting access)
    */

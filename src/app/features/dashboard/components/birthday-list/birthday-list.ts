@@ -116,3 +116,5 @@ export class BirthdayList implements OnChanges {
     return `${months[date.getMonth()]} ${date.getDate()}`;
   }
 }
+
+

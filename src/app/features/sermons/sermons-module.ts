@@ -8,22 +8,14 @@ import { CreateSermon } from './components/create-sermon/create-sermon';
 import { EditSermon } from './components/edit-sermon/edit-sermon';
 import { SermonDetail } from './components/sermon-detail/sermon-detail';
 
-
-
 @NgModule({
-  declarations: [
-    SermonsList,
-    CreateSermon,
-    EditSermon,
-    SermonDetail
-  ],
+  declarations: [SermonsList, CreateSermon, EditSermon, SermonDetail],
   imports: [
     CommonModule,
-      ReactiveFormsModule,
+    ReactiveFormsModule,
     FormsModule,
     SharedModule,
-    SermonsRoutingModule
-  ]
+    SermonsRoutingModule,
+  ],
 })
-export class SermonsModule { }
-
+export class SermonsModule {}

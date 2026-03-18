@@ -1,0 +1,29 @@
+@use '../../../reports-shared' as *;
+
+.student-fees-container {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.student-name { font-size: 14px; font-weight: 500; color: #111827; margin: 0; }
+.student-num { font-size: 12px; color: #9CA3AF; margin: 2px 0 0; font-family: monospace; }
+
+.btn-pay {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  background: #4F46E5;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+
+  &:hover { background: #4338CA; }
+}
+
+.status-paid { background: #D1FAE5; color: #065F46; }
+.status-partial { background: #FEF3C7; color: #92400E; }
+.status-unpaid { background: #FEE2E2; color: #991B1B; }

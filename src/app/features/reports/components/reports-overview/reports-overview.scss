@@ -1,0 +1,217 @@
+.reports-overview-container {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+
+  h1 { font-size: 24px; font-weight: 700; color: #111827; margin: 0; }
+  .subtitle { color: #6B7280; margin: 4px 0 0; }
+
+  .header-filters {
+    display: flex;
+    gap: 12px;
+
+    .filter-select {
+      padding: 8px 12px;
+      border: 1px solid #E5E7EB;
+      border-radius: 8px;
+      font-size: 14px;
+      background: white;
+      cursor: pointer;
+    }
+  }
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  border: 1px solid #F3F4F6;
+
+  .stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+
+  .stat-label { font-size: 13px; color: #6B7280; margin: 0 0 4px; }
+  .stat-value { font-size: 22px; font-weight: 700; color: #111827; margin: 0; }
+  .stat-meta { font-size: 12px; color: #9CA3AF; margin: 2px 0 0; }
+}
+
+.progress-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  border: 1px solid #F3F4F6;
+
+  .progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+
+    h3 { font-size: 15px; font-weight: 600; color: #111827; margin: 0; }
+    .progress-percent { font-size: 18px; font-weight: 700; color: #10B981; }
+  }
+
+  .progress-bar-container {
+    background: #F3F4F6;
+    border-radius: 100px;
+    height: 12px;
+    overflow: hidden;
+    margin-bottom: 12px;
+
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #10B981, #34D399);
+      border-radius: 100px;
+      transition: width 0.5s ease;
+    }
+  }
+
+  .progress-legend {
+    display: flex;
+    gap: 20px;
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: #6B7280;
+
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+      }
+
+      &.paid .dot { background: #10B981; }
+      &.partial .dot { background: #F59E0B; }
+      &.unpaid .dot { background: #EF4444; }
+    }
+  }
+}
+
+.section-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 16px;
+}
+
+.actions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.action-group {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  border: 1px solid #F3F4F6;
+
+  .group-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #374151;
+    margin: 0 0 16px;
+
+    i { color: #6366F1; font-size: 18px; }
+  }
+
+  .action-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .action-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    background: #F9FAFB;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #374151;
+    font-size: 14px;
+    font-weight: 500;
+
+    i { font-size: 18px; color: #6366F1; }
+
+    &:hover {
+      background: #EEF2FF;
+      color: #4F46E5;
+      transform: translateX(4px);
+    }
+  }
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 60px;
+  gap: 16px;
+  color: #6B7280;
+
+  .spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid #E5E7EB;
+    border-top-color: #6366F1;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.error-alert {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  border-radius: 8px;
+  color: #DC2626;
+  margin-bottom: 20px;
+  font-size: 14px;
+}

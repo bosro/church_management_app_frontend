@@ -90,3 +90,5 @@ export class GivingHistoryPage implements OnInit, OnDestroy {  // ✅ different 
     this.router.navigate(['/main/my-giving/make-payment']);
   }
 }
+
+

@@ -5,6 +5,7 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { CmsService } from '../../services/cms';
 import { CmsPage } from '../../../../models/cms.model';
+import { PermissionService } from '../../../../core/services/permission.service';
 
 @Component({
   selector: 'app-pages-list',
@@ -32,7 +33,8 @@ export class PagesList implements OnInit, OnDestroy {
 
   constructor(
     private cmsService: CmsService,
-    private router: Router
+    private router: Router,
+    public permissionService: PermissionService,
   ) {}
 
   ngOnInit(): void {
@@ -46,10 +48,16 @@ export class PagesList implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-    this.canManageContent = this.cmsService.canManageContent();
-    this.canPublishContent = this.cmsService.canPublishContent();
+    const canView =
+      this.permissionService.isAdmin || this.permissionService.settings.view;
 
-    if (!this.cmsService.canViewContent()) {
+    this.canManageContent =
+      this.permissionService.isAdmin || this.permissionService.settings.manage;
+
+    this.canPublishContent =
+      this.permissionService.isAdmin || this.permissionService.settings.manage;
+
+    if (!canView) {
       this.router.navigate(['/unauthorized']);
     }
   }
@@ -72,7 +80,7 @@ export class PagesList implements OnInit, OnDestroy {
           this.errorMessage = error.message || 'Failed to load pages';
           this.loading = false;
           console.error('Error loading pages:', error);
-        }
+        },
       });
   }
 
@@ -106,7 +114,8 @@ export class PagesList implements OnInit, OnDestroy {
     event.stopPropagation();
 
     if (!this.canPublishContent) {
-      this.errorMessage = 'You do not have permission to publish/unpublish pages';
+      this.errorMessage =
+        'You do not have permission to publish/unpublish pages';
       this.scrollToTop();
       return;
     }
@@ -129,7 +138,7 @@ export class PagesList implements OnInit, OnDestroy {
         this.errorMessage = error.message || `Failed to ${action} page`;
         this.scrollToTop();
         console.error(`${action} error:`, error);
-      }
+      },
     });
   }
 
@@ -142,7 +151,7 @@ export class PagesList implements OnInit, OnDestroy {
       return;
     }
 
-    const page = this.pages.find(p => p.id === pageId);
+    const page = this.pages.find((p) => p.id === pageId);
     if (!page) return;
 
     const confirmMessage = page.is_published
@@ -169,7 +178,7 @@ export class PagesList implements OnInit, OnDestroy {
           this.errorMessage = error.message || 'Failed to delete page';
           this.scrollToTop();
           console.error('Delete error:', error);
-        }
+        },
       });
   }
 

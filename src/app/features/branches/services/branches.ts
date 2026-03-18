@@ -9,6 +9,9 @@ import {
   BranchMember,
   BranchStatistics,
   BranchFormData,
+  BranchInsights,
+  AssignBranchPastorRequest,
+  BranchPastor,
 } from '../../../models/branch.model';
 
 @Injectable({
@@ -61,7 +64,19 @@ export class BranchesService {
       (async () => {
         let query = this.supabase.client
           .from('branches')
-          .select('*', { count: 'exact' })
+          .select(
+            `
+            *,
+            pastor:profiles!pastor_id(
+              id,
+              full_name,
+              email,
+              avatar_url,
+              phone_number
+            )
+          `,
+            { count: 'exact' },
+          )
           .eq('church_id', churchId);
 
         // Apply filters
@@ -97,7 +112,18 @@ export class BranchesService {
     return from(
       this.supabase.client
         .from('branches')
-        .select('*')
+        .select(
+          `
+          *,
+          pastor:profiles!pastor_id(
+            id,
+            full_name,
+            email,
+            avatar_url,
+            phone_number
+          )
+        `,
+        )
         .eq('id', branchId)
         .eq('church_id', churchId)
         .single(),
@@ -129,25 +155,17 @@ export class BranchesService {
       return throwError(() => new Error('Invalid email address'));
     }
 
-    // Validate established date if provided
-    if (branchData.established_date) {
-      const date = new Date(branchData.established_date);
-      if (isNaN(date.getTime())) {
-        return throwError(() => new Error('Invalid established date'));
-      }
-      if (date > new Date()) {
-        return throwError(
-          () => new Error('Established date cannot be in the future'),
-        );
-      }
-    }
+    // Generate slug from name
+    const slug = this.generateSlug(branchData.name);
 
     return from(
       this.supabase.insert<Branch>('branches', {
         church_id: churchId,
         name: branchData.name.trim(),
+        slug: slug,
         pastor_name: branchData.pastor_name?.trim() || null,
-        address: branchData.address?.trim() || undefined,
+        pastor_id: branchData.pastor_id || null,
+        address: branchData.address?.trim() || null,
         city: branchData.city?.trim() || null,
         state: branchData.state?.trim() || null,
         country: branchData.country?.trim() || null,
@@ -189,19 +207,6 @@ export class BranchesService {
       return throwError(() => new Error('Invalid email address'));
     }
 
-    // Validate established date if provided
-    if (branchData.established_date) {
-      const date = new Date(branchData.established_date);
-      if (isNaN(date.getTime())) {
-        return throwError(() => new Error('Invalid established date'));
-      }
-      if (date > new Date()) {
-        return throwError(
-          () => new Error('Established date cannot be in the future'),
-        );
-      }
-    }
-
     return from(
       (async () => {
         // Verify ownership
@@ -216,18 +221,24 @@ export class BranchesService {
           throw new Error('Branch not found or access denied');
         }
 
-        const updateData = {
+        const updateData: any = {
           ...branchData,
           name: branchData.name?.trim(),
-          pastor_name: branchData.pastor_name?.trim() || undefined,
-          address: branchData.address?.trim() || undefined,
-          city: branchData.city?.trim() || undefined,
-          state: branchData.state?.trim() || undefined,
-          country: branchData.country?.trim() || undefined,
-          phone: branchData.phone?.trim() || undefined,
-          email: branchData.email?.trim() || undefined,
+          pastor_name: branchData.pastor_name?.trim() || null,
+          pastor_id: branchData.pastor_id || null,
+          address: branchData.address?.trim() || null,
+          city: branchData.city?.trim() || null,
+          state: branchData.state?.trim() || null,
+          country: branchData.country?.trim() || null,
+          phone: branchData.phone?.trim() || null,
+          email: branchData.email?.trim() || null,
           updated_at: new Date().toISOString(),
         };
+
+        // Update slug if name changed
+        if (branchData.name) {
+          updateData.slug = this.generateSlug(branchData.name);
+        }
 
         return this.supabase.update<Branch>('branches', branchId, updateData);
       })(),
@@ -310,7 +321,7 @@ export class BranchesService {
           )
           .eq('branch_id', branchId)
           .eq('is_active', true)
-          .order('assigned_date', { ascending: false })
+          .order('created_at', { ascending: false })
           .range(offset, offset + pageSize - 1);
 
         if (error) throw new Error(error.message);
@@ -377,7 +388,7 @@ export class BranchesService {
             const result = await this.supabase.update<BranchMember>(
               'branch_members',
               existing.id,
-              { is_active: true, assigned_date: new Date().toISOString() },
+              { is_active: true, updated_at: new Date().toISOString() },
             );
 
             return {
@@ -393,15 +404,11 @@ export class BranchesService {
           {
             branch_id: branchId,
             member_id: memberId,
-            assigned_date: new Date().toISOString(),
             is_active: true,
           } as any,
         );
 
         if (error) throw new Error(error.message);
-
-        // Update branch member count
-        await this.updateBranchMemberCount(branchId);
 
         return { data: data ? data[0] : null, error: null };
       })(),
@@ -435,9 +442,6 @@ export class BranchesService {
         );
 
         if (error) throw new Error(error.message);
-
-        // Update branch member count
-        await this.updateBranchMemberCount(branchId);
       })(),
     ).pipe(
       catchError((err) => {
@@ -447,20 +451,246 @@ export class BranchesService {
     );
   }
 
-  private async updateBranchMemberCount(branchId: string): Promise<void> {
-    const { count } = await this.supabase.client
-      .from('branch_members')
-      .select('*', { count: 'exact', head: true })
-      .eq('branch_id', branchId)
-      .eq('is_active', true);
+  // ==================== NEW: BRANCH INSIGHTS ====================
 
-    await this.supabase.client
-      .from('branches')
-      .update({
-        member_count: count || 0,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', branchId);
+  getBranchInsights(branchId: string): Observable<BranchInsights> {
+    return from(
+      this.supabase.client.rpc('get_branch_insights', {
+        p_branch_id: branchId,
+      }),
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw new Error(error.message);
+        if (!data || data.length === 0) {
+          throw new Error('No insights available for this branch');
+        }
+        return data[0] as BranchInsights;
+      }),
+      catchError((err) => {
+        console.error('Error loading branch insights:', err);
+        return throwError(() => err);
+      }),
+    );
+  }
+
+  // ==================== NEW: BRANCH PASTOR MANAGEMENT ====================
+
+  /**
+   * Get all profiles with 'pastor' role who are not assigned to any branch
+   */
+  getAvailablePastors(): Observable<BranchPastor[]> {
+    const churchId = this.authService.getChurchId();
+
+    return from(
+      (async () => {
+        // Get all pastors
+        const { data: allPastors, error: pastorsError } =
+          await this.supabase.client
+            .from('profiles')
+            .select('id, full_name, email, avatar_url, phone_number')
+            .eq('church_id', churchId)
+            .eq('role', 'pastor')
+            .eq('is_active', true)
+            .order('full_name', { ascending: true });
+
+        if (pastorsError) throw new Error(pastorsError.message);
+
+        // Get all assigned pastor IDs
+        const { data: assignedBranches } = await this.supabase.client
+          .from('branches')
+          .select('pastor_id')
+          .not('pastor_id', 'is', null)
+          .eq('is_active', true);
+
+        const assignedPastorIds = new Set(
+          (assignedBranches || []).map((b) => b.pastor_id),
+        );
+
+        // Filter out already assigned pastors
+        const availablePastors = (allPastors || []).filter(
+          (pastor) => !assignedPastorIds.has(pastor.id),
+        );
+
+        return availablePastors as BranchPastor[];
+      })(),
+    ).pipe(
+      catchError((err) => {
+        console.error('Error loading available pastors:', err);
+        return throwError(() => err);
+      }),
+    );
+  }
+
+  /**
+   * Assign a pastor to a branch
+   */
+  assignBranchPastor(request: AssignBranchPastorRequest): Observable<void> {
+    const churchId = this.authService.getChurchId();
+
+    return from(
+      (async () => {
+        // Verify branch exists and belongs to church
+        const { data: branch } = await this.supabase.client
+          .from('branches')
+          .select('id, name, pastor_id')
+          .eq('id', request.branch_id)
+          .eq('church_id', churchId)
+          .single();
+
+        if (!branch) {
+          throw new Error('Branch not found or access denied');
+        }
+
+        if (branch.pastor_id) {
+          throw new Error('This branch already has an assigned pastor');
+        }
+
+        // Verify profile exists and is a pastor
+        const { data: profile } = await this.supabase.client
+          .from('profiles')
+          .select('id, email, full_name, role')
+          .eq('id', request.user_id)
+          .eq('church_id', churchId)
+          .eq('role', 'pastor')
+          .single();
+
+        if (!profile) {
+          throw new Error('User not found or is not a pastor');
+        }
+
+        // Check if pastor is already assigned to another branch
+        const { data: existingAssignment } = await this.supabase.client
+          .from('branches')
+          .select('id, name')
+          .eq('pastor_id', request.user_id)
+          .eq('is_active', true)
+          .maybeSingle();
+
+        if (existingAssignment) {
+          throw new Error(
+            `This pastor is already assigned to ${existingAssignment.name}`,
+          );
+        }
+
+        // Update branch with pastor assignment
+        const { error: updateBranchError } = await this.supabase.client
+          .from('branches')
+          .update({
+            pastor_id: request.user_id,
+            pastor_name: profile.full_name,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', request.branch_id);
+
+        if (updateBranchError) throw new Error(updateBranchError.message);
+
+        // Send welcome email if requested
+        if (request.send_welcome_email) {
+          try {
+            // Call edge function or RPC to send password reset email
+            await this.supabase.client.auth.resetPasswordForEmail(
+              profile.email,
+              {
+                redirectTo: `${window.location.origin}/auth/reset-password`,
+              },
+            );
+
+            console.log('Password reset email sent to:', profile.email);
+          } catch (emailErr) {
+            console.error('Error sending password reset email:', emailErr);
+            // Continue - assignment was successful
+          }
+        }
+
+        return;
+      })(),
+    ).pipe(
+      catchError((err) => {
+        console.error('Error assigning branch pastor:', err);
+        return throwError(() => err);
+      }),
+    );
+  }
+
+  /**
+   * Remove pastor from branch
+   */
+  removeBranchPastor(branchId: string): Observable<void> {
+    const churchId = this.authService.getChurchId();
+
+    return from(
+      (async () => {
+        // Verify ownership
+        const { data: existing } = await this.supabase.client
+          .from('branches')
+          .select('id, pastor_id')
+          .eq('id', branchId)
+          .eq('church_id', churchId)
+          .single();
+
+        if (!existing) {
+          throw new Error('Branch not found or access denied');
+        }
+
+        if (!existing.pastor_id) {
+          throw new Error('This branch does not have an assigned pastor');
+        }
+
+        // Remove pastor from branch
+        const { error: branchError } = await this.supabase.client
+          .from('branches')
+          .update({
+            pastor_id: null,
+            pastor_name: null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', branchId);
+
+        if (branchError) throw new Error(branchError.message);
+      })(),
+    ).pipe(
+      catchError((err) => {
+        console.error('Error removing branch pastor:', err);
+        return throwError(() => err);
+      }),
+    );
+  }
+
+  /**
+   * Get branch for current logged-in pastor
+   */
+  getMyBranch(): Observable<Branch> {
+    return from(this.supabase.client.rpc('get_my_branch')).pipe(
+      map(({ data, error }) => {
+        if (error) throw new Error(error.message);
+        if (!data || data.length === 0) {
+          throw new Error('No branch assigned to you');
+        }
+        return data[0] as Branch;
+      }),
+      catchError((err) => {
+        console.error('Error loading my branch:', err);
+        return throwError(() => err);
+      }),
+    );
+  }
+
+  /**
+   * Check if current user is a branch pastor
+   */
+  isBranchPastor(): Observable<boolean> {
+    return from(this.supabase.client.rpc('is_branch_pastor')).pipe(
+      map(({ data, error }) => {
+        if (error) {
+          console.error('Error checking branch pastor status:', error);
+          return false;
+        }
+        return data as boolean;
+      }),
+      catchError(() => {
+        return from([false]);
+      }),
+    );
   }
 
   // ==================== STATISTICS ====================
@@ -542,6 +772,7 @@ export class BranchesService {
 
         const headers = [
           'Branch Name',
+          'Slug',
           'Pastor/Leader',
           'Address',
           'City',
@@ -557,6 +788,7 @@ export class BranchesService {
 
         const rows = data.map((branch) => [
           branch.name,
+          branch.slug,
           branch.pastor_name || '',
           branch.address || '',
           branch.city || '',
@@ -593,6 +825,15 @@ export class BranchesService {
   private isValidEmail(email: string): boolean {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
+  }
+
+  private generateSlug(name: string): string {
+    return name
+      .toLowerCase()
+      .trim()
+      .replace(/[^\w\s-]/g, '')
+      .replace(/[\s_-]+/g, '-')
+      .replace(/^-+|-+$/g, '');
   }
 
   searchBranches(searchTerm: string): Observable<Branch[]> {

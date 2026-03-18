@@ -1,0 +1,172 @@
+<div class="dashboard-layout no-print">
+  <app-sidebar></app-sidebar>
+  <div class="dashboard-content">
+    <app-header></app-header>
+    <div class="dashboard-body">
+      <div class="report-card-page">
+
+        <!-- Action Bar -->
+        <div class="action-bar no-print">
+          <button class="back-btn" (click)="goBack()">
+            <i class="ri-arrow-left-line"></i>
+            Back to Results
+          </button>
+          <div class="action-right">
+            <label class="toggle-label no-print">
+              <input type="checkbox" [(ngModel)]="showPosition" />
+              Show Position
+            </label>
+            <button class="btn-primary" (click)="printReport()" *ngIf="reportCard">
+              <i class="ri-printer-line"></i>
+              Print Report Card
+            </button>
+          </div>
+        </div>
+
+        <!-- Loading -->
+        <div *ngIf="loading" class="loading-container no-print">
+          <div class="spinner"></div>
+          <p>Loading report card...</p>
+        </div>
+
+        <!-- Error -->
+        <div *ngIf="errorMessage" class="error-alert no-print">
+          <i class="ri-error-warning-line"></i>
+          {{ errorMessage }}
+        </div>
+
+        <!-- Report Card (printable) -->
+        <div *ngIf="!loading && reportCard" class="report-card-wrapper">
+          <div class="report-card" id="report-card">
+
+            <!-- Header -->
+            <div class="rc-header">
+              <img *ngIf="churchLogo" [src]="churchLogo"
+                   [alt]="churchName" class="school-logo" />
+              <div class="school-info">
+                <h1>{{ churchName }}</h1>
+                <h2>ACADEMIC REPORT CARD</h2>
+                <p>{{ reportCard.academic_year }} — {{ reportCard.term }}</p>
+              </div>
+            </div>
+
+            <div class="rc-divider"></div>
+
+            <!-- Student Info -->
+            <div class="rc-student-section">
+              <div class="rc-student-info">
+                <div class="info-row">
+                  <span class="label">Student Name:</span>
+                  <span class="value">{{ getStudentFullName() }}</span>
+                </div>
+                <div class="info-row">
+                  <span class="label">Student No:</span>
+                  <span class="value">{{ reportCard.student.student_number }}</span>
+                </div>
+                <div class="info-row">
+                  <span class="label">Class:</span>
+                  <span class="value">{{ reportCard.class.name }}</span>
+                </div>
+                <div class="info-row">
+                  <span class="label">Exam:</span>
+                  <span class="value">{{ reportCard.exam.exam_name }}</span>
+                </div>
+              </div>
+
+              <!-- Position Badge -->
+              <div class="rc-position" *ngIf="showPosition && reportCard.position">
+                <div class="position-badge">
+                  <span class="position-number">
+                    {{ getOrdinal(reportCard.position) }}
+                  </span>
+                  <span class="position-label">
+                    out of {{ reportCard.total_students }}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div class="rc-divider"></div>
+
+            <!-- Results Table -->
+            <table class="rc-table">
+              <thead>
+                <tr>
+                  <th>Subject</th>
+                  <th>Score</th>
+                  <th>Grade</th>
+                  <th>Remarks</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let result of reportCard.results">
+                  <td>{{ result.subject?.name }}</td>
+                  <td>
+                    <span class="score" [ngClass]="getScoreClass(result.marks_obtained)">
+                      {{ result.marks_obtained !== null
+                          ? result.marks_obtained
+                          : '—' }}
+                      /{{ reportCard.exam.total_marks }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="grade-chip">{{ result.grade || '—' }}</span>
+                  </td>
+                  <td class="remarks">{{ result.remarks || '' }}</td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr class="summary-row">
+                  <td><strong>Total Score</strong></td>
+                  <td colspan="3">
+                    <strong>{{ reportCard.total_marks | number:'1.0-1' }}</strong>
+                  </td>
+                </tr>
+                <tr class="summary-row">
+                  <td><strong>Average Score</strong></td>
+                  <td colspan="3">
+                    <strong>{{ reportCard.average | number:'1.0-1' }}%</strong>
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+
+            <!-- Comments Section -->
+            <div class="rc-comments">
+              <div class="comment-box">
+                <p class="comment-label">Class Teacher's Remarks:</p>
+                <div class="comment-line"></div>
+              </div>
+              <div class="comment-box">
+                <p class="comment-label">Head Teacher's Remarks:</p>
+                <div class="comment-line"></div>
+              </div>
+            </div>
+
+            <!-- Signatures -->
+            <div class="rc-signatures">
+              <div class="sig-item">
+                <div class="sig-line"></div>
+                <p>Class Teacher</p>
+              </div>
+              <div class="sig-item">
+                <div class="sig-line"></div>
+                <p>Head Teacher</p>
+              </div>
+              <div class="sig-item">
+                <div class="sig-line"></div>
+                <p>Parent/Guardian</p>
+              </div>
+            </div>
+
+            <p class="rc-footer-note">
+              This report card is official. Please keep it for your records.
+            </p>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>

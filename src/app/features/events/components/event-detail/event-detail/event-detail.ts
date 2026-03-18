@@ -10,6 +10,7 @@ import {
 } from 'rxjs/operators';
 import { EventsService } from '../../../services/events';
 import { ChurchEvent, EventCategory } from '../../../../../models/event.model';
+import { PermissionService } from '../../../../../core/services/permission.service';
 
 @Component({
   selector: 'app-event-detail',
@@ -47,6 +48,7 @@ export class EventDetail implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private router: Router,
     private eventsService: EventsService,
+    public permissionService: PermissionService,
   ) {}
 
   ngOnInit(): void {
@@ -65,7 +67,17 @@ export class EventDetail implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-    this.canManageEvents = this.eventsService.canManageEvents();
+    const canView =
+      this.permissionService.isAdmin || this.permissionService.events.view;
+
+    this.canManageEvents =
+      this.permissionService.isAdmin ||
+      this.permissionService.events.edit ||
+      this.permissionService.events.delete;
+
+    if (!canView) {
+      this.router.navigate(['/unauthorized']);
+    }
   }
 
   private loadEventDetails(): void {

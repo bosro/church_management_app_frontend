@@ -1,0 +1,137 @@
+@use '../../../reports-shared' as *;
+
+.enter-results-container {
+  padding: 24px;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.results-table-wrapper {
+  background: white;
+  border: 1px solid #E5E7EB;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+.table-scroll {
+  overflow-x: auto;
+  max-height: calc(100vh - 280px);
+  overflow-y: auto;
+}
+
+.results-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 800px;
+
+  thead {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+
+    tr { background: #F9FAFB; }
+  }
+
+  th {
+    padding: 12px 10px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: #6B7280;
+    border-bottom: 2px solid #E5E7EB;
+    white-space: nowrap;
+
+    .total-marks {
+      display: block;
+      font-size: 10px;
+      font-weight: 400;
+      color: #9CA3AF;
+    }
+  }
+
+  .sticky-col {
+    position: sticky;
+    left: 0;
+    background: #F9FAFB;
+    z-index: 5;
+    text-align: left;
+    min-width: 160px;
+    border-right: 1px solid #E5E7EB;
+  }
+
+  td {
+    padding: 8px 10px;
+    text-align: center;
+    border-bottom: 1px solid #F3F4F6;
+    vertical-align: middle;
+  }
+
+  tbody .sticky-col {
+    background: white;
+    border-right: 1px solid #F3F4F6;
+  }
+
+  tbody tr:hover td { background: #F9FAFB; }
+  tbody tr:hover .sticky-col { background: #F9FAFB; }
+
+  .student-cell {
+    text-align: left;
+    padding: 8px 14px;
+
+    .student-name { font-size: 13px; font-weight: 500; color: #111827; margin: 0; }
+    .student-num { font-size: 11px; color: #9CA3AF; margin: 1px 0 0; font-family: monospace; }
+  }
+
+  .subject-col { min-width: 90px; }
+  .total-col, .avg-col { min-width: 70px; }
+  .grade-col { min-width: 60px; }
+
+  .score-input {
+    width: 70px;
+    padding: 5px 8px;
+    border: 1px solid #E5E7EB;
+    border-radius: 6px;
+    font-size: 13px;
+    text-align: center;
+    transition: border-color 0.2s;
+
+    &:focus { outline: none; border-color: #6366F1; box-shadow: 0 0 0 2px rgba(99,102,241,0.15); }
+    &::placeholder { color: #D1D5DB; }
+  }
+
+  .total-cell strong { font-size: 14px; color: #111827; }
+  .avg-cell { color: #374151; font-size: 13px; }
+
+  .grade-badge {
+    display: inline-flex;
+    background: #EEF2FF;
+    color: #4F46E5;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .action-col { min-width: 44px; }
+}
+
+.save-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-top: 1px solid #E5E7EB;
+  background: #F9FAFB;
+
+  .save-hint {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #6B7280;
+    margin: 0;
+
+    i { color: #6366F1; }
+  }
+}

@@ -6,6 +6,7 @@ import { takeUntil } from 'rxjs/operators';
 import { UserPermission, Permission } from '../../../../models/user-role.model';
 import { UserRolesService } from '../../services/user-roles';
 import { AuthService } from '../../../../core/services/auth';
+import { PermissionService } from '../../../../core/services/permission.service';
 
 @Component({
   selector: 'app-manage-permissions',
@@ -39,6 +40,7 @@ export class ManagePermissions implements OnInit, OnDestroy {
     private authService: AuthService,
     private router: Router,
     private route: ActivatedRoute,
+    public permissionService: PermissionService,
   ) {}
 
   ngOnInit(): void {
@@ -63,11 +65,11 @@ export class ManagePermissions implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-    this.canManagePermissions = this.userRolesService.canManagePermissions();
-
-    if (!this.canManagePermissions) {
+    // Only admins can manage permissions — no permission fallback here
+    if (!this.permissionService.isAdmin) {
       this.router.navigate(['/unauthorized']);
     }
+    this.canManagePermissions = this.permissionService.isAdmin;
   }
 
   private loadUser(): void {
@@ -383,5 +385,3 @@ export class ManagePermissions implements OnInit, OnDestroy {
     return Object.keys(this.permissionsByCategory).length > 0;
   }
 }
-
-

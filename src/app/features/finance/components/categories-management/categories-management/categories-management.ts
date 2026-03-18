@@ -5,6 +5,9 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { GivingCategory } from '../../../../../models/giving.model';
 import { FinanceService } from '../../../services/finance.service';
+import { PermissionService } from '../../../../../core/services/permission.service';
+import { Router } from '@angular/router';
+import { Location } from '@angular/common';
 
 @Component({
   selector: 'app-categories-management',
@@ -31,7 +34,10 @@ export class CategoriesManagement implements OnInit, OnDestroy {
 
   constructor(
     private fb: FormBuilder,
-    private financeService: FinanceService
+    private financeService: FinanceService,
+     public permissionService: PermissionService,
+     private router: Router,
+       private location: Location
   ) {}
 
   ngOnInit(): void {
@@ -45,9 +51,19 @@ export class CategoriesManagement implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  private checkPermissions(): void {
-    this.canManageCategories = this.financeService.canManageCategories();
+private checkPermissions(): void {
+  this.canManageCategories =
+    this.permissionService.isAdmin ||
+    this.permissionService.finance.manage;
+
+  // View-only users can see categories but not edit them
+  if (
+    !this.permissionService.isAdmin &&
+    !this.permissionService.finance.view
+  ) {
+    this.router.navigate(['/unauthorized']);
   }
+}
 
   private initForm(): void {
     this.categoryForm = this.fb.group({
@@ -215,4 +231,10 @@ export class CategoriesManagement implements OnInit, OnDestroy {
     this.errorMessage = '';
     this.successMessage = '';
   }
+  goBack(): void {
+  this.location.back();
 }
+}
+
+
+

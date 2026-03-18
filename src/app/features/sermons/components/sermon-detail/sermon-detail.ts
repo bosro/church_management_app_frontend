@@ -6,6 +6,7 @@ import { takeUntil, finalize } from 'rxjs/operators';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { SermonsService } from '../../services/sermons';
 import { Sermon } from '../../../../models/sermon.model';
+import { PermissionService } from '../../../../core/services/permission.service';
 
 @Component({
   selector: 'app-sermon-detail',
@@ -30,7 +31,8 @@ export class SermonDetail implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private router: Router,
     private sermonsService: SermonsService,
-    private sanitizer: DomSanitizer
+    private sanitizer: DomSanitizer,
+    public permissionService: PermissionService
   ) {}
 
   ngOnInit(): void {
@@ -51,9 +53,19 @@ export class SermonDetail implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  private checkPermissions(): void {
-    this.canManageSermons = this.sermonsService.canManageSermons();
+private checkPermissions(): void {
+  const canView =
+    this.permissionService.isAdmin ||
+    this.permissionService.sermons.view;
+
+  this.canManageSermons =
+    this.permissionService.isAdmin ||
+    this.permissionService.sermons.edit;
+
+  if (!canView) {
+    this.router.navigate(['/unauthorized']);
   }
+}
 
   private loadSermon(): void {
     this.loading = true;
@@ -141,3 +153,7 @@ export class SermonDetail implements OnInit, OnDestroy {
     return this.sermonsService.formatDuration(minutes);
   }
 }
+
+
+
+

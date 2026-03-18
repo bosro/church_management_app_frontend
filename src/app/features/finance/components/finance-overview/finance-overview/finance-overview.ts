@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { FinanceService, GivingStatistics, TopGiver } from '../../../services/finance.service';
+import { PermissionService } from '../../../../../core/services/permission.service';
 
 @Component({
   selector: 'app-finance-overview',
@@ -36,7 +37,8 @@ export class FinanceOverview implements OnInit, OnDestroy {
 
   constructor(
     private financeService: FinanceService,
-    private router: Router
+    private router: Router,
+     public permissionService: PermissionService
   ) {
     // Generate year options (current year and 5 years back)
     const currentYear = new Date().getFullYear();
@@ -55,14 +57,20 @@ export class FinanceOverview implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  private checkPermissions(): void {
-    this.canViewFinance = this.financeService.canViewFinance();
-    this.canManageFinance = this.financeService.canManageFinance();
+ private checkPermissions(): void {
+  this.canViewFinance =
+    this.permissionService.isAdmin ||
+    this.permissionService.finance.view;
 
-    if (!this.canViewFinance) {
-      this.router.navigate(['/unauthorized']);
-    }
+  this.canManageFinance =
+    this.permissionService.isAdmin ||
+    this.permissionService.finance.manage ||
+    this.permissionService.finance.record;
+
+  if (!this.canViewFinance) {
+    this.router.navigate(['/unauthorized']);
   }
+}
 
   loadFinanceData(): void {
     this.loading = true;
@@ -194,7 +202,7 @@ export class FinanceOverview implements OnInit, OnDestroy {
   }
 
 
-  
+
   // Helper methods
   formatCurrency(amount: number, currency: string = 'GHS'): string {
     return new Intl.NumberFormat('en-GH', {
@@ -217,3 +225,7 @@ export class FinanceOverview implements OnInit, OnDestroy {
     return 'A';
   }
 }
+
+
+
+

@@ -7,6 +7,7 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { FinanceService } from '../services/finance.service';
 import { PaymentMethod } from '../../../models/giving.model';
+import { PermissionService } from '../../../core/services/permission.service';
 
 @Component({
   selector: 'app-pledge-details',
@@ -39,7 +40,8 @@ export class PledgeDetails implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private router: Router,
     private fb: FormBuilder,
-    private financeService: FinanceService
+    private financeService: FinanceService,
+      public permissionService: PermissionService
   ) {}
 
   ngOnInit(): void {
@@ -58,9 +60,22 @@ export class PledgeDetails implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  private checkPermissions(): void {
-    this.canManageFinance = this.financeService.canManageFinance();
+ private checkPermissions(): void {
+  this.canManageFinance =
+    this.permissionService.isAdmin ||
+    this.permissionService.finance.manage ||
+    this.permissionService.finance.record;
+
+  // View-only users can still see pledge details
+  // but cannot record or delete payments
+  const canView =
+    this.permissionService.isAdmin ||
+    this.permissionService.finance.view;
+
+  if (!canView) {
+    this.router.navigate(['/unauthorized']);
   }
+}
 
   private initializePaymentForm(): void {
     this.paymentForm = this.fb.group({
@@ -276,3 +291,10 @@ export class PledgeDetails implements OnInit, OnDestroy {
     ).join(' ');
   }
 }
+
+
+
+
+
+
+
