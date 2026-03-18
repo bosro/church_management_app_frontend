@@ -72,7 +72,7 @@ export class BranchesService {
               full_name,
               email,
               avatar_url,
-              phone
+              phone_number
             )
           `,
             { count: 'exact' },
@@ -120,7 +120,7 @@ export class BranchesService {
             full_name,
             email,
             avatar_url,
-            phone
+            phone_number
           )
         `,
         )
@@ -487,7 +487,7 @@ export class BranchesService {
         const { data: allPastors, error: pastorsError } =
           await this.supabase.client
             .from('profiles')
-            .select('id, full_name, email, avatar_url, phone')
+            .select('id, full_name, email, avatar_url, phone_number')
             .eq('church_id', churchId)
             .eq('role', 'pastor')
             .eq('is_active', true)
