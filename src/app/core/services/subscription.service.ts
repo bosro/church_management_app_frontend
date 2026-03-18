@@ -1,9 +1,11 @@
-import { Injectable } from '@angular/core';
+// subscription.service.ts
+import { Injectable, Injector } from '@angular/core';
 import { Observable, from, BehaviorSubject } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 import { throwError } from 'rxjs';
 import { SupabaseService } from './supabase';
-import { AuthService } from './auth';
+// ❌ REMOVE THIS IMPORT
+// import { AuthService } from './auth';
 
 export interface SubscriptionPlan {
   id: string;
@@ -57,10 +59,21 @@ export class SubscriptionService {
   private statusSubject = new BehaviorSubject<SubscriptionStatus | null>(null);
   public status$ = this.statusSubject.asObservable();
 
+  // ✅ Lazy-loaded AuthService to break circular dependency
+  private _authService: any;
+
   constructor(
     private supabase: SupabaseService,
-    private authService: AuthService,
+    private injector: Injector, // ✅ Inject Injector instead of AuthService
   ) {}
+
+  // ✅ Lazy getter for AuthService
+  private get authService(): any {
+    if (!this._authService) {
+      this._authService = this.injector.get('AuthService' as any);
+    }
+    return this._authService;
+  }
 
   private getChurchId(): string {
     const id = this.authService.getChurchId();
