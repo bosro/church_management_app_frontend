@@ -350,24 +350,61 @@ export class MemberService {
 
     const results: ImportResult = { success: 0, failed: 0, errors: [] };
 
+    // Parse headers and normalize them
+    const headers = this.parseCSVLine(lines[0]).map((h) =>
+      h
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, '_')
+        .replace(/[^a-z0-9_]/g, ''),
+    );
+
+    // Header name aliases — maps any variation to a canonical key
+    const headerAliases: Record<string, string> = {
+      first_name: 'first_name',
+      last_name: 'last_name',
+      email: 'email',
+      phone: 'phone',
+      phone_number: 'phone',
+      phonenumber: 'phone',
+      gender: 'gender',
+      date_of_birth: 'date_of_birth',
+      dob: 'date_of_birth',
+      dateofbirth: 'date_of_birth',
+      join_date: 'join_date',
+      joindate: 'join_date',
+      address: 'address',
+      city: 'city',
+      title: 'title',
+      cell_group: 'cell_group',
+      cellgroup: 'cell_group',
+      notes: 'notes',
+    };
+
     for (let i = 1; i < lines.length; i++) {
       try {
         const values = this.parseCSVLine(lines[i]);
         if (values.length < 2) throw new Error('Insufficient data');
 
+        // Build a keyed object using headers
+        const row: Record<string, string> = {};
+        headers.forEach((header, idx) => {
+          const canonical = headerAliases[header] || header;
+          row[canonical] = values[idx]?.trim() || '';
+        });
+
         const memberData: any = {
-          first_name: values[0]?.trim(),
-          last_name: values[1]?.trim(),
-          email: values[2]?.trim() || undefined,
-          phone_primary: values[3]?.trim() || undefined,
-          gender: values[4]?.trim().toLowerCase() || undefined,
-          date_of_birth: values[5]?.trim() || undefined,
-          address: values[6]?.trim() || undefined,
-          city: values[7]?.trim() || undefined,
-          join_date:
-            values[8]?.trim() || new Date().toISOString().split('T')[0],
+          first_name: row['first_name'],
+          last_name: row['last_name'],
+          email: row['email'] || undefined,
+          phone_primary: row['phone'] || undefined,
+          gender: row['gender']?.toLowerCase() || undefined,
+          date_of_birth: row['date_of_birth'] || undefined,
+          address: row['address'] || undefined,
+          city: row['city'] || undefined,
+          join_date: row['join_date'] || new Date().toISOString().split('T')[0],
           church_id: churchId,
-          branch_id: branchId || null, // auto-assign to pastor's branch
+          branch_id: branchId || null,
           membership_status: 'active',
           is_new_convert: false,
           is_visitor: false,
@@ -375,6 +412,11 @@ export class MemberService {
 
         if (!memberData.first_name || !memberData.last_name) {
           throw new Error('First name and last name are required');
+        }
+
+        // Only validate email format if one is provided
+        if (memberData.email && !this.isValidEmail(memberData.email)) {
+          throw new Error(`Invalid email format: ${memberData.email}`);
         }
 
         const { error } = await this.supabase.client
@@ -392,6 +434,10 @@ export class MemberService {
       }
     }
     return results;
+  }
+
+  private isValidEmail(email: string): boolean {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   }
 
   private parseCSVLine(line: string): string[] {
