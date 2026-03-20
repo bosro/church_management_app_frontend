@@ -78,7 +78,7 @@ export class Sidebar implements OnInit {
       label: 'Members',
       route: '/main/members',
       active: false,
-      roles: ['church_admin', 'pastor', 'group_leader'],
+      roles: ['church_admin', 'pastor', 'group_leader', 'ministry_leader'], // ADD
       permission: 'members.view',
       excludeRoles: ['super_admin', 'member'],
     },
@@ -87,7 +87,7 @@ export class Sidebar implements OnInit {
       label: 'Attendance',
       route: '/main/attendance',
       active: false,
-      roles: ['church_admin', 'pastor', 'group_leader'],
+      roles: ['church_admin', 'pastor', 'group_leader', 'ministry_leader'], // ADD
       permission: 'attendance.view',
       excludeRoles: ['super_admin'],
     },
@@ -105,7 +105,7 @@ export class Sidebar implements OnInit {
       label: 'Departments',
       route: '/main/ministries',
       active: false,
-      roles: ['church_admin', 'pastor'],
+      roles: ['church_admin', 'pastor', 'ministry_leader'], // ADD
       permission: 'ministries.view',
       excludeRoles: ['super_admin'],
     },
@@ -123,6 +123,7 @@ export class Sidebar implements OnInit {
       label: 'Events',
       route: '/main/events',
       active: false,
+      roles: ['church_admin', 'pastor', 'ministry_leader', 'group_leader'], // ADD
       permission: 'events.view',
       excludeRoles: ['super_admin', 'member'],
     },
@@ -143,6 +144,16 @@ export class Sidebar implements OnInit {
       roles: ['church_admin'],
       permission: 'users.permissions',
       excludeRoles: ['super_admin'],
+    },
+
+    {
+      icon: 'ri-bar-chart-line',
+      label: 'Reports',
+      route: '/main/reports',
+      active: false,
+      roles: ['church_admin', 'pastor', 'finance_officer'],
+      permission: 'reports.view',
+      excludeRoles: ['super_admin', 'member'],
     },
     {
       icon: 'ri-settings-3-line',

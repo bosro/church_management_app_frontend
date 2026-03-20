@@ -16,6 +16,10 @@ import {
   CURRENCIES,
 } from '../../../../models/setting.model';
 import { PermissionService } from '../../../../core/services/permission.service';
+import {
+  SubscriptionService,
+  SubscriptionStatus,
+} from '../../../../core/services/subscription.service';
 
 interface MemberProfile {
   id: string;
@@ -82,12 +86,18 @@ export class Settings implements OnInit, OnDestroy {
   timezones = TIMEZONES;
   currencies = CURRENCIES;
 
+  subscriptionStatus: SubscriptionStatus | null = null;
+  loadingSubscription = false;
+  showUpgradeModal = false;
+  upgradeModalTrigger = '';
+
   constructor(
     private fb: FormBuilder,
     private settingsService: SettingsService,
     private authService: AuthService,
     private supabase: SupabaseService,
     public permissionService: PermissionService,
+    private subscriptionService: SubscriptionService,
   ) {}
 
   ngOnInit(): void {
@@ -103,11 +113,22 @@ export class Settings implements OnInit, OnDestroy {
     }
 
     this.loadProfileData();
+    this.loadSubscriptionStatus();
   }
 
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  loadSubscriptionStatus(): void {
+    if (this.isMember) return; // Members don't see subscription info
+
+    this.loadingSubscription = true;
+    this.subscriptionService.loadStatus().then(() => {
+      this.subscriptionStatus = this.subscriptionService.currentStatus;
+      this.loadingSubscription = false;
+    });
   }
 
   private checkUserRole(): void {
@@ -218,7 +239,7 @@ export class Settings implements OnInit, OnDestroy {
 
       // Step 2: If no member found, create one
       if (!memberData) {
-        console.log('📝 No member record found, creating one...');
+        // console.log('📝 No member record found, creating one...');
 
         // Get user profile data from profiles table
         const { data: profileData, error: profileError } =
@@ -252,7 +273,7 @@ export class Settings implements OnInit, OnDestroy {
           return;
         }
 
-        console.log('✅ Member profile created via function');
+        // console.log('✅ Member profile created via function');
         memberData = newMember;
       }
 
@@ -264,11 +285,11 @@ export class Settings implements OnInit, OnDestroy {
         this.photoPreviewUrl = memberData.photo_url;
       }
 
-      console.log('✅ Member profile loaded:', {
-        id: memberData.id,
-        name: `${memberData.first_name} ${memberData.last_name}`,
-        hasPhoto: !!memberData.photo_url,
-      });
+      // console.log('✅ Member profile loaded:', {
+      //   id: memberData.id,
+      //   name: `${memberData.first_name} ${memberData.last_name}`,
+      //   hasPhoto: !!memberData.photo_url,
+      // });
 
       this.loadingProfile = false;
     } catch (err: any) {
@@ -776,6 +797,58 @@ export class Settings implements OnInit, OnDestroy {
         this.markFormGroupTouched(control);
       }
     });
+  }
+
+  // ADD these helper methods (before markFormGroupTouched)
+  getUsagePercent(
+    resource:
+      | 'members'
+      | 'branches'
+      | 'users'
+      | 'forms'
+      | 'events'
+      | 'ministries',
+  ): number {
+    return this.subscriptionService.getUsagePercent(resource);
+  }
+
+  getLimitLabel(
+    resource:
+      | 'members'
+      | 'branches'
+      | 'users'
+      | 'forms'
+      | 'events'
+      | 'ministries',
+  ): string {
+    return this.subscriptionService.getLimitLabel(resource);
+  }
+
+  getPlanBadgeColor(tier: string): string {
+    switch (tier) {
+      case 'pro':
+        return '#5B21B6';
+      case 'growth':
+        return '#0369A1';
+      default:
+        return '#6B7280';
+    }
+  }
+
+  openUpgradeModal(): void {
+    this.upgradeModalTrigger =
+      'Upgrade your plan to unlock more features and higher limits.';
+    this.showUpgradeModal = true;
+  }
+
+  getDaysUntilExpiry(): number | null {
+    if (!this.subscriptionStatus?.expires_at) return null;
+    const expiry = new Date(this.subscriptionStatus.expires_at);
+    const today = new Date();
+    const diff = Math.ceil(
+      (expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
+    );
+    return diff;
   }
 
   getErrorMessage(

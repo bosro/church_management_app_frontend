@@ -11,16 +11,16 @@ import {
   TargetAudience,
   SmsLog,
   EmailLog,
-  CommunicationStatistics
+  CommunicationStatistics,
 } from '../../../models/communication.model';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class CommunicationsService {
   constructor(
     private supabase: SupabaseService,
-    private authService: AuthService
+    private authService: AuthService,
   ) {}
 
   // ==================== PERMISSIONS ====================
@@ -31,7 +31,13 @@ export class CommunicationsService {
   }
 
   canViewCommunications(): boolean {
-    const roles = ['super_admin', 'church_admin', 'pastor', 'ministry_leader', 'secretary'];
+    const roles = [
+      'super_admin',
+      'church_admin',
+      'pastor',
+      'ministry_leader',
+      'secretary',
+    ];
     return this.authService.hasRole(roles);
   }
 
@@ -48,9 +54,11 @@ export class CommunicationsService {
     filters?: {
       status?: CommunicationStatus;
       type?: CommunicationType;
-    }
-  ): Observable<{ data: Communication[], count: number }> {
+    },
+  ): Observable<{ data: Communication[]; count: number }> {
     const churchId = this.authService.getChurchId();
+    const isBranchPastor = this.authService.isBranchPastor();
+    const branchId = this.authService.getBranchId();
     const offset = (page - 1) * pageSize;
 
     return from(
@@ -60,28 +68,22 @@ export class CommunicationsService {
           .select('*', { count: 'exact' })
           .eq('church_id', churchId);
 
-        // Apply filters
-        if (filters?.status) {
-          query = query.eq('status', filters.status);
+        // Branch pastor only sees their branch communications
+        if (isBranchPastor && branchId) {
+          query = query.eq('branch_id', branchId);
         }
-        if (filters?.type) {
-          query = query.eq('communication_type', filters.type);
-        }
+
+        if (filters?.status) query = query.eq('status', filters.status);
+        if (filters?.type) query = query.eq('communication_type', filters.type);
 
         const { data, error, count } = await query
           .order('created_at', { ascending: false })
           .range(offset, offset + pageSize - 1);
 
         if (error) throw new Error(error.message);
-
         return { data: data as Communication[], count: count || 0 };
-      })()
-    ).pipe(
-      catchError(err => {
-        console.error('Error loading communications:', err);
-        return throwError(() => err);
-      })
-    );
+      })(),
+    ).pipe(catchError((err) => throwError(() => err)));
   }
 
   getCommunicationById(communicationId: string): Observable<Communication> {
@@ -93,17 +95,17 @@ export class CommunicationsService {
         .select('*')
         .eq('id', communicationId)
         .eq('church_id', churchId)
-        .single()
+        .single(),
     ).pipe(
       map(({ data, error }) => {
         if (error) throw new Error(error.message);
         if (!data) throw new Error('Communication not found');
         return data as Communication;
       }),
-      catchError(err => {
+      catchError((err) => {
         console.error('Error loading communication:', err);
         return throwError(() => err);
-      })
+      }),
     );
   }
 
@@ -116,34 +118,34 @@ export class CommunicationsService {
   }): Observable<Communication> {
     const churchId = this.authService.getChurchId();
     const userId = this.authService.getUserId();
+    const branchId = this.authService.getBranchId(); // auto-set branch
 
     return from(
       this.supabase.insert<Communication>('communications', {
         church_id: churchId,
+        branch_id: branchId || null, // set if pastor
         title: communicationData.title.trim(),
         message: communicationData.message.trim(),
         communication_type: communicationData.communication_type,
         target_audience: communicationData.target_audience,
         scheduled_at: communicationData.scheduled_at || null,
         status: communicationData.scheduled_at ? 'scheduled' : 'draft',
-        created_by: userId
-      } as any)
+        created_by: userId,
+      } as any),
     ).pipe(
       map(({ data, error }) => {
         if (error) throw new Error(error.message);
-        if (!data || data.length === 0) throw new Error('Failed to create communication');
+        if (!data || data.length === 0)
+          throw new Error('Failed to create communication');
         return data[0];
       }),
-      catchError(err => {
-        console.error('Error creating communication:', err);
-        return throwError(() => err);
-      })
+      catchError((err) => throwError(() => err)),
     );
   }
 
   updateCommunication(
     communicationId: string,
-    communicationData: Partial<Communication>
+    communicationData: Partial<Communication>,
   ): Observable<Communication> {
     const churchId = this.authService.getChurchId();
 
@@ -168,21 +170,26 @@ export class CommunicationsService {
 
         const updateData = {
           ...communicationData,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         };
 
-        return this.supabase.update<Communication>('communications', communicationId, updateData);
-      })()
+        return this.supabase.update<Communication>(
+          'communications',
+          communicationId,
+          updateData,
+        );
+      })(),
     ).pipe(
       map(({ data, error }) => {
         if (error) throw new Error(error.message);
-        if (!data || data.length === 0) throw new Error('Failed to update communication');
+        if (!data || data.length === 0)
+          throw new Error('Failed to update communication');
         return data[0];
       }),
-      catchError(err => {
+      catchError((err) => {
         console.error('Error updating communication:', err);
         return throwError(() => err);
-      })
+      }),
     );
   }
 
@@ -209,15 +216,15 @@ export class CommunicationsService {
         }
 
         return this.supabase.delete('communications', communicationId);
-      })()
+      })(),
     ).pipe(
       map(({ error }) => {
         if (error) throw new Error(error.message);
       }),
-      catchError(err => {
+      catchError((err) => {
         console.error('Error deleting communication:', err);
         return throwError(() => err);
-      })
+      }),
     );
   }
 
@@ -248,7 +255,7 @@ export class CommunicationsService {
         await this.supabase.update<Communication>(
           'communications',
           communicationId,
-          { status: 'sending' }
+          { status: 'sending' },
         );
 
         // In a real implementation, this would trigger the backend to send messages
@@ -259,20 +266,22 @@ export class CommunicationsService {
           communicationId,
           {
             status: 'sent',
-            sent_at: new Date().toISOString()
-          }
+            sent_at: new Date().toISOString(),
+          },
         );
 
         if (error) throw new Error(error.message);
         return data![0];
-      })()
+      })(),
     ).pipe(
-      catchError(err => {
+      catchError((err) => {
         console.error('Error sending communication:', err);
         // Update status back to draft on error
-        this.updateCommunication(communicationId, { status: 'draft' }).subscribe();
+        this.updateCommunication(communicationId, {
+          status: 'draft',
+        }).subscribe();
         return throwError(() => err);
-      })
+      }),
     );
   }
 
@@ -284,8 +293,8 @@ export class CommunicationsService {
     filters?: {
       status?: string;
       communicationId?: string;
-    }
-  ): Observable<{ data: SmsLog[], count: number }> {
+    },
+  ): Observable<{ data: SmsLog[]; count: number }> {
     const churchId = this.authService.getChurchId();
     const offset = (page - 1) * pageSize;
 
@@ -293,10 +302,13 @@ export class CommunicationsService {
       (async () => {
         let query = this.supabase.client
           .from('sms_logs')
-          .select(`
+          .select(
+            `
             *,
             member:members(id, first_name, last_name, phone_primary)
-          `, { count: 'exact' })
+          `,
+            { count: 'exact' },
+          )
           .eq('church_id', churchId);
 
         // Apply filters
@@ -314,12 +326,12 @@ export class CommunicationsService {
         if (error) throw new Error(error.message);
 
         return { data: data as SmsLog[], count: count || 0 };
-      })()
+      })(),
     ).pipe(
-      catchError(err => {
+      catchError((err) => {
         console.error('Error loading SMS logs:', err);
         return throwError(() => err);
-      })
+      }),
     );
   }
 
@@ -331,8 +343,8 @@ export class CommunicationsService {
     filters?: {
       status?: string;
       communicationId?: string;
-    }
-  ): Observable<{ data: EmailLog[], count: number }> {
+    },
+  ): Observable<{ data: EmailLog[]; count: number }> {
     const churchId = this.authService.getChurchId();
     const offset = (page - 1) * pageSize;
 
@@ -340,10 +352,13 @@ export class CommunicationsService {
       (async () => {
         let query = this.supabase.client
           .from('email_logs')
-          .select(`
+          .select(
+            `
             *,
             member:members(id, first_name, last_name, email)
-          `, { count: 'exact' })
+          `,
+            { count: 'exact' },
+          )
           .eq('church_id', churchId);
 
         // Apply filters
@@ -361,12 +376,12 @@ export class CommunicationsService {
         if (error) throw new Error(error.message);
 
         return { data: data as EmailLog[], count: count || 0 };
-      })()
+      })(),
     ).pipe(
-      catchError(err => {
+      catchError((err) => {
         console.error('Error loading email logs:', err);
         return throwError(() => err);
-      })
+      }),
     );
   }
 
@@ -374,41 +389,67 @@ export class CommunicationsService {
 
   getCommunicationStatistics(): Observable<CommunicationStatistics> {
     const churchId = this.authService.getChurchId();
+    const isBranchPastor = this.authService.isBranchPastor();
+    const branchId = this.authService.getBranchId();
 
     return from(
       (async () => {
-        const { count: totalCommunications } = await this.supabase.client
-          .from('communications')
-          .select('*', { count: 'exact', head: true })
-          .eq('church_id', churchId);
+        const buildQuery = (table: string) => {
+          let q = this.supabase.client
+            .from(table)
+            .select('*', { count: 'exact', head: true })
+            .eq('church_id', churchId);
+          if (isBranchPastor && branchId && table === 'communications') {
+            q = q.eq('branch_id', branchId);
+          }
+          return q;
+        };
 
-        const { count: totalSms } = await this.supabase.client
-          .from('sms_logs')
-          .select('*', { count: 'exact', head: true })
-          .eq('church_id', churchId);
+        const [
+          { count: totalCommunications },
+          { count: totalSms },
+          { count: totalEmails },
+        ] = await Promise.all([
+          buildQuery('communications'),
+          this.supabase.client
+            .from('sms_logs')
+            .select('*', { count: 'exact', head: true })
+            .eq('church_id', churchId),
+          this.supabase.client
+            .from('email_logs')
+            .select('*', { count: 'exact', head: true })
+            .eq('church_id', churchId),
+        ]);
 
-        const { count: totalEmails } = await this.supabase.client
-          .from('email_logs')
-          .select('*', { count: 'exact', head: true })
-          .eq('church_id', churchId);
-
-        const { count: sentCommunications } = await this.supabase.client
+        let sentQuery = this.supabase.client
           .from('communications')
           .select('*', { count: 'exact', head: true })
           .eq('church_id', churchId)
           .eq('status', 'sent');
 
-        const { count: failedCommunications } = await this.supabase.client
+        let failedQuery = this.supabase.client
           .from('communications')
           .select('*', { count: 'exact', head: true })
           .eq('church_id', churchId)
           .eq('status', 'failed');
 
-        const { count: pendingCommunications } = await this.supabase.client
+        let pendingQuery = this.supabase.client
           .from('communications')
           .select('*', { count: 'exact', head: true })
           .eq('church_id', churchId)
           .in('status', ['draft', 'scheduled']);
+
+        if (isBranchPastor && branchId) {
+          sentQuery = sentQuery.eq('branch_id', branchId);
+          failedQuery = failedQuery.eq('branch_id', branchId);
+          pendingQuery = pendingQuery.eq('branch_id', branchId);
+        }
+
+        const [
+          { count: sentCommunications },
+          { count: failedCommunications },
+          { count: pendingCommunications },
+        ] = await Promise.all([sentQuery, failedQuery, pendingQuery]);
 
         return {
           total_communications: totalCommunications || 0,
@@ -416,15 +457,10 @@ export class CommunicationsService {
           total_emails: totalEmails || 0,
           sent_communications: sentCommunications || 0,
           failed_communications: failedCommunications || 0,
-          pending_communications: pendingCommunications || 0
+          pending_communications: pendingCommunications || 0,
         };
-      })()
-    ).pipe(
-      catchError(err => {
-        console.error('Error loading statistics:', err);
-        return throwError(() => err);
-      })
-    );
+      })(),
+    ).pipe(catchError((err) => throwError(() => err)));
   }
 
   // ==================== HELPER METHODS ====================

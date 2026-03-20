@@ -1,0 +1,85 @@
+<!-- upgrade-modal.component.html -->
+<div class="modal-overlay" *ngIf="show" (click)="close()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div class="header-icon">
+        <i class="ri-vip-crown-line"></i>
+      </div>
+      <button class="close-btn" (click)="close()">
+        <i class="ri-close-line"></i>
+      </button>
+      <h2>Upgrade Your Plan</h2>
+      <p *ngIf="trigger">{{ trigger }}</p>
+
+      <!-- Billing Toggle -->
+      <div class="billing-toggle">
+        <button [class.active]="billingCycle === 'monthly'" (click)="billingCycle = 'monthly'">
+          Monthly
+        </button>
+        <button [class.active]="billingCycle === 'yearly'" (click)="billingCycle = 'yearly'">
+          Yearly
+          <span class="save-badge">Save up to 20%</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="plans-grid">
+      <div *ngFor="let plan of plans" class="plan-card" [class.popular]="plan.id === 'growth'">
+        <div class="popular-badge" *ngIf="plan.id === 'growth'">Most Popular</div>
+
+        <h3>{{ plan.name }}</h3>
+        <div class="price">
+          <span class="amount">GHS {{ getPrice(plan) | number:'1.0-0' }}</span>
+          <span class="period">/month</span>
+        </div>
+        <p *ngIf="billingCycle === 'yearly'" class="yearly-saving">
+          Save GHS {{ getYearlySaving(plan) | number:'1.0-0' }} per year
+        </p>
+
+        <ul class="features-list">
+          <li>
+            <i class="ri-group-line"></i>
+            {{ formatLimit(plan.max_members) }} members
+          </li>
+          <li>
+            <i class="ri-building-2-line"></i>
+            {{ formatLimit(plan.max_branches) }} branches
+          </li>
+          <li>
+            <i class="ri-user-settings-line"></i>
+            {{ formatLimit(plan.max_users) }} staff users
+          </li>
+          <li>
+            <i class="ri-calendar-event-line"></i>
+            {{ formatLimit(plan.max_events) }} active events
+          </li>
+          <li>
+            <i class="ri-team-line"></i>
+            {{ formatLimit(plan.max_ministries) }} departments
+          </li>
+          <li [class.disabled]="!plan.can_export">
+            <i [class]="plan.can_export ? 'ri-download-line' : 'ri-close-line'"></i>
+            CSV Export
+          </li>
+          <li [class.disabled]="!plan.can_send_communications">
+            <i [class]="plan.can_send_communications ? 'ri-message-3-line' : 'ri-close-line'"></i>
+            SMS & Email
+          </li>
+          <li [class.disabled]="!plan.can_use_reports">
+            <i [class]="plan.can_use_reports ? 'ri-bar-chart-line' : 'ri-close-line'"></i>
+            Advanced Reports
+          </li>
+        </ul>
+
+        <button class="btn-select" (click)="selectPlan(plan)">
+          Get {{ plan.name }}
+        </button>
+      </div>
+    </div>
+
+    <p class="contact-note">
+      <i class="ri-information-line"></i>
+      Payment via bank transfer or mobile money. Contact us to activate.
+    </p>
+  </div>
+</div>

@@ -90,6 +90,7 @@ export interface MemberCreateInput {
   is_new_convert?: boolean;
   is_visitor?: boolean;
   notes?: string;
+  branch_id?: string
 }
 
 export interface MemberUpdateInput {

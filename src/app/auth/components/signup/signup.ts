@@ -7,7 +7,6 @@ import { AuthService } from '../../../core/services/auth';
 import { Church } from '../../../models/church.model';
 import { ChurchService } from '../../../core/services/church.service';
 
-
 @Component({
   selector: 'app-signup',
   standalone: false,
@@ -35,7 +34,7 @@ export class Signup implements OnInit {
     { value: '51-200', label: '51-200 members' },
     { value: '201-500', label: '201-500 members' },
     { value: '501-1000', label: '501-1000 members' },
-    { value: '1000+', label: '1000+ members' }
+    { value: '1000+', label: '1000+ members' },
   ];
 
   positionOptions = [
@@ -54,14 +53,14 @@ export class Signup implements OnInit {
     { value: 'friend_referral', label: 'Friend/Colleague Referral' },
     { value: 'church_referral', label: 'Another Church' },
     { value: 'advertisement', label: 'Advertisement' },
-    { value: 'other', label: 'Other' }
+    { value: 'other', label: 'Other' },
   ];
 
   constructor(
     private fb: FormBuilder,
     private authService: AuthService,
     private churchService: ChurchService,
-    private router: Router
+    private router: Router,
   ) {}
 
   ngOnInit(): void {
@@ -69,26 +68,32 @@ export class Signup implements OnInit {
   }
 
   private initForm(): void {
-    this.signupForm = this.fb.group({
-      // Common fields
-      full_name: ['', [Validators.required, Validators.minLength(3)]],
-      email: ['', [Validators.required, Validators.email]],
-      phone: ['', [Validators.required, Validators.pattern(/^[0-9]{10,15}$/)]],
-      password: ['', [Validators.required, Validators.minLength(8)]],
-      confirm_password: ['', [Validators.required]],
+    this.signupForm = this.fb.group(
+      {
+        // Common fields
+        full_name: ['', [Validators.required, Validators.minLength(3)]],
+        email: ['', [Validators.required, Validators.email]],
+        phone: [
+          '',
+          [Validators.required, Validators.pattern(/^[0-9]{10,15}$/)],
+        ],
+        password: ['', [Validators.required, Validators.minLength(8)]],
+        confirm_password: ['', [Validators.required]],
 
-      // Member-specific
-      church_id: [''],
+        // Member-specific
+        church_id: [''],
 
-      // Admin-specific
-      position: [''],
-      church_name: [''],
-      church_location: [''],
-      church_size: [''],
-      how_heard: ['']
-    }, {
-      validators: this.passwordMatchValidator
-    });
+        // Admin-specific
+        position: [''],
+        church_name: [''],
+        church_location: [''],
+        church_size: [''],
+        how_heard: [''],
+      },
+      {
+        validators: this.passwordMatchValidator,
+      },
+    );
   }
 
   // ✅ NEW: Select signup type
@@ -112,14 +117,18 @@ export class Signup implements OnInit {
       // Set admin validators
       this.signupForm.get('church_id')?.clearValidators();
       this.signupForm.get('position')?.setValidators([Validators.required]);
-      this.signupForm.get('church_name')?.setValidators([Validators.required, Validators.minLength(3)]);
-      this.signupForm.get('church_location')?.setValidators([Validators.required]);
+      this.signupForm
+        .get('church_name')
+        ?.setValidators([Validators.required, Validators.minLength(3)]);
+      this.signupForm
+        .get('church_location')
+        ?.setValidators([Validators.required]);
       this.signupForm.get('church_size')?.setValidators([Validators.required]);
       this.signupForm.get('how_heard')?.setValidators([Validators.required]);
     }
 
     // Update validators
-    Object.keys(this.signupForm.controls).forEach(key => {
+    Object.keys(this.signupForm.controls).forEach((key) => {
       this.signupForm.get(key)?.updateValueAndValidity();
     });
   }
@@ -135,42 +144,43 @@ export class Signup implements OnInit {
         console.error('Error loading churches:', error);
         this.errorMessage = 'Failed to load churches. Please try again.';
         this.loadingChurches = false;
-      }
+      },
     });
   }
 
   // ✅ NEW: Check if email exists when church is selected
   onChurchSelected(): void {
-  const email = this.signupForm.get('email')?.value;
-  const churchId = this.signupForm.get('church_id')?.value;
+    const email = this.signupForm.get('email')?.value;
+    const churchId = this.signupForm.get('church_id')?.value;
 
-  if (email && churchId && this.signupForm.get('email')?.valid) {
-    this.churchService.checkEmailExistsInChurch(email, churchId).subscribe({
-      next: (result: any) => {
-        if (!result) {
-          // Email not in system at all — normal new signup
-          this.errorMessage = '';
-          return;
-        }
+    if (email && churchId && this.signupForm.get('email')?.valid) {
+      this.churchService.checkEmailExistsInChurch(email, churchId).subscribe({
+        next: (result) => {
+          if (!result) {
+            // Not in system — fresh signup
+            this.errorMessage = '';
+            this.successMessage = '';
+            return;
+          }
 
-        if (result.has_auth_account) {
-          // Has both users row AND auth account — they've signed up before
-          this.errorMessage =
-            'This email is already registered. Please sign in or use "Forgot Password" to reset your password.';
-        } else {
-          // Admin pre-created this user — they just need to complete signup
-          // Let them proceed normally, the signup flow will create the auth account
-          this.errorMessage = '';
-          this.successMessage =
-            'Your account has been set up by your church admin. Complete registration to set your password.';
-        }
-      },
-      error: (error) => {
-        console.error('Error checking email:', error);
-      },
-    });
+          if (result.has_auth_account) {
+            // Already has full account
+            this.errorMessage =
+              'This email is already registered. Please sign in or use "Forgot Password" to reset your password.';
+            this.successMessage = '';
+          } else {
+            // Admin pre-created this user
+            this.errorMessage = '';
+            this.successMessage =
+              'Your account has been set up by your church admin. Complete registration to set your password.';
+          }
+        },
+        error: (err) => {
+          console.error('Error checking email:', err);
+        },
+      });
+    }
   }
-}
 
   passwordMatchValidator(group: FormGroup): { [key: string]: boolean } | null {
     const password = group.get('password')?.value;
@@ -198,11 +208,18 @@ export class Signup implements OnInit {
       if (this.signupType === 'member') {
         step1Fields = ['full_name', 'email', 'phone', 'church_id'];
       } else {
-        step1Fields = ['full_name', 'church_name', 'church_location', 'position', 'email', 'phone'];
+        step1Fields = [
+          'full_name',
+          'church_name',
+          'church_location',
+          'position',
+          'email',
+          'phone',
+        ];
       }
 
       let isValid = true;
-      step1Fields.forEach(field => {
+      step1Fields.forEach((field) => {
         const control = this.signupForm.get(field);
         if (control?.invalid) {
           control.markAsTouched();
@@ -220,11 +237,16 @@ export class Signup implements OnInit {
       if (this.signupType === 'member') {
         step2Fields = ['password', 'confirm_password'];
       } else {
-        step2Fields = ['church_size', 'password', 'confirm_password', 'how_heard'];
+        step2Fields = [
+          'church_size',
+          'password',
+          'confirm_password',
+          'how_heard',
+        ];
       }
 
       let isValid = true;
-      step2Fields.forEach(field => {
+      step2Fields.forEach((field) => {
         const control = this.signupForm.get(field);
         if (control?.invalid) {
           control.markAsTouched();
@@ -275,33 +297,35 @@ export class Signup implements OnInit {
       signup_type: this.signupType!,
     };
 
-    const
-    signupData = this.signupType === 'member'
-      ? {
-          ...baseData,
-          church_id: this.signupForm.value.church_id,
-        }
-      : {
-          ...baseData,
-          church_name: this.signupForm.value.church_name,
-          church_location: this.signupForm.value.church_location,
-          position: this.signupForm.value.position,
-          church_size: this.signupForm.value.church_size,
-          how_heard: this.signupForm.value.how_heard,
-        };
+    const signupData =
+      this.signupType === 'member'
+        ? {
+            ...baseData,
+            church_id: this.signupForm.value.church_id,
+          }
+        : {
+            ...baseData,
+            church_name: this.signupForm.value.church_name,
+            church_location: this.signupForm.value.church_location,
+            position: this.signupForm.value.position,
+            church_size: this.signupForm.value.church_size,
+            how_heard: this.signupForm.value.how_heard,
+          };
 
     this.authService.signUp(signupData).subscribe({
       next: (response) => {
         console.log('Signup successful:', response);
         this.loading = false;
         this.currentStep = 3;
-        this.successMessage = response.message || 'Account created successfully!';
+        this.successMessage =
+          response.message || 'Account created successfully!';
       },
       error: (error) => {
         this.loading = false;
         console.error('Signup error:', error);
-        this.errorMessage = error.message || 'Registration failed. Please try again.';
-      }
+        this.errorMessage =
+          error.message || 'Registration failed. Please try again.';
+      },
     });
   }
 

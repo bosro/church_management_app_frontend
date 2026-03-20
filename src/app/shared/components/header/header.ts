@@ -47,7 +47,7 @@ refreshChurchProfile(): void {
 
   private loadCurrentUser(): void {
     this.authService.currentProfile$.subscribe((profile) => {
-      console.log('----', profile)
+      // console.log('----', profile)
       this.currentUser = profile;
     });
   }

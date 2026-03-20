@@ -55,6 +55,11 @@
                 <i class="ri-settings-3-line"></i>
                 <span>General</span>
               </button>
+
+              <button class="tab-btn" [class.active]="activeTab === 'subscription'" (click)="switchTab('subscription')">
+                <i class="ri-vip-crown-line"></i>
+                <span>Subscription</span>
+              </button>
               <!-- <button class="tab-btn" [class.active]="activeTab === 'notifications'"
                 (click)="switchTab('notifications')">
                 <i class="ri-notification-3-line"></i>
@@ -935,9 +940,254 @@
                 </div>
               </div>
             </div>
+
+            <!-- ═══════════════════════════════════════════════════════ -->
+            <!-- SUBSCRIPTION TAB (Admin Only) -->
+            <!-- ═══════════════════════════════════════════════════════ -->
+            <div *ngIf="isAdmin && activeTab === 'subscription'" class="settings-panel">
+              <div class="panel-header">
+                <h2>
+                  <i class="ri-vip-crown-line"></i>
+                  Subscription & Usage
+                </h2>
+                <p>Monitor your plan usage and manage your subscription</p>
+              </div>
+
+              <!-- Loading -->
+              <div *ngIf="loadingSubscription" class="loading-container">
+                <div class="spinner"></div>
+                <p>Loading subscription info...</p>
+              </div>
+
+              <div *ngIf="!loadingSubscription && subscriptionStatus">
+
+                <!-- Current Plan Banner -->
+                <div class="subscription-banner" [style.border-color]="getPlanBadgeColor(subscriptionStatus.tier)">
+                  <div class="plan-header">
+                    <div class="plan-info">
+                      <div class="plan-badge" [style.background]="getPlanBadgeColor(subscriptionStatus.tier)">
+                        <i class="ri-vip-crown-line"></i>
+                        {{ subscriptionStatus.plan.name }} Plan
+                      </div>
+                      <div *ngIf="subscriptionStatus.is_expired" class="expired-badge">
+                        <i class="ri-error-warning-line"></i>
+                        Expired — downgraded to Free
+                      </div>
+                      <div *ngIf="subscriptionStatus.expires_at && !subscriptionStatus.is_expired" class="expiry-info"
+                        [class.expiring-soon]="(getDaysUntilExpiry() || 999) <= 30">
+                        <i class="ri-calendar-line"></i>
+                        {{ (getDaysUntilExpiry() || 0) <= 30 ? 'Expires in ' + getDaysUntilExpiry() + ' days' : 'Active'
+                          }} </div>
+                          <div *ngIf="!subscriptionStatus.expires_at" class="expiry-info">
+                            <i class="ri-checkbox-circle-line"></i>
+                            No expiry set
+                          </div>
+                      </div>
+                      <button *ngIf="subscriptionStatus.tier === 'free'" class="btn-upgrade-plan"
+                        (click)="openUpgradeModal()">
+                        <i class="ri-arrow-up-circle-line"></i>
+                        Upgrade Plan
+                      </button>
+                      <button *ngIf="subscriptionStatus.tier !== 'free'" class="btn-renew-plan"
+                        (click)="openUpgradeModal()">
+                        <i class="ri-refresh-line"></i>
+                        Renew / Change Plan
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Usage Overview -->
+                  <div class="usage-section">
+                    <h3>Current Usage</h3>
+                    <div class="usage-grid">
+
+                      <div class="usage-card">
+                        <div class="usage-card-header">
+                          <div class="usage-icon" style="background:#DDD6FE; color:#7C3AED;">
+                            <i class="ri-group-line"></i>
+                          </div>
+                          <div>
+                            <span class="usage-label">Members</span>
+                            <span class="usage-value">{{ getLimitLabel('members') }}</span>
+                          </div>
+                        </div>
+                        <div class="usage-bar">
+                          <div class="usage-bar-fill" [style.width.%]="getUsagePercent('members')" [style.background]="getUsagePercent('members') >= 90 ? '#DC2626' :
+                                     getUsagePercent('members') >= 70 ? '#F59E0B' : '#7C3AED'">
+                          </div>
+                        </div>
+                        <span class="usage-percent" [class.critical]="getUsagePercent('members') >= 90">
+                          {{ subscriptionStatus.plan.max_members
+                          ? getUsagePercent('members') + '% used'
+                          : 'Unlimited' }}
+                        </span>
+                      </div>
+
+                      <div class="usage-card">
+                        <div class="usage-card-header">
+                          <div class="usage-icon" style="background:#DBEAFE; color:#3B82F6;">
+                            <i class="ri-building-2-line"></i>
+                          </div>
+                          <div>
+                            <span class="usage-label">Branches</span>
+                            <span class="usage-value">{{ getLimitLabel('branches') }}</span>
+                          </div>
+                        </div>
+                        <div class="usage-bar">
+                          <div class="usage-bar-fill" [style.width.%]="getUsagePercent('branches')" [style.background]="getUsagePercent('branches') >= 90 ? '#DC2626' :
+                                     getUsagePercent('branches') >= 70 ? '#F59E0B' : '#3B82F6'">
+                          </div>
+                        </div>
+                        <span class="usage-percent" [class.critical]="getUsagePercent('branches') >= 90">
+                          {{ subscriptionStatus.plan.max_branches
+                          ? getUsagePercent('branches') + '% used'
+                          : 'Unlimited' }}
+                        </span>
+                      </div>
+
+                      <div class="usage-card">
+                        <div class="usage-card-header">
+                          <div class="usage-icon" style="background:#D1FAE5; color:#059669;">
+                            <i class="ri-user-settings-line"></i>
+                          </div>
+                          <div>
+                            <span class="usage-label">Staff Users</span>
+                            <span class="usage-value">{{ getLimitLabel('users') }}</span>
+                          </div>
+                        </div>
+                        <div class="usage-bar">
+                          <div class="usage-bar-fill" [style.width.%]="getUsagePercent('users')" [style.background]="getUsagePercent('users') >= 90 ? '#DC2626' :
+                                     getUsagePercent('users') >= 70 ? '#F59E0B' : '#059669'">
+                          </div>
+                        </div>
+                        <span class="usage-percent" [class.critical]="getUsagePercent('users') >= 90">
+                          {{ subscriptionStatus.plan.max_users
+                          ? getUsagePercent('users') + '% used'
+                          : 'Unlimited' }}
+                        </span>
+                      </div>
+
+                      <div class="usage-card">
+                        <div class="usage-card-header">
+                          <div class="usage-icon" style="background:#FEF3C7; color:#F59E0B;">
+                            <i class="ri-calendar-event-line"></i>
+                          </div>
+                          <div>
+                            <span class="usage-label">Active Events</span>
+                            <span class="usage-value">{{ getLimitLabel('events') }}</span>
+                          </div>
+                        </div>
+                        <div class="usage-bar">
+                          <div class="usage-bar-fill" [style.width.%]="getUsagePercent('events')" [style.background]="getUsagePercent('events') >= 90 ? '#DC2626' :
+                                     getUsagePercent('events') >= 70 ? '#F59E0B' : '#F59E0B'">
+                          </div>
+                        </div>
+                        <span class="usage-percent" [class.critical]="getUsagePercent('events') >= 90">
+                          {{ subscriptionStatus.plan.max_events
+                          ? getUsagePercent('events') + '% used'
+                          : 'Unlimited' }}
+                        </span>
+                      </div>
+
+                      <div class="usage-card">
+                        <div class="usage-card-header">
+                          <div class="usage-icon" style="background:#FCE7F3; color:#EC4899;">
+                            <i class="ri-team-line"></i>
+                          </div>
+                          <div>
+                            <span class="usage-label">Departments</span>
+                            <span class="usage-value">{{ getLimitLabel('ministries') }}</span>
+                          </div>
+                        </div>
+                        <div class="usage-bar">
+                          <div class="usage-bar-fill" [style.width.%]="getUsagePercent('ministries')"
+                            [style.background]="getUsagePercent('ministries') >= 90 ? '#DC2626' :
+                                     getUsagePercent('ministries') >= 70 ? '#F59E0B' : '#EC4899'">
+                          </div>
+                        </div>
+                        <span class="usage-percent" [class.critical]="getUsagePercent('ministries') >= 90">
+                          {{ subscriptionStatus.plan.max_ministries
+                          ? getUsagePercent('ministries') + '% used'
+                          : 'Unlimited' }}
+                        </span>
+                      </div>
+
+                      <div class="usage-card">
+                        <div class="usage-card-header">
+                          <div class="usage-icon" style="background:#E0E7FF; color:#6366F1;">
+                            <i class="ri-file-list-3-line"></i>
+                          </div>
+                          <div>
+                            <span class="usage-label">Forms</span>
+                            <span class="usage-value">{{ getLimitLabel('forms') }}</span>
+                          </div>
+                        </div>
+                        <div class="usage-bar">
+                          <div class="usage-bar-fill" [style.width.%]="getUsagePercent('forms')" [style.background]="getUsagePercent('forms') >= 90 ? '#DC2626' :
+                                     getUsagePercent('forms') >= 70 ? '#F59E0B' : '#6366F1'">
+                          </div>
+                        </div>
+                        <span class="usage-percent" [class.critical]="getUsagePercent('forms') >= 90">
+                          {{ subscriptionStatus.plan.max_forms
+                          ? getUsagePercent('forms') + '% used'
+                          : 'Unlimited' }}
+                        </span>
+                      </div>
+
+                    </div>
+                  </div>
+
+                  <!-- Feature Access -->
+                  <div class="features-section">
+                    <h3>Feature Access</h3>
+                    <div class="features-grid">
+
+                      <div class="feature-item" [class.enabled]="subscriptionStatus.plan.can_export">
+                        <i [class]="subscriptionStatus.plan.can_export ?
+             'ri-checkbox-circle-fill' : 'ri-close-circle-line'"></i>
+                        <span>CSV Export</span>
+                        <span *ngIf="!subscriptionStatus.plan.can_export" class="feature-locked">
+                          Growth+
+                        </span>
+                      </div>
+
+                      <div class="feature-item" [class.enabled]="subscriptionStatus.plan.can_send_communications">
+                        <i [class]="subscriptionStatus.plan.can_send_communications ?
+             'ri-checkbox-circle-fill' : 'ri-close-circle-line'"></i>
+                        <span>SMS & Email</span>
+                        <span *ngIf="!subscriptionStatus.plan.can_send_communications"
+                          class="feature-locked">Growth+</span>
+                      </div>
+
+                      <div class="feature-item" [class.enabled]="subscriptionStatus.plan.can_use_reports">
+                        <i [class]="subscriptionStatus.plan.can_use_reports ?
+             'ri-checkbox-circle-fill' : 'ri-close-circle-line'"></i>
+                        <span>Advanced Reports</span>
+                        <span *ngIf="!subscriptionStatus.plan.can_use_reports" class="feature-locked">Pro only</span>
+                      </div>
+
+                      <div class="feature-item" [class.enabled]="subscriptionStatus.plan.can_custom_branding">
+                        <i [class]="subscriptionStatus.plan.can_custom_branding ?
+             'ri-checkbox-circle-fill' : 'ri-close-circle-line'"></i>
+                        <span>Custom Branding</span>
+                        <span *ngIf="!subscriptionStatus.plan.can_custom_branding" class="feature-locked">Pro
+                          only</span>
+                      </div>
+
+                    </div>
+                  </div>
+
+                </div>
+
+                <!-- Upgrade Modal -->
+                <app-upgrade-modal [show]="showUpgradeModal" [trigger]="upgradeModalTrigger"
+                  (closed)="showUpgradeModal = false">
+                </app-upgrade-modal>
+
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
   </div>
-</div>

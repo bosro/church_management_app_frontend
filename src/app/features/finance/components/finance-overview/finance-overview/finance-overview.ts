@@ -82,7 +82,7 @@ export class FinanceOverview implements OnInit, OnDestroy {
       .subscribe({
         next: (stats) => {
           this.statistics = stats;
-          console.log('Finance stats loaded:', stats); // Debug log
+          // console.log('Finance stats loaded:', stats); // Debug log
           this.loading = false;
         },
         error: (error) => {
@@ -98,7 +98,7 @@ export class FinanceOverview implements OnInit, OnDestroy {
       .subscribe({
         next: ({ data }) => {
           this.recentTransactions = data;
-          console.log('Recent transactions loaded:', data.length); // Debug log
+          // console.log('Recent transactions loaded:', data.length); // Debug log
         },
         error: (error) => {
           console.error('Error loading transactions:', error);
@@ -111,7 +111,7 @@ export class FinanceOverview implements OnInit, OnDestroy {
       .subscribe({
         next: (givers) => {
           this.topGivers = givers;
-          console.log('Top givers loaded:', givers.length); // Debug log
+          // console.log('Top givers loaded:', givers.length); // Debug log
         },
         error: (error) => {
           console.error('Error loading top givers:', error);
@@ -131,7 +131,7 @@ export class FinanceOverview implements OnInit, OnDestroy {
       .subscribe({
         next: (data) => {
           this.prepareChartData(data);
-          console.log('Chart data prepared:', this.chartData); // Debug log
+          // console.log('Chart data prepared:', this.chartData); // Debug log
         },
         error: (error) => {
           console.error('Error loading chart data:', error);

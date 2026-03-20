@@ -53,6 +53,10 @@ export class MemberList implements OnInit, OnDestroy {
   showBirthdayNotice = false;
   filteredMemberCount = 0;
 
+  showExportModal = false;
+exporting = false;
+
+
   constructor(
     private memberService: MemberService,
     private authService: AuthService,
@@ -284,42 +288,45 @@ export class MemberList implements OnInit, OnDestroy {
 
   // Export
   exportMembers(): void {
-    if (!this.canImportExport) {
-      this.error = 'You do not have permission to export members';
-      setTimeout(() => (this.error = ''), 3000);
-      return;
-    }
-
-    this.loading = true;
-
-    this.memberService
-      .exportMembersToCSV(this.filters)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (blob) => {
-          this.loading = false;
-
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `members_export_${new Date().toISOString().split('T')[0]}.csv`;
-          document.body.appendChild(a);
-          a.click();
-
-          document.body.removeChild(a);
-          window.URL.revokeObjectURL(url);
-
-          this.error = '';
-          console.log('Export successful');
-        },
-        error: (error) => {
-          this.loading = false;
-          this.error =
-            'Failed to export members: ' + (error.message || 'Unknown error');
-          console.error('Error exporting members:', error);
-        },
-      });
+  if (!this.canImportExport) {
+    this.error = 'You do not have permission to export members';
+    setTimeout(() => (this.error = ''), 3000);
+    return;
   }
+  this.showExportModal = true;
+}
+
+exportAs(format: 'csv' | 'excel' | 'pdf'): void {
+  this.exporting = true;
+  this.showExportModal = false;
+
+  const today = new Date().toISOString().split('T')[0];
+  const fileName = `members_export_${today}`;
+  const ext = format === 'excel' ? 'xlsx' : format;
+
+  const export$ =
+    format === 'excel' ? this.memberService.exportMembersToExcel(this.filters) :
+    format === 'pdf'   ? this.memberService.exportMembersToPDF(this.filters) :
+                         this.memberService.exportMembersToCSV(this.filters);
+
+  export$.pipe(takeUntil(this.destroy$)).subscribe({
+    next: (blob) => {
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${fileName}.${ext}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      this.exporting = false;
+    },
+    error: (err) => {
+      this.exporting = false;
+      this.error = 'Failed to export members: ' + (err.message || 'Unknown error');
+    },
+  });
+}
 
   // Delete member
   deleteMember(memberId: string, event: Event): void {

@@ -39,20 +39,13 @@
               <form [formGroup]="formDetailsForm">
                 <div class="form-group">
                   <label>Form Title *</label>
-                  <input
-                    type="text"
-                    formControlName="title"
-                    placeholder="e.g., Member Registration, Event RSVP"
-                  />
+                  <input type="text" formControlName="title" placeholder="e.g., Member Registration, Event RSVP" />
                 </div>
 
                 <div class="form-group">
                   <label>Description</label>
-                  <textarea
-                    formControlName="description"
-                    placeholder="Describe the purpose of this form..."
-                    rows="3"
-                  ></textarea>
+                  <textarea formControlName="description" placeholder="Describe the purpose of this form..."
+                    rows="3"></textarea>
                 </div>
               </form>
             </div>
@@ -64,12 +57,8 @@
               <div class="form-group">
                 <label>Field Type *</label>
                 <div class="field-types-grid">
-                  <div
-                    *ngFor="let type of fieldTypes"
-                    class="field-type-btn"
-                    [class.selected]="newFieldType === type.value"
-                    (click)="newFieldType = type.value"
-                  >
+                  <div *ngFor="let type of fieldTypes" class="field-type-btn"
+                    [class.selected]="newFieldType === type.value" (click)="newFieldType = type.value">
                     <i [class]="type.icon"></i>
                     <span>{{ type.label }}</span>
                   </div>
@@ -78,29 +67,18 @@
 
               <div class="form-group">
                 <label>Field Label *</label>
-                <input
-                  type="text"
-                  [(ngModel)]="newFieldLabel"
-                  placeholder="e.g., Full Name, Email Address"
-                />
+                <input type="text" [(ngModel)]="newFieldLabel" placeholder="e.g., Full Name, Email Address" />
               </div>
 
               <div class="form-group">
                 <label>Placeholder</label>
-                <input
-                  type="text"
-                  [(ngModel)]="newFieldPlaceholder"
-                  placeholder="Enter placeholder text..."
-                />
+                <input type="text" [(ngModel)]="newFieldPlaceholder" placeholder="Enter placeholder text..." />
               </div>
 
               <div class="form-group" *ngIf="needsOptions(newFieldType)">
                 <label>Options (one per line) *</label>
-                <textarea
-                  [(ngModel)]="newFieldOptions"
-                  placeholder="Option 1&#10;Option 2&#10;Option 3"
-                  rows="4"
-                ></textarea>
+                <textarea [(ngModel)]="newFieldOptions" placeholder="Option 1&#10;Option 2&#10;Option 3"
+                  rows="4"></textarea>
               </div>
 
               <div class="form-group checkbox-group">
@@ -111,11 +89,7 @@
               </div>
 
               <div class="field-actions">
-                <button
-                  *ngIf="editingIndex >= 0"
-                  class="btn-secondary"
-                  (click)="cancelEditField()"
-                >
+                <button *ngIf="editingIndex >= 0" class="btn-secondary" (click)="cancelEditField()">
                   Cancel
                 </button>
                 <button class="btn-primary" (click)="addField()">
@@ -135,28 +109,17 @@
               </div>
 
               <div class="preview-form" *ngIf="formFields.length > 0">
-                <div
-                  *ngFor="let field of formFields; let i = index"
-                  class="preview-field"
-                >
+                <div *ngFor="let field of formFields; let i = index" class="preview-field">
                   <div class="field-header">
                     <div class="field-label">
                       {{ field.label }}
                       <span class="required-mark" *ngIf="field.required">*</span>
                     </div>
                     <div class="field-controls">
-                      <button
-                        class="control-btn"
-                        (click)="moveFieldUp(i)"
-                        [disabled]="i === 0"
-                      >
+                      <button class="control-btn" (click)="moveFieldUp(i)" [disabled]="i === 0">
                         <i class="ri-arrow-up-line"></i>
                       </button>
-                      <button
-                        class="control-btn"
-                        (click)="moveFieldDown(i)"
-                        [disabled]="i === formFields.length - 1"
-                      >
+                      <button class="control-btn" (click)="moveFieldDown(i)" [disabled]="i === formFields.length - 1">
                         <i class="ri-arrow-down-line"></i>
                       </button>
                       <button class="control-btn" (click)="editField(field, i)">
@@ -172,30 +135,15 @@
                   <div class="field-input">
                     <input
                       *ngIf="field.field_type === 'text' || field.field_type === 'email' || field.field_type === 'phone'"
-                      type="text"
-                      [placeholder]="field.placeholder || ''"
-                      disabled
-                    />
+                      type="text" [placeholder]="field.placeholder || ''" disabled />
 
-                    <input
-                      *ngIf="field.field_type === 'number'"
-                      type="number"
-                      [placeholder]="field.placeholder || ''"
-                      disabled
-                    />
+                    <input *ngIf="field.field_type === 'number'" type="number" [placeholder]="field.placeholder || ''"
+                      disabled />
 
-                    <input
-                      *ngIf="field.field_type === 'date'"
-                      type="date"
-                      disabled
-                    />
+                    <input *ngIf="field.field_type === 'date'" type="date" disabled />
 
-                    <textarea
-                      *ngIf="field.field_type === 'textarea'"
-                      [placeholder]="field.placeholder || ''"
-                      rows="3"
-                      disabled
-                    ></textarea>
+                    <textarea *ngIf="field.field_type === 'textarea'" [placeholder]="field.placeholder || ''" rows="3"
+                      disabled></textarea>
 
                     <select *ngIf="field.field_type === 'select'" disabled>
                       <option value="">Select an option</option>
@@ -233,18 +181,10 @@
 
             <!-- Submit Button -->
             <div class="submit-section">
-              <button
-                class="btn-secondary btn-full"
-                (click)="cancel()"
-                [disabled]="loading"
-              >
+              <button class="btn-secondary btn-full" (click)="cancel()" [disabled]="loading">
                 Cancel
               </button>
-              <button
-                class="btn-primary btn-full"
-                (click)="onSubmit()"
-                [disabled]="loading || formFields.length === 0"
-              >
+              <button class="btn-primary btn-full" (click)="onSubmit()" [disabled]="loading || formFields.length === 0">
                 <span *ngIf="!loading">
                   <i class="ri-save-line"></i>
                   Create Form
@@ -260,6 +200,7 @@
       </div>
     </div>
   </div>
+
+  <app-upgrade-modal [show]="showUpgradeModal" [trigger]="upgradeModalTrigger" (closed)="showUpgradeModal = false">
+  </app-upgrade-modal>
 </div>
-
-

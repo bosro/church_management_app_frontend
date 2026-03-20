@@ -24,6 +24,9 @@ export class AddMinistry implements OnInit, OnDestroy {
   // Permissions
   canManageMinistries = false;
 
+  showUpgradeModal = false;
+  upgradeModalTrigger = '';
+
   constructor(
     private fb: FormBuilder,
     private ministryService: MinistryService,
@@ -103,10 +106,34 @@ export class AddMinistry implements OnInit, OnDestroy {
     return !!(control && control.invalid && control.touched);
   }
 
+  handleError(error: any, resourceLabel: string = 'item'): void {
+    if (error.message?.startsWith('QUOTA_EXCEEDED:')) {
+      const parts = error.message.split(':');
+      const resource = parts[1];
+      const limit = parts[3];
+
+      const labels: Record<string, string> = {
+        events: 'active event',
+        ministries: 'department',
+        forms: 'form',
+      };
+
+      const label = labels[resource] || resourceLabel;
+      this.upgradeModalTrigger =
+        `You've reached the ${limit} ${label} limit on your current plan. ` +
+        `Upgrade to create more.`;
+      this.showUpgradeModal = true;
+      this.loading = false;
+    } else {
+      this.errorMessage = error.message || 'An error occurred';
+      this.loading = false;
+    }
+  }
+
   onSubmit(): void {
-    console.log('Form submitted'); // DEBUG
-    console.log('Form valid:', this.ministryForm.valid); // DEBUG
-    console.log('Form value:', this.ministryForm.value); // DEBUG
+    // console.log('Form submitted'); // DEBUG
+    // console.log('Form valid:', this.ministryForm.valid); // DEBUG
+    // console.log('Form value:', this.ministryForm.value); // DEBUG
 
     // Mark all fields as touched to show validation errors
     this.markFormGroupTouched(this.ministryForm);
@@ -145,14 +172,14 @@ export class AddMinistry implements OnInit, OnDestroy {
       is_active: formData.is_active ?? true,
     };
 
-    console.log('Sending to service:', ministryData); // DEBUG
+    // console.log('Sending to service:', ministryData); // DEBUG
 
     this.ministryService
       .createMinistry(ministryData)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (ministry) => {
-          console.log('Ministry created:', ministry); // DEBUG
+          // console.log('Ministry created:', ministry); // DEBUG
           this.successMessage = 'Ministry created successfully!';
           this.loading = false;
 
@@ -160,13 +187,10 @@ export class AddMinistry implements OnInit, OnDestroy {
             this.router.navigate(['main/ministries', ministry.id]);
           }, 1500);
         },
-        error: (error) => {
+
+        error: (err) => {
           this.loading = false;
-          console.error('Create ministry error:', error); // DEBUG
-          this.errorMessage =
-            error.error?.message ||
-            error.message ||
-            'Failed to create ministry. Please try again.';
+          this.handleError(err);
           this.scrollToTop();
         },
       });

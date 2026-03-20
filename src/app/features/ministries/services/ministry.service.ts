@@ -12,6 +12,7 @@ import {
   MinistryStatistics,
   // REMOVED: MINISTRY_CATEGORIES (no longer needed for validation)
 } from '../../../models/ministry.model';
+import { SubscriptionService } from '../../../core/services/subscription.service';
 
 @Injectable({
   providedIn: 'root',
@@ -20,6 +21,7 @@ export class MinistryService {
   constructor(
     private supabase: SupabaseService,
     private authService: AuthService,
+    private subscriptionService: SubscriptionService,
   ) {}
 
   // ==================== PERMISSIONS (Client-side UX only) ====================
@@ -57,6 +59,8 @@ export class MinistryService {
     },
   ): Observable<{ data: Ministry[]; count: number }> {
     const churchId = this.authService.getChurchId();
+    const isBranchPastor = this.authService.isBranchPastor();
+    const branchId = this.authService.getBranchId();
     const offset = (page - 1) * pageSize;
 
     return from(
@@ -64,20 +68,20 @@ export class MinistryService {
         let query = this.supabase.client
           .from('ministries')
           .select(
-            `
-            *,
-            leader:members!leader_id(id, first_name, last_name, photo_url, phone_primary, email)
-          `,
+            `*,
+          leader:members!leader_id(id, first_name, last_name, photo_url, phone_primary, email)`,
             { count: 'exact' },
           )
           .eq('church_id', churchId);
 
-        if (filters?.isActive !== undefined) {
+        // Branch pastor only sees their branch ministries
+        if (isBranchPastor && branchId) {
+          query = query.eq('branch_id', branchId);
+        }
+
+        if (filters?.isActive !== undefined)
           query = query.eq('is_active', filters.isActive);
-        }
-        if (filters?.category) {
-          query = query.eq('category', filters.category);
-        }
+        if (filters?.category) query = query.eq('category', filters.category);
         if (filters?.searchTerm) {
           query = query.or(
             `name.ilike.%${filters.searchTerm}%,description.ilike.%${filters.searchTerm}%`,
@@ -89,15 +93,9 @@ export class MinistryService {
           .range(offset, offset + pageSize - 1);
 
         if (error) throw error;
-
         return { data: data as Ministry[], count: count || 0 };
       })(),
-    ).pipe(
-      catchError((err) => {
-        console.error('Error loading ministries:', err);
-        return throwError(() => err);
-      }),
-    );
+    ).pipe(catchError((err) => throwError(() => err)));
   }
 
   getMinistryById(ministryId: string): Observable<Ministry> {
@@ -135,25 +133,18 @@ export class MinistryService {
    */
   createMinistry(ministryData: MinistryFormData): Observable<Ministry> {
     const churchId = this.authService.getChurchId();
+    const branchId = this.authService.getBranchId();
 
-    console.log('MinistryService.createMinistry called with:', ministryData); // DEBUG
-
-    // Validate required fields
     if (!ministryData.name || ministryData.name.trim().length < 2) {
       return throwError(
         () => new Error('Ministry name must be at least 2 characters'),
       );
     }
-
-    // REMOVED: Category validation against MINISTRY_CATEGORIES
-    // Now we just check if category is provided and not empty
     if (ministryData.category && ministryData.category.trim().length < 2) {
       return throwError(
         () => new Error('Category must be at least 2 characters'),
       );
     }
-
-    // Validate description length (500 characters max)
     if (
       ministryData.description &&
       ministryData.description.trim().length > 500
@@ -162,8 +153,6 @@ export class MinistryService {
         () => new Error('Description cannot exceed 500 characters'),
       );
     }
-
-    // Validate meeting time format if provided
     if (
       ministryData.meeting_time &&
       !this.isValidTimeFormat(ministryData.meeting_time)
@@ -171,53 +160,54 @@ export class MinistryService {
       return throwError(() => new Error('Invalid time format. Use HH:MM'));
     }
 
-    return from(
-      (async () => {
-        // Check for duplicate ministry name
-        const { data: existing } = await this.supabase.client
-          .from('ministries')
-          .select('id')
-          .eq('church_id', churchId)
-          .ilike('name', ministryData.name.trim())
-          .maybeSingle();
-
-        if (existing) {
-          throw new Error('A ministry with this name already exists');
+    return this.subscriptionService.checkQuota('ministries').pipe(
+      switchMap((quota) => {
+        if (!quota.allowed) {
+          throw new Error(
+            `QUOTA_EXCEEDED:ministries:${quota.current}:${quota.limit}`,
+          );
         }
+        return from(
+          (async () => {
+            const { data: existing } = await this.supabase.client
+              .from('ministries')
+              .select('id')
+              .eq('church_id', churchId)
+              .ilike('name', ministryData.name.trim())
+              .maybeSingle();
 
-        console.log('Inserting ministry into database...'); // DEBUG
+            if (existing)
+              throw new Error('A ministry with this name already exists');
 
-        // Insert ministry
-        const insertData = {
-          church_id: churchId,
-          name: ministryData.name.trim(),
-          description: ministryData.description?.trim() || null,
-          category: ministryData.category?.trim().toLowerCase() || null, // Convert to lowercase
-          meeting_day: ministryData.meeting_day || null,
-          meeting_time: ministryData.meeting_time || null,
-          meeting_location: ministryData.meeting_location?.trim() || null,
-          meeting_schedule: ministryData.meeting_schedule?.trim() || null,
-          requirements: ministryData.requirements?.trim() || null,
-          is_active:
-            ministryData.is_active !== undefined
-              ? ministryData.is_active
-              : true,
-          member_count: 0,
-        };
+            const insertData = {
+              church_id: churchId,
+              branch_id: branchId || null,
+              name: ministryData.name.trim(),
+              description: ministryData.description?.trim() || null,
+              category: ministryData.category?.trim().toLowerCase() || null,
+              meeting_day: ministryData.meeting_day || null,
+              meeting_time: ministryData.meeting_time || null,
+              meeting_location: ministryData.meeting_location?.trim() || null,
+              meeting_schedule: ministryData.meeting_schedule?.trim() || null,
+              requirements: ministryData.requirements?.trim() || null,
+              is_active:
+                ministryData.is_active !== undefined
+                  ? ministryData.is_active
+                  : true,
+              member_count: 0,
+            };
 
-        console.log('Insert data:', insertData); // DEBUG
-
-        return this.supabase.insert<Ministry>('ministries', insertData as any);
-      })(),
-    ).pipe(
+            return this.supabase.insert<Ministry>(
+              'ministries',
+              insertData as any,
+            );
+          })(),
+        );
+      }),
       map(({ data, error }) => {
-        if (error) {
-          console.error('Database insert error:', error); // DEBUG
-          throw error;
-        }
+        if (error) throw error;
         if (!data || data.length === 0)
           throw new Error('Failed to create ministry');
-        console.log('Ministry created successfully:', data[0]); // DEBUG
         return data[0];
       }),
       catchError((err) => {
@@ -748,81 +738,73 @@ export class MinistryService {
 
   getMinistryStatistics(): Observable<MinistryStatistics> {
     const churchId = this.authService.getChurchId();
+    const isBranchPastor = this.authService.isBranchPastor();
+    const branchId = this.authService.getBranchId();
 
     return from(
       (async () => {
-        const { count: totalMinistries } = await this.supabase.client
+        let baseQuery = this.supabase.client
           .from('ministries')
-          .select('*', { count: 'exact', head: true })
+          .select('id, name, member_count, is_active')
           .eq('church_id', churchId);
 
-        const { count: activeMinistries } = await this.supabase.client
-          .from('ministries')
-          .select('*', { count: 'exact', head: true })
-          .eq('church_id', churchId)
-          .eq('is_active', true);
+        // Branch pastor only sees their branch
+        if (isBranchPastor && branchId) {
+          baseQuery = baseQuery.eq('branch_id', branchId);
+        }
 
-        const { data: ministriesData } = await this.supabase.client
-          .from('ministries')
-          .select('id, name, member_count')
-          .eq('church_id', churchId)
-          .eq('is_active', true)
-          .order('member_count', { ascending: false })
-          .limit(1);
+        const { data: allMinistries } = await baseQuery;
+        const ministries = allMinistries || [];
 
-        const largestMinistry =
-          ministriesData && ministriesData.length > 0
-            ? {
-                id: ministriesData[0].id,
-                name: ministriesData[0].name,
-                member_count: ministriesData[0].member_count || 0,
-              }
-            : undefined;
+        const totalMinistries = ministries.length;
+        const activeMinistries = ministries.filter((m) => m.is_active).length;
+        const ministryIds = ministries.map((m) => m.id);
 
-        const { data: allMinistries } = await this.supabase.client
-          .from('ministries')
-          .select('id')
-          .eq('church_id', churchId)
-          .eq('is_active', true);
-
-        const ministryIds = allMinistries?.map((m) => m.id) || [];
+        const largest = ministries
+          .filter((m) => m.is_active)
+          .sort((a, b) => (b.member_count || 0) - (a.member_count || 0))[0];
 
         let totalMembers = 0;
+        let recentActivity = 0;
+
         if (ministryIds.length > 0) {
-          const { count } = await this.supabase.client
+          const { count: memberCount } = await this.supabase.client
             .from('ministry_members')
             .select('*', { count: 'exact', head: true })
             .eq('is_active', true)
             .in('ministry_id', ministryIds);
 
-          totalMembers = count || 0;
+          totalMembers = memberCount || 0;
+
+          const thirtyDaysAgo = new Date();
+          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+          const { count: recentCount } = await this.supabase.client
+            .from('ministry_members')
+            .select('*', { count: 'exact', head: true })
+            .gte('created_at', thirtyDaysAgo.toISOString())
+            .in('ministry_id', ministryIds);
+
+          recentActivity = recentCount || 0;
         }
 
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-        const { count: recentActivity } = await this.supabase.client
-          .from('ministry_members')
-          .select('*', { count: 'exact', head: true })
-          .gte('created_at', thirtyDaysAgo.toISOString())
-          .in('ministry_id', ministryIds);
-
         return {
-          total_ministries: totalMinistries || 0,
-          active_ministries: activeMinistries || 0,
-          inactive_ministries: (totalMinistries || 0) - (activeMinistries || 0),
+          total_ministries: totalMinistries,
+          active_ministries: activeMinistries,
+          inactive_ministries: totalMinistries - activeMinistries,
           total_members: totalMembers,
-          largest_ministry: largestMinistry,
+          largest_ministry: largest
+            ? {
+                id: largest.id,
+                name: largest.name,
+                member_count: largest.member_count || 0,
+              }
+            : undefined,
           most_active_leaders: [],
-          recent_activity_count: recentActivity || 0,
+          recent_activity_count: recentActivity,
         };
       })(),
-    ).pipe(
-      catchError((err) => {
-        console.error('Error loading statistics:', err);
-        return throwError(() => err);
-      }),
-    );
+    ).pipe(catchError((err) => throwError(() => err)));
   }
 
   // ==================== HELPER METHODS ====================
@@ -842,6 +824,8 @@ export class MinistryService {
 
   searchAvailableMembers(ministryId: string, query: string): Observable<any[]> {
     const churchId = this.authService.getChurchId();
+    const isBranchPastor = this.authService.isBranchPastor();
+    const branchId = this.authService.getBranchId();
 
     if (!query || query.trim().length < 2) {
       return throwError(
@@ -866,26 +850,24 @@ export class MinistryService {
           )
           .eq('church_id', churchId);
 
+        // Branch pastor only searches their branch members
+        if (isBranchPastor && branchId) {
+          searchQuery = searchQuery.eq('branch_id', branchId);
+        }
+
         if (memberIds.length > 0) {
           searchQuery = searchQuery.not('id', 'in', `(${memberIds.join(',')})`);
         }
 
-        const searchTerm = query.trim();
         searchQuery = searchQuery.or(
-          `first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,phone_primary.ilike.%${searchTerm}%,member_number.ilike.%${searchTerm}%`,
+          `first_name.ilike.%${query.trim()}%,last_name.ilike.%${query.trim()}%,email.ilike.%${query.trim()}%,phone_primary.ilike.%${query.trim()}%,member_number.ilike.%${query.trim()}%`,
         );
 
         const { data, error } = await searchQuery.limit(10);
-
         if (error) throw error;
         return data || [];
       })(),
-    ).pipe(
-      catchError((err) => {
-        console.error('Search error:', err);
-        return throwError(() => err);
-      }),
-    );
+    ).pipe(catchError((err) => throwError(() => err)));
   }
 
   exportMinistryReport(ministryId: string): Observable<Blob> {

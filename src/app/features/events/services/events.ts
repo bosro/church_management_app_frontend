@@ -1,7 +1,7 @@
 // src/app/features/events/services/events.service.ts
 import { Injectable } from '@angular/core';
 import { Observable, from, throwError } from 'rxjs';
-import { map, catchError } from 'rxjs/operators';
+import { map, catchError, switchMap } from 'rxjs/operators';
 import { SupabaseService } from '../../../core/services/supabase';
 import { AuthService } from '../../../core/services/auth';
 import {
@@ -9,6 +9,7 @@ import {
   EventCategory,
   EventRegistration,
 } from '../../../models/event.model';
+import { SubscriptionService } from '../../../core/services/subscription.service';
 
 @Injectable({
   providedIn: 'root',
@@ -17,6 +18,7 @@ export class EventsService {
   constructor(
     private supabase: SupabaseService,
     private authService: AuthService,
+      private subscriptionService: SubscriptionService,
   ) {}
 
   // ==================== PERMISSIONS ====================
@@ -46,6 +48,8 @@ export class EventsService {
     },
   ): Observable<{ data: ChurchEvent[]; count: number }> {
     const churchId = this.authService.getChurchId();
+    const isBranchPastor = this.authService.isBranchPastor();
+    const branchId = this.authService.getBranchId();
     const offset = (page - 1) * pageSize;
 
     return from(
@@ -55,12 +59,14 @@ export class EventsService {
           .select('*', { count: 'exact' })
           .eq('church_id', churchId);
 
-        if (filters?.startDate) {
+        // Branch pastor only sees their branch events
+        if (isBranchPastor && branchId) {
+          query = query.eq('branch_id', branchId);
+        }
+
+        if (filters?.startDate)
           query = query.gte('start_date', filters.startDate);
-        }
-        if (filters?.endDate) {
-          query = query.lte('start_date', filters.endDate);
-        }
+        if (filters?.endDate) query = query.lte('start_date', filters.endDate);
         if (filters?.category && filters.category !== 'all') {
           query = query.eq('category', filters.category);
         }
@@ -70,65 +76,49 @@ export class EventsService {
           .range(offset, offset + pageSize - 1);
 
         if (error) throw new Error(error.message);
-
         return { data: data as ChurchEvent[], count: count || 0 };
       })(),
-    ).pipe(
-      catchError((err) => {
-        console.error('Error loading events:', err);
-        return throwError(() => err);
-      }),
-    );
+    ).pipe(catchError((err) => throwError(() => err)));
   }
 
   getUpcomingEvents(limit: number = 10): Observable<ChurchEvent[]> {
-  const churchId = this.authService.getChurchId();
-  const today = new Date().toISOString().split('T')[0];
-  const userRole = this.authService.getUserRole();
+    const churchId = this.authService.getChurchId();
+    const isBranchPastor = this.authService.isBranchPastor();
+    const branchId = this.authService.getBranchId();
+    const userRole = this.authService.getUserRole();
+    const today = new Date().toISOString().split('T')[0];
 
-  console.log('🔍 Loading upcoming events:', {
-    churchId,
-    userRole,
-    today,
-    limit
-  });
+    return from(
+      (async () => {
+        let query = this.supabase.client
+          .from('events')
+          .select('*')
+          .eq('church_id', churchId)
+          .gte('start_date', today)
+          .order('start_date', { ascending: true })
+          .limit(limit);
 
-  return from(
-    (async () => {
-      // Build the query
-      let query = this.supabase.client
-        .from('events')
-        .select('*')
-        .eq('church_id', churchId)
-        .gte('start_date', today)
-        .order('start_date', { ascending: true })
-        .limit(limit);
+        // Branch pastor only sees their branch events
+        if (isBranchPastor && branchId) {
+          query = query.eq('branch_id', branchId);
+        }
 
-      // For non-admin roles, only show public events or use RLS
-      const adminRoles = ['super_admin', 'church_admin', 'pastor', 'ministry_leader'];
-      if (!adminRoles.includes(userRole || '')) {
-        // Rely on RLS policy, but also add explicit filter for safety
-        query = query.eq('is_public', true);
-      }
+        const adminRoles = [
+          'super_admin',
+          'church_admin',
+          'pastor',
+          'ministry_leader',
+        ];
+        if (!adminRoles.includes(userRole || '')) {
+          query = query.eq('is_public', true);
+        }
 
-      const { data, error } = await query;
-
-      if (error) {
-        console.error('❌ Error loading upcoming events:', error);
-        throw new Error(error.message);
-      }
-
-      console.log('✅ Loaded upcoming events:', data?.length || 0);
-
-      return (data || []) as ChurchEvent[];
-    })(),
-  ).pipe(
-    catchError((err) => {
-      console.error('❌ Error in getUpcomingEvents observable:', err);
-      return throwError(() => err);
-    }),
-  );
-}
+        const { data, error } = await query;
+        if (error) throw new Error(error.message);
+        return (data || []) as ChurchEvent[];
+      })(),
+    ).pipe(catchError((err) => throwError(() => err)));
+  }
 
   getEventById(eventId: string): Observable<ChurchEvent> {
     const churchId = this.authService.getChurchId();
@@ -154,60 +144,66 @@ export class EventsService {
   }
 
   createEvent(eventData: {
-    title: string;
-    description?: string;
-    category: EventCategory;
-    start_date: string;
-    end_date: string;
-    start_time?: string;
-    end_time?: string;
-    location?: string;
-    max_attendees?: number;
-    registration_deadline?: string;
-    registration_required?: boolean;
-    is_public?: boolean;
-  }): Observable<ChurchEvent> {
-    const churchId = this.authService.getChurchId();
-    const userId = this.authService.getUserId();
+  title: string;
+  description?: string;
+  category: EventCategory;
+  start_date: string;
+  end_date: string;
+  start_time?: string;
+  end_time?: string;
+  location?: string;
+  max_attendees?: number;
+  registration_deadline?: string;
+  registration_required?: boolean;
+  is_public?: boolean;
+}): Observable<ChurchEvent> {
+  const churchId = this.authService.getChurchId();
+  const userId = this.authService.getUserId();
+  const branchId = this.authService.getBranchId();
 
-    const startDateTime = this.combineDateAndTime(
-      eventData.start_date,
-      eventData.start_time,
-    );
-    const endDateTime = this.combineDateAndTime(
-      eventData.end_date,
-      eventData.end_time,
-    );
+  return this.subscriptionService.checkQuota('events').pipe(
+    switchMap((quota) => {
+      if (!quota.allowed) {
+        throw new Error(
+          `QUOTA_EXCEEDED:events:${quota.current}:${quota.limit}`
+        );
+      }
+      const startDateTime = this.combineDateAndTime(
+        eventData.start_date, eventData.start_time
+      );
+      const endDateTime = this.combineDateAndTime(
+        eventData.end_date, eventData.end_time
+      );
+      return from(
+        this.supabase.insert<ChurchEvent>('events', {
+          church_id: churchId,
+          branch_id: branchId || null,
+          title: eventData.title,
+          description: eventData.description || null,
+          category: eventData.category,
+          start_date: startDateTime,
+          end_date: endDateTime,
+          location: eventData.location || null,
+          max_attendees: eventData.max_attendees || null,
+          registration_deadline: eventData.registration_deadline || null,
+          registration_required: eventData.registration_required || false,
+          is_public: eventData.is_public !== undefined ? eventData.is_public : true,
+          created_by: userId,
+        } as any)
+      );
+    }),
+    map(({ data, error }) => {
+      if (error) throw new Error(error.message);
+      if (!data || data.length === 0) throw new Error('Failed to create event');
+      return data[0];
+    }),
+    catchError((err) => {
+      console.error('Error creating event:', err);
+      return throwError(() => err);
+    }),
+  );
+}
 
-    return from(
-      this.supabase.insert<ChurchEvent>('events', {
-        church_id: churchId,
-        title: eventData.title,
-        description: eventData.description || null,
-        category: eventData.category,
-        start_date: startDateTime,
-        end_date: endDateTime,
-        location: eventData.location || null,
-        max_attendees: eventData.max_attendees || null,
-        registration_deadline: eventData.registration_deadline || null,
-        registration_required: eventData.registration_required || false,
-        is_public:
-          eventData.is_public !== undefined ? eventData.is_public : true,
-        created_by: userId,
-      } as any),
-    ).pipe(
-      map(({ data, error }) => {
-        if (error) throw new Error(error.message);
-        if (!data || data.length === 0)
-          throw new Error('Failed to create event');
-        return data[0];
-      }),
-      catchError((err) => {
-        console.error('Error creating event:', err);
-        return throwError(() => err);
-      }),
-    );
-  }
 
   updateEvent(
     eventId: string,
@@ -547,10 +543,11 @@ export class EventsService {
 
   searchMembersForEvent(eventId: string, query: string): Observable<any[]> {
     const churchId = this.authService.getChurchId();
+    const isBranchPastor = this.authService.isBranchPastor();
+    const branchId = this.authService.getBranchId();
 
     return from(
       (async () => {
-        // Get already registered members
         const { data: registered } = await this.supabase.client
           .from('event_registrations')
           .select('member_id')
@@ -560,7 +557,6 @@ export class EventsService {
         const registeredIds =
           registered?.map((r) => r.member_id).filter(Boolean) || [];
 
-        // Search members not registered
         let searchQuery = this.supabase.client
           .from('members')
           .select(
@@ -568,7 +564,11 @@ export class EventsService {
           )
           .eq('church_id', churchId);
 
-        // Exclude already registered members
+        // Branch pastor only searches their branch members
+        if (isBranchPastor && branchId) {
+          searchQuery = searchQuery.eq('branch_id', branchId);
+        }
+
         if (registeredIds.length > 0) {
           searchQuery = searchQuery.not(
             'id',
@@ -577,22 +577,15 @@ export class EventsService {
           );
         }
 
-        // Search by name, email, or phone
         searchQuery = searchQuery.or(
           `first_name.ilike.%${query}%,last_name.ilike.%${query}%,email.ilike.%${query}%,phone_primary.ilike.%${query}%`,
         );
 
         const { data, error } = await searchQuery.limit(10);
-
         if (error) throw new Error(error.message);
         return data || [];
       })(),
-    ).pipe(
-      catchError((err) => {
-        console.error('Error searching members:', err);
-        return throwError(() => err);
-      }),
-    );
+    ).pipe(catchError((err) => throwError(() => err)));
   }
 
   // ==================== HELPER METHODS ====================

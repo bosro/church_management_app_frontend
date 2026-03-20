@@ -135,10 +135,10 @@
                   </div>
                 </div>
 
-                <button class="btn-export" (click)="exportGivingReport()"
+                <button class="btn-export" (click)="exportGivingReport()" [disabled]="exporting"
                   *ngIf="permissionService.isAdmin || permissionService.finance.reports">
                   <i class="ri-download-line"></i>
-                  Export CSV
+                  {{ exporting ? 'Exporting...' : 'Export Report' }}
                 </button>
 
               </div>
@@ -153,10 +153,10 @@
 
                 <div class="spacer"></div>
 
-                <button class="btn-export" (click)="exportPledgesReport()"
+                <button class="btn-export" (click)="exportPledgesReport()" [disabled]="exporting"
                   *ngIf="permissionService.isAdmin || permissionService.finance.reports">
                   <i class="ri-download-line"></i>
-                  Export CSV
+                  {{ exporting ? 'Exporting...' : 'Export Report' }}
                 </button>
               </div>
             </div>
@@ -189,6 +189,89 @@
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="modal-overlay" *ngIf="showGivingExportModal" (click)="showGivingExportModal = false">
+    <div class="export-modal" (click)="$event.stopPropagation()">
+      <div class="export-modal-header">
+        <h3><i class="ri-file-chart-line"></i> Export Giving Report</h3>
+        <button class="modal-close-btn" (click)="showGivingExportModal = false">
+          <i class="ri-close-line"></i>
+        </button>
+      </div>
+      <p class="export-subtitle">
+        Choose format for giving transactions
+        ({{ startDateControl.value }} → {{ endDateControl.value }})
+      </p>
+      <div class="export-options">
+        <button class="export-option" (click)="exportGivingAs('csv')">
+          <div class="export-icon csv"><i class="ri-file-text-line"></i></div>
+          <div class="export-info">
+            <strong>CSV</strong>
+            <span>Plain text, works with any spreadsheet app</span>
+          </div>
+          <i class="ri-arrow-right-s-line export-arrow"></i>
+        </button>
+        <button class="export-option" (click)="exportGivingAs('excel')">
+          <div class="export-icon excel"><i class="ri-file-excel-2-line"></i></div>
+          <div class="export-info">
+            <strong>Excel (.xlsx)</strong>
+            <span>Formatted workbook with summary sheet</span>
+          </div>
+          <i class="ri-arrow-right-s-line export-arrow"></i>
+        </button>
+        <button class="export-option" (click)="exportGivingAs('pdf')">
+          <div class="export-icon pdf"><i class="ri-file-pdf-2-line"></i></div>
+          <div class="export-info">
+            <strong>PDF</strong>
+            <span>Branded report with totals, ready to print or share</span>
+          </div>
+          <i class="ri-arrow-right-s-line export-arrow"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pledges Export Modal -->
+  <div class="modal-overlay" *ngIf="showPledgesExportModal" (click)="showPledgesExportModal = false">
+    <div class="export-modal" (click)="$event.stopPropagation()">
+      <div class="export-modal-header">
+        <h3><i class="ri-hand-heart-line"></i> Export Pledges Report</h3>
+        <button class="modal-close-btn" (click)="showPledgesExportModal = false">
+          <i class="ri-close-line"></i>
+        </button>
+      </div>
+      <p class="export-subtitle">
+        Choose format for all pledges with payment status
+      </p>
+      <div class="export-options">
+        <button class="export-option" (click)="exportPledgesAs('csv')">
+          <div class="export-icon csv"><i class="ri-file-text-line"></i></div>
+          <div class="export-info">
+            <strong>CSV</strong>
+            <span>Plain text, works with any spreadsheet app</span>
+          </div>
+          <i class="ri-arrow-right-s-line export-arrow"></i>
+        </button>
+        <button class="export-option" (click)="exportPledgesAs('excel')">
+          <div class="export-icon excel"><i class="ri-file-excel-2-line"></i></div>
+          <div class="export-info">
+            <strong>Excel (.xlsx)</strong>
+            <span>Formatted workbook with summary sheet</span>
+          </div>
+          <i class="ri-arrow-right-s-line export-arrow"></i>
+        </button>
+        <button class="export-option" (click)="exportPledgesAs('pdf')">
+          <div class="export-icon pdf"><i class="ri-file-pdf-2-line"></i></div>
+          <div class="export-info">
+            <strong>PDF</strong>
+            <span>Branded report with totals, ready to print or share</span>
+          </div>
+          <i class="ri-arrow-right-s-line export-arrow"></i>
+        </button>
       </div>
     </div>
   </div>

@@ -34,7 +34,10 @@ export class ChurchService {
   checkEmailExistsInChurch(
     email: string,
     churchId: string,
-  ): Observable<boolean> {
+  ): Observable<{
+    has_auth_account: boolean;
+    has_user_record: boolean;
+  } | null> {
     return from(
       this.supabase.callFunction('check_email_exists_in_church', {
         p_email: email,
@@ -43,9 +46,10 @@ export class ChurchService {
     ).pipe(
       map(({ data, error }) => {
         if (error) throw error;
-        return Boolean(data);
+        if (!data) return null;
+        return data as { has_auth_account: boolean; has_user_record: boolean };
       }),
-      catchError(() => from([false])),
+      catchError(() => from([null])),
     );
   }
 }

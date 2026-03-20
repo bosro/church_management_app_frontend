@@ -247,15 +247,90 @@ export class AdminService {
   }
 
   clearUserPermissions(userId: string): Observable<void> {
+    return from(
+      this.supabase.client
+        .from('user_permissions')
+        .delete()
+        .eq('user_id', userId),
+    ).pipe(
+      map(({ error }) => {
+        if (error) throw error;
+      }),
+    );
+  }
+
+  /**
+ * Get all churches with subscription info and usage
+ */
+getAllChurchesWithSubscription(): Observable<any[]> {
   return from(
     this.supabase.client
-      .from('user_permissions')
-      .delete()
-      .eq('user_id', userId)
+      .from('churches')
+      .select(`
+        id, name, location, is_active, created_at,
+        subscription_plan, subscription_tier,
+        subscription_expires_at, subscription_started_at,
+        billing_email, payment_reference,
+        contact_email, size_category
+      `)
+      .order('created_at', { ascending: false }),
+  ).pipe(
+    map(({ data, error }) => {
+      if (error) throw error;
+      return data || [];
+    }),
+  );
+}
+
+/**
+ * Update church subscription (super admin only)
+ */
+updateChurchSubscription(
+  churchId: string,
+  planId: string,
+  durationMonths: number,
+  paymentReference: string,
+  billingEmail?: string,
+): Observable<void> {
+  const expiresAt = new Date();
+  expiresAt.setMonth(expiresAt.getMonth() + durationMonths);
+
+  return from(
+    this.supabase.client
+      .from('churches')
+      .update({
+        subscription_plan: planId,
+        subscription_tier: planId === 'pro' ? 'premium' : planId,
+        subscription_expires_at: planId === 'free'
+          ? null
+          : expiresAt.toISOString(),
+        subscription_started_at: new Date().toISOString(),
+        subscription_renewed_at: new Date().toISOString(),
+        payment_reference: paymentReference || null,
+        billing_email: billingEmail || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', churchId),
   ).pipe(
     map(({ error }) => {
+      if (error) throw new Error(error.message);
+    }),
+  );
+}
+
+/**
+ * Get usage for a specific church
+ */
+getChurchUsage(churchId: string): Observable<any> {
+  return from(
+    this.supabase.client.rpc('get_church_usage', {
+      p_church_id: churchId,
+    }),
+  ).pipe(
+    map(({ data, error }) => {
       if (error) throw error;
-    })
+      return data;
+    }),
   );
 }
 }

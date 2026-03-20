@@ -80,6 +80,7 @@
               </div>
             </div>
 
+            <!-- REPLACE the existing card-footer div -->
             <div class="card-footer">
               <button class="btn-manage" [disabled]="!canManagePermissions"
                 (click)="managePermissions(user.id); $event.stopPropagation()">
@@ -87,11 +88,15 @@
                 <span>Manage Permissions</span>
               </button>
 
-              <button
-                class="btn-delete"
-                (click)="openDeleteModal(user.id, user.full_name, $event)"
-                *ngIf="canDeleteUser && user.id !== currentUserId"
-                title="Delete user and all their permissions">
+              <!-- ADD: Change Role button -->
+              <button class="btn-role" *ngIf="canManageRoles && user.id !== currentUserId"
+                (click)="openRoleModal(user.id, user.full_name, user.role, $event)" title="Change user role">
+                <i class="ri-shield-user-line"></i>
+                <span class="desktop-only">Change Role</span>
+              </button>
+
+              <button class="btn-delete" (click)="openDeleteModal(user.id, user.full_name, $event)"
+                *ngIf="canDeleteUser && user.id !== currentUserId" title="Delete user">
                 <i class="ri-delete-bin-line"></i>
                 <span class="desktop-only">Delete</span>
               </button>
@@ -151,22 +156,17 @@
           <i class="ri-alert-line"></i>
           <div>
             <p class="warning-title">This action cannot be undone</p>
-            <p class="warning-text">This will permanently remove their profile and all permissions you have granted them.</p>
+            <p class="warning-text">This will permanently remove their profile and all permissions you have granted
+              them.</p>
           </div>
         </div>
       </div>
 
       <div class="modal-footer">
-        <button
-          class="btn-cancel"
-          (click)="closeDeleteModal()"
-          [disabled]="isDeleting">
+        <button class="btn-cancel" (click)="closeDeleteModal()" [disabled]="isDeleting">
           Cancel
         </button>
-        <button
-          class="btn-delete-confirm"
-          (click)="confirmDelete()"
-          [disabled]="isDeleting">
+        <button class="btn-delete-confirm" (click)="confirmDelete()" [disabled]="isDeleting">
           <span *ngIf="!isDeleting">
             <i class="ri-delete-bin-line"></i>
             Delete User
@@ -179,4 +179,94 @@
       </div>
     </div>
   </div>
+
+  <!-- Role Change Modal -->
+<div class="modal-overlay" *ngIf="showRoleModal" (click)="closeRoleModal()">
+  <div class="modal-container" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div class="modal-icon-wrapper" style="background: #EDE9FE;">
+        <i class="ri-shield-user-line" style="color: #5B21B6;"></i>
+      </div>
+      <button class="modal-close-btn" (click)="closeRoleModal()" [disabled]="isChangingRole">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <h2>Change Role</h2>
+      <p class="modal-description">
+        Update the role for <strong>{{ userToChangeRole?.name }}</strong>
+      </p>
+
+      <!-- Current Role -->
+      <div class="current-role-box">
+        <span class="role-label-sm">Current Role</span>
+        <span class="role-badge" [ngClass]="getRoleBadgeClass(userToChangeRole?.currentRole || '')">
+          <i class="ri-shield-user-line"></i>
+          {{ getRoleLabel(userToChangeRole?.currentRole || '') }}
+        </span>
+      </div>
+
+      <!-- New Role Select -->
+      <div class="role-select-group">
+        <label>New Role</label>
+        <div class="role-options">
+          <label
+            *ngFor="let role of availableRoles"
+            class="role-option"
+            [class.selected]="selectedNewRole === role.value"
+            [class.current]="userToChangeRole?.currentRole === role.value"
+          >
+            <input
+              type="radio"
+              [value]="role.value"
+              [(ngModel)]="selectedNewRole"
+              [disabled]="isChangingRole"
+            />
+            <span class="role-option-content">
+              <span class="role-option-label">{{ role.label }}</span>
+              <span class="role-option-check" *ngIf="selectedNewRole === role.value">
+                <i class="ri-check-line"></i>
+              </span>
+            </span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Warning if downgrading from admin -->
+      <div
+        class="modal-warning"
+        *ngIf="userToChangeRole?.currentRole === 'church_admin' && selectedNewRole !== 'church_admin'"
+      >
+        <i class="ri-alert-line"></i>
+        <div>
+          <p class="warning-title">Removing Admin Access</p>
+          <p class="warning-text">
+            This user will lose all admin privileges. Their custom permissions will remain but admin-level access will be revoked.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-cancel" (click)="closeRoleModal()" [disabled]="isChangingRole">
+        Cancel
+      </button>
+      <button
+        class="btn-role-confirm"
+        (click)="confirmRoleChange()"
+        [disabled]="isChangingRole || selectedNewRole === userToChangeRole?.currentRole"
+      >
+        <span *ngIf="!isChangingRole">
+          <i class="ri-save-line"></i>
+          Update Role
+        </span>
+        <span *ngIf="isChangingRole" class="deleting-state">
+          <div class="btn-spinner"></div>
+          Updating...
+        </span>
+      </button>
+    </div>
+  </div>
+</div>
 </div>

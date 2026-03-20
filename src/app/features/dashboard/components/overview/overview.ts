@@ -67,6 +67,9 @@ export class Overview implements OnInit, OnDestroy {
   canViewAllEvents = false;
   canViewAllBirthdays = false; // ✅ NEW
 
+  isBranchPastor = false;
+  branchId: string | undefined;
+
   constructor(
     private supabase: SupabaseService,
     private authService: AuthService,
@@ -91,6 +94,9 @@ export class Overview implements OnInit, OnDestroy {
 
         this.churchId = profile?.church_id;
         this.userRole = profile?.role;
+
+        this.isBranchPastor = this.authService.isBranchPastor();
+        this.branchId = this.authService.getBranchId();
 
         this.setPermissions();
 
@@ -206,7 +212,7 @@ export class Overview implements OnInit, OnDestroy {
 
   // ✅ FIXED: Use EventsService instead of direct query
   private loadUpcomingEvents(): Promise<void> {
-    console.log('📅 Loading upcoming events for dashboard...');
+    // console.log('📅 Loading upcoming events for dashboard...');
 
     return new Promise((resolve) => {
       this.eventsService
@@ -214,7 +220,7 @@ export class Overview implements OnInit, OnDestroy {
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: (events) => {
-            console.log('✅ Events loaded successfully:', events.length);
+            // console.log('✅ Events loaded successfully:', events.length);
 
             this.upcomingEvents = events.map((event: any) => ({
               id: event.id,
@@ -227,7 +233,7 @@ export class Overview implements OnInit, OnDestroy {
               attendees: event.max_attendees,
             }));
 
-            console.log('📅 Formatted events:', this.upcomingEvents);
+            // console.log('📅 Formatted events:', this.upcomingEvents);
             resolve();
           },
           error: (error) => {
@@ -269,22 +275,64 @@ export class Overview implements OnInit, OnDestroy {
   }
 
   private async loadDashboardSummary(): Promise<void> {
+    if (this.isBranchPastor && this.branchId) {
+      // Branch pastor sees branch-level stats
+      await this.loadBranchDashboardSummary();
+      return;
+    }
+
     const { data, error } = await this.supabase.query<DashboardSummary>(
       'dashboard_church_summary',
-      {
-        filters: { church_id: this.churchId },
-        limit: 1,
-      },
+      { filters: { church_id: this.churchId }, limit: 1 },
     );
 
-    if (error) {
-      console.error('Error loading dashboard summary:', error);
-      throw error;
-    }
+    if (error) throw error;
+    if (data && data.length > 0) this.dashboardStats = data[0];
+  }
 
-    if (data && data.length > 0) {
-      this.dashboardStats = data[0];
-    }
+  private async loadBranchDashboardSummary(): Promise<void> {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+      .toISOString()
+      .split('T')[0];
+
+    const [
+      { count: activeMembers },
+      { count: newMembers },
+      { data: attendanceData },
+    ] = await Promise.all([
+      this.supabase.client
+        .from('members')
+        .select('*', { count: 'exact', head: true })
+        .eq('church_id', this.churchId)
+        .eq('branch_id', this.branchId!)
+        .eq('membership_status', 'active'),
+
+      this.supabase.client
+        .from('members')
+        .select('*', { count: 'exact', head: true })
+        .eq('church_id', this.churchId)
+        .eq('branch_id', this.branchId!)
+        .gte('created_at', startOfMonth),
+
+      this.supabase.client
+        .from('attendance_events')
+        .select('total_attendance')
+        .eq('church_id', this.churchId)
+        .eq('branch_id', this.branchId!)
+        .gte('event_date', startOfMonth),
+    ]);
+
+    const totalAttendance = (attendanceData || []).reduce(
+      (sum, e) => sum + (e.total_attendance || 0),
+      0,
+    );
+
+    this.dashboardStats = {
+      active_members: activeMembers || 0,
+      new_members_this_month: newMembers || 0,
+      attendance_this_month: totalAttendance,
+    } as DashboardSummary;
   }
 
   private async loadUpcomingBirthdays(): Promise<void> {
@@ -292,7 +340,7 @@ export class Overview implements OnInit, OnDestroy {
     const thirtyDaysLater = new Date();
     thirtyDaysLater.setDate(today.getDate() + 30);
 
-    const { data, error } = await this.supabase.client
+    let query = this.supabase.client
       .from('upcoming_birthdays')
       .select('*')
       .eq('church_id', this.churchId)
@@ -301,10 +349,13 @@ export class Overview implements OnInit, OnDestroy {
       .order('celebration_date', { ascending: true })
       .limit(10);
 
-    if (error) {
-      console.error('Error loading birthdays:', error);
-      throw error;
+    // Branch pastor only sees their branch members' birthdays
+    if (this.isBranchPastor && this.branchId) {
+      query = query.eq('branch_id', this.branchId);
     }
+
+    const { data, error } = await query;
+    if (error) throw error;
 
     if (data) {
       this.upcomingBirthdays = data.map((birthday: any) => {
@@ -318,12 +369,9 @@ export class Overview implements OnInit, OnDestroy {
         tomorrow.setDate(tomorrow.getDate() + 1);
 
         let status: 'Today' | 'Tomorrow' | 'Upcoming' = 'Upcoming';
-
-        if (celebrationDate.getTime() === todayDate.getTime()) {
-          status = 'Today';
-        } else if (celebrationDate.getTime() === tomorrow.getTime()) {
+        if (celebrationDate.getTime() === todayDate.getTime()) status = 'Today';
+        else if (celebrationDate.getTime() === tomorrow.getTime())
           status = 'Tomorrow';
-        }
 
         return {
           id: birthday.id,
@@ -332,7 +380,7 @@ export class Overview implements OnInit, OnDestroy {
           date: this.formatDateWithoutYear(birthday.next_birthday),
           age: birthday.age + 1,
           phone: birthday.phone_primary || '',
-          status: status,
+          status,
           avatar: undefined,
         };
       });
@@ -374,18 +422,51 @@ export class Overview implements OnInit, OnDestroy {
     }
   }
 
+  private emptyRevenueData() {
+    return {
+      labels: [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
+      ],
+      tithe: Array(12).fill(0),
+      offering: Array(12).fill(0),
+      seed: Array(12).fill(0),
+    };
+  }
+
   private async loadRevenueData(): Promise<void> {
     const currentYear = new Date().getFullYear();
 
-    const { data, error } = await this.supabase.client
-      .from('monthly_giving_summary')
-      .select('*')
-      .eq('church_id', this.churchId)
-      .eq('year', currentYear)
-      .order('month', { ascending: true });
+    if (this.isBranchPastor && this.branchId) {
+      // Branch pastor — query giving_transactions directly
+      const { data, error } = await this.supabase.client
+        .from('giving_transactions')
+        .select('transaction_date, amount')
+        .eq('church_id', this.churchId)
+        .eq('branch_id', this.branchId)
+        .eq('fiscal_year', currentYear);
 
-    if (error) {
-      console.error('Error loading revenue data:', error);
+      if (error) {
+        this.revenueData = this.emptyRevenueData();
+        return;
+      }
+
+      const monthlyTotals = Array(12).fill(0);
+      (data || []).forEach((t: any) => {
+        const month = new Date(t.transaction_date).getMonth();
+        monthlyTotals[month] += t.amount || 0;
+      });
+
       this.revenueData = {
         labels: [
           'Jan',
@@ -401,44 +482,54 @@ export class Overview implements OnInit, OnDestroy {
           'Nov',
           'Dec',
         ],
-        tithe: Array(12).fill(0),
+        tithe: monthlyTotals,
         offering: Array(12).fill(0),
         seed: Array(12).fill(0),
       };
       return;
     }
 
-    if (data && data.length > 0) {
-      const labels: string[] = [];
-      const tithe: number[] = [];
-      const offering: number[] = [];
-      const seed: number[] = [];
+    // Church admin — use monthly_giving_summary view
+    const { data, error } = await this.supabase.client
+      .from('monthly_giving_summary')
+      .select('*')
+      .eq('church_id', this.churchId)
+      .eq('year', currentYear)
+      .order('month', { ascending: true });
 
-      const monthNames = [
-        'Jan',
-        'Feb',
-        'Mar',
-        'Apr',
-        'May',
-        'Jun',
-        'Jul',
-        'Aug',
-        'Sep',
-        'Oct',
-        'Nov',
-        'Dec',
-      ];
-
-      for (let i = 1; i <= 12; i++) {
-        const monthData = data.find((d) => d.month === i);
-        labels.push(monthNames[i - 1]);
-        tithe.push(monthData?.total_amount || 0);
-        offering.push(0);
-        seed.push(0);
-      }
-
-      this.revenueData = { labels, tithe, offering, seed };
+    if (error || !data?.length) {
+      this.revenueData = this.emptyRevenueData();
+      return;
     }
+
+    const labels: string[] = [];
+    const tithe: number[] = [];
+    const offering: number[] = [];
+    const seed: number[] = [];
+    const monthNames = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+
+    for (let i = 1; i <= 12; i++) {
+      const monthData = data.find((d) => d.month === i);
+      labels.push(monthNames[i - 1]);
+      tithe.push(monthData?.total_amount || 0);
+      offering.push(0);
+      seed.push(0);
+    }
+
+    this.revenueData = { labels, tithe, offering, seed };
   }
 
   navigateToAddMembers(): void {

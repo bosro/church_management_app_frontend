@@ -20,6 +20,7 @@ import {
   UserRole,
 } from '../../models/user.model';
 import { SupabaseService } from './supabase';
+import { SubscriptionService } from './subscription.service';
 
 @Injectable({
   providedIn: 'root',
@@ -39,11 +40,17 @@ export class AuthService {
   private churchFeaturesSubject = new BehaviorSubject<string[]>([]);
   churchFeatures$ = this.churchFeaturesSubject.asObservable();
 
+  private subscriptionService?: any;
+
   constructor(
     private supabase: SupabaseService,
     private router: Router,
   ) {
     this.initializeAuth();
+  }
+
+  setSubscriptionService(service: any): void {
+    this.subscriptionService = service;
   }
 
   setUserRolesService(service: any): void {
@@ -67,6 +74,10 @@ export class AuthService {
           // Load permissions on page refresh too
           if (this.userRolesService) {
             await this.userRolesService.loadCurrentUserPermissions();
+          }
+
+          if (this.subscriptionService) {
+            this.subscriptionService.loadStatus();
           }
         } else {
           this.currentProfileSubject.next(null);
@@ -139,13 +150,13 @@ export class AuthService {
         // }
 
         if (approvalStatus === 'pending') {
-  await this.supabase.client.auth.signOut();
-  throw new Error(
-    'Please confirm your email address first. ' +
-    'Check your inbox for a confirmation link. ' +
-    'Once confirmed you can sign in immediately.'
-  );
-}
+          await this.supabase.client.auth.signOut();
+          throw new Error(
+            'Please confirm your email address first. ' +
+              'Check your inbox for a confirmation link. ' +
+              'Once confirmed you can sign in immediately.',
+          );
+        }
 
         if (approvalStatus === 'rejected') {
           await this.supabase.client.auth.signOut();
@@ -185,6 +196,9 @@ export class AuthService {
         // Signal that auth + permissions are fully ready
         // This unblocks PermissionGuard and RoleGuard which wait on authReady$
         this.authReadySubject.next(true);
+        if (this.subscriptionService) {
+          this.subscriptionService.loadStatus();
+        }
 
         return {
           user: userProfile,
@@ -225,62 +239,50 @@ export class AuthService {
   /**
    * Handle member signup (joining existing church)
    */
- private async handleMemberSignup(
-  data: any,
-  signUpData: SignUpData,
-): Promise<any> {
-  // Check if a pre-created user record exists for this email in this church
-  const { data: existingUser } = await this.supabase.client
-    .from('users')
-    .select('id')
-    .eq('email', signUpData.email)
-    .eq('church_id', signUpData.church_id!)
-    .neq('id', data.user.id)
-    .maybeSingle();
+  private async handleMemberSignup(
+    data: any,
+    signUpData: SignUpData,
+  ): Promise<any> {
+    // create_member_signup handles: church_id, approval_status=approved, is_active=true
+    const result = await this.supabase.callFunction('create_member_signup', {
+      p_user_id: data.user.id,
+      p_full_name: signUpData.full_name,
+      p_email: signUpData.email,
+      p_phone: signUpData.phone,
+      p_church_id: signUpData.church_id,
+    });
 
-  if (existingUser) {
-    await this.supabase.client
-      .from('users')
-      .update({ id: data.user.id, updated_at: new Date().toISOString() })
-      .eq('email', signUpData.email)
-      .eq('church_id', signUpData.church_id!);
+    if (result.error) {
+      // Non-fatal — profile exists, email confirmation will approve them
+      console.error('create_member_signup error:', result.error);
+    }
 
-    await this.supabase.client
-      .from('members')
-      .update({ user_id: data.user.id })
-      .eq('email', signUpData.email)
-      .is('user_id', null);
+    return {
+      ...data,
+      needsEmailConfirmation: !data.user.email_confirmed_at,
+      pendingApproval: false,
+      message:
+        'Account created! Please check your email and click the confirmation link to activate your account. You can sign in immediately after confirming.',
+    };
   }
 
-  // ✅ ADD THIS — ensure profile is set to pending until email confirmed
-  // The DB trigger will flip this to approved once email is confirmed
-  await this.supabase.client
-    .from('profiles')
-    .update({
-      approval_status: 'pending',
-      is_active: false,
-      church_id: signUpData.church_id,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', data.user.id);
+  // Get current user's branch ID (null for church_admin/super_admin)
+  getBranchId(): string | undefined {
+    return this.currentProfile?.branch_id ?? undefined;
+  }
 
-  const result = await this.supabase.callFunction('create_member_signup', {
-    p_user_id: data.user.id,
-    p_full_name: signUpData.full_name,
-    p_email: signUpData.email,
-    p_phone: signUpData.phone,
-    p_church_id: signUpData.church_id,
-  });
+  // Check if current user is a branch-scoped pastor
+  isBranchPastor(): boolean {
+    const role = this.getCurrentUserRole();
+    return role === 'pastor' && !!this.currentProfile?.branch_id;
+  }
 
-  return {
-    ...data,
-    needsEmailConfirmation: !data.user.email_confirmed_at,
-    pendingApproval: false,
-    // ✅ Updated message — no mention of admin approval
-    message:
-      'Account created! Please check your email and click the confirmation link to activate your account. You can sign in immediately after confirming.',
-  };
-}
+  // Check if current user is church-wide admin
+  isChurchAdmin(): boolean {
+    const role = this.getCurrentUserRole();
+    return role === 'church_admin' || role === 'super_admin';
+  }
+
   /**
    * Handle admin/pastor signup (creating new church or requesting access)
    */
@@ -457,7 +459,10 @@ export class AuthService {
       this.currentProfileSubject.next(null);
       this.authReadySubject.next(false);
       if (this.userRolesService) {
-        this.userRolesService.clearCurrentUserPermissions(); // ← clear on logout
+        this.userRolesService.clearCurrentUserPermissions();
+      }
+      if (this.subscriptionService) {
+        this.subscriptionService.clearStatus();
       }
       this.router.navigate(['/auth/signin']);
     } catch (error) {

@@ -27,7 +27,7 @@ export class CreateForm implements OnInit, OnDestroy {
   editingIndex: number = -1;
 
   // Field types
-  fieldTypes: { value: FieldType, label: string, icon: string }[] = [
+  fieldTypes: { value: FieldType; label: string; icon: string }[] = [
     { value: 'text', label: 'Text Input', icon: 'ri-text' },
     { value: 'email', label: 'Email', icon: 'ri-mail-line' },
     { value: 'phone', label: 'Phone', icon: 'ri-phone-line' },
@@ -37,7 +37,7 @@ export class CreateForm implements OnInit, OnDestroy {
     { value: 'radio', label: 'Radio Buttons', icon: 'ri-radio-button-line' },
     { value: 'checkbox', label: 'Checkboxes', icon: 'ri-checkbox-line' },
     { value: 'date', label: 'Date', icon: 'ri-calendar-line' },
-    { value: 'file', label: 'File Upload', icon: 'ri-file-upload-line' }
+    { value: 'file', label: 'File Upload', icon: 'ri-file-upload-line' },
   ];
 
   // New field form
@@ -50,10 +50,13 @@ export class CreateForm implements OnInit, OnDestroy {
   // Permissions
   canManageForms = false;
 
+  showUpgradeModal = false;
+  upgradeModalTrigger = '';
+
   constructor(
     private fb: FormBuilder,
     private formsService: FormsService,
-    private router: Router
+    private router: Router,
   ) {}
 
   ngOnInit(): void {
@@ -76,8 +79,15 @@ export class CreateForm implements OnInit, OnDestroy {
 
   private initForm(): void {
     this.formDetailsForm = this.fb.group({
-      title: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(100)]],
-      description: ['', [Validators.maxLength(500)]]
+      title: [
+        '',
+        [
+          Validators.required,
+          Validators.minLength(3),
+          Validators.maxLength(100),
+        ],
+      ],
+      description: ['', [Validators.maxLength(500)]],
     });
   }
 
@@ -85,19 +95,19 @@ export class CreateForm implements OnInit, OnDestroy {
   addField(): void {
     if (!this.newFieldLabel.trim()) {
       this.errorMessage = 'Field label is required';
-      setTimeout(() => this.errorMessage = '', 3000);
+      setTimeout(() => (this.errorMessage = ''), 3000);
       return;
     }
 
     if (this.newFieldLabel.length > 100) {
       this.errorMessage = 'Field label must be 100 characters or less';
-      setTimeout(() => this.errorMessage = '', 3000);
+      setTimeout(() => (this.errorMessage = ''), 3000);
       return;
     }
 
     if (this.needsOptions(this.newFieldType) && !this.newFieldOptions.trim()) {
       this.errorMessage = 'Options are required for this field type';
-      setTimeout(() => this.errorMessage = '', 3000);
+      setTimeout(() => (this.errorMessage = ''), 3000);
       return;
     }
 
@@ -108,9 +118,12 @@ export class CreateForm implements OnInit, OnDestroy {
       required: this.newFieldRequired,
       placeholder: this.newFieldPlaceholder?.trim() || undefined,
       options: this.newFieldOptions
-        ? this.newFieldOptions.split('\n').map(o => o.trim()).filter(o => o)
+        ? this.newFieldOptions
+            .split('\n')
+            .map((o) => o.trim())
+            .filter((o) => o)
         : undefined,
-      order: this.formFields.length
+      order: this.formFields.length,
     };
 
     if (this.editingIndex >= 0) {
@@ -142,28 +155,32 @@ export class CreateForm implements OnInit, OnDestroy {
     if (confirm('Are you sure you want to remove this field?')) {
       this.formFields.splice(index, 1);
       // Update order
-      this.formFields.forEach((field, i) => field.order = i);
+      this.formFields.forEach((field, i) => (field.order = i));
     }
   }
 
   moveFieldUp(index: number): void {
     if (index > 0) {
-      [this.formFields[index], this.formFields[index - 1]] =
-      [this.formFields[index - 1], this.formFields[index]];
+      [this.formFields[index], this.formFields[index - 1]] = [
+        this.formFields[index - 1],
+        this.formFields[index],
+      ];
       this.updateFieldOrder();
     }
   }
 
   moveFieldDown(index: number): void {
     if (index < this.formFields.length - 1) {
-      [this.formFields[index], this.formFields[index + 1]] =
-      [this.formFields[index + 1], this.formFields[index]];
+      [this.formFields[index], this.formFields[index + 1]] = [
+        this.formFields[index + 1],
+        this.formFields[index],
+      ];
       this.updateFieldOrder();
     }
   }
 
   private updateFieldOrder(): void {
-    this.formFields.forEach((field, i) => field.order = i);
+    this.formFields.forEach((field, i) => (field.order = i));
   }
 
   private resetFieldForm(): void {
@@ -179,6 +196,30 @@ export class CreateForm implements OnInit, OnDestroy {
     this.editingField = null;
     this.resetFieldForm();
     this.clearMessages();
+  }
+
+  handleError(error: any, resourceLabel: string = 'item'): void {
+    if (error.message?.startsWith('QUOTA_EXCEEDED:')) {
+      const parts = error.message.split(':');
+      const resource = parts[1];
+      const limit = parts[3];
+
+      const labels: Record<string, string> = {
+        events: 'active event',
+        ministries: 'department',
+        forms: 'form',
+      };
+
+      const label = labels[resource] || resourceLabel;
+      this.upgradeModalTrigger =
+        `You've reached the ${limit} ${label} limit on your current plan. ` +
+        `Upgrade to create more.`;
+      this.showUpgradeModal = true;
+      this.loading = false;
+    } else {
+      this.errorMessage = error.message || 'An error occurred';
+      this.loading = false;
+    }
   }
 
   // Form Submission
@@ -203,10 +244,11 @@ export class CreateForm implements OnInit, OnDestroy {
     const formData = {
       title: this.formDetailsForm.value.title.trim(),
       description: this.formDetailsForm.value.description?.trim() || undefined,
-      form_fields: this.formFields
+      form_fields: this.formFields,
     };
 
-    this.formsService.createFormTemplate(formData)
+    this.formsService
+      .createFormTemplate(formData)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
@@ -217,18 +259,19 @@ export class CreateForm implements OnInit, OnDestroy {
             this.router.navigate(['main/forms']);
           }, 1500);
         },
-        error: (error:any) => {
+        error: (err) => {
           this.loading = false;
-          this.errorMessage = error.message || 'Failed to create form. Please try again.';
+          this.handleError(err);
           this.scrollToTop();
-          console.error('Error creating form:', error);
-        }
+        },
       });
   }
 
   cancel(): void {
     if (this.formFields.length > 0 || this.formDetailsForm.dirty) {
-      if (confirm('You have unsaved changes. Are you sure you want to leave?')) {
+      if (
+        confirm('You have unsaved changes. Are you sure you want to leave?')
+      ) {
         this.router.navigate(['main/forms']);
       }
     } else {
@@ -242,7 +285,9 @@ export class CreateForm implements OnInit, OnDestroy {
   }
 
   getFieldTypeIcon(type: FieldType): string {
-    return this.fieldTypes.find(ft => ft.value === type)?.icon || 'ri-input-field';
+    return (
+      this.fieldTypes.find((ft) => ft.value === type)?.icon || 'ri-input-field'
+    );
   }
 
   needsOptions(type: FieldType): boolean {
@@ -250,7 +295,7 @@ export class CreateForm implements OnInit, OnDestroy {
   }
 
   private markFormGroupTouched(formGroup: FormGroup): void {
-    Object.keys(formGroup.controls).forEach(key => {
+    Object.keys(formGroup.controls).forEach((key) => {
       const control = formGroup.get(key);
       control?.markAsTouched();
 
@@ -269,5 +314,3 @@ export class CreateForm implements OnInit, OnDestroy {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }
-
-

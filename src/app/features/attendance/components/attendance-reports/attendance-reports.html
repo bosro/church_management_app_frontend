@@ -18,10 +18,10 @@
               <p class="subtitle">View and analyze attendance trends</p>
             </div>
           </div>
-          <button class="btn-primary" (click)="exportReport()"
+          <button class="btn-primary" (click)="exportReport()" [disabled]="exporting"
             *ngIf="permissionService.isAdmin || permissionService.attendance.reports">
             <i class="ri-download-line"></i>
-            Export Report
+            {{ exporting ? 'Exporting...' : 'Export Report' }}
           </button>
         </div>
 
@@ -177,6 +177,63 @@
             </button>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Export Modal -->
+  <div class="modal-overlay" *ngIf="showExportModal" (click)="showExportModal = false">
+    <div class="export-modal" (click)="$event.stopPropagation()">
+
+      <div class="export-modal-header">
+        <h3>
+          <i class="ri-download-2-line"></i>
+          Export Attendance Report
+        </h3>
+        <button class="modal-close-btn" (click)="showExportModal = false">
+          <i class="ri-close-line"></i>
+        </button>
+      </div>
+
+      <p class="export-subtitle">
+        {{ reports.length }} record{{ reports.length !== 1 ? 's' : '' }} will be exported
+        for the selected period
+      </p>
+
+      <div class="export-options">
+        <button class="export-option" (click)="exportAs('csv')">
+          <div class="export-icon csv">
+            <i class="ri-file-text-line"></i>
+          </div>
+          <div class="export-info">
+            <strong>CSV</strong>
+            <span>Plain text, works with any spreadsheet app</span>
+          </div>
+          <i class="ri-arrow-right-s-line export-arrow"></i>
+        </button>
+
+        <button class="export-option" (click)="exportAs('excel')">
+          <div class="export-icon excel">
+            <i class="ri-file-excel-2-line"></i>
+          </div>
+          <div class="export-info">
+            <strong>Excel (.xlsx)</strong>
+            <span>Formatted workbook with summary sheet</span>
+          </div>
+          <i class="ri-arrow-right-s-line export-arrow"></i>
+        </button>
+
+        <button class="export-option" (click)="exportAs('pdf')">
+          <div class="export-icon pdf">
+            <i class="ri-file-pdf-2-line"></i>
+          </div>
+          <div class="export-info">
+            <strong>PDF</strong>
+            <span>Branded report with stats, ready to print or share</span>
+          </div>
+          <i class="ri-arrow-right-s-line export-arrow"></i>
+        </button>
       </div>
     </div>
   </div>
