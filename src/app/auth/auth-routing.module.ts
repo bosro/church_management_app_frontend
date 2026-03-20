@@ -7,6 +7,7 @@ import { Signin } from './components/signin/signin';
 import { Signup } from './components/signup/signup';
 import { AuthLayout } from './components/auth-layout/auth-layout';
 import { EmailConfirmed } from './components/email-confirmed/email-confirmed';
+import { ResetPassword } from './components/reset-password/reset-password';
 
 const routes: Routes = [
   {
@@ -16,8 +17,9 @@ const routes: Routes = [
       { path: '', redirectTo: 'signin', pathMatch: 'full' },
       { path: 'signin', component: Signin },
       { path: 'signup', component: Signup },
-      { path: 'otp-verification', component: OtpVerification },
+      // { path: 'otp-verification', component: OtpVerification },
       { path: 'forgot-password', component: ForgotPassword },
+       { path: 'reset-password', component: ResetPassword },
       {
         path: 'email-confirmed',
         component: EmailConfirmed,
