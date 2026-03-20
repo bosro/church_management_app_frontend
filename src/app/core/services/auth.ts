@@ -40,12 +40,17 @@ export class AuthService {
   private churchFeaturesSubject = new BehaviorSubject<string[]>([]);
   churchFeatures$ = this.churchFeaturesSubject.asObservable();
 
+  private subscriptionService?: any;
+
   constructor(
     private supabase: SupabaseService,
     private router: Router,
-    private subscriptionService: SubscriptionService,
   ) {
     this.initializeAuth();
+  }
+
+  setSubscriptionService(service: any): void {
+    this.subscriptionService = service;
   }
 
   setUserRolesService(service: any): void {
@@ -191,7 +196,9 @@ export class AuthService {
         // Signal that auth + permissions are fully ready
         // This unblocks PermissionGuard and RoleGuard which wait on authReady$
         this.authReadySubject.next(true);
-        this.subscriptionService.loadStatus();
+        if (this.subscriptionService) {
+          this.subscriptionService.loadStatus();
+        }
 
         return {
           user: userProfile,
@@ -452,7 +459,9 @@ export class AuthService {
       this.currentProfileSubject.next(null);
       this.authReadySubject.next(false);
       if (this.userRolesService) {
-        this.userRolesService.clearCurrentUserPermissions(); // ← clear on logout
+        this.userRolesService.clearCurrentUserPermissions();
+      }
+      if (this.subscriptionService) {
         this.subscriptionService.clearStatus();
       }
       this.router.navigate(['/auth/signin']);

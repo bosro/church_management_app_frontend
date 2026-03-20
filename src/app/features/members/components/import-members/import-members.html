@@ -48,7 +48,8 @@
                 <strong>Download the template:</strong> Click the button below to get the CSV template with sample data
               </li>
               <li>
-                <strong>Fill in your data:</strong> Add your member information following the template format. Required fields are marked with *
+                <strong>Fill in your data:</strong> Add your member information following the template format. Required
+                fields are marked with *
               </li>
               <li>
                 <strong>Remove instructions:</strong> Delete the instruction rows (starting with #) before uploading
@@ -69,15 +70,9 @@
 
           <!-- File Upload Area -->
           <div class="upload-section">
-            <div
-              class="dropzone"
-              [class.dragover]="dragOver"
-              [class.has-file]="selectedFile"
-              [class.uploading]="uploading"
-              (dragover)="onDragOver($event)"
-              (dragleave)="onDragLeave($event)"
-              (drop)="onDrop($event)"
-            >
+            <div class="dropzone" [class.dragover]="dragOver" [class.has-file]="selectedFile"
+              [class.uploading]="uploading" (dragover)="onDragOver($event)" (dragleave)="onDragLeave($event)"
+              (drop)="onDrop($event)">
               <div *ngIf="!selectedFile" class="dropzone-content">
                 <i class="ri-upload-cloud-line"></i>
                 <h4>Drag & Drop your CSV file here</h4>
@@ -85,17 +80,12 @@
                 <label class="btn-browse">
                   <i class="ri-folder-open-line"></i>
                   Browse Files
-                  <input
-                    type="file"
-                    accept=".csv,.CSV"
-                    (change)="onFileSelected($event)"
-                    [disabled]="uploading"
-                    hidden
-                  />
+                  <input type="file" accept=".csv,.CSV,.xlsx,.XLSX,.xls,.XLS" (change)="onFileSelected($event)"
+                    [disabled]="uploading" hidden />
                 </label>
                 <span class="file-hint">
                   <i class="ri-information-line"></i>
-                  Maximum file size: 10MB • Accepted format: .CSV
+                  Maximum file size: 10MB • Accepted formats: .CSV, .XLSX, .XLS
                 </span>
               </div>
 
@@ -106,12 +96,7 @@
                     <p class="file-name">{{ selectedFile.name }}</p>
                     <p class="file-size">{{ (selectedFile.size / 1024).toFixed(2) }} KB</p>
                   </div>
-                  <button
-                    class="btn-remove"
-                    (click)="removeFile()"
-                    *ngIf="!uploading"
-                    title="Remove file"
-                  >
+                  <button class="btn-remove" (click)="removeFile()" *ngIf="!uploading" title="Remove file">
                     <i class="ri-close-line"></i>
                   </button>
                 </div>
@@ -128,11 +113,7 @@
                 </div>
 
                 <!-- Upload Button -->
-                <button
-                  *ngIf="!uploading"
-                  class="btn-upload"
-                  (click)="uploadFile()"
-                >
+                <button *ngIf="!uploading" class="btn-upload" (click)="uploadFile()">
                   <i class="ri-upload-2-line"></i>
                   Start Import
                 </button>
@@ -175,12 +156,30 @@
                 <div *ngFor="let error of importResults.errors; let i = index" class="error-item">
                   <span class="error-number">{{ i + 1 }}</span>
                   <i class="ri-alert-line"></i>
-                  <span class="error-text">{{ error }}</span>
+                  <div class="error-text">
+                    <span class="error-message">{{ error.message }}</span>
+                    <span class="error-action duplicate" *ngIf="error.type === 'duplicate'">
+                      <i class="ri-information-line"></i>
+                      This member is already in your database — no action needed
+                    </span>
+                    <span class="error-action missing" *ngIf="error.type === 'missing_name'">
+                      <i class="ri-edit-line"></i>
+                      Open your CSV and fill in the missing First Name or Last Name for this row
+                    </span>
+                    <span class="error-action email" *ngIf="error.type === 'invalid_email'">
+                      <i class="ri-mail-line"></i>
+                      Check that the email address is correctly formatted (e.g. name@example.com)
+                    </span>
+                    <span class="error-action other" *ngIf="error.type === 'other'">
+                      <i class="ri-tools-line"></i>
+                      Fix this row in your CSV file and re-import
+                    </span>
+                  </div>
                 </div>
               </div>
               <p class="error-hint">
                 <i class="ri-information-line"></i>
-                Fix these errors in your CSV file and import again
+                Duplicate entries can be safely ignored. Fix other errors in your CSV and import again
               </p>
             </div>
 
@@ -188,7 +187,8 @@
             <div *ngIf="importResults.success > 0 && importResults.failed === 0" class="success-details">
               <i class="ri-checkbox-circle-line"></i>
               <h4>All members imported successfully!</h4>
-              <p>{{ importResults.success }} member{{ importResults.success > 1 ? 's' : '' }} have been added to your database.</p>
+              <p>{{ importResults.success }} member{{ importResults.success > 1 ? 's' : '' }} have been added to your
+                database.</p>
             </div>
 
             <!-- Actions -->

@@ -212,7 +212,7 @@ export class Overview implements OnInit, OnDestroy {
 
   // ✅ FIXED: Use EventsService instead of direct query
   private loadUpcomingEvents(): Promise<void> {
-    console.log('📅 Loading upcoming events for dashboard...');
+    // console.log('📅 Loading upcoming events for dashboard...');
 
     return new Promise((resolve) => {
       this.eventsService
@@ -220,7 +220,7 @@ export class Overview implements OnInit, OnDestroy {
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: (events) => {
-            console.log('✅ Events loaded successfully:', events.length);
+            // console.log('✅ Events loaded successfully:', events.length);
 
             this.upcomingEvents = events.map((event: any) => ({
               id: event.id,
@@ -233,7 +233,7 @@ export class Overview implements OnInit, OnDestroy {
               attendees: event.max_attendees,
             }));
 
-            console.log('📅 Formatted events:', this.upcomingEvents);
+            // console.log('📅 Formatted events:', this.upcomingEvents);
             resolve();
           },
           error: (error) => {

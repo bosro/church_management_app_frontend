@@ -7,10 +7,15 @@ import { MemberService } from '../../services/member.service';
 import { AuthService } from '../../../../core/services/auth';
 import { PermissionService } from '../../../../core/services/permission.service';
 
+interface ImportError {
+  message: string;
+  type: 'duplicate' | 'missing_name' | 'invalid_email' | 'other';
+}
+
 interface ImportResults {
   success: number;
   failed: number;
-  errors: string[];
+  errors: ImportError[];
 }
 
 @Component({
@@ -90,12 +95,12 @@ export class ImportMembers implements OnInit, OnDestroy {
   }
 
   private handleFileSelection(file: File): void {
-    // Validate file type
-    const validExtensions = ['.csv', '.CSV'];
+    const validExtensions = ['.csv', '.CSV', '.xlsx', '.XLSX', '.xls', '.XLS'];
     const fileExtension = file.name.substring(file.name.lastIndexOf('.'));
 
     if (!validExtensions.includes(fileExtension)) {
-      this.errorMessage = 'Please select a CSV file (.csv)';
+      this.errorMessage =
+        'Please select a CSV or Excel file (.csv, .xlsx, .xls)';
       setTimeout(() => (this.errorMessage = ''), 3000);
       return;
     }
@@ -154,7 +159,23 @@ export class ImportMembers implements OnInit, OnDestroy {
           this.importResults = {
             success: results.success,
             failed: results.failed,
-            errors: results.errors.map((e) => `Row ${e.row}: ${e.error}`),
+            errors: results.errors.map((e) => {
+              const msg = `Row ${e.row}: ${e.error}`;
+              let type: ImportError['type'] = 'other';
+              if (e.error.includes('already exists')) type = 'duplicate';
+              else if (
+                e.error.includes('First name') ||
+                e.error.includes('Last name') ||
+                e.error.includes('required')
+              )
+                type = 'missing_name';
+              else if (
+                e.error.includes('email') ||
+                e.error.includes('email format')
+              )
+                type = 'invalid_email';
+              return { message: msg, type };
+            }),
           };
 
           if (results.success > 0) {

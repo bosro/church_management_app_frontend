@@ -239,7 +239,7 @@ export class Settings implements OnInit, OnDestroy {
 
       // Step 2: If no member found, create one
       if (!memberData) {
-        console.log('📝 No member record found, creating one...');
+        // console.log('📝 No member record found, creating one...');
 
         // Get user profile data from profiles table
         const { data: profileData, error: profileError } =
@@ -273,7 +273,7 @@ export class Settings implements OnInit, OnDestroy {
           return;
         }
 
-        console.log('✅ Member profile created via function');
+        // console.log('✅ Member profile created via function');
         memberData = newMember;
       }
 
@@ -285,11 +285,11 @@ export class Settings implements OnInit, OnDestroy {
         this.photoPreviewUrl = memberData.photo_url;
       }
 
-      console.log('✅ Member profile loaded:', {
-        id: memberData.id,
-        name: `${memberData.first_name} ${memberData.last_name}`,
-        hasPhoto: !!memberData.photo_url,
-      });
+      // console.log('✅ Member profile loaded:', {
+      //   id: memberData.id,
+      //   name: `${memberData.first_name} ${memberData.last_name}`,
+      //   hasPhoto: !!memberData.photo_url,
+      // });
 
       this.loadingProfile = false;
     } catch (err: any) {

@@ -131,9 +131,9 @@ export class AddMinistry implements OnInit, OnDestroy {
   }
 
   onSubmit(): void {
-    console.log('Form submitted'); // DEBUG
-    console.log('Form valid:', this.ministryForm.valid); // DEBUG
-    console.log('Form value:', this.ministryForm.value); // DEBUG
+    // console.log('Form submitted'); // DEBUG
+    // console.log('Form valid:', this.ministryForm.valid); // DEBUG
+    // console.log('Form value:', this.ministryForm.value); // DEBUG
 
     // Mark all fields as touched to show validation errors
     this.markFormGroupTouched(this.ministryForm);
@@ -172,14 +172,14 @@ export class AddMinistry implements OnInit, OnDestroy {
       is_active: formData.is_active ?? true,
     };
 
-    console.log('Sending to service:', ministryData); // DEBUG
+    // console.log('Sending to service:', ministryData); // DEBUG
 
     this.ministryService
       .createMinistry(ministryData)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (ministry) => {
-          console.log('Ministry created:', ministry); // DEBUG
+          // console.log('Ministry created:', ministry); // DEBUG
           this.successMessage = 'Ministry created successfully!';
           this.loading = false;
 

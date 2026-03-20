@@ -14,6 +14,9 @@ import {
   MemberListResult,
 } from '../../../models/member.model';
 import { SubscriptionService } from '../../../core/services/subscription.service';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 @Injectable({
   providedIn: 'root',
@@ -324,6 +327,236 @@ export class MemberService {
     );
   }
 
+  exportMembersToExcel(filters: MemberSearchFilters = {}): Observable<Blob> {
+    return this.getMembers(filters, 1, 10000).pipe(
+      map(({ data: members }) => {
+        const rows = members.map((m) => ({
+          'Member Number': m.member_number || '',
+          'First Name': m.first_name,
+          'Middle Name': m.middle_name || '',
+          'Last Name': m.last_name,
+          Email: m.email || '',
+          Phone: m.phone_primary || '',
+          Gender: m.gender || '',
+          'Date of Birth': m.date_of_birth || '',
+          'Marital Status': m.marital_status || '',
+          Address: m.address || '',
+          City: m.city || '',
+          Occupation: m.occupation || '',
+          'Join Date': m.join_date,
+          Status: m.membership_status,
+        }));
+
+        const worksheet = XLSX.utils.json_to_sheet(rows);
+        const workbook = XLSX.utils.book_new();
+
+        // Column widths
+        worksheet['!cols'] = [
+          { wch: 16 },
+          { wch: 16 },
+          { wch: 16 },
+          { wch: 16 },
+          { wch: 28 },
+          { wch: 14 },
+          { wch: 10 },
+          { wch: 14 },
+          { wch: 14 },
+          { wch: 24 },
+          { wch: 14 },
+          { wch: 18 },
+          { wch: 12 },
+          { wch: 10 },
+        ];
+
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Members');
+
+        // Add a summary sheet
+        const summaryData = [
+          { Info: 'Church', Value: 'Members Export' },
+          { Info: 'Total Members', Value: members.length },
+          { Info: 'Export Date', Value: new Date().toLocaleDateString() },
+          {
+            Info: 'Active',
+            Value: members.filter((m) => m.membership_status === 'active')
+              .length,
+          },
+          {
+            Info: 'Inactive',
+            Value: members.filter((m) => m.membership_status === 'inactive')
+              .length,
+          },
+        ];
+        const summarySheet = XLSX.utils.json_to_sheet(summaryData);
+        summarySheet['!cols'] = [{ wch: 18 }, { wch: 24 }];
+        XLSX.utils.book_append_sheet(workbook, summarySheet, 'Summary');
+
+        const buffer = XLSX.write(workbook, {
+          bookType: 'xlsx',
+          type: 'array',
+        });
+        return new Blob([buffer], {
+          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        });
+      }),
+    );
+  }
+
+  exportMembersToPDF(filters: MemberSearchFilters = {}): Observable<Blob> {
+    return this.getMembers(filters, 1, 10000).pipe(
+      map(({ data: members }) => {
+        const doc = new jsPDF({
+          orientation: 'landscape',
+          unit: 'mm',
+          format: 'a4',
+        });
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const today = new Date().toLocaleDateString('en-GB', {
+          day: '2-digit',
+          month: 'long',
+          year: 'numeric',
+        });
+
+        // Header banner
+        doc.setFillColor(91, 33, 182);
+        doc.rect(0, 0, pageWidth, 22, 'F');
+
+        // Logo text
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Churchman', 14, 14);
+
+        // Title
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'normal');
+        doc.text('Members Report', pageWidth / 2, 14, { align: 'center' });
+
+        // Date top right
+        doc.setFontSize(9);
+        doc.text(`Exported: ${today}`, pageWidth - 14, 14, { align: 'right' });
+
+        // Stats row
+        const active = members.filter(
+          (m) => m.membership_status === 'active',
+        ).length;
+        const inactive = members.length - active;
+        const male = members.filter((m) => m.gender === 'male').length;
+        const female = members.filter((m) => m.gender === 'female').length;
+
+        doc.setFillColor(245, 243, 255);
+        doc.rect(0, 22, pageWidth, 16, 'F');
+
+        doc.setTextColor(91, 33, 182);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+
+        const stats = [
+          `Total: ${members.length}`,
+          `Active: ${active}`,
+          `Inactive: ${inactive}`,
+          `Male: ${male}`,
+          `Female: ${female}`,
+        ];
+        const colW = pageWidth / stats.length;
+        stats.forEach((stat, i) => {
+          doc.text(stat, colW * i + colW / 2, 32, { align: 'center' });
+        });
+
+        // Table
+        autoTable(doc, {
+          startY: 42,
+          head: [
+            [
+              '#',
+              'Member No.',
+              'First Name',
+              'Last Name',
+              'Email',
+              'Phone',
+              'Gender',
+              'Date of Birth',
+              'Join Date',
+              'Status',
+            ],
+          ],
+          body: members.map((m, idx) => [
+            idx + 1,
+            m.member_number || '—',
+            m.first_name || '—',
+            m.last_name || '—',
+            m.email || '—',
+            m.phone_primary || '—',
+            m.gender
+              ? m.gender.charAt(0).toUpperCase() + m.gender.slice(1)
+              : '—',
+            m.date_of_birth || '—',
+            m.join_date || '—',
+            m.membership_status
+              ? m.membership_status.charAt(0).toUpperCase() +
+                m.membership_status.slice(1)
+              : '—',
+          ]),
+          styles: {
+            fontSize: 8,
+            cellPadding: 3,
+            overflow: 'linebreak',
+          },
+          headStyles: {
+            fillColor: [91, 33, 182],
+            textColor: 255,
+            fontStyle: 'bold',
+            fontSize: 8,
+          },
+          alternateRowStyles: {
+            fillColor: [249, 250, 251],
+          },
+          columnStyles: {
+            0: { halign: 'center', cellWidth: 8 },
+            1: { cellWidth: 22 },
+            2: { cellWidth: 24 },
+            3: { cellWidth: 24 },
+            4: { cellWidth: 48 },
+            5: { cellWidth: 24 },
+            6: { cellWidth: 16 },
+            7: { cellWidth: 24 },
+            8: { cellWidth: 22 },
+            9: { cellWidth: 20 },
+          },
+          didDrawCell: (data) => {
+            // Colour the status pill
+            if (data.section === 'body' && data.column.index === 9) {
+              const status = String(data.cell.raw).toLowerCase();
+              if (status === 'active') {
+                doc.setFillColor(209, 250, 229);
+                doc.setTextColor(6, 95, 70);
+              } else {
+                doc.setFillColor(254, 226, 226);
+                doc.setTextColor(153, 27, 27);
+              }
+            }
+          },
+          // Footer on each page
+          didDrawPage: (data) => {
+            const pageCount = (doc as any).internal.getNumberOfPages();
+            doc.setFontSize(8);
+            doc.setTextColor(156, 163, 175);
+            doc.setFont('helvetica', 'normal');
+            doc.text(
+              `Page ${data.pageNumber} of ${pageCount}  •  Churchman Church Management`,
+              pageWidth / 2,
+              doc.internal.pageSize.getHeight() - 6,
+              { align: 'center' },
+            );
+          },
+        });
+
+        return new Blob([doc.output('arraybuffer')], {
+          type: 'application/pdf',
+        });
+      }),
+    );
+  }
+
   private escapeCsvValue(value: string | undefined | null): string {
     if (!value) return '';
     const s = String(value);
@@ -334,7 +567,134 @@ export class MemberService {
   }
 
   importMembersFromCSV(file: File): Observable<ImportResult> {
-    return from(this.processCSVImport(file));
+    return from(this.processFileImport(file));
+  }
+
+  private async processFileImport(file: File): Promise<ImportResult> {
+    const ext = file.name.split('.').pop()?.toLowerCase();
+
+    if (ext === 'xlsx' || ext === 'xls') {
+      return this.processExcelImport(file);
+    }
+    return this.processCSVImport(file);
+  }
+
+  private async processExcelImport(file: File): Promise<ImportResult> {
+    const churchId = this.getChurchId();
+    const branchId = this.authService.getBranchId();
+
+    const buffer = await file.arrayBuffer();
+    const workbook = XLSX.read(buffer, { type: 'array', cellDates: true });
+
+    // Use first sheet
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+
+    // Convert to array of objects using first row as headers
+    const rows: any[] = XLSX.utils.sheet_to_json(sheet, {
+      defval: '',
+      raw: false, // format dates as strings
+    });
+
+    if (!rows.length) throw new Error('Excel file is empty or invalid');
+
+    const results: ImportResult = { success: 0, failed: 0, errors: [] };
+
+    const headerAliases: Record<string, string> = {
+      'first name': 'first_name',
+      first_name: 'first_name',
+      'last name': 'last_name',
+      last_name: 'last_name',
+      email: 'email',
+      phone: 'phone',
+      'phone number': 'phone',
+      phone_number: 'phone',
+      gender: 'gender',
+      'date of birth': 'date_of_birth',
+      date_of_birth: 'date_of_birth',
+      dob: 'date_of_birth',
+      'join date': 'join_date',
+      join_date: 'join_date',
+      address: 'address',
+      city: 'city',
+      title: 'title',
+      'cell group': 'cell_group',
+      cell_group: 'cell_group',
+      notes: 'notes',
+    };
+
+    for (let i = 0; i < rows.length; i++) {
+      try {
+        // Normalize keys using aliases
+        const row: Record<string, string> = {};
+        Object.entries(rows[i]).forEach(([key, val]) => {
+          const normalized = key.trim().toLowerCase();
+          const canonical = headerAliases[normalized] || normalized;
+          row[canonical] = String(val ?? '').trim();
+        });
+
+        const memberData: any = {
+          first_name: row['first_name'],
+          last_name: row['last_name'],
+          email: row['email'] || undefined,
+          phone_primary: row['phone'] || undefined,
+          gender: row['gender']?.toLowerCase() || undefined,
+          date_of_birth: this.normalizeDate(row['date_of_birth']),
+          address: row['address'] || undefined,
+          city: row['city'] || undefined,
+          join_date:
+            this.normalizeDate(row['join_date']) ||
+            new Date().toISOString().split('T')[0],
+          church_id: churchId,
+          branch_id: branchId || null,
+          membership_status: 'active',
+          is_new_convert: false,
+          is_visitor: false,
+        };
+
+        if (!memberData.first_name || !memberData.last_name) {
+          throw new Error('First name and last name are required');
+        }
+
+        if (memberData.email && !this.isValidEmail(memberData.email)) {
+          throw new Error(`Invalid email format: ${memberData.email}`);
+        }
+
+        const { error } = await this.supabase.client
+          .from('members')
+          .insert(memberData);
+
+        if (error) {
+          let friendlyMessage = error.message;
+          if (
+            error.code === '23505' ||
+            error.message?.includes('members_email_unique')
+          ) {
+            friendlyMessage = `Member with email "${memberData.email}" already exists — skipped`;
+          } else if (error.message?.includes('members_phone')) {
+            friendlyMessage = `Member with phone "${memberData.phone_primary}" already exists — skipped`;
+          }
+          throw new Error(friendlyMessage);
+        }
+
+        results.success++;
+      } catch (error: any) {
+        results.failed++;
+        results.errors.push({ row: i + 2, error: error.message, data: '' });
+      }
+    }
+
+    return results;
+  }
+
+  private normalizeDate(value: string | undefined): string | undefined {
+    if (!value) return undefined;
+    // Already in YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+    // Try parsing any other format
+    const d = new Date(value);
+    if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
+    return undefined;
   }
 
   private async processCSVImport(file: File): Promise<ImportResult> {
@@ -422,7 +782,23 @@ export class MemberService {
         const { error } = await this.supabase.client
           .from('members')
           .insert(memberData);
-        if (error) throw error;
+        if (error) {
+          let friendlyMessage = error.message;
+
+          if (
+            error.code === '23505' ||
+            error.message?.includes('members_email_unique')
+          ) {
+            friendlyMessage = `Member with email "${memberData.email}" already exists — skipped`;
+          } else if (error.message?.includes('members_phone')) {
+            friendlyMessage = `Member with phone "${memberData.phone_primary}" already exists — skipped`;
+          } else if (error.message?.includes('not-null')) {
+            friendlyMessage =
+              'Missing required field — check First Name and Last Name';
+          }
+
+          throw new Error(friendlyMessage);
+        }
         results.success++;
       } catch (error: any) {
         results.failed++;

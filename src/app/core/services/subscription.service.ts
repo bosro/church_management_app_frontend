@@ -1,11 +1,9 @@
 // subscription.service.ts
-import { Injectable, Injector } from '@angular/core';
-import { Observable, from, BehaviorSubject } from 'rxjs';
+import { Injectable } from '@angular/core';
+import { Observable, from, BehaviorSubject, throwError } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
-import { throwError } from 'rxjs';
 import { SupabaseService } from './supabase';
-// ❌ REMOVE THIS IMPORT
-// import { AuthService } from './auth';
+import { AuthService } from './auth';
 
 export interface SubscriptionPlan {
   id: string;
@@ -59,42 +57,32 @@ export class SubscriptionService {
   private statusSubject = new BehaviorSubject<SubscriptionStatus | null>(null);
   public status$ = this.statusSubject.asObservable();
 
-  // ✅ Lazy-loaded AuthService to break circular dependency
-  private _authService: any;
-
   constructor(
     private supabase: SupabaseService,
-    private injector: Injector, // ✅ Inject Injector instead of AuthService
+    private authService: AuthService,
   ) {}
-
-  // ✅ Lazy getter for AuthService
-  private get authService(): any {
-    if (!this._authService) {
-      this._authService = this.injector.get('AuthService' as any);
-    }
-    return this._authService;
-  }
 
   private getChurchId(): string {
     const id = this.authService.getChurchId();
-    if (!id) throw new Error('Church ID not found');
+    if (!id) throw new Error('Church ID not found. Please log in again.');
     return id;
   }
 
-  // Load and cache subscription status — call this after login
+  // ─── Status Management ───────────────────────────────────────────
+
   async loadStatus(): Promise<void> {
     try {
       const churchId = this.getChurchId();
 
-      const [planData, usageData, churchData] = await Promise.all([
+      const [plan, usage, churchData] = await Promise.all([
         this.getCurrentPlan(churchId),
         this.getUsage(churchId),
         this.getChurchSubscriptionData(churchId),
       ]);
 
       this.statusSubject.next({
-        plan: planData,
-        usage: usageData,
+        plan,
+        usage,
         tier: churchData.tier,
         is_expired: churchData.is_expired,
         expires_at: churchData.expires_at,
@@ -104,7 +92,6 @@ export class SubscriptionService {
     }
   }
 
-  // Clear on logout
   clearStatus(): void {
     this.statusSubject.next(null);
   }
@@ -125,14 +112,20 @@ export class SubscriptionService {
     return this.currentTier !== 'free';
   }
 
-  // Check quota via DB (real-time, accurate)
+  // ─── Quota Checks ────────────────────────────────────────────────
+
   checkQuota(
-    resource: 'members' | 'branches' | 'users' | 'forms' | 'events' | 'ministries',
+    resource:
+      | 'members'
+      | 'branches'
+      | 'users'
+      | 'forms'
+      | 'events'
+      | 'ministries',
   ): Observable<QuotaCheck> {
-    const churchId = this.getChurchId();
     return from(
       this.supabase.client.rpc('check_quota', {
-        p_church_id: churchId,
+        p_church_id: this.getChurchId(),
         p_resource: resource,
       }),
     ).pipe(
@@ -144,82 +137,68 @@ export class SubscriptionService {
     );
   }
 
-  // Check quota from cache (fast, for UI display)
   canAdd(resource: keyof ChurchUsage): boolean {
     const status = this.statusSubject.value;
     if (!status) return true;
-
-    const limits: Record<string, number | null> = {
-      members: status.plan.max_members,
-      branches: status.plan.max_branches,
-      users: status.plan.max_users,
-      forms: status.plan.max_forms,
-      events: status.plan.max_events,
-      ministries: status.plan.max_ministries,
-    };
-
-    const limit = limits[resource];
+    const limit = this.getLimit(resource);
     if (limit === null) return true;
     return status.usage[resource] < limit;
   }
 
-  // Check feature access
+  // ─── Feature Access ──────────────────────────────────────────────
+
   canUseFeature(
     feature: 'export' | 'communications' | 'reports' | 'custom_branding',
   ): boolean {
     const status = this.statusSubject.value;
-    if (!status) return false;
-    if (status.is_expired) return false;
+    if (!status || status.is_expired) return false;
 
-    switch (feature) {
-      case 'export': return status.plan.can_export;
-      case 'communications': return status.plan.can_send_communications;
-      case 'reports': return status.plan.can_use_reports;
-      case 'custom_branding': return status.plan.can_custom_branding;
-      default: return false;
-    }
+    const featureMap: Record<string, boolean> = {
+      export: status.plan.can_export,
+      communications: status.plan.can_send_communications,
+      reports: status.plan.can_use_reports,
+      custom_branding: status.plan.can_custom_branding,
+    };
+
+    return featureMap[feature] ?? false;
   }
 
-  // Get usage percentage for progress bars
+  // ─── Usage Display Helpers ───────────────────────────────────────
+
   getUsagePercent(resource: keyof ChurchUsage): number {
     const status = this.statusSubject.value;
     if (!status) return 0;
-
-    const limits: Record<string, number | null> = {
-      members: status.plan.max_members,
-      branches: status.plan.max_branches,
-      users: status.plan.max_users,
-      forms: status.plan.max_forms,
-      events: status.plan.max_events,
-      ministries: status.plan.max_ministries,
-    };
-
-    const limit = limits[resource];
+    const limit = this.getLimit(resource);
     if (limit === null) return 0;
     return Math.min(100, Math.round((status.usage[resource] / limit) * 100));
   }
 
-  // Get limit label for display
   getLimitLabel(resource: keyof ChurchUsage): string {
     const status = this.statusSubject.value;
     if (!status) return '';
-
-    const limits: Record<string, number | null> = {
-      members: status.plan.max_members,
-      branches: status.plan.max_branches,
-      users: status.plan.max_users,
-      forms: status.plan.max_forms,
-      events: status.plan.max_events,
-      ministries: status.plan.max_ministries,
-    };
-
-    const limit = limits[resource];
+    const limit = this.getLimit(resource);
     const current = status.usage[resource];
-    if (limit === null) return `${current} (Unlimited)`;
-    return `${current} / ${limit}`;
+    return limit === null ? `${current} (Unlimited)` : `${current} / ${limit}`;
   }
 
-  // Get all plans for upgrade modal
+  private getLimit(resource: keyof ChurchUsage): number | null {
+    const plan = this.statusSubject.value?.plan;
+    if (!plan) return null;
+
+    const limitMap: Record<string, number | null> = {
+      members: plan.max_members,
+      branches: plan.max_branches,
+      users: plan.max_users,
+      forms: plan.max_forms,
+      events: plan.max_events,
+      ministries: plan.max_ministries,
+    };
+
+    return limitMap[resource] ?? null;
+  }
+
+  // ─── Plans ───────────────────────────────────────────────────────
+
   getPlans(): Observable<SubscriptionPlan[]> {
     return from(
       this.supabase.client
@@ -236,7 +215,8 @@ export class SubscriptionService {
     );
   }
 
-  // Called by super admin to upgrade a church
+  // ─── Upgrade (Super Admin) ───────────────────────────────────────
+
   upgradePlan(
     churchId: string,
     planId: string,
@@ -264,15 +244,15 @@ export class SubscriptionService {
     ).pipe(
       map(({ error }) => {
         if (error) throw new Error(error.message);
-        // Refresh cached status if upgrading own church
-        const myChurchId = this.authService.getChurchId();
-        if (churchId === myChurchId) {
+        if (churchId === this.authService.getChurchId()) {
           this.loadStatus();
         }
       }),
       catchError((err) => throwError(() => err)),
     );
   }
+
+  // ─── Private Helpers ─────────────────────────────────────────────
 
   private async getCurrentPlan(churchId: string): Promise<SubscriptionPlan> {
     const { data: church } = await this.supabase.client
@@ -302,7 +282,14 @@ export class SubscriptionService {
     const { data } = await this.supabase.client.rpc('get_church_usage', {
       p_church_id: churchId,
     });
-    return data as ChurchUsage;
+    return (data || {
+      members: 0,
+      branches: 0,
+      users: 0,
+      forms: 0,
+      events: 0,
+      ministries: 0,
+    }) as ChurchUsage;
   }
 
   private async getChurchSubscriptionData(churchId: string): Promise<{

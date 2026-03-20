@@ -760,9 +760,52 @@
           }
         }
 
+        // Inside .error-item, replace `span.error-text` with:
         .error-text {
           flex: 1;
           min-width: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 0.25rem;
+
+          .error-message {
+            font-size: 0.875rem;
+            color: #991b1b;
+            font-weight: 500;
+          }
+
+          .error-action {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-size: 0.75rem;
+            font-style: italic;
+            border-radius: 4px;
+            padding: 0.2rem 0.4rem;
+            width: fit-content;
+
+            i {
+              font-size: 0.75rem;
+              flex-shrink: 0;
+            }
+
+            &.duplicate {
+              color: #065f46;
+              background: #d1fae5;
+            }
+            &.missing {
+              color: #92400e;
+              background: #fef3c7;
+            }
+            &.email {
+              color: #1e40af;
+              background: #dbeafe;
+            }
+            &.other {
+              color: #6b7280;
+              background: #f3f4f6;
+            }
+          }
         }
       }
     }
