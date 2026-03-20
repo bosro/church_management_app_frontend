@@ -17,6 +17,7 @@ interface MenuItem {
   permission?: string;
   badge?: number;
   excludeRoles?: string[]; // ✅ NEW: Roles to exclude
+  featureFlag?: string;
 }
 
 @Component({
@@ -154,6 +155,7 @@ export class Sidebar implements OnInit {
       roles: ['church_admin', 'pastor', 'finance_officer'],
       permission: 'reports.view',
       excludeRoles: ['super_admin', 'member'],
+      featureFlag: 'reports',
     },
     {
       icon: 'ri-settings-3-line',
@@ -225,18 +227,21 @@ export class Sidebar implements OnInit {
     }
 
     this.filteredMenuItems = this.menuItems.filter((item) => {
-      // Always exclude if role is explicitly excluded
-      if (item.excludeRoles?.includes(this.currentUser!.role)) {
+      if (item.excludeRoles?.includes(this.currentUser!.role)) return false;
+
+      // ← add this block
+      if (
+        item.featureFlag &&
+        !this.authService.hasChurchFeature(item.featureFlag)
+      ) {
         return false;
       }
 
-      // Check role-based access
       const hasRole =
         !item.roles || item.roles.length === 0
           ? true
           : item.roles.includes(this.currentUser!.role);
 
-      // Check permission-based access (fallback for non-role users)
       const hasPermission = item.permission
         ? this.userRolesService.hasPermission(item.permission)
         : false;
@@ -244,10 +249,15 @@ export class Sidebar implements OnInit {
       const canAccess = hasRole || hasPermission;
       if (!canAccess) return false;
 
-      // Filter children using same logic
       if (item.children) {
         item.children = item.children.filter((child) => {
           if (child.excludeRoles?.includes(this.currentUser!.role))
+            return false;
+          // ← and this for children
+          if (
+            child.featureFlag &&
+            !this.authService.hasChurchFeature(child.featureFlag)
+          )
             return false;
           const childHasRole =
             !child.roles || child.roles.length === 0

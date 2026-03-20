@@ -15,11 +15,7 @@
       <ng-container *ngFor="let item of filteredMenuItems">
         <!-- Menu item with children (expandable) -->
         <li *ngIf="item.children && item.children.length > 0" class="menu-item-group">
-          <div
-            class="menu-item"
-            [class.active]="item.active"
-            (click)="toggleSubmenu(item)"
-          >
+          <div class="menu-item" [class.active]="item.active" (click)="toggleSubmenu(item)">
             <i [class]="item.icon"></i>
             <span class="menu-label">{{ item.label }}</span>
             <i class="ri-arrow-down-s-line submenu-arrow" [class.expanded]="isExpanded(item)"></i>
@@ -27,12 +23,8 @@
 
           <!-- Submenu -->
           <ul class="submenu" [class.expanded]="isExpanded(item)">
-            <li
-              *ngFor="let child of item.children"
-              class="submenu-item"
-              [class.active]="child.active"
-              (click)="navigate(child.route!)"
-            >
+            <li *ngFor="let child of item.children" class="submenu-item" [class.active]="child.active"
+              (click)="navigate(child.route!)">
               <i [class]="child.icon"></i>
               <span>{{ child.label }}</span>
               <span class="badge" *ngIf="child.badge">{{ child.badge }}</span>
@@ -41,22 +33,13 @@
         </li>
 
         <!-- Regular menu item (no children) -->
-        <li
-          *ngIf="!item.children || item.children.length === 0"
-          class="menu-item"
-          [class.active]="item.active"
-          (click)="navigate(item.route!)"
-        >
+        <li *ngIf="!item.children || item.children.length === 0" class="menu-item" [class.active]="item.active"
+          (click)="navigate(item.route!)">
           <i [class]="item.icon"></i>
           <span>{{ item.label }}</span>
         </li>
 
-        <li *ngIf="authService.hasChurchFeature('reports')">
-  <a routerLink="main/reports">
-    <i class="ri-bar-chart-line"></i>
-    <span>Reports</span>
-  </a>
-</li>
+
       </ng-container>
     </ul>
   </nav>
@@ -65,11 +48,7 @@
   <div class="sidebar-footer">
     <div class="user-profile" *ngIf="currentUser">
       <div class="user-avatar">
-        <img
-          *ngIf="currentUser.avatar_url"
-          [src]="currentUser.avatar_url"
-          [alt]="currentUser.full_name"
-        />
+        <img *ngIf="currentUser.avatar_url" [src]="currentUser.avatar_url" [alt]="currentUser.full_name" />
         <div *ngIf="!currentUser.avatar_url" class="avatar-placeholder">
           {{ currentUser.full_name.charAt(0).toUpperCase() }}
         </div>
@@ -87,8 +66,3 @@
     </button>
   </div>
 </div>
-
-
-
-
-
