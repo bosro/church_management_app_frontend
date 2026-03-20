@@ -586,3 +586,496 @@
     padding: 1rem;
   }
 }
+
+
+
+// ── Tab shared utilities ──────────────────────────────────────────────────────
+
+.tab-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  gap: 1rem;
+  background: white;
+  border-radius: 12px;
+
+  p {
+    font-size: 0.9375rem;
+    color: #6B7280;
+    margin: 0;
+  }
+}
+
+.tab-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.tab-stat-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: white;
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+
+  .tab-stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    i {
+      font-size: 1.5rem;
+    }
+  }
+
+  .tab-stat-label {
+    font-size: 0.8125rem;
+    color: #6B7280;
+    margin: 0 0 0.25rem 0;
+  }
+
+  .tab-stat-value {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #111827;
+    margin: 0;
+  }
+}
+
+.tab-table-card {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 1.5rem;
+}
+
+.tab-table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #E5E7EB;
+
+  h3 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #111827;
+    margin: 0;
+
+    i {
+      font-size: 1.125rem;
+      color: #5B21B6;
+    }
+  }
+
+  .record-count {
+    font-size: 0.8125rem;
+    color: #6B7280;
+    background: #F3F4F6;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-weight: 600;
+  }
+}
+
+.detail-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+
+  thead {
+    background: #F9FAFB;
+    border-bottom: 1px solid #E5E7EB;
+
+    th {
+      padding: 0.875rem 1.25rem;
+      text-align: left;
+      font-weight: 700;
+      color: #374151;
+      font-size: 0.8125rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      white-space: nowrap;
+    }
+  }
+
+  tbody tr {
+    border-bottom: 1px solid #F3F4F6;
+    transition: background 0.15s;
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    &:hover {
+      background: #F9FAFB;
+    }
+
+    td {
+      padding: 0.875rem 1.25rem;
+      color: #374151;
+      vertical-align: middle;
+
+      &.fw-600 {
+        font-weight: 600;
+        color: #111827;
+      }
+
+      &.amount-cell {
+        font-weight: 700;
+        color: #059669;
+      }
+
+      &.ref-cell {
+        font-family: 'Courier New', monospace;
+        font-size: 0.8125rem;
+        color: #6B7280;
+      }
+    }
+  }
+}
+
+.type-badge {
+  display: inline-block;
+  padding: 0.25rem 0.625rem;
+  background: #F5F3FF;
+  color: #5B21B6;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.tab-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #E5E7EB;
+
+  .pagination-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 1rem;
+    background: white;
+    border: 1px solid #E5E7EB;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'Nunito Sans', sans-serif;
+
+    &:hover:not(:disabled) {
+      background: #F5F3FF;
+      border-color: #5B21B6;
+      color: #5B21B6;
+    }
+
+    &:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+  }
+
+  .page-info {
+    font-size: 0.875rem;
+    color: #6B7280;
+  }
+}
+
+// ── Giving — Pledges ──────────────────────────────────────────────────────────
+
+.pledges-list {
+  padding: 0.75rem 1.5rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.pledge-item {
+  background: #F9FAFB;
+  border: 1px solid #E5E7EB;
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+}
+
+.pledge-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.75rem;
+  gap: 1rem;
+
+  .pledge-left {
+    .pledge-category {
+      font-size: 0.9375rem;
+      font-weight: 700;
+      color: #111827;
+      margin: 0 0 0.2rem 0;
+    }
+
+    .pledge-dates {
+      font-size: 0.8125rem;
+      color: #6B7280;
+      margin: 0;
+    }
+  }
+
+  .pledge-right {
+    text-align: right;
+    flex-shrink: 0;
+
+    .pledge-status {
+      display: inline-block;
+      padding: 0.2rem 0.625rem;
+      border-radius: 10px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      margin-bottom: 0.375rem;
+
+      &.fulfilled {
+        background: #D1FAE5;
+        color: #059669;
+      }
+
+      &.pending {
+        background: #FEF3C7;
+        color: #D97706;
+      }
+    }
+
+    .pledge-amounts {
+      font-size: 0.9375rem;
+      font-weight: 700;
+      color: #111827;
+      margin: 0;
+
+      .pledge-total {
+        font-weight: 500;
+        color: #6B7280;
+      }
+    }
+  }
+}
+
+.pledge-progress-bar {
+  height: 6px;
+  background: #E5E7EB;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 0.375rem;
+
+  .pledge-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #5B21B6, #7C3AED);
+    border-radius: 3px;
+    transition: width 0.4s ease;
+  }
+}
+
+.pledge-percent {
+  font-size: 0.75rem;
+  color: #9CA3AF;
+  margin: 0;
+}
+
+// ── Ministries ────────────────────────────────────────────────────────────────
+
+.ministries-section {
+  margin-bottom: 2rem;
+}
+
+.section-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+
+  .section-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+
+    &.active {
+      background: #D1FAE5;
+      color: #059669;
+    }
+
+    &.inactive {
+      background: #F3F4F6;
+      color: #6B7280;
+    }
+  }
+
+  .section-count {
+    font-size: 0.875rem;
+    color: #9CA3AF;
+    font-weight: 600;
+  }
+}
+
+.ministry-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 1.25rem;
+}
+
+.ministry-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 1px solid #E5E7EB;
+  transition: box-shadow 0.2s, transform 0.2s;
+
+  &:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
+  }
+
+  &--inactive {
+    opacity: 0.65;
+
+    &:hover {
+      box-shadow: none;
+      transform: none;
+    }
+  }
+}
+
+.ministry-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.875rem;
+  margin-bottom: 0.875rem;
+
+  .ministry-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #F5F3FF, #EDE9FE);
+    flex-shrink: 0;
+
+    i {
+      font-size: 1.375rem;
+      color: #5B21B6;
+    }
+
+    &--inactive {
+      background: #F3F4F6;
+
+      i {
+        color: #9CA3AF;
+      }
+    }
+  }
+
+  .ministry-title {
+    flex: 1;
+
+    h4 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #111827;
+      margin: 0 0 0.25rem 0;
+    }
+
+    .ministry-category {
+      font-size: 0.75rem;
+      color: #6B7280;
+      font-weight: 500;
+    }
+  }
+
+  .ministry-role {
+    padding: 0.25rem 0.625rem;
+    background: #F5F3FF;
+    color: #5B21B6;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    flex-shrink: 0;
+
+    &--inactive {
+      background: #F3F4F6;
+      color: #6B7280;
+    }
+  }
+}
+
+.ministry-desc {
+  font-size: 0.875rem;
+  color: #6B7280;
+  margin: 0 0 0.875rem 0;
+  line-height: 1.5;
+}
+
+.ministry-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+
+  .meta-item {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.8125rem;
+    color: #6B7280;
+
+    i {
+      font-size: 0.9375rem;
+      color: #9CA3AF;
+    }
+  }
+}
+
+// ── Responsive additions ──────────────────────────────────────────────────────
+
+@media (max-width: 768px) {
+  .tab-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .ministry-cards-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pledge-top {
+    flex-direction: column;
+    gap: 0.5rem;
+
+    .pledge-right {
+      text-align: left;
+    }
+  }
+
+  .detail-table thead th,
+  .detail-table tbody td {
+    padding: 0.75rem 0.875rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .tab-stats-grid {
+    grid-template-columns: 1fr;
+  }
+}

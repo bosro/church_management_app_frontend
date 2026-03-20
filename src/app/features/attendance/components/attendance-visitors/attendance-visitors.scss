@@ -1,0 +1,119 @@
+.dashboard-layout { display: flex; min-height: 100vh; background: #F9FAFB; }
+.dashboard-content {
+  margin-left: 280px; flex: 1; display: flex; flex-direction: column;
+  min-width: 0; width: calc(100% - 280px);
+  @media (max-width: 768px) { margin-left: 0; width: 100%; }
+}
+.dashboard-body { flex: 1; padding: 2rem; @media (max-width: 768px) { padding: 1rem; } }
+.visitors-container { max-width: 1400px; margin: 0 auto; }
+
+.btn-back {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  padding: 0.625rem 1rem; background: white; color: #374151;
+  border: 1px solid #E5E7EB; border-radius: 8px; font-size: 0.9375rem;
+  font-weight: 600; cursor: pointer; transition: all 0.2s; margin-bottom: 1.5rem;
+  font-family: 'Nunito Sans', sans-serif;
+  i { font-size: 1.125rem; }
+  &:hover { background: #F9FAFB; border-color: #D1D5DB; }
+}
+
+.page-header {
+  margin-bottom: 2rem;
+  h1 { font-size: 2rem; font-weight: 800; color: #111827; margin: 0 0 0.5rem 0; }
+  .subtitle { font-size: 0.9375rem; color: #6B7280; margin: 0; }
+}
+
+.error-alert {
+  display: flex; align-items: center; gap: 0.75rem; padding: 1rem 1.25rem;
+  background: #FEE2E2; border: 1px solid #FCA5A5; border-radius: 8px; margin-bottom: 1.5rem;
+  i { font-size: 1.25rem; color: #DC2626; }
+  span { font-size: 0.9375rem; color: #991B1B; font-weight: 500; }
+}
+
+.loading-container {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; padding: 4rem 0; gap: 1rem;
+  p { color: #6B7280; margin: 0; }
+}
+
+.visitors-table-card {
+  background: white; border-radius: 12px; overflow: hidden;
+}
+
+.table-wrapper { overflow-x: auto; }
+
+.visitors-table {
+  width: 100%; border-collapse: collapse; font-size: 0.9375rem;
+
+  thead {
+    background: #F9FAFB; border-bottom: 1px solid #E5E7EB;
+    th {
+      padding: 1rem 1.25rem; text-align: left; font-weight: 700;
+      color: #374151; font-size: 0.8125rem; text-transform: uppercase;
+      letter-spacing: 0.05em; white-space: nowrap;
+    }
+  }
+
+  tbody .visitor-row {
+    border-bottom: 1px solid #F3F4F6;
+    &:last-child { border-bottom: none; }
+    &:hover { background: #F9FAFB; }
+    td { padding: 1rem 1.25rem; color: #374151; vertical-align: middle; }
+  }
+
+  .empty-state {
+    text-align: center; padding: 4rem 1rem;
+    i { font-size: 3rem; color: #D1D5DB; display: block; margin-bottom: 1rem; }
+    p { color: #6B7280; margin: 0; }
+  }
+}
+
+.visitor-cell {
+  display: flex; align-items: center; gap: 0.875rem;
+  .visitor-avatar {
+    width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.875rem; font-weight: 700; color: #5B21B6;
+    background: linear-gradient(135deg, #DDD6FE, #C4B5FD);
+  }
+  .visitor-name { font-weight: 600; color: #111827; margin: 0 0 0.2rem 0; }
+  .visitor-ref { font-size: 0.8125rem; color: #9CA3AF; margin: 0; }
+}
+
+.contact-info {
+  p {
+    display: flex; align-items: center; gap: 0.375rem;
+    font-size: 0.875rem; color: #6B7280; margin: 0.2rem 0;
+    i { font-size: 0.9375rem; color: #9CA3AF; }
+  }
+  .no-contact { color: #D1D5DB; }
+}
+
+.visit-count {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; background: #F5F3FF; color: #5B21B6;
+  border-radius: 50%; font-weight: 700; font-size: 0.875rem;
+}
+
+.status-badge {
+  display: inline-flex; align-items: center; padding: 0.375rem 0.875rem;
+  border-radius: 20px; font-size: 0.75rem; font-weight: 600;
+  &.active { background: #FEF3C7; color: #D97706; }
+  &.converted { background: #D1FAE5; color: #059669; }
+}
+
+.pagination {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 1.25rem 1.5rem; border-top: 1px solid #E5E7EB;
+
+  .pagination-btn {
+    display: flex; align-items: center; gap: 0.5rem; padding: 0.625rem 1rem;
+    background: white; border: 1px solid #E5E7EB; border-radius: 8px;
+    font-size: 0.9375rem; font-weight: 600; color: #374151; cursor: pointer;
+    transition: all 0.2s; font-family: 'Nunito Sans', sans-serif;
+    &:hover:not(:disabled) { background: #F5F3FF; border-color: #5B21B6; color: #5B21B6; }
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
+  }
+
+  .page-info { font-size: 0.875rem; color: #6B7280; }
+}

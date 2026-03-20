@@ -1,0 +1,100 @@
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+  <div class="dashboard-content">
+    <app-header></app-header>
+    <div class="dashboard-body">
+      <div class="visitors-container">
+
+        <button class="btn-back" (click)="goBack()">
+          <i class="ri-arrow-left-line"></i>
+          <span>Back to Attendance</span>
+        </button>
+
+        <div class="page-header">
+          <div class="header-left">
+            <h1>Visitors</h1>
+            <p class="subtitle">{{ totalVisitors }} visitor{{ totalVisitors !== 1 ? 's' : '' }} recorded</p>
+          </div>
+        </div>
+
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i>
+          <span>{{ errorMessage }}</span>
+        </div>
+
+        <div *ngIf="loading" class="loading-container">
+          <div class="spinner"></div>
+          <p>Loading visitors...</p>
+        </div>
+
+        <div *ngIf="!loading" class="visitors-table-card">
+          <div class="table-wrapper">
+            <table class="visitors-table">
+              <thead>
+                <tr>
+                  <th>Visitor</th>
+                  <th>Contact</th>
+                  <th>First Visit</th>
+                  <th>Last Visit</th>
+                  <th>Visits</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let visitor of visitors" class="visitor-row">
+                  <td>
+                    <div class="visitor-cell">
+                      <div class="visitor-avatar">{{ getVisitorInitials(visitor) }}</div>
+                      <div class="visitor-info">
+                        <p class="visitor-name">{{ getFullName(visitor) }}</p>
+                        <p class="visitor-ref" *ngIf="visitor.referred_by">
+                          Referred by {{ visitor.referred_by }}
+                        </p>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="contact-info">
+                      <p *ngIf="visitor.phone"><i class="ri-phone-line"></i> {{ visitor.phone }}</p>
+                      <p *ngIf="visitor.email"><i class="ri-mail-line"></i> {{ visitor.email }}</p>
+                      <p *ngIf="!visitor.phone && !visitor.email" class="no-contact">—</p>
+                    </div>
+                  </td>
+                  <td>{{ visitor.first_visit_date | date:'MMM d, y' }}</td>
+                  <td>{{ visitor.last_visit_date ? (visitor.last_visit_date | date:'MMM d, y') : '—' }}</td>
+                  <td>
+                    <span class="visit-count">{{ visitor.visit_count }}</span>
+                  </td>
+                  <td>
+                    <span class="status-badge" [class.converted]="visitor.is_converted_to_member"
+                      [class.active]="!visitor.is_converted_to_member">
+                      {{ visitor.is_converted_to_member ? 'Converted' : 'Visitor' }}
+                    </span>
+                  </td>
+                </tr>
+
+                <tr *ngIf="visitors.length === 0">
+                  <td colspan="6" class="empty-state">
+                    <i class="ri-user-follow-line"></i>
+                    <p>No visitors recorded yet</p>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="pagination" *ngIf="totalPages > 1">
+            <button class="pagination-btn" [disabled]="currentPage === 1" (click)="previousPage()">
+              <i class="ri-arrow-left-s-line"></i> Previous
+            </button>
+            <span class="page-info">Page {{ currentPage }} of {{ totalPages }}</span>
+            <button class="pagination-btn" [disabled]="currentPage === totalPages" (click)="nextPage()">
+              Next <i class="ri-arrow-right-s-line"></i>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>

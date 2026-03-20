@@ -48,7 +48,6 @@ export interface MemberSearchFilters {
   max_age?: number;
 }
 
-// Additional interfaces for member management
 export interface MemberStatistics {
   total_members: number;
   active_members: number;
@@ -90,7 +89,7 @@ export interface MemberCreateInput {
   is_new_convert?: boolean;
   is_visitor?: boolean;
   notes?: string;
-  branch_id?: string
+  branch_id?: string;
 }
 
 export interface MemberUpdateInput {
@@ -121,14 +120,12 @@ export interface MemberUpdateInput {
   notes?: string;
 }
 
-// Helper type for member list display
 export interface MemberListItem extends Member {
   full_name?: string;
   initials?: string;
   age?: number;
 }
 
-// For pagination results
 export interface MemberListResult {
   data: Member[];
   count: number;
@@ -137,33 +134,85 @@ export interface MemberListResult {
   totalPages: number;
 }
 
-// For member attendance summary
+// ── Attendance ────────────────────────────────────────────────────────────────
+
+export interface MemberAttendanceRecord {
+  id: string;
+  attendance_event_id: string;
+  checked_in_at: string | null;
+  check_in_method: string | null;
+  notes: string | null;
+  // joined from attendance_events
+  event_name: string;
+  event_type: string;
+  event_date: string;
+  event_time: string | null;
+  location: string | null;
+}
+
+// Replaces the old MemberAttendanceSummary (which had attendance_rate/last_attended)
 export interface MemberAttendanceSummary {
   member_id: string;
   total_attendance: number;
-  attendance_rate: number;
-  last_attended?: string;
+  last_attendance: string | null;
+  attendance_last_30_days: number;
+  attendance_this_year: number;
 }
 
-// For member giving summary
+// ── Giving ────────────────────────────────────────────────────────────────────
+
+export interface MemberGivingTransaction {
+  id: string;
+  amount: number;
+  currency: string;
+  payment_method: string;
+  transaction_reference: string | null;
+  transaction_date: string;
+  fiscal_year: number | null;
+  notes: string | null;
+  created_at: string;
+  // joined from giving_categories
+  category_name: string;
+}
+
+// Replaces the old MemberGivingSummary (which had total_giving/last_giving_date at top level)
 export interface MemberGivingSummary {
-  member_id: string;
-  total_giving: number;
+  member_id?: string;
   total_transactions: number;
+  total_given: number;
   avg_transaction: number;
-  last_giving_date?: string;
+  last_giving_date: string | null;
+  first_giving_date: string | null;
 }
 
-// For member ministry involvement
-export interface MemberMinistryInvolvement {
-  member_id: string;
+export interface MemberPledge {
+  id: string;
+  pledge_amount: number;
+  amount_paid: number;
+  currency: string;
+  pledge_date: string;
+  due_date: string | null;
+  is_fulfilled: boolean;
+  notes: string | null;
+  // joined from giving_categories
+  category_name: string | null;
+}
+
+// ── Ministries ────────────────────────────────────────────────────────────────
+
+// Replaces the old MemberMinistryInvolvement
+export interface MemberMinistryAssignment {
+  id: string;
   ministry_id: string;
-  ministry_name: string;
-  role?: string;
+  role: string | null;
   joined_date: string;
   is_active: boolean;
+  // joined from ministries
+  ministry_name: string;
+  ministry_description: string | null;
+  ministry_category: string | null;
+  meeting_day: string | null;
+  meeting_time: string | null;
+  meeting_location: string | null;
+  meeting_schedule: string | null;
 }
-
-
-
-

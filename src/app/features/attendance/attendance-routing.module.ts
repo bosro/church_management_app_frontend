@@ -9,6 +9,7 @@ import { AttendanceList } from './components/attendance-list/attendance-list';
 import { RoleGuard } from '../../core/guards/role-guard';
 import { CreateEvent } from './components/create-event/create-event/create-event';
 import { CheckIn } from './components/check-in/check-in/check-in';
+import { AttendanceVisitors } from './components/attendance-visitors/attendance-visitors';
 
 const routes: Routes = [
   {
@@ -18,8 +19,14 @@ const routes: Routes = [
     data: {
       title: 'Attendance',
       breadcrumb: 'Attendance',
-      roles: ['super_admin', 'church_admin', 'pastor', 'ministry_leader', 'secretary']
-    }
+      roles: [
+        'super_admin',
+        'church_admin',
+        'pastor',
+        'ministry_leader',
+        'secretary',
+      ],
+    },
   },
   // ✅ SPECIFIC ROUTES FIRST - These must come before ':id'
   {
@@ -29,8 +36,8 @@ const routes: Routes = [
     data: {
       title: 'Create Event',
       breadcrumb: 'Create Event',
-      roles: ['super_admin', 'church_admin', 'pastor', 'ministry_leader']
-    }
+      roles: ['super_admin', 'church_admin', 'pastor', 'ministry_leader'],
+    },
   },
   {
     path: 'reports',
@@ -39,26 +46,56 @@ const routes: Routes = [
     data: {
       title: 'Attendance Reports',
       breadcrumb: 'Reports',
-      roles: ['super_admin', 'church_admin', 'pastor', 'ministry_leader', 'secretary']
-    }
+      roles: [
+        'super_admin',
+        'church_admin',
+        'pastor',
+        'ministry_leader',
+        'secretary',
+      ],
+    },
   },
- {
-  path: 'check-in',
-  component: CheckIn, // ✅ Use the new component
-  canActivate: [RoleGuard],
-  data: {
-    title: 'Check In',
-    breadcrumb: 'Check In',
-    roles: ['super_admin', 'church_admin', 'pastor', 'ministry_leader', 'usher', 'group_leader']
-  }
-},
+  {
+    path: 'check-in',
+    component: CheckIn, // ✅ Use the new component
+    canActivate: [RoleGuard],
+    data: {
+      title: 'Check In',
+      breadcrumb: 'Check In',
+      roles: [
+        'super_admin',
+        'church_admin',
+        'pastor',
+        'ministry_leader',
+        'usher',
+        'group_leader',
+      ],
+    },
+  },
+
+  {
+    path: 'visitors',
+    component: AttendanceVisitors, // we'll create this below
+    canActivate: [RoleGuard],
+    data: {
+      title: 'Visitors',
+      breadcrumb: 'Visitors',
+      roles: [
+        'super_admin',
+        'church_admin',
+        'pastor',
+        'ministry_leader',
+        'secretary',
+      ],
+    },
+  },
   {
     path: 'qr-checkin/:eventId',
     component: QrCheckin,
     data: {
       title: 'Check In',
-      breadcrumb: 'QR Check-in'
-    }
+      breadcrumb: 'QR Check-in',
+    },
   },
   // ✅ PARAMETERIZED ROUTES LAST - ':id' must come after all specific routes
   {
@@ -68,8 +105,14 @@ const routes: Routes = [
     data: {
       title: 'Event Details',
       breadcrumb: 'Details',
-      roles: ['super_admin', 'church_admin', 'pastor', 'ministry_leader', 'secretary']
-    }
+      roles: [
+        'super_admin',
+        'church_admin',
+        'pastor',
+        'ministry_leader',
+        'secretary',
+      ],
+    },
   },
   {
     path: ':id/mark',
@@ -78,13 +121,19 @@ const routes: Routes = [
     data: {
       title: 'Mark Attendance',
       breadcrumb: 'Mark Attendance',
-      roles: ['super_admin', 'church_admin', 'pastor', 'ministry_leader', 'usher']
-    }
-  }
+      roles: [
+        'super_admin',
+        'church_admin',
+        'pastor',
+        'ministry_leader',
+        'usher',
+      ],
+    },
+  },
 ];
 
 @NgModule({
   imports: [RouterModule.forChild(routes)],
-  exports: [RouterModule]
+  exports: [RouterModule],
 })
-export class AttendanceRoutingModule { }
+export class AttendanceRoutingModule {}
