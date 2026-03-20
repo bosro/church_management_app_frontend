@@ -1,4 +1,3 @@
-
 // src/app/features/auth/components/forgot-password/forgot-password.component.ts
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
@@ -25,7 +24,7 @@ export class ForgotPassword implements OnInit, OnDestroy {
   constructor(
     private fb: FormBuilder,
     private authService: AuthService,
-    private router: Router
+    private router: Router,
   ) {}
 
   ngOnInit(): void {
@@ -39,7 +38,7 @@ export class ForgotPassword implements OnInit, OnDestroy {
 
   private initForm(): void {
     this.forgotPasswordForm = this.fb.group({
-      email: ['', [Validators.required, Validators.email]]
+      email: ['', [Validators.required, Validators.email]],
     });
   }
 
@@ -54,27 +53,30 @@ export class ForgotPassword implements OnInit, OnDestroy {
 
     const { email } = this.forgotPasswordForm.value;
 
-    this.authService.resetPassword(email)
+    this.authService
+      .resetPassword(email)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
           this.loading = false;
           this.emailSent = true;
-          this.successMessage = 'Password reset link has been sent to your email!';
+          this.successMessage =
+            'Password reset link has been sent to your email!';
         },
         error: (error) => {
           this.loading = false;
-          this.errorMessage = error.message || 'Failed to send reset link. Please try again.';
-        }
+          this.errorMessage =
+            error.message || 'Failed to send reset link. Please try again.';
+        },
       });
   }
 
   goToLogin(): void {
-    this.router.navigate(['/auth/login']);
+    this.router.navigate(['/auth/signin']);
   }
 
   private markFormGroupTouched(formGroup: FormGroup): void {
-    Object.keys(formGroup.controls).forEach(key => {
+    Object.keys(formGroup.controls).forEach((key) => {
       const control = formGroup.get(key);
       control?.markAsTouched();
     });
