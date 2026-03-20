@@ -12,6 +12,7 @@ import { AttendanceDetail } from './components/attendance-detail/attendance-deta
 import { QrCodeComponent } from 'ng-qrcode';
 import { CreateEvent } from './components/create-event/create-event/create-event';
 import { CheckIn } from './components/check-in/check-in/check-in';
+import { AttendanceVisitors } from './components/attendance-visitors/attendance-visitors';
 
 @NgModule({
   declarations: [
@@ -22,6 +23,7 @@ import { CheckIn } from './components/check-in/check-in/check-in';
     CreateEvent,
     AttendanceDetail,
     CheckIn,
+    AttendanceVisitors,
   ],
   imports: [
     CommonModule,

@@ -340,36 +340,355 @@
           </div>
 
           <!-- Attendance Tab -->
-          <div *ngIf="activeTab === 'attendance'" class="attendance-tab">
-            <div class="empty-state">
-              <i class="ri-calendar-check-line"></i>
-              <h3>Attendance Records</h3>
-              <p>Attendance tracking coming soon...</p>
-              <p class="empty-hint">You'll be able to view attendance history, patterns, and statistics here.</p>
-            </div>
-          </div>
+          <!-- Attendance Tab -->
+<div *ngIf="activeTab === 'attendance'" class="attendance-tab">
+
+  <!-- Loading -->
+  <div *ngIf="loadingAttendance" class="tab-loading">
+    <div class="spinner"></div>
+    <p>Loading attendance records...</p>
+  </div>
+
+  <ng-container *ngIf="!loadingAttendance && attendanceLoaded">
+
+    <!-- Summary Cards -->
+    <div class="tab-stats-grid" *ngIf="attendanceSummary">
+      <div class="tab-stat-card">
+        <div class="tab-stat-icon" style="background:#DDD6FE;color:#7C3AED">
+          <i class="ri-calendar-check-line"></i>
+        </div>
+        <div>
+          <p class="tab-stat-label">Total Attendance</p>
+          <p class="tab-stat-value">{{ attendanceSummary.total_attendance }}</p>
+        </div>
+      </div>
+      <div class="tab-stat-card">
+        <div class="tab-stat-icon" style="background:#D1FAE5;color:#059669">
+          <i class="ri-time-line"></i>
+        </div>
+        <div>
+          <p class="tab-stat-label">Last 30 Days</p>
+          <p class="tab-stat-value">{{ attendanceSummary.attendance_last_30_days }}</p>
+        </div>
+      </div>
+      <div class="tab-stat-card">
+        <div class="tab-stat-icon" style="background:#DBEAFE;color:#3B82F6">
+          <i class="ri-calendar-2-line"></i>
+        </div>
+        <div>
+          <p class="tab-stat-label">This Year</p>
+          <p class="tab-stat-value">{{ attendanceSummary.attendance_this_year }}</p>
+        </div>
+      </div>
+      <div class="tab-stat-card">
+        <div class="tab-stat-icon" style="background:#FEF3C7;color:#F59E0B">
+          <i class="ri-history-line"></i>
+        </div>
+        <div>
+          <p class="tab-stat-label">Last Attended</p>
+          <p class="tab-stat-value">
+            {{ attendanceSummary.last_attendance
+              ? (attendanceSummary.last_attendance | date:'MMM d, y')
+              : '—' }}
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Records Table -->
+    <div class="tab-table-card" *ngIf="attendanceRecords.length > 0">
+      <div class="tab-table-header">
+        <h3><i class="ri-list-check"></i> Attendance History</h3>
+        <span class="record-count">{{ attendanceTotalCount }} record{{ attendanceTotalCount !== 1 ? 's' : '' }}</span>
+      </div>
+      <div class="table-wrapper">
+        <table class="detail-table">
+          <thead>
+            <tr>
+              <th>Event</th>
+              <th>Type</th>
+              <th>Date</th>
+              <th>Check-in Time</th>
+              <th>Method</th>
+              <th>Location</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let record of attendanceRecords">
+              <td class="fw-600">{{ record.event_name }}</td>
+              <td>
+                <span class="type-badge">{{ formatEventType(record.event_type) }}</span>
+              </td>
+              <td>{{ record.event_date | date:'MMM d, y' }}</td>
+              <td>{{ record.checked_in_at ? (record.checked_in_at | date:'h:mm a') : '—' }}</td>
+              <td class="capitalize">{{ record.check_in_method ?? '—' }}</td>
+              <td>{{ record.location ?? '—' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <!-- Pagination -->
+      <div class="tab-pagination" *ngIf="attendanceTotalPages > 1">
+        <button class="pagination-btn" [disabled]="attendancePage === 1" (click)="attendancePreviousPage()">
+          <i class="ri-arrow-left-s-line"></i> Previous
+        </button>
+        <span class="page-info">Page {{ attendancePage }} of {{ attendanceTotalPages }}</span>
+        <button class="pagination-btn" [disabled]="attendancePage === attendanceTotalPages" (click)="attendanceNextPage()">
+          Next <i class="ri-arrow-right-s-line"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Empty -->
+    <div *ngIf="attendanceRecords.length === 0" class="empty-state">
+      <i class="ri-calendar-check-line"></i>
+      <h3>No Attendance Records</h3>
+      <p>This member has no recorded attendance yet.</p>
+    </div>
+
+  </ng-container>
+</div>
 
           <!-- Giving Tab -->
-          <div *ngIf="activeTab === 'giving'" class="giving-tab">
-            <div class="empty-state">
-              <i class="ri-money-dollar-circle-line"></i>
-              <h3>Giving History</h3>
-              <p>Giving records coming soon...</p>
-              <p class="empty-hint">You'll be able to view giving history, pledges, and contribution summaries here.</p>
+          <!-- Giving Tab -->
+<div *ngIf="activeTab === 'giving'" class="giving-tab">
+
+  <div *ngIf="loadingGiving" class="tab-loading">
+    <div class="spinner"></div>
+    <p>Loading giving records...</p>
+  </div>
+
+  <ng-container *ngIf="!loadingGiving && givingLoaded">
+
+    <!-- Summary Cards -->
+    <div class="tab-stats-grid" *ngIf="givingSummary">
+      <div class="tab-stat-card">
+        <div class="tab-stat-icon" style="background:#D1FAE5;color:#059669">
+          <i class="ri-money-dollar-circle-line"></i>
+        </div>
+        <div>
+          <p class="tab-stat-label">Total Given</p>
+          <p class="tab-stat-value">{{ formatCurrency(givingSummary.total_given) }}</p>
+        </div>
+      </div>
+      <div class="tab-stat-card">
+        <div class="tab-stat-icon" style="background:#DDD6FE;color:#7C3AED">
+          <i class="ri-receipt-line"></i>
+        </div>
+        <div>
+          <p class="tab-stat-label">Transactions</p>
+          <p class="tab-stat-value">{{ givingSummary.total_transactions }}</p>
+        </div>
+      </div>
+      <div class="tab-stat-card">
+        <div class="tab-stat-icon" style="background:#DBEAFE;color:#3B82F6">
+          <i class="ri-bar-chart-line"></i>
+        </div>
+        <div>
+          <p class="tab-stat-label">Average Gift</p>
+          <p class="tab-stat-value">{{ formatCurrency(givingSummary.avg_transaction) }}</p>
+        </div>
+      </div>
+      <div class="tab-stat-card">
+        <div class="tab-stat-icon" style="background:#FEF3C7;color:#F59E0B">
+          <i class="ri-calendar-line"></i>
+        </div>
+        <div>
+          <p class="tab-stat-label">Last Gift</p>
+          <p class="tab-stat-value">
+            {{ givingSummary.last_giving_date
+              ? (givingSummary.last_giving_date | date:'MMM d, y')
+              : '—' }}
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pledges -->
+    <div class="tab-table-card" *ngIf="memberPledges.length > 0">
+      <div class="tab-table-header">
+        <h3><i class="ri-hand-heart-line"></i> Pledges</h3>
+        <span class="record-count">{{ memberPledges.length }} pledge{{ memberPledges.length !== 1 ? 's' : '' }}</span>
+      </div>
+      <div class="pledges-list">
+        <div *ngFor="let pledge of memberPledges" class="pledge-item">
+          <div class="pledge-top">
+            <div class="pledge-left">
+              <p class="pledge-category">{{ pledge.category_name ?? 'General' }}</p>
+              <p class="pledge-dates">
+                Pledged {{ pledge.pledge_date | date:'MMM d, y' }}
+                <span *ngIf="pledge.due_date"> · Due {{ pledge.due_date | date:'MMM d, y' }}</span>
+              </p>
+            </div>
+            <div class="pledge-right">
+              <span class="pledge-status" [class.fulfilled]="pledge.is_fulfilled" [class.pending]="!pledge.is_fulfilled">
+                {{ pledge.is_fulfilled ? 'Fulfilled' : 'Pending' }}
+              </span>
+              <p class="pledge-amounts">
+                {{ formatCurrency(pledge.amount_paid, pledge.currency) }}
+                <span class="pledge-total"> / {{ formatCurrency(pledge.pledge_amount, pledge.currency) }}</span>
+              </p>
             </div>
           </div>
+          <div class="pledge-progress-bar">
+            <div class="pledge-progress-fill" [style.width.%]="getPledgeProgress(pledge)"></div>
+          </div>
+          <p class="pledge-percent">{{ getPledgeProgress(pledge) }}% fulfilled</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Transactions Table -->
+    <div class="tab-table-card" *ngIf="givingTransactions.length > 0">
+      <div class="tab-table-header">
+        <h3><i class="ri-list-check"></i> Transaction History</h3>
+        <span class="record-count">{{ givingTotalCount }} transaction{{ givingTotalCount !== 1 ? 's' : '' }}</span>
+      </div>
+      <div class="table-wrapper">
+        <table class="detail-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Category</th>
+              <th>Amount</th>
+              <th>Method</th>
+              <th>Reference</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let txn of givingTransactions">
+              <td>{{ txn.transaction_date | date:'MMM d, y' }}</td>
+              <td>{{ txn.category_name }}</td>
+              <td class="amount-cell">{{ formatCurrency(txn.amount, txn.currency) }}</td>
+              <td>{{ formatPaymentMethod(txn.payment_method) }}</td>
+              <td class="ref-cell">{{ txn.transaction_reference ?? '—' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="tab-pagination" *ngIf="givingTotalPages > 1">
+        <button class="pagination-btn" [disabled]="givingPage === 1" (click)="givingPreviousPage()">
+          <i class="ri-arrow-left-s-line"></i> Previous
+        </button>
+        <span class="page-info">Page {{ givingPage }} of {{ givingTotalPages }}</span>
+        <button class="pagination-btn" [disabled]="givingPage === givingTotalPages" (click)="givingNextPage()">
+          Next <i class="ri-arrow-right-s-line"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Empty -->
+    <div *ngIf="givingTransactions.length === 0 && memberPledges.length === 0" class="empty-state">
+      <i class="ri-money-dollar-circle-line"></i>
+      <h3>No Giving Records</h3>
+      <p>This member has no recorded giving or pledges yet.</p>
+    </div>
+
+  </ng-container>
+</div>
 
           <!-- Ministries Tab -->
-          <div *ngIf="activeTab === 'ministries'" class="ministries-tab">
-            <div class="empty-state">
+          <!-- Ministries Tab -->
+<div *ngIf="activeTab === 'ministries'" class="ministries-tab">
+
+  <div *ngIf="loadingMinistries" class="tab-loading">
+    <div class="spinner"></div>
+    <p>Loading ministry assignments...</p>
+  </div>
+
+  <ng-container *ngIf="!loadingMinistries && ministriesLoaded">
+
+    <!-- Active Ministries -->
+    <div *ngIf="getActiveMinistries().length > 0" class="ministries-section">
+      <div class="section-label">
+        <span class="section-badge active">Active</span>
+        <span class="section-count">{{ getActiveMinistries().length }}</span>
+      </div>
+      <div class="ministry-cards-grid">
+        <div *ngFor="let assignment of getActiveMinistries()" class="ministry-card">
+          <div class="ministry-card-header">
+            <div class="ministry-icon">
               <i class="ri-team-line"></i>
-              <h3>Ministry Involvement</h3>
-              <p>Ministry assignments coming soon...</p>
-              <p class="empty-hint">You'll be able to view and manage ministry memberships here.</p>
             </div>
+            <div class="ministry-title">
+              <h4>{{ assignment.ministry_name }}</h4>
+              <span *ngIf="assignment.ministry_category" class="ministry-category">
+                {{ assignment.ministry_category }}
+              </span>
+            </div>
+            <span *ngIf="assignment.role" class="ministry-role">{{ assignment.role }}</span>
           </div>
+
+          <p *ngIf="assignment.ministry_description" class="ministry-desc">
+            {{ assignment.ministry_description }}
+          </p>
+
+          <div class="ministry-meta">
+            <span *ngIf="assignment.meeting_day || assignment.meeting_schedule" class="meta-item">
+              <i class="ri-calendar-line"></i>
+              {{ assignment.meeting_schedule ?? assignment.meeting_day }}
+            </span>
+            <span *ngIf="assignment.meeting_time" class="meta-item">
+              <i class="ri-time-line"></i>
+              {{ assignment.meeting_time }}
+            </span>
+            <span *ngIf="assignment.meeting_location" class="meta-item">
+              <i class="ri-map-pin-line"></i>
+              {{ assignment.meeting_location }}
+            </span>
+            <span class="meta-item">
+              <i class="ri-calendar-check-line"></i>
+              Joined {{ assignment.joined_date | date:'MMM d, y' }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Inactive Ministries -->
+    <div *ngIf="getInactiveMinistries().length > 0" class="ministries-section">
+      <div class="section-label">
+        <span class="section-badge inactive">Past</span>
+        <span class="section-count">{{ getInactiveMinistries().length }}</span>
+      </div>
+      <div class="ministry-cards-grid">
+        <div *ngFor="let assignment of getInactiveMinistries()" class="ministry-card ministry-card--inactive">
+          <div class="ministry-card-header">
+            <div class="ministry-icon ministry-icon--inactive">
+              <i class="ri-team-line"></i>
+            </div>
+            <div class="ministry-title">
+              <h4>{{ assignment.ministry_name }}</h4>
+              <span *ngIf="assignment.ministry_category" class="ministry-category">
+                {{ assignment.ministry_category }}
+              </span>
+            </div>
+            <span *ngIf="assignment.role" class="ministry-role ministry-role--inactive">{{ assignment.role }}</span>
+          </div>
+          <div class="ministry-meta">
+            <span class="meta-item">
+              <i class="ri-calendar-check-line"></i>
+              Joined {{ assignment.joined_date | date:'MMM d, y' }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty -->
+    <div *ngIf="ministryAssignments.length === 0" class="empty-state">
+      <i class="ri-team-line"></i>
+      <h3>No Ministry Assignments</h3>
+      <p>This member is not assigned to any ministry yet.</p>
+    </div>
+
+  </ng-container>
+</div>
         </div>
       </div>
     </div>
   </div>
 </div>
+
+
+
