@@ -107,9 +107,9 @@ export class Settings implements OnInit, OnDestroy {
 
     // ✅ FIX: Set default active tab based on role
     if (this.isMember) {
-      this.activeTab = 'profile'; // Member's default tab
-    } else if (this.isAdmin) {
-      this.activeTab = 'general'; // Admin's default tab
+      this.activeTab = 'profile';
+    } else {
+      this.activeTab = 'general';
     }
 
     this.loadProfileData();
@@ -122,7 +122,14 @@ export class Settings implements OnInit, OnDestroy {
   }
 
   loadSubscriptionStatus(): void {
-    if (this.isMember) return; // Members don't see subscription info
+    if (this.isMember) return;
+
+    // Super admins have no church — subscription not applicable
+    const churchId = this.authService.getChurchId();
+    if (!churchId) {
+      this.loadingSubscription = false;
+      return;
+    }
 
     this.loadingSubscription = true;
     this.subscriptionService.loadStatus().then(() => {
@@ -136,11 +143,13 @@ export class Settings implements OnInit, OnDestroy {
       if (profile) {
         this.userRole = profile.role;
         this.isMember = profile.role === 'member';
-        this.isAdmin = ['church_admin', 'pastor', 'finance_officer'].includes(
-          profile.role,
-        );
+        this.isAdmin = [
+          'super_admin',
+          'church_admin',
+          'pastor',
+          'finance_officer',
+        ].includes(profile.role);
 
-        // ✅ FIX: Set active tab immediately when role is known
         if (this.isMember) {
           this.activeTab = 'profile';
         } else if (this.isAdmin) {

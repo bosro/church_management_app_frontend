@@ -62,10 +62,8 @@ export class SubscriptionService {
     private authService: AuthService,
   ) {}
 
-  private getChurchId(): string {
-    const id = this.authService.getChurchId();
-    if (!id) throw new Error('Church ID not found. Please log in again.');
-    return id;
+  private getChurchId(): string | null {
+    return this.authService.getChurchId() || null;
   }
 
   // ─── Status Management ───────────────────────────────────────────
@@ -73,6 +71,9 @@ export class SubscriptionService {
   async loadStatus(): Promise<void> {
     try {
       const churchId = this.getChurchId();
+
+      // Super admins have no church_id — subscription status not applicable
+      if (!churchId) return;
 
       const [plan, usage, churchData] = await Promise.all([
         this.getCurrentPlan(churchId),
@@ -123,9 +124,26 @@ export class SubscriptionService {
       | 'events'
       | 'ministries',
   ): Observable<QuotaCheck> {
+    const churchId = this.getChurchId();
+
+    // Super admins bypass all quota checks
+    if (!churchId) {
+      return from([
+        {
+          allowed: true,
+          current: 0,
+          limit: null,
+          tier: 'super_admin',
+          is_unlimited: true,
+          is_expired: false,
+          upgrade_required: false,
+        } as QuotaCheck,
+      ]);
+    }
+
     return from(
       this.supabase.client.rpc('check_quota', {
-        p_church_id: this.getChurchId(),
+        p_church_id: churchId,
         p_resource: resource,
       }),
     ).pipe(
@@ -244,7 +262,8 @@ export class SubscriptionService {
     ).pipe(
       map(({ error }) => {
         if (error) throw new Error(error.message);
-        if (churchId === this.authService.getChurchId()) {
+        const myChurchId = this.getChurchId();
+        if (myChurchId && churchId === myChurchId) {
           this.loadStatus();
         }
       }),
