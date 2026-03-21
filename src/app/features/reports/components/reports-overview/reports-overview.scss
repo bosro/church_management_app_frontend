@@ -1,9 +1,13 @@
+// NOTE: .dashboard-layout, .dashboard-content, .dashboard-body are defined
+// in the global styles.scss — do NOT duplicate them here.
+
 .reports-overview-container {
   padding: 24px;
   max-width: 1400px;
   margin: 0 auto;
 }
 
+// ─── Page Header ──────────────────────────────────────────
 .page-header {
   display: flex;
   justify-content: space-between;
@@ -12,8 +16,27 @@
   flex-wrap: wrap;
   gap: 16px;
 
-  h1 { font-size: 24px; font-weight: 700; color: #111827; margin: 0; }
-  .subtitle { color: #6B7280; margin: 4px 0 0; }
+  .header-left {
+    h1 {
+      font-size: 24px;
+      font-weight: 700;
+      color: #111827;
+      margin: 0;
+    }
+    .subtitle {
+      color: #6b7280;
+      margin: 4px 0 0;
+      font-size: 14px;
+    }
+  }
+
+  // Right side: filters + export button grouped together
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
 
   .header-filters {
     display: flex;
@@ -21,15 +44,89 @@
 
     .filter-select {
       padding: 8px 12px;
-      border: 1px solid #E5E7EB;
+      border: 1px solid #e5e7eb;
       border-radius: 8px;
       font-size: 14px;
       background: white;
       cursor: pointer;
+      font-family: "Nunito Sans", sans-serif;
+      transition: all 0.2s;
+
+      &:focus {
+        outline: none;
+        border-color: #4f46e5;
+      }
     }
   }
 }
 
+// ─── Export Button ────────────────────────────────────────
+.btn-export {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #4f46e5;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  font-family: "Nunito Sans", sans-serif;
+
+  i {
+    font-size: 16px;
+  }
+
+  &:hover:not(:disabled) {
+    background: #4338ca;
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+}
+
+// ─── Error ────────────────────────────────────────────────
+.error-alert {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  color: #dc2626;
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+
+// ─── Loading ──────────────────────────────────────────────
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 60px;
+  gap: 16px;
+  color: #6b7280;
+
+  .spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid #e5e7eb;
+    border-top-color: #6366f1;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+}
+
+// ─── Stats Grid ───────────────────────────────────────────
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -44,8 +141,14 @@
   display: flex;
   align-items: center;
   gap: 16px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-  border: 1px solid #F3F4F6;
+  border: 1px solid #f3f4f6;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: #e5e7eb;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  }
 
   .stat-icon {
     width: 48px;
@@ -58,18 +161,31 @@
     flex-shrink: 0;
   }
 
-  .stat-label { font-size: 13px; color: #6B7280; margin: 0 0 4px; }
-  .stat-value { font-size: 22px; font-weight: 700; color: #111827; margin: 0; }
-  .stat-meta { font-size: 12px; color: #9CA3AF; margin: 2px 0 0; }
+  .stat-label {
+    font-size: 13px;
+    color: #6b7280;
+    margin: 0 0 4px;
+  }
+  .stat-value {
+    font-size: 22px;
+    font-weight: 700;
+    color: #111827;
+    margin: 0;
+  }
+  .stat-meta {
+    font-size: 12px;
+    color: #9ca3af;
+    margin: 2px 0 0;
+  }
 }
 
+// ─── Progress Card ────────────────────────────────────────
 .progress-card {
   background: white;
   border-radius: 12px;
   padding: 20px 24px;
   margin-bottom: 24px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-  border: 1px solid #F3F4F6;
+  border: 1px solid #f3f4f6;
 
   .progress-header {
     display: flex;
@@ -77,12 +193,21 @@
     align-items: center;
     margin-bottom: 12px;
 
-    h3 { font-size: 15px; font-weight: 600; color: #111827; margin: 0; }
-    .progress-percent { font-size: 18px; font-weight: 700; color: #10B981; }
+    h3 {
+      font-size: 15px;
+      font-weight: 600;
+      color: #111827;
+      margin: 0;
+    }
+    .progress-percent {
+      font-size: 18px;
+      font-weight: 700;
+      color: #10b981;
+    }
   }
 
   .progress-bar-container {
-    background: #F3F4F6;
+    background: #f3f4f6;
     border-radius: 100px;
     height: 12px;
     overflow: hidden;
@@ -90,36 +215,46 @@
 
     .progress-bar {
       height: 100%;
-      background: linear-gradient(90deg, #10B981, #34D399);
+      background: linear-gradient(90deg, #10b981, #34d399);
       border-radius: 100px;
       transition: width 0.5s ease;
+      min-width: 4px;
     }
   }
 
   .progress-legend {
     display: flex;
     gap: 20px;
+    flex-wrap: wrap;
 
     .legend-item {
       display: flex;
       align-items: center;
       gap: 6px;
       font-size: 13px;
-      color: #6B7280;
+      color: #6b7280;
 
       .dot {
         width: 8px;
         height: 8px;
         border-radius: 50%;
+        flex-shrink: 0;
       }
 
-      &.paid .dot { background: #10B981; }
-      &.partial .dot { background: #F59E0B; }
-      &.unpaid .dot { background: #EF4444; }
+      &.paid .dot {
+        background: #10b981;
+      }
+      &.partial .dot {
+        background: #f59e0b;
+      }
+      &.unpaid .dot {
+        background: #ef4444;
+      }
     }
   }
 }
 
+// ─── Quick Actions ────────────────────────────────────────
 .section-title {
   font-size: 18px;
   font-weight: 600;
@@ -137,8 +272,7 @@
   background: white;
   border-radius: 12px;
   padding: 20px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-  border: 1px solid #F3F4F6;
+  border: 1px solid #f3f4f6;
 
   .group-title {
     display: flex;
@@ -149,7 +283,10 @@
     color: #374151;
     margin: 0 0 16px;
 
-    i { color: #6366F1; font-size: 18px; }
+    i {
+      color: #6366f1;
+      font-size: 18px;
+    }
   }
 
   .action-cards {
@@ -164,54 +301,68 @@
     gap: 12px;
     padding: 12px 16px;
     border-radius: 8px;
-    background: #F9FAFB;
+    background: #f9fafb;
     cursor: pointer;
     transition: all 0.2s;
     color: #374151;
     font-size: 14px;
     font-weight: 500;
 
-    i { font-size: 18px; color: #6366F1; }
+    i {
+      font-size: 18px;
+      color: #6366f1;
+    }
 
     &:hover {
-      background: #EEF2FF;
-      color: #4F46E5;
+      background: #eef2ff;
+      color: #4f46e5;
       transform: translateX(4px);
+
+      i {
+        color: #4f46e5;
+      }
     }
   }
 }
 
-.loading-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 60px;
-  gap: 16px;
-  color: #6B7280;
-
-  .spinner {
-    width: 32px;
-    height: 32px;
-    border: 3px solid #E5E7EB;
-    border-top-color: #6366F1;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
+// ─── Animation ────────────────────────────────────────────
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
+// ─── Responsive ───────────────────────────────────────────
+@media (max-width: 768px) {
+  .reports-overview-container {
+    padding: 16px;
+  }
 
-.error-alert {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 16px;
-  background: #FEF2F2;
-  border: 1px solid #FECACA;
-  border-radius: 8px;
-  color: #DC2626;
-  margin-bottom: 20px;
-  font-size: 14px;
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+
+    .header-right {
+      width: 100%;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .header-filters {
+      flex-wrap: wrap;
+      .filter-select {
+        flex: 1;
+        min-width: 130px;
+      }
+    }
+
+    .btn-export {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }

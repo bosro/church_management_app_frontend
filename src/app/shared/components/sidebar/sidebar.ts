@@ -16,7 +16,7 @@ interface MenuItem {
   children?: MenuItem[];
   permission?: string;
   badge?: number;
-  excludeRoles?: string[]; // ✅ NEW: Roles to exclude
+  excludeRoles?: string[];
   featureFlag?: string;
 }
 
@@ -36,7 +36,6 @@ export class Sidebar implements OnInit {
       label: 'Overview',
       route: '/main/dashboard',
       active: true,
-      // No role restriction — all authenticated users see dashboard
     },
     {
       icon: 'ri-admin-line',
@@ -79,7 +78,7 @@ export class Sidebar implements OnInit {
       label: 'Members',
       route: '/main/members',
       active: false,
-      roles: ['church_admin', 'pastor', 'group_leader', 'ministry_leader'], // ADD
+      roles: ['church_admin', 'pastor', 'group_leader', 'ministry_leader'],
       permission: 'members.view',
       excludeRoles: ['super_admin', 'member'],
     },
@@ -88,7 +87,7 @@ export class Sidebar implements OnInit {
       label: 'Attendance',
       route: '/main/attendance',
       active: false,
-      roles: ['church_admin', 'pastor', 'group_leader', 'ministry_leader'], // ADD
+      roles: ['church_admin', 'pastor', 'group_leader', 'ministry_leader'],
       permission: 'attendance.view',
       excludeRoles: ['super_admin'],
     },
@@ -106,7 +105,7 @@ export class Sidebar implements OnInit {
       label: 'Departments',
       route: '/main/ministries',
       active: false,
-      roles: ['church_admin', 'pastor', 'ministry_leader'], // ADD
+      roles: ['church_admin', 'pastor', 'ministry_leader'],
       permission: 'ministries.view',
       excludeRoles: ['super_admin'],
     },
@@ -124,7 +123,7 @@ export class Sidebar implements OnInit {
       label: 'Events',
       route: '/main/events',
       active: false,
-      roles: ['church_admin', 'pastor', 'ministry_leader', 'group_leader'], // ADD
+      roles: ['church_admin', 'pastor', 'ministry_leader', 'group_leader'],
       permission: 'events.view',
       excludeRoles: ['super_admin', 'member'],
     },
@@ -146,7 +145,6 @@ export class Sidebar implements OnInit {
       permission: 'users.permissions',
       excludeRoles: ['super_admin'],
     },
-
     {
       icon: 'ri-bar-chart-line',
       label: 'Reports',
@@ -156,6 +154,87 @@ export class Sidebar implements OnInit {
       permission: 'reports.view',
       excludeRoles: ['super_admin', 'member'],
       featureFlag: 'reports',
+      children: [
+        // ── Students ──────────────────────────────────
+        {
+          icon: 'ri-group-line',
+          label: 'All Students',
+          route: '/main/reports/students',
+          active: false,
+          roles: ['church_admin', 'pastor', 'finance_officer'],
+        },
+        {
+          icon: 'ri-user-add-line',
+          label: 'Add Student',
+          route: '/main/reports/students/add',
+          active: false,
+          roles: ['church_admin'],
+          permission: 'school.manage',
+        },
+        {
+          icon: 'ri-building-line',
+          label: 'Classes',
+          route: '/main/reports/classes',
+          active: false,
+          roles: ['church_admin', 'pastor', 'finance_officer'],
+        },
+        // ── Fees ──────────────────────────────────────
+        {
+          icon: 'ri-file-list-3-line',
+          label: 'Student Fees',
+          route: '/main/reports/fees/students',
+          active: false,
+          roles: ['church_admin', 'finance_officer'],
+          permission: 'school.fees',
+        },
+        {
+          icon: 'ri-settings-3-line',
+          label: 'Fee Structures',
+          route: '/main/reports/fees/structures',
+          active: false,
+          roles: ['church_admin', 'finance_officer'],
+          permission: 'school.fees',
+        },
+        {
+          icon: 'ri-bar-chart-line',
+          label: 'Fee Report',
+          route: '/main/reports/fees/report',
+          active: false,
+          roles: ['church_admin', 'finance_officer'],
+          permission: 'school.fees',
+        },
+        // ── Exams ─────────────────────────────────────
+        // {
+        //   icon: 'ri-file-list-line',
+        //   label: 'All Exams',
+        //   route: '/main/reports/exams',
+        //   active: false,
+        //   roles: ['church_admin', 'pastor', 'finance_officer'],
+        //   permission: 'school.exams',
+        // },
+        // {
+        //   icon: 'ri-add-circle-line',
+        //   label: 'Create Exam',
+        //   route: '/main/reports/exams/create',
+        //   active: false,
+        //   roles: ['church_admin'],
+        // },
+        // // ── Settings ──────────────────────────────────
+        // {
+        //   icon: 'ri-award-line',
+        //   label: 'Grading Scale',
+        //   route: '/main/reports/grading',
+        //   active: false,
+        //   roles: ['church_admin'],
+        // },
+        // {
+        //   icon: 'ri-book-2-line',
+        //   label: 'Subjects',
+        //   route: '/main/reports/subjects',
+        //   active: false,
+        //   roles: ['church_admin'],
+        // },
+      ],
     },
     {
       icon: 'ri-settings-3-line',
@@ -182,22 +261,18 @@ export class Sidebar implements OnInit {
   ngOnInit(): void {
     this.checkScreenSize();
 
-    // Get current user
     this.authService.currentProfile$.subscribe((profile) => {
       this.currentUser = profile;
       this.isSuperAdmin = profile?.role === 'super_admin';
       this.filterMenuByRole();
     });
 
-    // Subscribe to sidebar state
     this.sidebarService.sidebarOpen$.subscribe((isOpen) => {
       this.isMobileMenuOpen = isOpen;
     });
 
-    // Set active menu item based on current route
     this.updateActiveMenuItem(this.router.url);
 
-    // Listen to route changes
     this.router.events
       .pipe(filter((event) => event instanceof NavigationEnd))
       .subscribe((event: any) => {
@@ -229,7 +304,6 @@ export class Sidebar implements OnInit {
     this.filteredMenuItems = this.menuItems.filter((item) => {
       if (item.excludeRoles?.includes(this.currentUser!.role)) return false;
 
-      // ← add this block
       if (
         item.featureFlag &&
         !this.authService.hasChurchFeature(item.featureFlag)
@@ -251,14 +325,11 @@ export class Sidebar implements OnInit {
 
       if (item.children) {
         item.children = item.children.filter((child) => {
-          if (child.excludeRoles?.includes(this.currentUser!.role))
-            return false;
-          // ← and this for children
+          if (child.excludeRoles?.includes(this.currentUser!.role)) return false;
           if (
             child.featureFlag &&
             !this.authService.hasChurchFeature(child.featureFlag)
-          )
-            return false;
+          ) return false;
           const childHasRole =
             !child.roles || child.roles.length === 0
               ? true
@@ -276,26 +347,32 @@ export class Sidebar implements OnInit {
 
   private updateActiveMenuItem(url: string): void {
     this.filteredMenuItems.forEach((item) => {
-      if (item.route) {
-        item.active = url.startsWith(item.route);
-      } else if (item.children) {
-        // Check if any child is active
+      if (item.children && item.children.length > 0) {
+        // For items with children, check if any child matches
         const hasActiveChild = item.children.some(
           (child) => child.route && url.startsWith(child.route),
         );
-        item.active = hasActiveChild;
 
-        // Auto-expand if has active child
+        // Also check if the parent route itself is an exact match
+        // (e.g. /main/reports overview page)
+        const isParentExact = item.route
+          ? url === item.route || url === item.route + '/'
+          : false;
+
+        item.active = hasActiveChild || isParentExact;
+
+        // Auto-expand if a child is active
         if (hasActiveChild) {
           this.expandedItems.add(item.label);
         }
 
-        // Update children active state
         item.children.forEach((child) => {
           if (child.route) {
             child.active = url.startsWith(child.route);
           }
         });
+      } else if (item.route) {
+        item.active = url.startsWith(item.route);
       }
     });
   }

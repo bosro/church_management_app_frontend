@@ -1,3 +1,36 @@
+.dashboard-layout {
+  display: flex;
+  min-height: 100vh;
+  background: #f9fafb;
+}
+
+.dashboard-content {
+  /* Offset content so it starts AFTER the fixed sidebar */
+  margin-left: 280px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0; /* prevents flex children from overflowing */
+  width: calc(100% - 280px);
+
+  @media (max-width: 768px) {
+    /* On mobile the sidebar slides off-screen, so no offset needed */
+    margin-left: 0;
+    width: 100%;
+  }
+}
+
+
+.dashboard-body {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+
+  @media (max-width: 768px) {
+    padding: 1rem;
+  }
+}
+
 .report-card-page {
   padding: 24px;
   max-width: 900px;
@@ -38,7 +71,7 @@
   padding: 40px;
   width: 100%;
   max-width: 700px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  //box-shadow: 0 4px 16px rgba(0,0,0,0.08);
 }
 
 .rc-header {
@@ -208,7 +241,9 @@
   .dashboard-content { margin: 0 !important; }
   .dashboard-body { padding: 0 !important; }
   .report-card-page { padding: 0; }
-  .report-card { box-shadow: none; border: none; padding: 16px; max-width: 100%; }
+  .report-card {
+    //box-shadow: none; border: none; padding: 16px; max-width: 100%;
+     }
 
   @page { margin: 1cm; size: A4; }
 }

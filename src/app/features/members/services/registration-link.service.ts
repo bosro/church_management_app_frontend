@@ -9,19 +9,19 @@ export interface RegistrationLink {
   id: string;
   church_id: string;
   link_token: string;
-  expires_at: string;
+  expires_at: string | null; // nullable — no expiry means never expires
   max_uses: number | null;
   current_uses: number;
   is_active: boolean;
   registration_data?: any;
-  created_by?: string; // ← Add this
+  created_by?: string;
   created_at: string;
-  updated_at?: string; // ← Also add this for completeness
+  updated_at?: string;
 }
 
 export interface CreateLinkInput {
-  expires_in_hours: number;
-  max_uses?: number;
+  expires_in_hours: number | null; // null = no expiry
+  max_uses: number | null; // null = unlimited
 }
 
 @Injectable({
@@ -37,48 +37,32 @@ export class RegistrationLinkService {
     this.churchId = this.authService.getChurchId();
   }
 
-  // Generate unique token
   private generateToken(): string {
     return Array.from(crypto.getRandomValues(new Uint8Array(32)))
       .map((b) => b.toString(16).padStart(2, '0'))
       .join('');
   }
 
-  // Create registration link (used by component)
   createLink(input: CreateLinkInput): Observable<RegistrationLink> {
-    // Calculate expiration date
-    const expiresAt = new Date();
-    expiresAt.setHours(expiresAt.getHours() + input.expires_in_hours);
+    // Calculate expiry only if user chose to set one
+    let expiresAt: string | null = null;
+    if (input.expires_in_hours !== null) {
+      const d = new Date();
+      d.setHours(d.getHours() + input.expires_in_hours);
+      expiresAt = d.toISOString();
+    }
 
-    return this.createRegistrationLink({
-      expires_at: expiresAt.toISOString(),
-      max_uses: input.max_uses || null,
-    });
-  }
-
-  // Internal method to create registration link
-  private createRegistrationLink(linkData: {
-    expires_at: string;
-    max_uses?: number | null;
-    registration_data?: any;
-  }): Observable<RegistrationLink> {
-    // ✅ FIXED: Generate token in TypeScript instead of relying on database DEFAULT
     const insertData: any = {
       church_id: this.authService.getChurchId()!,
       created_by: this.authService.getUserId(),
-      link_token: this.generateToken(), // ✅ Use the existing generateToken method!
-      expires_at: linkData.expires_at,
+      link_token: this.generateToken(),
+      expires_at: expiresAt, // null is fine now — column is nullable
       is_active: true,
       current_uses: 0,
     };
 
-    // Only add optional fields if they have values
-    if (linkData.max_uses !== null && linkData.max_uses !== undefined) {
-      insertData.max_uses = linkData.max_uses;
-    }
-
-    if (linkData.registration_data) {
-      insertData.registration_data = linkData.registration_data;
+    if (input.max_uses !== null) {
+      insertData.max_uses = input.max_uses;
     }
 
     return from(
@@ -100,7 +84,6 @@ export class RegistrationLinkService {
     );
   }
 
-  // Get all links for current church
   getLinks(): Observable<RegistrationLink[]> {
     return from(
       this.supabase.client
@@ -116,7 +99,6 @@ export class RegistrationLinkService {
     );
   }
 
-  // Deactivate link
   deactivateLink(linkId: string): Observable<void> {
     return from(
       this.supabase.client
@@ -131,7 +113,20 @@ export class RegistrationLinkService {
     );
   }
 
-  // Validate link (public - no auth)
+  reactivateLink(linkId: string): Observable<void> {
+    return from(
+      this.supabase.client
+        .from('registration_links')
+        .update({ is_active: true })
+        .eq('id', linkId)
+        .eq('church_id', this.churchId),
+    ).pipe(
+      map(({ error }) => {
+        if (error) throw new Error(error.message);
+      }),
+    );
+  }
+
   validateLink(token: string): Observable<any> {
     return from(
       this.supabase.client.rpc('use_registration_link', {
@@ -145,9 +140,7 @@ export class RegistrationLinkService {
     );
   }
 
-  // Get full registration URL
   getRegistrationUrl(token: string): string {
-    const baseUrl = window.location.origin;
-    return `${baseUrl}/register/${token}`;
+    return `${window.location.origin}/register/${token}`;
   }
 }

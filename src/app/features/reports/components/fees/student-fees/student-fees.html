@@ -5,6 +5,7 @@
     <div class="dashboard-body">
       <div class="student-fees-container">
 
+        <!-- Page Header -->
         <div class="page-header">
           <div class="header-left">
             <button class="back-btn" (click)="router.navigate(['main/reports'])">
@@ -15,6 +16,13 @@
               <p class="subtitle">Track fee payments per student</p>
             </div>
           </div>
+          <div class="header-actions">
+            <button class="btn-secondary" (click)="openExport()" [disabled]="exporting"
+              *ngIf="studentSummaries.length > 0">
+              <i class="ri-download-line"></i>
+              {{ exporting ? 'Exporting...' : 'Export List' }}
+            </button>
+          </div>
         </div>
 
         <div *ngIf="errorMessage" class="error-alert">
@@ -23,7 +31,7 @@
         </div>
 
         <!-- Filters -->
-        <div class="filters-bar">
+        <div class="filters-card">
           <select [(ngModel)]="selectedYear" (change)="onFilterChange()" class="filter-select">
             <option *ngFor="let y of academicYears" [value]="y">{{ y }}</option>
           </select>
@@ -44,61 +52,112 @@
 
         <!-- Table -->
         <div *ngIf="!loading" class="table-card">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Student</th>
-                <th>Class</th>
-                <th>Total Due</th>
-                <th>Total Paid</th>
-                <th>Balance</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let summary of studentSummaries"
-                  class="table-row"
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Student</th>
+                  <th>Class</th>
+                  <th>Total Due</th>
+                  <th>Total Paid</th>
+                  <th>Balance</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let summary of studentSummaries" class="table-row"
                   (click)="viewStudent(summary.student?.id)">
-                <td>
-                  <p class="student-name">
-                    {{ summary.student?.first_name }}
-                    {{ summary.student?.last_name }}
-                  </p>
-                  <p class="student-num">{{ summary.student?.student_number }}</p>
-                </td>
-                <td>{{ summary.student?.class?.name }}</td>
-                <td>{{ formatCurrency(summary.totalDue) }}</td>
-                <td>{{ formatCurrency(summary.totalPaid) }}</td>
-                <td><strong>{{ formatCurrency(summary.totalBalance) }}</strong></td>
-                <td>
-                  <span class="status-badge" [ngClass]="getStatusClass(summary.status)">
-                    {{ summary.status | titlecase }}
-                  </span>
-                </td>
-                <td>
-                  <button class="btn-pay"
-                          (click)="recordPayment(summary.student?.id);
-                                   $event.stopPropagation()"
-                          *ngIf="permissionService.school.fees &&
-                                 summary.status !== 'paid'">
-                    <i class="ri-money-dollar-circle-line"></i>
-                    Pay
-                  </button>
-                </td>
-              </tr>
+                  <td>
+                    <p class="student-name">{{ getStudentName(summary.student) }}</p>
+                    <p class="student-num">{{ summary.student?.student_number }}</p>
+                  </td>
+                  <td>{{ summary.student?.class?.name || '—' }}</td>
+                  <td>{{ formatCurrency(summary.totalDue) }}</td>
+                  <td>{{ formatCurrency(summary.totalPaid) }}</td>
+                  <td><strong class="balance-amount">{{ formatCurrency(summary.totalBalance) }}</strong></td>
+                  <td>
+                    <span class="status-badge" [ngClass]="getStatusClass(summary.status)">
+                      {{ summary.status | titlecase }}
+                    </span>
+                  </td>
+                  <td>
+                    <div class="action-buttons">
+                      <!-- Export this student's fee statement as PDF -->
+                      <button class="btn-icon-small" (click)="exportStudentPDF(summary, $event)"
+                        title="Download fee statement">
+                        <i class="ri-file-pdf-line"></i>
+                      </button>
+                      <!-- Record payment -->
+                      <button class="btn-pay" (click)="recordPayment(summary.student?.id); $event.stopPropagation()"
+                        *ngIf="permissionService.school.fees && summary.status !== 'paid'">
+                        <i class="ri-money-dollar-circle-line"></i>
+                        Pay
+                      </button>
+                    </div>
+                  </td>
+                </tr>
 
-              <tr *ngIf="studentSummaries.length === 0">
-                <td colspan="7" class="empty-state">
-                  <i class="ri-checkbox-circle-line" style="color: #10B981;"></i>
-                  <p>All fees cleared for this term!</p>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+                <!-- Empty state -->
+                <tr *ngIf="studentSummaries.length === 0">
+                  <td colspan="7">
+                    <div class="empty-state">
+                      <div class="empty-icon success">
+                        <i class="ri-checkbox-circle-line"></i>
+                      </div>
+                      <h3>All fees cleared!</h3>
+                      <p>No outstanding fees for {{ selectedTerm }} {{ selectedYear }}</p>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
 
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Export Modal -->
+<div class="modal-overlay" *ngIf="showExportModal" (click)="showExportModal = false">
+  <div class="export-modal" (click)="$event.stopPropagation()">
+    <div class="export-modal-header">
+      <h3><i class="ri-download-2-line"></i> Export Student Fees</h3>
+      <button class="modal-close-btn" (click)="showExportModal = false">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+    <p class="export-subtitle">
+      {{ studentSummaries.length }} student{{ studentSummaries.length !== 1 ? 's' : '' }} —
+      {{ selectedTerm }} {{ selectedYear }}
+    </p>
+    <div class="export-options">
+      <button class="export-option" (click)="exportAs('csv')">
+        <div class="export-icon csv"><i class="ri-file-text-line"></i></div>
+        <div class="export-info">
+          <strong>CSV</strong>
+          <span>Plain text, works with any spreadsheet</span>
+        </div>
+        <i class="ri-arrow-right-s-line export-arrow"></i>
+      </button>
+      <button class="export-option" (click)="exportAs('xlsx')">
+        <div class="export-icon excel"><i class="ri-file-excel-2-line"></i></div>
+        <div class="export-info">
+          <strong>Excel (.xlsx)</strong>
+          <span>Formatted workbook with summary sheet</span>
+        </div>
+        <i class="ri-arrow-right-s-line export-arrow"></i>
+      </button>
+      <button class="export-option" (click)="exportAs('pdf')">
+        <div class="export-icon pdf"><i class="ri-file-pdf-2-line"></i></div>
+        <div class="export-info">
+          <strong>PDF Report</strong>
+          <span>Branded fee report, ready to print</span>
+        </div>
+        <i class="ri-arrow-right-s-line export-arrow"></i>
+      </button>
     </div>
   </div>
 </div>

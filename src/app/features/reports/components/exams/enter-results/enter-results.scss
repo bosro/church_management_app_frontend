@@ -1,5 +1,6 @@
 @use '../../../reports-shared' as *;
 
+
 .enter-results-container {
   padding: 24px;
   max-width: 100%;
@@ -11,7 +12,7 @@
   border: 1px solid #E5E7EB;
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  //box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
 
 .table-scroll {
