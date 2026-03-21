@@ -11,13 +11,20 @@
             <h1>School Reports</h1>
             <p class="subtitle">Manage students, fees, and academic records</p>
           </div>
-          <div class="header-filters">
-            <select [(ngModel)]="currentTerm" (change)="onTermChange()" class="filter-select">
-              <option *ngFor="let term of terms" [value]="term">{{ term }}</option>
-            </select>
-            <select [(ngModel)]="currentAcademicYear" (change)="onYearChange()" class="filter-select">
-              <option *ngFor="let year of academicYears" [value]="year">{{ year }}</option>
-            </select>
+          <div class="header-right">
+            <div class="header-filters">
+              <select [(ngModel)]="currentTerm" (change)="onTermChange()" class="filter-select">
+                <option *ngFor="let term of terms" [value]="term">{{ term }}</option>
+              </select>
+              <select [(ngModel)]="currentAcademicYear" (change)="onYearChange()" class="filter-select">
+                <option *ngFor="let year of academicYears" [value]="year">{{ year }}</option>
+              </select>
+            </div>
+            <button class="btn-export" (click)="exportSummaryPDF()" [disabled]="exporting || !statistics"
+              *ngIf="statistics">
+              <i class="ri-file-pdf-line"></i>
+              {{ exporting ? 'Generating...' : 'Export Summary' }}
+            </button>
           </div>
         </div>
 
@@ -140,9 +147,8 @@
                 <i class="ri-group-line"></i>
                 <span>All Students</span>
               </div>
-              <div class="action-card"
-                   *ngIf="permissionService.school.manage"
-                   (click)="router.navigate(['main/reports/students/add'])">
+              <div class="action-card" *ngIf="permissionService.school.manage"
+                (click)="router.navigate(['main/reports/students/add'])">
                 <i class="ri-user-add-line"></i>
                 <span>Add Student</span>
               </div>
@@ -154,8 +160,7 @@
           </div>
 
           <!-- Fees -->
-          <div class="action-group"
-               *ngIf="permissionService.school.fees">
+          <div class="action-group" *ngIf="permissionService.school.fees">
             <h3 class="group-title">
               <i class="ri-money-dollar-circle-line"></i>
               Fees
@@ -177,7 +182,7 @@
           </div>
 
           <!-- Exams -->
-          <div class="action-group"
+          <!-- <div class="action-group"
                *ngIf="permissionService.school.exams">
             <h3 class="group-title">
               <i class="ri-book-open-line"></i>
@@ -195,10 +200,10 @@
                 <span>Create Exam</span>
               </div>
             </div>
-          </div>
+          </div> -->
 
           <!-- Settings -->
-          <div class="action-group"
+          <!-- <div class="action-group"
                *ngIf="permissionService.isAdmin">
             <h3 class="group-title">
               <i class="ri-settings-3-line"></i>
@@ -214,7 +219,7 @@
                 <span>Subjects</span>
               </div>
             </div>
-          </div>
+          </div> -->
 
         </div>
       </div>

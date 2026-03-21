@@ -13,18 +13,30 @@
   <nav class="sidebar-nav">
     <ul class="menu-list">
       <ng-container *ngFor="let item of filteredMenuItems">
-        <!-- Menu item with children (expandable) -->
+
+        <!-- Menu item WITH children (expandable) -->
         <li *ngIf="item.children && item.children.length > 0" class="menu-item-group">
-          <div class="menu-item" [class.active]="item.active" (click)="toggleSubmenu(item)">
-            <i [class]="item.icon"></i>
-            <span class="menu-label">{{ item.label }}</span>
-            <i class="ri-arrow-down-s-line submenu-arrow" [class.expanded]="isExpanded(item)"></i>
+
+          <!-- Parent row: clicking the label area navigates (if route exists),
+               clicking the arrow toggles the submenu -->
+          <div class="menu-item" [class.active]="item.active">
+            <!-- Navigable label area -->
+            <span class="menu-item-main" (click)="item.route ? navigate(item.route) : toggleSubmenu(item)">
+              <i [class]="item.icon"></i>
+              <span class="menu-label">{{ item.label }}</span>
+            </span>
+            <!-- Toggle arrow -->
+            <i class="ri-arrow-down-s-line submenu-arrow"
+               [class.expanded]="isExpanded(item)"
+               (click)="toggleSubmenu(item)"></i>
           </div>
 
           <!-- Submenu -->
           <ul class="submenu" [class.expanded]="isExpanded(item)">
-            <li *ngFor="let child of item.children" class="submenu-item" [class.active]="child.active"
-              (click)="navigate(child.route!)">
+            <li *ngFor="let child of item.children"
+                class="submenu-item"
+                [class.active]="child.active"
+                (click)="navigate(child.route!)">
               <i [class]="child.icon"></i>
               <span>{{ child.label }}</span>
               <span class="badge" *ngIf="child.badge">{{ child.badge }}</span>
@@ -33,12 +45,13 @@
         </li>
 
         <!-- Regular menu item (no children) -->
-        <li *ngIf="!item.children || item.children.length === 0" class="menu-item" [class.active]="item.active"
-          (click)="navigate(item.route!)">
+        <li *ngIf="!item.children || item.children.length === 0"
+            class="menu-item"
+            [class.active]="item.active"
+            (click)="navigate(item.route!)">
           <i [class]="item.icon"></i>
           <span>{{ item.label }}</span>
         </li>
-
 
       </ng-container>
     </ul>

@@ -1,5 +1,6 @@
 @use '../../../reports-shared' as *;
 
+
 .exams-container {
   padding: 24px;
   max-width: 1400px;
@@ -17,11 +18,7 @@
   border: 1px solid #E5E7EB;
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-  transition: box-shadow 0.2s;
-
-  &:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-
+ 
   .exam-header {
     display: flex;
     justify-content: space-between;

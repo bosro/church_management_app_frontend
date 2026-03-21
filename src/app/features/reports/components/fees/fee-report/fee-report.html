@@ -5,6 +5,7 @@
     <div class="dashboard-body">
       <div class="fee-report-container">
 
+        <!-- Page Header -->
         <div class="page-header no-print">
           <div class="header-left">
             <button class="back-btn" (click)="router.navigate(['main/reports'])">
@@ -15,10 +16,17 @@
               <p class="subtitle">{{ selectedTerm }} — {{ selectedYear }}</p>
             </div>
           </div>
-          <button class="btn-primary" (click)="printReport()">
-            <i class="ri-printer-line"></i>
-            Print Report
-          </button>
+          <div class="header-actions">
+            <button class="btn-secondary" (click)="printReport()">
+              <i class="ri-printer-line"></i>
+              Print
+            </button>
+            <button class="btn-secondary" (click)="openExport()" [disabled]="exporting"
+              *ngIf="studentSummaries.length > 0">
+              <i class="ri-download-line"></i>
+              {{ exporting ? 'Exporting...' : 'Export List' }}
+            </button>
+          </div>
         </div>
 
         <div *ngIf="errorMessage" class="error-alert no-print">
@@ -27,7 +35,7 @@
         </div>
 
         <!-- Filters -->
-        <div class="filters-bar no-print">
+        <div class="filters-card no-print">
           <select [(ngModel)]="selectedYear" (change)="onFilterChange()" class="filter-select">
             <option *ngFor="let y of academicYears" [value]="y">{{ y }}</option>
           </select>
@@ -49,86 +57,158 @@
         <!-- Summary Cards -->
         <div *ngIf="!loading" class="summary-cards">
           <div class="summary-card">
-            <p class="card-label">Total Due</p>
-            <p class="card-value">{{ formatCurrency(grandTotalDue) }}</p>
-          </div>
-          <div class="summary-card paid">
-            <p class="card-label">Total Collected</p>
-            <p class="card-value">{{ formatCurrency(grandTotalPaid) }}</p>
-          </div>
-          <div class="summary-card outstanding">
-            <p class="card-label">Total Outstanding</p>
-            <p class="card-value">{{ formatCurrency(grandTotalBalance) }}</p>
+            <div class="card-icon" style="background:#EEF2FF; color:#4F46E5;">
+              <i class="ri-money-dollar-circle-line"></i>
+            </div>
+            <div>
+              <p class="card-label">Total Due</p>
+              <p class="card-value">{{ formatCurrency(grandTotalDue) }}</p>
+            </div>
           </div>
           <div class="summary-card">
-            <p class="card-label">Students with Balance</p>
-            <p class="card-value">{{ studentSummaries.length }}</p>
+            <div class="card-icon" style="background:#D1FAE5; color:#059669;">
+              <i class="ri-checkbox-circle-line"></i>
+            </div>
+            <div>
+              <p class="card-label">Total Collected</p>
+              <p class="card-value paid">{{ formatCurrency(grandTotalPaid) }}</p>
+            </div>
+          </div>
+          <div class="summary-card">
+            <div class="card-icon" style="background:#FEE2E2; color:#DC2626;">
+              <i class="ri-error-warning-line"></i>
+            </div>
+            <div>
+              <p class="card-label">Total Outstanding</p>
+              <p class="card-value outstanding">{{ formatCurrency(grandTotalBalance) }}</p>
+            </div>
+          </div>
+          <div class="summary-card">
+            <div class="card-icon" style="background:#FEF3C7; color:#D97706;">
+              <i class="ri-group-line"></i>
+            </div>
+            <div>
+              <p class="card-label">Students with Balance</p>
+              <p class="card-value">{{ studentSummaries.length }}</p>
+            </div>
           </div>
         </div>
 
         <!-- Report Table -->
         <div *ngIf="!loading" class="report-card">
+          <!-- Print-only title -->
           <div class="report-title print-only">
             <h2>Fee Outstanding Report</h2>
             <p>{{ selectedTerm }} — {{ selectedYear }}</p>
           </div>
 
-          <table class="report-table">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Student</th>
-                <th>Student No.</th>
-                <th>Class</th>
-                <th>Total Due</th>
-                <th>Total Paid</th>
-                <th>Balance</th>
-                <th class="no-print">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let summary of studentSummaries; let i = index"
-                  (click)="viewStudent(summary.student?.id)"
+          <div class="table-wrapper">
+            <table class="report-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Student</th>
+                  <th>Student No.</th>
+                  <th>Class</th>
+                  <th class="text-right">Total Due</th>
+                  <th class="text-right">Total Paid</th>
+                  <th class="text-right">Balance</th>
+                  <th class="no-print">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let summary of studentSummaries; let i = index" (click)="viewStudent(summary.student?.id)"
                   class="table-row">
-                <td>{{ i + 1 }}</td>
-                <td>{{ getStudentName(summary.student) }}</td>
-                <td>{{ summary.student?.student_number }}</td>
-                <td>{{ summary.student?.class?.name }}</td>
-                <td>{{ formatCurrency(summary.totalDue) }}</td>
-                <td>{{ formatCurrency(summary.totalPaid) }}</td>
-                <td class="balance-cell">
-                  <strong>{{ formatCurrency(summary.totalBalance) }}</strong>
-                </td>
-                <td class="no-print">
-                  <button class="btn-pay"
-                          (click)="recordPayment(summary.student?.id); $event.stopPropagation()"
-                          *ngIf="permissionService.school.fees">
-                    <i class="ri-money-dollar-circle-line"></i>
-                    Pay
-                  </button>
-                </td>
-              </tr>
+                  <td>{{ i + 1 }}</td>
+                  <td>
+                    <p class="student-name">{{ getStudentName(summary.student) }}</p>
+                  </td>
+                  <td><span class="student-num">{{ summary.student?.student_number }}</span></td>
+                  <td>{{ summary.student?.class?.name || '—' }}</td>
+                  <td class="text-right">{{ formatCurrency(summary.totalDue) }}</td>
+                  <td class="text-right">{{ formatCurrency(summary.totalPaid) }}</td>
+                  <td class="text-right balance-cell">
+                    <strong>{{ formatCurrency(summary.totalBalance) }}</strong>
+                  </td>
+                  <td class="no-print">
+                    <div class="action-buttons">
+                      <!-- Per-student PDF -->
+                      <button class="btn-icon-small" (click)="exportStudentPDF(summary, $event)"
+                        title="Download fee statement PDF">
+                        <i class="ri-file-pdf-line"></i>
+                      </button>
+                      <!-- Record payment -->
+                      <button class="btn-pay" (click)="recordPayment(summary.student?.id); $event.stopPropagation()"
+                        *ngIf="permissionService.school.fees">
+                        <i class="ri-money-dollar-circle-line"></i>
+                        Pay
+                      </button>
+                    </div>
+                  </td>
+                </tr>
 
-              <tr *ngIf="studentSummaries.length === 0">
-                <td colspan="8" class="empty-state">
-                  <i class="ri-checkbox-circle-line" style="color: #10B981;"></i>
-                  <p>All fees are cleared for this term!</p>
-                </td>
-              </tr>
-            </tbody>
-            <tfoot *ngIf="studentSummaries.length > 0">
-              <tr class="grand-total-row">
-                <td colspan="4"><strong>GRAND TOTAL</strong></td>
-                <td><strong>{{ formatCurrency(grandTotalDue) }}</strong></td>
-                <td><strong>{{ formatCurrency(grandTotalPaid) }}</strong></td>
-                <td><strong>{{ formatCurrency(grandTotalBalance) }}</strong></td>
-                <td class="no-print"></td>
-              </tr>
-            </tfoot>
-          </table>
+                <!-- Empty state -->
+                <tr *ngIf="studentSummaries.length === 0">
+                  <td colspan="8">
+                    <div class="empty-state">
+                      <div class="empty-icon success">
+                        <i class="ri-checkbox-circle-line"></i>
+                      </div>
+                      <h3>All fees cleared!</h3>
+                      <p>No outstanding fees for {{ selectedTerm }} {{ selectedYear }}</p>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+
+              <!-- Grand total footer -->
+              <tfoot *ngIf="studentSummaries.length > 0">
+                <tr class="grand-total-row">
+                  <td colspan="4"><strong>GRAND TOTAL</strong></td>
+                  <td class="text-right"><strong>{{ formatCurrency(grandTotalDue) }}</strong></td>
+                  <td class="text-right"><strong>{{ formatCurrency(grandTotalPaid) }}</strong></td>
+                  <td class="text-right"><strong>{{ formatCurrency(grandTotalBalance) }}</strong></td>
+                  <td class="no-print"></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
         </div>
 
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Export Modal -->
+<div class="modal-overlay" *ngIf="showExportModal" (click)="showExportModal = false">
+  <div class="export-modal" (click)="$event.stopPropagation()">
+    <div class="export-modal-header">
+      <h3><i class="ri-download-2-line"></i> Export Fee Report</h3>
+      <button class="modal-close-btn" (click)="showExportModal = false">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+    <p class="export-subtitle">
+      {{ studentSummaries.length }} student{{ studentSummaries.length !== 1 ? 's' : '' }} —
+      {{ selectedTerm }} {{ selectedYear }}
+    </p>
+    <div class="export-options">
+      <button class="export-option" (click)="exportAs('csv')">
+        <div class="export-icon csv"><i class="ri-file-text-line"></i></div>
+        <div class="export-info"><strong>CSV</strong><span>Plain text, works with any spreadsheet</span></div>
+        <i class="ri-arrow-right-s-line export-arrow"></i>
+      </button>
+      <button class="export-option" (click)="exportAs('xlsx')">
+        <div class="export-icon excel"><i class="ri-file-excel-2-line"></i></div>
+        <div class="export-info"><strong>Excel (.xlsx)</strong><span>Formatted workbook with summary sheet</span></div>
+        <i class="ri-arrow-right-s-line export-arrow"></i>
+      </button>
+      <button class="export-option" (click)="exportAs('pdf')">
+        <div class="export-icon pdf"><i class="ri-file-pdf-2-line"></i></div>
+        <div class="export-info"><strong>PDF Report</strong><span>Branded report with grand totals</span></div>
+        <i class="ri-arrow-right-s-line export-arrow"></i>
+      </button>
     </div>
   </div>
 </div>

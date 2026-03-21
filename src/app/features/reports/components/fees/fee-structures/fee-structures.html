@@ -5,6 +5,7 @@
     <div class="dashboard-body">
       <div class="fee-structures-container">
 
+        <!-- Page Header -->
         <div class="page-header">
           <div class="header-left">
             <button class="back-btn" (click)="router.navigate(['main/reports'])">
@@ -15,11 +16,16 @@
               <p class="subtitle">Set fee amounts per class per term</p>
             </div>
           </div>
-          <button class="btn-primary" (click)="openCreateModal()"
-                  *ngIf="permissionService.school.fees">
-            <i class="ri-add-line"></i>
-            Add Fee
-          </button>
+          <div class="header-actions">
+            <button class="btn-secondary" (click)="openExport()" [disabled]="exporting" *ngIf="groupedFees.length > 0">
+              <i class="ri-download-line"></i>
+              {{ exporting ? 'Exporting...' : 'Export All' }}
+            </button>
+            <button class="btn-primary" (click)="openCreateModal()" *ngIf="permissionService.school.fees">
+              <i class="ri-add-line"></i>
+              Add Fee
+            </button>
+          </div>
         </div>
 
         <div *ngIf="successMessage" class="success-alert">
@@ -32,7 +38,7 @@
         </div>
 
         <!-- Filters -->
-        <div class="filters-bar">
+        <div class="filters-card">
           <select [(ngModel)]="selectedYear" (change)="onFilterChange()" class="filter-select">
             <option *ngFor="let y of academicYears" [value]="y">{{ y }}</option>
           </select>
@@ -61,56 +67,70 @@
                   Total: {{ formatCurrency(getClassTotal(group.fees)) }}
                 </span>
               </div>
-              <button class="btn-assign"
-                      (click)="assignFeesToClass(group.class.id)"
-                      *ngIf="permissionService.school.fees"
-                      title="Assign these fees to all students in this class">
-                <i class="ri-user-add-line"></i>
-                Assign to Students
-              </button>
+              <div class="class-actions">
+                <!-- Export this class as PDF -->
+                <button class="btn-icon-outline" (click)="exportClassPDF(group, $event)"
+                  title="Download fee structure PDF for this class">
+                  <i class="ri-file-pdf-line"></i>
+                </button>
+                <!-- Assign to students -->
+                <button class="btn-assign" (click)="assignFeesToClass(group.class.id)"
+                  *ngIf="permissionService.school.fees" title="Assign these fees to all students in this class">
+                  <i class="ri-user-add-line"></i>
+                  Assign to Students
+                </button>
+              </div>
             </div>
 
             <table class="fee-table">
               <thead>
                 <tr>
                   <th>Fee Name</th>
-                  <th>Amount</th>
-                  <th>Mandatory</th>
+                  <th class="text-right">Amount</th>
+                  <th class="text-center">Mandatory</th>
                   <th *ngIf="permissionService.school.fees">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 <tr *ngFor="let fee of group.fees">
                   <td>{{ fee.fee_name }}</td>
-                  <td>{{ formatCurrency(fee.amount) }}</td>
-                  <td>
+                  <td class="text-right">{{ formatCurrency(fee.amount) }}</td>
+                  <td class="text-center">
                     <span class="badge" [class.yes]="fee.is_mandatory">
                       {{ fee.is_mandatory ? 'Yes' : 'No' }}
                     </span>
                   </td>
                   <td *ngIf="permissionService.school.fees">
                     <div class="action-buttons">
-                      <button class="btn-icon-small"
-                              (click)="openEditModal(fee)" title="Edit">
+                      <button class="btn-icon-small" (click)="openEditModal(fee)" title="Edit">
                         <i class="ri-edit-line"></i>
                       </button>
-                      <button class="btn-icon-small btn-danger"
-                              (click)="deleteFee(fee)" title="Delete">
+                      <button class="btn-icon-small btn-danger" (click)="deleteFee(fee)" title="Delete">
                         <i class="ri-delete-bin-line"></i>
                       </button>
                     </div>
                   </td>
                 </tr>
               </tbody>
+              <tfoot>
+                <tr class="total-row">
+                  <td><strong>Total</strong></td>
+                  <td class="text-right"><strong>{{ formatCurrency(getClassTotal(group.fees)) }}</strong></td>
+                  <td></td>
+                  <td *ngIf="permissionService.school.fees"></td>
+                </tr>
+              </tfoot>
             </table>
           </div>
 
+          <!-- Empty state -->
           <div *ngIf="groupedFees.length === 0" class="empty-state">
-            <i class="ri-money-dollar-circle-line"></i>
+            <div class="empty-icon">
+              <i class="ri-money-dollar-circle-line"></i>
+            </div>
             <h3>No Fee Structures</h3>
             <p>Create fee structures for each class and term</p>
-            <button class="btn-primary" (click)="openCreateModal()"
-                    *ngIf="permissionService.school.fees">
+            <button class="btn-primary" (click)="openCreateModal()" *ngIf="permissionService.school.fees">
               <i class="ri-add-line"></i>
               Add First Fee
             </button>
@@ -153,13 +173,11 @@
       </div>
       <div class="form-group">
         <label>Fee Name *</label>
-        <input type="text" [(ngModel)]="feeForm.fee_name"
-               placeholder="e.g., Tuition, Sports Levy, PTA" />
+        <input type="text" [(ngModel)]="feeForm.fee_name" placeholder="e.g., Tuition, Sports Levy, PTA" />
       </div>
       <div class="form-group">
         <label>Amount (GHS) *</label>
-        <input type="number" [(ngModel)]="feeForm.amount"
-               min="0" step="0.01" placeholder="0.00" />
+        <input type="number" [(ngModel)]="feeForm.amount" min="0" step="0.01" placeholder="0.00" />
       </div>
       <div class="form-group">
         <label class="checkbox-label">
@@ -172,11 +190,42 @@
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn-secondary" (click)="closeModal()"
-              [disabled]="processing">Cancel</button>
-      <button class="btn-primary" (click)="saveFee()"
-              [disabled]="processing">
+      <button class="btn-secondary" (click)="closeModal()" [disabled]="processing">Cancel</button>
+      <button class="btn-primary" (click)="saveFee()" [disabled]="processing">
         {{ processing ? 'Saving...' : (editingFee ? 'Update Fee' : 'Add Fee') }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Export Modal -->
+<div class="modal-overlay" *ngIf="showExportModal" (click)="showExportModal = false">
+  <div class="export-modal" (click)="$event.stopPropagation()">
+    <div class="export-modal-header">
+      <h3><i class="ri-download-2-line"></i> Export Fee Structures</h3>
+      <button class="modal-close-btn" (click)="showExportModal = false">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+    <p class="export-subtitle">
+      {{ groupedFees.length }} class{{ groupedFees.length !== 1 ? 'es' : '' }} —
+      {{ selectedTerm }} {{ selectedYear }}
+    </p>
+    <div class="export-options">
+      <button class="export-option" (click)="exportAs('csv')">
+        <div class="export-icon csv"><i class="ri-file-text-line"></i></div>
+        <div class="export-info"><strong>CSV</strong><span>All fee items in plain text</span></div>
+        <i class="ri-arrow-right-s-line export-arrow"></i>
+      </button>
+      <button class="export-option" (click)="exportAs('xlsx')">
+        <div class="export-icon excel"><i class="ri-file-excel-2-line"></i></div>
+        <div class="export-info"><strong>Excel (.xlsx)</strong><span>Detailed sheet + per-class summary</span></div>
+        <i class="ri-arrow-right-s-line export-arrow"></i>
+      </button>
+      <button class="export-option" (click)="exportAs('pdf')">
+        <div class="export-icon pdf"><i class="ri-file-pdf-2-line"></i></div>
+        <div class="export-info"><strong>PDF Report</strong><span>All classes, grouped, ready to print</span></div>
+        <i class="ri-arrow-right-s-line export-arrow"></i>
       </button>
     </div>
   </div>

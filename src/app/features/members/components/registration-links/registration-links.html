@@ -44,7 +44,11 @@
 
         <!-- Links List -->
         <div *ngIf="!loading || links.length > 0" class="links-list">
-          <div *ngFor="let link of links" class="link-card">
+          <div
+            *ngFor="let link of links"
+            class="link-card"
+            [ngClass]="{'link-card--inactive': !link.is_active || isExpired(link) || isMaxedOut(link)}"
+          >
             <div class="link-header">
               <div class="link-info">
                 <h3>Registration Link</h3>
@@ -59,7 +63,7 @@
               <div class="detail-row">
                 <i class="ri-time-line"></i>
                 <span class="detail-label">Expires:</span>
-                <span class="detail-value">{{ formatDate(link.expires_at) }}</span>
+                <span class="detail-value">{{ formatExpiry(link.expires_at) }}</span>
               </div>
               <div class="detail-row">
                 <i class="ri-user-line"></i>
@@ -86,10 +90,26 @@
                 <i class="ri-qr-code-line"></i>
                 QR Code
               </button>
-              <button class="btn-action btn-danger" (click)="deactivateLink(link.id)" [disabled]="!link.is_active">
-                <i class="ri-close-line"></i>
-                Deactivate
-              </button>
+
+              <!-- Deactivate/Reactivate toggle — only for non-expired, non-maxed links -->
+              <ng-container *ngIf="!isExpired(link) && !isMaxedOut(link)">
+                <button
+                  *ngIf="link.is_active"
+                  class="btn-action btn-danger"
+                  (click)="deactivateLink(link.id)"
+                >
+                  <i class="ri-close-line"></i>
+                  Deactivate
+                </button>
+                <button
+                  *ngIf="!link.is_active"
+                  class="btn-action btn-reactivate"
+                  (click)="reactivateLink(link.id)"
+                >
+                  <i class="ri-restart-line"></i>
+                  Reactivate
+                </button>
+              </ng-container>
             </div>
           </div>
 
@@ -120,16 +140,58 @@
     </div>
 
     <div class="modal-body">
+
+      <!-- Expiry -->
       <div class="form-group">
-        <label for="expiresIn">Link Expiration (hours)</label>
-        <input id="expiresIn" type="number" [(ngModel)]="expiresInHours" min="1" max="720" placeholder="24" />
-        <p class="help-text">How long should this link remain valid? (1-720 hours / 30 days)</p>
+        <div class="toggle-label">
+          <div>
+            <label>Link Expiration</label>
+            <p class="help-text">Set a date/time when this link stops working</p>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" [(ngModel)]="hasExpiry" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div *ngIf="hasExpiry" class="toggle-input">
+          <input
+            type="number"
+            [(ngModel)]="expiresInHours"
+            min="1"
+            max="720"
+            placeholder="24"
+          />
+          <span class="input-suffix">hours</span>
+        </div>
+        <p *ngIf="!hasExpiry" class="no-limit-note">
+          <i class="ri-infinity-line"></i> This link will never expire
+        </p>
       </div>
 
+      <!-- Max Uses -->
       <div class="form-group">
-        <label for="maxUses">Maximum Uses (optional)</label>
-        <input id="maxUses" type="number" [(ngModel)]="maxUses" min="1" placeholder="Unlimited" />
-        <p class="help-text">Leave empty for unlimited uses</p>
+        <div class="toggle-label">
+          <div>
+            <label>Maximum Uses</label>
+            <p class="help-text">Limit how many times this link can be used</p>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" [(ngModel)]="hasMaxUses" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div *ngIf="hasMaxUses" class="toggle-input">
+          <input
+            type="number"
+            [(ngModel)]="maxUses"
+            min="1"
+            placeholder="e.g. 50"
+          />
+          <span class="input-suffix">uses</span>
+        </div>
+        <p *ngIf="!hasMaxUses" class="no-limit-note">
+          <i class="ri-infinity-line"></i> Unlimited registrations allowed
+        </p>
       </div>
 
       <div *ngIf="errorMessage" class="error-message">
@@ -164,7 +226,6 @@
 
     <div class="modal-body">
       <div class="qr-container">
-        <!-- Use ng-qrcode component with CORRECT properties -->
         <qr-code [value]="qrCodeValue" [size]="300" [errorCorrectionLevel]="'M'" [darkColor]="'#000000FF'"
           [lightColor]="'#FFFFFFFF'"></qr-code>
       </div>
@@ -181,7 +242,7 @@
         <div class="qr-details" *ngIf="selectedLinkForQR">
           <div class="detail-row">
             <span class="label">Expires:</span>
-            <span class="value">{{ selectedLinkForQR.expires_at | date:'medium' }}</span>
+            <span class="value">{{ formatExpiry(selectedLinkForQR.expires_at) }}</span>
           </div>
           <div class="detail-row" *ngIf="selectedLinkForQR.max_uses">
             <span class="label">Max Uses:</span>
@@ -192,9 +253,7 @@
     </div>
 
     <div class="modal-footer">
-      <button class="btn-secondary" (click)="closeQRModal()">
-        Close
-      </button>
+      <button class="btn-secondary" (click)="closeQRModal()">Close</button>
       <button class="btn-primary" (click)="downloadQRCode()">
         <i class="ri-download-line"></i>
         Download QR Code

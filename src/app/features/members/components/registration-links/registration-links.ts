@@ -31,8 +31,10 @@ export class RegistrationLinks implements OnInit, OnDestroy {
   qrCodeValue = '';
   selectedLink: RegistrationLink | null = null;
 
-  // Form data
+  // Form data — toggles control whether limits are applied
+  hasExpiry = false;
   expiresInHours = 24;
+  hasMaxUses = false;
   maxUses: number | null = null;
 
   // Permissions
@@ -57,7 +59,7 @@ export class RegistrationLinks implements OnInit, OnDestroy {
 
   private checkPermissions(): void {
     this.canManageLinks =
-      this.permissionService.isAdmin || this.permissionService.members.import; // import permission covers link creation
+      this.permissionService.isAdmin || this.permissionService.members.import;
 
     if (!this.canManageLinks) {
       this.router.navigate(['/unauthorized']);
@@ -86,8 +88,12 @@ export class RegistrationLinks implements OnInit, OnDestroy {
 
   openCreateModal(): void {
     this.showCreateModal = true;
+    // Reset form to defaults — no limits by default
+    this.hasExpiry = false;
     this.expiresInHours = 24;
+    this.hasMaxUses = false;
     this.maxUses = null;
+    this.errorMessage = '';
   }
 
   closeCreateModal(): void {
@@ -96,8 +102,14 @@ export class RegistrationLinks implements OnInit, OnDestroy {
   }
 
   createLink(): void {
-    if (this.expiresInHours < 1) {
-      this.errorMessage = 'Expiration must be at least 1 hour';
+    // Only validate hours if the user opted into expiry
+    if (this.hasExpiry && (!this.expiresInHours || this.expiresInHours < 1)) {
+      this.errorMessage = 'Please enter a valid expiration (at least 1 hour)';
+      return;
+    }
+
+    if (this.hasMaxUses && (!this.maxUses || this.maxUses < 1)) {
+      this.errorMessage = 'Please enter a valid maximum uses (at least 1)';
       return;
     }
 
@@ -106,17 +118,16 @@ export class RegistrationLinks implements OnInit, OnDestroy {
 
     this.linkService
       .createLink({
-        expires_in_hours: this.expiresInHours,
-        max_uses: this.maxUses || undefined,
+        expires_in_hours: this.hasExpiry ? this.expiresInHours : null,
+        max_uses: this.hasMaxUses ? this.maxUses! : null,
       })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (link) => {
+        next: () => {
           this.successMessage = 'Registration link created successfully!';
           this.loadLinks();
           this.closeCreateModal();
           this.loading = false;
-
           setTimeout(() => (this.successMessage = ''), 3000);
         },
         error: (error) => {
@@ -139,35 +150,34 @@ export class RegistrationLinks implements OnInit, OnDestroy {
       });
   }
 
-  showQRCode(link: any) {
+  showQRCode(link: any): void {
     const fullUrl = `${window.location.origin}/register/${link.link_token}`;
-    this.qrCodeValue = fullUrl; // ← Just set the value
+    this.qrCodeValue = fullUrl;
     this.selectedLinkForQR = link;
     this.showQRModal = true;
   }
 
-  closeQRModal() {
+  closeQRModal(): void {
     this.showQRModal = false;
     this.selectedLinkForQR = null;
     this.qrCodeValue = '';
   }
 
-  downloadQRCode() {
+  downloadQRCode(): void {
     const canvas = document.querySelector(
       '.qr-code-image canvas',
     ) as HTMLCanvasElement;
     if (canvas) {
       const url = canvas.toDataURL('image/png');
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `registration-qr-${this.selectedLinkForQR?.link_token || 'code'}.png`;
-      link.click();
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `registration-qr-${this.selectedLinkForQR?.link_token || 'code'}.png`;
+      a.click();
     }
   }
 
   copyLink(link: RegistrationLink): void {
     const url = this.linkService.getRegistrationUrl(link.link_token);
-
     navigator.clipboard
       .writeText(url)
       .then(() => {
@@ -183,7 +193,7 @@ export class RegistrationLinks implements OnInit, OnDestroy {
   deactivateLink(linkId: string): void {
     if (
       !confirm(
-        'Are you sure you want to deactivate this link? This action cannot be undone.',
+        'Are you sure you want to deactivate this link? You can reactivate it later.',
       )
     ) {
       return;
@@ -204,11 +214,29 @@ export class RegistrationLinks implements OnInit, OnDestroy {
       });
   }
 
+  reactivateLink(linkId: string): void {
+    this.linkService
+      .reactivateLink(linkId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.successMessage = 'Link reactivated successfully';
+          this.loadLinks();
+          setTimeout(() => (this.successMessage = ''), 3000);
+        },
+        error: (error) => {
+          this.errorMessage = error.message || 'Failed to reactivate link';
+        },
+      });
+  }
+
   getRegistrationUrl(link: RegistrationLink): string {
     return this.linkService.getRegistrationUrl(link.link_token);
   }
 
+  // A link is only expired if expires_at is set AND in the past
   isExpired(link: RegistrationLink): boolean {
+    if (!link.expires_at) return false;
     return new Date(link.expires_at) < new Date();
   }
 
@@ -217,20 +245,28 @@ export class RegistrationLinks implements OnInit, OnDestroy {
   }
 
   getLinkStatus(link: RegistrationLink): string {
-    if (!link.is_active) return 'Inactive';
     if (this.isExpired(link)) return 'Expired';
     if (this.isMaxedOut(link)) return 'Max Uses Reached';
+    if (!link.is_active) return 'Deactivated';
     return 'Active';
   }
 
   getStatusClass(link: RegistrationLink): string {
-    const status = this.getLinkStatus(link);
-    if (status === 'Active') return 'status-active';
-    return 'status-inactive';
+    if (this.isExpired(link)) return 'status-expired';
+    if (this.isMaxedOut(link)) return 'status-maxed';
+    if (!link.is_active) return 'status-inactive';
+    return 'status-active';
   }
 
   formatDate(dateString: string): string {
+    if (!dateString) return '—';
     return new Date(dateString).toLocaleString();
+  }
+
+  // Shows "Never" when expires_at is null, date otherwise
+  formatExpiry(expiresAt: string | null): string {
+    if (!expiresAt) return 'Never';
+    return new Date(expiresAt).toLocaleString();
   }
 
   goBack(): void {
