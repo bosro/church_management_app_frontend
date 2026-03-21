@@ -12,6 +12,7 @@ import { Router } from '@angular/router';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { PdfBrandingService } from '../../../../../core/services/pdf-branding.service';
 
 @Component({
   selector: 'app-fee-structures',
@@ -54,6 +55,7 @@ export class FeeStructures implements OnInit, OnDestroy {
     private schoolService: SchoolService,
     public permissionService: PermissionService,
     public router: Router,
+    private pdfBranding: PdfBrandingService,
   ) {}
 
   ngOnInit(): void {
@@ -162,9 +164,11 @@ export class FeeStructures implements OnInit, OnDestroy {
     }
     this.processing = true;
     this.errorMessage = '';
+
     const obs = this.editingFee
       ? this.schoolService.updateFeeStructure(this.editingFee.id, this.feeForm)
       : this.schoolService.createFeeStructure(this.feeForm);
+
     obs.pipe(takeUntil(this.destroy$)).subscribe({
       next: () => {
         this.successMessage = this.editingFee ? 'Fee updated!' : 'Fee created!';
@@ -231,7 +235,7 @@ export class FeeStructures implements OnInit, OnDestroy {
     try {
       if (format === 'csv') this.exportCSV(this.groupedFees, fileName);
       else if (format === 'xlsx') this.exportXLSX(this.groupedFees, fileName);
-      else this.exportPDFAll(this.groupedFees, fileName);
+      else await this.exportPDFAll(this.groupedFees, fileName);
     } catch (e: any) {
       this.errorMessage = 'Export failed: ' + e.message;
     } finally {
@@ -250,10 +254,11 @@ export class FeeStructures implements OnInit, OnDestroy {
     this.exportSingleClassPDF(group, fileName);
   }
 
-  private exportSingleClassPDF(
+  private async exportSingleClassPDF(
     group: { class: SchoolClass; fees: FeeStructure[] },
     fileName: string,
-  ): void {
+  ): Promise<void> {
+    const branding = await this.pdfBranding.getBranding();
     const doc = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
@@ -261,15 +266,33 @@ export class FeeStructures implements OnInit, OnDestroy {
     });
     const pw = doc.internal.pageSize.getWidth();
 
+    // Header banner
     doc.setFillColor(79, 70, 229);
     doc.rect(0, 0, pw, 28, 'F');
+
+    // Logo
+    if (branding.logoBase64) {
+      try {
+        doc.addImage(
+          branding.logoBase64,
+          branding.logoMimeType.replace('image/', '').toUpperCase(),
+          14,
+          4,
+          18,
+          18,
+        );
+      } catch {
+        /* logo render failed — skip */
+      }
+    }
+
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
-    doc.text('Churchman', 14, 12);
+    doc.text(branding.name, 36, 12);
     doc.setFontSize(11);
     doc.setFont('helvetica', 'normal');
-    doc.text('Fee Structure', 14, 20);
+    doc.text('Fee Structure', 36, 20);
     doc.setFontSize(9);
     doc.text(
       new Date().toLocaleDateString('en-GB', {
@@ -282,6 +305,7 @@ export class FeeStructures implements OnInit, OnDestroy {
       { align: 'right' },
     );
 
+    // Class name + term
     doc.setTextColor(17, 24, 39);
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
@@ -301,17 +325,17 @@ export class FeeStructures implements OnInit, OnDestroy {
     doc.text('Total Fees', pw - 42, 43, { align: 'center' });
     doc.setFontSize(13);
     doc.setFont('helvetica', 'bold');
-    doc.text(this.formatCurrency(total), pw - 42, 51, { align: 'center' });
+    doc.text(this.formatCurrencyPDF(total), pw - 42, 51, { align: 'center' });
 
     autoTable(doc, {
       startY: 60,
       head: [['Fee Name', 'Amount (GHS)', 'Mandatory']],
       body: group.fees.map((f) => [
         f.fee_name,
-        this.formatCurrency(f.amount),
+        this.formatCurrencyPDF(f.amount),
         f.is_mandatory ? 'Yes' : 'No',
       ]),
-      foot: [['TOTAL', this.formatCurrency(total), '']],
+      foot: [['TOTAL', this.formatCurrencyPDF(total), '']],
       styles: { fontSize: 10, cellPadding: 4 },
       headStyles: {
         fillColor: [79, 70, 229],
@@ -331,7 +355,7 @@ export class FeeStructures implements OnInit, OnDestroy {
     doc.setTextColor(156, 163, 175);
     doc.setFont('helvetica', 'normal');
     doc.text(
-      'Churchman School Management  •  Generated automatically',
+      `${branding.name}  •  Generated automatically`,
       pw / 2,
       doc.internal.pageSize.getHeight() - 8,
       { align: 'center' },
@@ -407,7 +431,6 @@ export class FeeStructures implements OnInit, OnDestroy {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Fee Structures');
 
-    // Per-class summary sheet
     const summaryRows = groups.map((g) => ({
       Class: g.class.name,
       'Number of Fees': g.fees.length,
@@ -426,10 +449,11 @@ export class FeeStructures implements OnInit, OnDestroy {
     );
   }
 
-  private exportPDFAll(
+  private async exportPDFAll(
     groups: { class: SchoolClass; fees: FeeStructure[] }[],
     fileName: string,
-  ): void {
+  ): Promise<void> {
+    const branding = await this.pdfBranding.getBranding();
     const doc = new jsPDF({
       orientation: 'landscape',
       unit: 'mm',
@@ -442,12 +466,30 @@ export class FeeStructures implements OnInit, OnDestroy {
       year: 'numeric',
     });
 
+    // Header banner
     doc.setFillColor(79, 70, 229);
     doc.rect(0, 0, pw, 22, 'F');
+
+    // Logo
+    if (branding.logoBase64) {
+      try {
+        doc.addImage(
+          branding.logoBase64,
+          branding.logoMimeType.replace('image/', '').toUpperCase(),
+          14,
+          3,
+          16,
+          16,
+        );
+      } catch {
+        /* logo render failed — skip */
+      }
+    }
+
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
-    doc.text('Churchman', 14, 14);
+    doc.text(branding.name, 36, 14);
     doc.setFontSize(11);
     doc.setFont('helvetica', 'normal');
     doc.text(
@@ -459,6 +501,7 @@ export class FeeStructures implements OnInit, OnDestroy {
     doc.setFontSize(9);
     doc.text(`Exported: ${today}`, pw - 14, 14, { align: 'right' });
 
+    // Stats row
     const totalFees = groups.reduce((s, g) => s + g.fees.length, 0);
     const grandTotal = groups.reduce(
       (s, g) => s + this.getClassTotal(g.fees),
@@ -473,44 +516,12 @@ export class FeeStructures implements OnInit, OnDestroy {
     const stats = [
       `Classes: ${groups.length}`,
       `Fee Items: ${totalFees}`,
-      `Grand Total: ${this.formatCurrency(grandTotal)}`,
+      `Grand Total: ${this.formatCurrencyPDF(grandTotal)}`,
     ];
     const cw = pw / stats.length;
     stats.forEach((s, i) =>
       doc.text(s, cw * i + cw / 2, 32, { align: 'center' }),
     );
-
-    const allRows = groups.flatMap((g) => [
-      // Class header row
-      [
-        {
-          content: g.class.name,
-          colSpan: 4,
-          styles: {
-            fillColor: [238, 242, 255] as [number, number, number],
-            textColor: [79, 70, 229] as [number, number, number],
-            fontStyle: 'bold' as 'bold',
-          },
-        },
-        {
-          content: `Total: ${this.formatCurrency(this.getClassTotal(g.fees))}`,
-          styles: {
-            fillColor: [238, 242, 255] as [number, number, number],
-            textColor: [79, 70, 229] as [number, number, number],
-            fontStyle: 'bold' as 'bold',
-            halign: 'right' as 'right',
-          },
-        },
-      ],
-      // Fee rows
-      ...g.fees.map((f) => [
-        f.fee_name,
-        this.formatCurrency(f.amount),
-        f.is_mandatory ? 'Yes' : 'No',
-        f.term,
-        f.academic_year,
-      ]),
-    ]);
 
     autoTable(doc, {
       startY: 42,
@@ -521,15 +532,15 @@ export class FeeStructures implements OnInit, OnDestroy {
             content: g.class.name,
             colSpan: 5,
             styles: {
-              fillColor: [238, 242, 255],
-              textColor: [79, 70, 229],
-              fontStyle: 'bold',
+              fillColor: [238, 242, 255] as [number, number, number],
+              textColor: [79, 70, 229] as [number, number, number],
+              fontStyle: 'bold' as const,
             },
           },
         ] as any,
         ...g.fees.map((f) => [
           f.fee_name,
-          this.formatCurrency(f.amount),
+          this.formatCurrencyPDF(f.amount),
           f.is_mandatory ? 'Yes' : 'No',
           f.term,
           f.academic_year,
@@ -549,7 +560,7 @@ export class FeeStructures implements OnInit, OnDestroy {
         doc.setTextColor(156, 163, 175);
         doc.setFont('helvetica', 'normal');
         doc.text(
-          `Page ${data.pageNumber} of ${count}  •  Churchman School Management`,
+          `Page ${data.pageNumber} of ${count}  •  ${branding.name}`,
           pw / 2,
           doc.internal.pageSize.getHeight() - 6,
           { align: 'center' },
@@ -562,6 +573,8 @@ export class FeeStructures implements OnInit, OnDestroy {
       `${fileName}.pdf`,
     );
   }
+
+  // ── Helpers ──────────────────────────────────────────────
 
   private triggerDownload(blob: Blob, fileName: string): void {
     const url = window.URL.createObjectURL(blob);
@@ -578,6 +591,14 @@ export class FeeStructures implements OnInit, OnDestroy {
     return new Intl.NumberFormat('en-GH', {
       style: 'currency',
       currency: 'GHS',
+    }).format(amount || 0);
+  }
+
+  private formatCurrencyPDF(amount: number): string {
+    return new Intl.NumberFormat('en-GH', {
+      style: 'currency',
+      currency: 'GHS',
+      currencyDisplay: 'code',
     }).format(amount || 0);
   }
 }

@@ -7,6 +7,7 @@ import { PermissionService } from '../../../../core/services/permission.service'
 import { TERMS } from '../../../../models/school.model';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { PdfBrandingService } from '../../../../core/services/pdf-branding.service';
 
 @Component({
   selector: 'app-reports-overview',
@@ -32,6 +33,7 @@ export class ReportsOverview implements OnInit, OnDestroy {
     private schoolService: SchoolService,
     public permissionService: PermissionService,
     public router: Router,
+    private pdfBranding: PdfBrandingService,
   ) {}
 
   ngOnInit(): void {
@@ -130,33 +132,47 @@ export class ReportsOverview implements OnInit, OnDestroy {
     }).format(amount || 0);
   }
 
+  /**
+   * PDF-safe currency formatter.
+   * jsPDF's built-in Helvetica font does not support the Ghanaian Cedi
+   * symbol ₵ (U+20B5) — it renders as garbled "μ". Using currencyDisplay:'code'
+   * outputs "GHS 1,250.00" instead, which is fully ASCII-safe.
+   */
+  private formatCurrencyPDF(amount: number): string {
+    return new Intl.NumberFormat('en-GH', {
+      style: 'currency',
+      currency: 'GHS',
+      currencyDisplay: 'code',
+    }).format(amount || 0);
+  }
+
   // ── Export summary PDF ────────────────────────────────────
 
-  exportSummaryPDF(): void {
+  async exportSummaryPDF(): Promise<void> {
+    const branding = await this.pdfBranding.getBranding();
     if (!this.statistics) return;
     this.exporting = true;
 
     try {
-      const doc = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4',
-      });
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
       const pw = doc.internal.pageSize.getWidth();
       const today = new Date().toLocaleDateString('en-GB', {
-        day: '2-digit',
-        month: 'long',
-        year: 'numeric',
+        day: '2-digit', month: 'long', year: 'numeric',
       });
 
       // ── Header banner ──
       doc.setFillColor(79, 70, 229);
       doc.rect(0, 0, pw, 32, 'F');
+    if (branding.logoBase64) {
+      try {
+        doc.addImage(branding.logoBase64, branding.logoMimeType.replace('image/', '').toUpperCase(), 14, 4, 18, 18);
+      } catch { /* logo render failed — skip */ }
+    }
 
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(20);
       doc.setFont('helvetica', 'bold');
-      doc.text('Churchman', 14, 14);
+      doc.text(branding.name, 36, 14);
 
       doc.setFontSize(12);
       doc.setFont('helvetica', 'normal');
@@ -173,49 +189,17 @@ export class ReportsOverview implements OnInit, OnDestroy {
       doc.setFont('helvetica', 'bold');
       doc.text(
         `${this.currentTerm}  |  Academic Year ${this.currentAcademicYear}`,
-        pw / 2,
-        47,
-        { align: 'center' },
+        pw / 2, 47, { align: 'center' },
       );
 
       // ── Stats summary boxes (2×3 grid) ──
       const stats = [
-        {
-          label: 'Total Students',
-          value: String(this.statistics.total_students),
-          bg: [221, 214, 254] as [number, number, number],
-          text: [124, 58, 237] as [number, number, number],
-        },
-        {
-          label: 'Classes',
-          value: String(this.statistics.total_classes),
-          bg: [209, 250, 229] as [number, number, number],
-          text: [16, 185, 129] as [number, number, number],
-        },
-        {
-          label: 'Total Fees Due',
-          value: this.formatCurrency(this.statistics.total_fees_due),
-          bg: [219, 234, 254] as [number, number, number],
-          text: [59, 130, 246] as [number, number, number],
-        },
-        {
-          label: 'Fees Collected',
-          value: this.formatCurrency(this.statistics.total_fees_paid),
-          bg: [209, 250, 229] as [number, number, number],
-          text: [16, 185, 129] as [number, number, number],
-        },
-        {
-          label: 'Outstanding',
-          value: this.formatCurrency(this.statistics.total_outstanding),
-          bg: [254, 226, 226] as [number, number, number],
-          text: [239, 68, 68] as [number, number, number],
-        },
-        {
-          label: 'Collection Rate',
-          value: `${this.getCollectionRate()}%`,
-          bg: [254, 243, 199] as [number, number, number],
-          text: [245, 158, 11] as [number, number, number],
-        },
+        { label: 'Total Students',   value: String(this.statistics.total_students),            bg: [221, 214, 254] as [number,number,number], text: [124, 58, 237] as [number,number,number] },
+        { label: 'Classes',           value: String(this.statistics.total_classes),              bg: [209, 250, 229] as [number,number,number], text: [16, 185, 129] as [number,number,number] },
+        { label: 'Total Fees Due',    value: this.formatCurrencyPDF(this.statistics.total_fees_due), bg: [219, 234, 254] as [number,number,number], text: [59, 130, 246] as [number,number,number] },
+        { label: 'Fees Collected',    value: this.formatCurrencyPDF(this.statistics.total_fees_paid), bg: [209, 250, 229] as [number,number,number], text: [16, 185, 129] as [number,number,number] },
+        { label: 'Outstanding',       value: this.formatCurrencyPDF(this.statistics.total_outstanding), bg: [254, 226, 226] as [number,number,number], text: [239, 68, 68] as [number,number,number] },
+        { label: 'Collection Rate',   value: `${this.getCollectionRate()}%`,                    bg: [254, 243, 199] as [number,number,number], text: [245, 158, 11] as [number,number,number] },
       ];
 
       const cols = 3;
@@ -256,9 +240,7 @@ export class ReportsOverview implements OnInit, OnDestroy {
 
       doc.setTextColor(16, 185, 129);
       doc.setFontSize(12);
-      doc.text(`${this.getCollectionRate()}%`, pw - 22, progressY + 10, {
-        align: 'right',
-      });
+      doc.text(`${this.getCollectionRate()}%`, pw - 22, progressY + 10, { align: 'right' });
 
       // Progress bar background
       const barX = 22;
@@ -276,18 +258,9 @@ export class ReportsOverview implements OnInit, OnDestroy {
       // Legend
       const legendY = progressY + 28;
       const legendItems = [
-        {
-          label: `Paid: ${this.statistics.paid_count}`,
-          color: [16, 185, 129] as [number, number, number],
-        },
-        {
-          label: `Partial: ${this.statistics.partial_count}`,
-          color: [245, 158, 11] as [number, number, number],
-        },
-        {
-          label: `Unpaid: ${this.statistics.unpaid_count}`,
-          color: [239, 68, 68] as [number, number, number],
-        },
+        { label: `Paid: ${this.statistics.paid_count}`,    color: [16, 185, 129] as [number,number,number] },
+        { label: `Partial: ${this.statistics.partial_count}`, color: [245, 158, 11] as [number,number,number] },
+        { label: `Unpaid: ${this.statistics.unpaid_count}`,  color: [239, 68, 68] as [number,number,number] },
       ];
       legendItems.forEach((item, i) => {
         const lx = 22 + i * 60;
@@ -308,29 +281,16 @@ export class ReportsOverview implements OnInit, OnDestroy {
         body: [
           ['Total Students', String(this.statistics.total_students)],
           ['Total Classes', String(this.statistics.total_classes)],
-          [
-            'Total Fees Due',
-            this.formatCurrency(this.statistics.total_fees_due),
-          ],
-          [
-            'Total Fees Collected',
-            this.formatCurrency(this.statistics.total_fees_paid),
-          ],
-          [
-            'Total Outstanding',
-            this.formatCurrency(this.statistics.total_outstanding),
-          ],
+          ['Total Fees Due', this.formatCurrencyPDF(this.statistics.total_fees_due)],
+          ['Total Fees Collected', this.formatCurrencyPDF(this.statistics.total_fees_paid)],
+          ['Total Outstanding', this.formatCurrencyPDF(this.statistics.total_outstanding)],
           ['Fully Paid Students', String(this.statistics.paid_count)],
           ['Partial Payment Students', String(this.statistics.partial_count)],
           ['Unpaid Students', String(this.statistics.unpaid_count)],
           ['Collection Rate', `${this.getCollectionRate()}%`],
         ],
         styles: { fontSize: 9, cellPadding: 4 },
-        headStyles: {
-          fillColor: [79, 70, 229],
-          textColor: 255,
-          fontStyle: 'bold',
-        },
+        headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold' },
         alternateRowStyles: { fillColor: [249, 250, 251] },
         columnStyles: { 1: { halign: 'right', fontStyle: 'bold' } },
       });
@@ -340,7 +300,7 @@ export class ReportsOverview implements OnInit, OnDestroy {
       doc.setTextColor(156, 163, 175);
       doc.setFont('helvetica', 'normal');
       doc.text(
-        'Churchman School Management  •  Generated automatically',
+        `${branding.name}  •  Generated automatically`,
         pw / 2,
         doc.internal.pageSize.getHeight() - 8,
         { align: 'center' },
@@ -348,17 +308,14 @@ export class ReportsOverview implements OnInit, OnDestroy {
 
       // ── Download ──
       const fileName = `school_report_${this.currentTerm.replace(' ', '_')}_${this.currentAcademicYear.replace('/', '-')}.pdf`;
-      const blob = new Blob([doc.output('arraybuffer')], {
-        type: 'application/pdf',
-      });
+      const blob = new Blob([doc.output('arraybuffer')], { type: 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
+      a.href = url; a.download = fileName;
+      document.body.appendChild(a); a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
+
     } finally {
       this.exporting = false;
     }

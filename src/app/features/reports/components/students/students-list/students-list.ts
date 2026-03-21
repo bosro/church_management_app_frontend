@@ -9,6 +9,7 @@ import { Student, SchoolClass } from '../../../../../models/school.model';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { PdfBrandingService } from '../../../../../core/services/pdf-branding.service';
 
 @Component({
   selector: 'app-students-list',
@@ -43,6 +44,7 @@ export class StudentsList implements OnInit, OnDestroy {
     public permissionService: PermissionService,
     public router: Router,
     private fb: FormBuilder,
+    private pdfBranding: PdfBrandingService,
   ) {}
 
   ngOnInit(): void {
@@ -297,7 +299,8 @@ export class StudentsList implements OnInit, OnDestroy {
     this.triggerDownload(blob, `${fileName}.xlsx`);
   }
 
-  private downloadPDF(students: Student[], fileName: string): void {
+  private async downloadPDF(students: Student[], fileName: string) {
+    const branding = await this.pdfBranding.getBranding();
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
     const pageWidth = doc.internal.pageSize.getWidth();
     const today = new Date().toLocaleDateString('en-GB', {
@@ -307,11 +310,16 @@ export class StudentsList implements OnInit, OnDestroy {
     // Header banner
     doc.setFillColor(79, 70, 229);
     doc.rect(0, 0, pageWidth, 22, 'F');
+    if (branding.logoBase64) {
+      try {
+        doc.addImage(branding.logoBase64, branding.logoMimeType.replace('image/', '').toUpperCase(), 14, 4, 18, 18);
+      } catch { /* logo render failed */ }
+    }
 
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
-    doc.text('Churchman', 14, 14);
+    doc.text(branding.name, 36, 14);
 
     doc.setFontSize(11);
     doc.setFont('helvetica', 'normal');
@@ -379,7 +387,7 @@ export class StudentsList implements OnInit, OnDestroy {
         doc.setTextColor(156, 163, 175);
         doc.setFont('helvetica', 'normal');
         doc.text(
-          `Page ${data.pageNumber} of ${pageCount}  •  Churchman School Management`,
+          `Page ${data.pageNumber} of ${pageCount}  •  ${branding.name}`,
           pageWidth / 2,
           doc.internal.pageSize.getHeight() - 6,
           { align: 'center' },
