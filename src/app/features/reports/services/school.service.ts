@@ -17,6 +17,8 @@ import {
   StudentReportCard,
   FeeStatement,
 } from '../../../models/school.model';
+import { ImportResult } from '../../../models/member.model';
+import * as XLSX from 'xlsx';
 
 @Injectable({ providedIn: 'root' })
 export class SchoolService {
@@ -109,7 +111,7 @@ export class SchoolService {
   ): Observable<{ data: Student[]; count: number }> {
     let query = this.supabase.client
       .from('students')
-      .select('*, class:classes(*)', { count: 'exact' })
+      .select('*, class:school_classes(*)', { count: 'exact' })
       .eq('church_id', this.churchId);
 
     if (filters?.classId) query = query.eq('class_id', filters.classId);
@@ -138,7 +140,7 @@ export class SchoolService {
     return from(
       this.supabase.client
         .from('students')
-        .select('*, class:classes(*)')
+        .select('*, class:school_classes(*)')
         .eq('id', id)
         .eq('church_id', this.churchId)
         .single(),
@@ -178,7 +180,7 @@ export class SchoolService {
           church_id: this.churchId,
           student_number: studentNumber,
         })
-        .select('*, class:classes(*)')
+        .select('*, class:school_classes(*)')
         .single(),
     ).pipe(
       map(({ data, error }) => {
@@ -195,7 +197,7 @@ export class SchoolService {
         .update({ ...data, updated_at: new Date().toISOString() })
         .eq('id', id)
         .eq('church_id', this.churchId)
-        .select('*, class:classes(*)')
+        .select('*, class:school_classes(*)')
         .single(),
     ).pipe(
       map(({ data, error }) => {
@@ -229,7 +231,7 @@ export class SchoolService {
     return from(
       this.supabase.client
         .from('fee_structures')
-        .select('*, class:classes(*)')
+        .select('*, class:school_classes(*)')
         .eq('church_id', this.churchId)
         .eq('class_id', classId)
         .eq('academic_year', academicYear)
@@ -250,7 +252,7 @@ export class SchoolService {
     return from(
       this.supabase.client
         .from('fee_structures')
-        .select('*, class:classes(*)')
+        .select('*, class:school_classes(*)')
         .eq('church_id', this.churchId)
         .eq('academic_year', academicYear)
         .eq('term', term)
@@ -268,7 +270,7 @@ export class SchoolService {
       this.supabase.client
         .from('fee_structures')
         .insert({ ...data, church_id: this.churchId })
-        .select('*, class:classes(*)')
+        .select('*, class:school_classes(*)')
         .single(),
     ).pipe(
       map(({ data, error }) => {
@@ -288,7 +290,7 @@ export class SchoolService {
         .update(data)
         .eq('id', id)
         .eq('church_id', this.churchId)
-        .select('*, class:classes(*)')
+        .select('*, class:school_classes(*)')
         .single(),
     ).pipe(
       map(({ data, error }) => {
@@ -365,7 +367,7 @@ export class SchoolService {
     return from(
       this.supabase.client
         .from('student_fees')
-        .select('*, student:students(*, class:classes(*))')
+        .select('*, student:students(*, class:school_classes(*))')
         .eq('church_id', this.churchId)
         .eq('academic_year', academicYear)
         .eq('term', term)
@@ -389,7 +391,7 @@ export class SchoolService {
     return from(
       this.supabase.client
         .from('student_fees')
-        .select('*, student:students(*, class:classes(*))')
+        .select('*, student:students(*, class:school_classes(*))')
         .eq('church_id', this.churchId)
         .eq('academic_year', academicYear)
         .eq('term', term)
@@ -416,7 +418,7 @@ export class SchoolService {
   ): Observable<{ data: FeePayment[]; count: number }> {
     let query = this.supabase.client
       .from('fee_payments')
-      .select('*, student:students(*, class:classes(*))', { count: 'exact' })
+      .select('*, student:students(*, class:school_classes(*))', { count: 'exact' })
       .eq('church_id', this.churchId);
 
     if (filters?.studentId) query = query.eq('student_id', filters.studentId);
@@ -441,7 +443,7 @@ export class SchoolService {
     return from(
       this.supabase.client
         .from('fee_payments')
-        .select('*, student:students(*, class:classes(*))')
+        .select('*, student:students(*, class:school_classes(*))')
         .eq('church_id', this.churchId)
         .eq('receipt_number', receiptNumber)
         .single(),
@@ -508,7 +510,7 @@ export class SchoolService {
   getSubjects(classId?: string): Observable<Subject[]> {
     let query = this.supabase.client
       .from('school_subjects')
-      .select('*, class:classes(*)')
+      .select('*, class:school_classes(*)')
       .eq('church_id', this.churchId)
       .eq('is_active', true)
       .order('name');
@@ -528,7 +530,7 @@ export class SchoolService {
       this.supabase.client
         .from('school_subjects')
         .insert({ ...data, church_id: this.churchId })
-        .select('*, class:classes(*)')
+        .select('*, class:school_classes(*)')
         .single(),
     ).pipe(
       map(({ data, error }) => {
@@ -545,7 +547,7 @@ export class SchoolService {
         .update(data)
         .eq('id', id)
         .eq('church_id', this.churchId)
-        .select('*, class:classes(*)')
+        .select('*, class:school_classes(*)')
         .single(),
     ).pipe(
       map(({ data, error }) => {
@@ -622,7 +624,7 @@ export class SchoolService {
   }): Observable<Exam[]> {
     let query = this.supabase.client
       .from('exams')
-      .select('*, class:classes(*)')
+      .select('*, class:school_classes(*)')
       .eq('church_id', this.churchId)
       .order('created_at', { ascending: false });
 
@@ -644,7 +646,7 @@ export class SchoolService {
       this.supabase.client
         .from('exams')
         .insert({ ...data, church_id: this.churchId })
-        .select('*, class:classes(*)')
+        .select('*, class:school_classes(*)')
         .single(),
     ).pipe(
       map(({ data, error }) => {
@@ -661,7 +663,7 @@ export class SchoolService {
         .update({ ...data, updated_at: new Date().toISOString() })
         .eq('id', id)
         .eq('church_id', this.churchId)
-        .select('*, class:classes(*)')
+        .select('*, class:school_classes(*)')
         .single(),
     ).pipe(
       map(({ data, error }) => {
@@ -678,7 +680,7 @@ export class SchoolService {
       this.supabase.client
         .from('exam_results')
         .select(
-          '*, student:students(*, class:classes(*)), subject:school_subjects(*)',
+          '*, student:students(*, class:school_classes(*)), subject:school_subjects(*)',
         )
         .eq('exam_id', examId)
         .eq('church_id', this.churchId)
@@ -712,12 +714,12 @@ export class SchoolService {
       Promise.all([
         this.supabase.client
           .from('students')
-          .select('*, class:classes(*)')
+          .select('*, class:school_classes(*)')
           .eq('id', studentId)
           .single(),
         this.supabase.client
           .from('exams')
-          .select('*, class:classes(*)')
+          .select('*, class:school_classes(*)')
           .eq('id', examId)
           .single(),
         this.supabase.client
@@ -839,4 +841,128 @@ export class SchoolService {
     const v = n % 100;
     return n + (s[(v - 20) % 10] || s[v] || s[0]);
   }
+
+
+  importStudentsFromFile(file: File): Observable<ImportResult> {
+  return from(this.processStudentFileImport(file));
+}
+
+private async processStudentFileImport(file: File): Promise<ImportResult> {
+  const ext = file.name.split('.').pop()?.toLowerCase();
+  if (ext === 'xlsx' || ext === 'xls') {
+    return this.processStudentExcelImport(file);
+  }
+  return this.processStudentCSVImport(file);
+}
+
+private async processStudentExcelImport(file: File): Promise<ImportResult> {
+  const buffer = await file.arrayBuffer();
+  const workbook = XLSX.read(buffer, { type: 'array', cellDates: true });
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  const rows: any[] = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: false });
+
+  if (!rows.length) throw new Error('File is empty or invalid');
+
+  // Load classes once for name→id lookup
+  const { data: classes } = await this.supabase.client
+    .from('school_classes')
+    .select('id, name, academic_year')
+    .eq('church_id', this.churchId)
+    .eq('is_active', true);
+
+  const results: ImportResult = { success: 0, failed: 0, errors: [] };
+
+  for (let i = 0; i < rows.length; i++) {
+    try {
+      const row: Record<string, string> = {};
+      Object.entries(rows[i]).forEach(([key, val]) => {
+        row[key.trim().toLowerCase().replace(/\s+/g, '_')] = String(val ?? '').trim();
+      });
+
+      const classId = this.resolveClassId(row['class'] || row['class_name'], classes || []);
+      if (!classId) throw new Error(`Class "${row['class'] || row['class_name']}" not found`);
+
+      await this.insertStudentRow(row, classId);
+      results.success++;
+    } catch (err: any) {
+      results.failed++;
+      results.errors.push({ row: i + 2, error: err.message, data: '' });
+    }
+  }
+  return results;
+}
+
+private async processStudentCSVImport(file: File): Promise<ImportResult> {
+  const text = await file.text();
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#'));
+  if (lines.length < 2) throw new Error('CSV file is empty or invalid');
+
+  const { data: classes } = await this.supabase.client
+    .from('school_classes')
+    .select('id, name, academic_year')
+    .eq('church_id', this.churchId)
+    .eq('is_active', true);
+
+  const headers = lines[0].split(',').map(h =>
+    h.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '')
+  );
+
+  const results: ImportResult = { success: 0, failed: 0, errors: [] };
+
+  for (let i = 1; i < lines.length; i++) {
+    try {
+      const values = lines[i].split(',');
+      const row: Record<string, string> = {};
+      headers.forEach((h, idx) => { row[h] = values[idx]?.trim() || ''; });
+
+      const classId = this.resolveClassId(row['class'] || row['class_name'], classes || []);
+      if (!classId) throw new Error(`Class "${row['class'] || row['class_name']}" not found`);
+
+      await this.insertStudentRow(row, classId);
+      results.success++;
+    } catch (err: any) {
+      results.failed++;
+      results.errors.push({ row: i + 1, error: err.message, data: lines[i] });
+    }
+  }
+  return results;
+}
+
+private resolveClassId(className: string, classes: any[]): string | null {
+  if (!className) return null;
+  const match = classes.find(c =>
+    c.name.toLowerCase().trim() === className.toLowerCase().trim()
+  );
+  return match?.id || null;
+}
+
+private async insertStudentRow(row: Record<string, string>, classId: string): Promise<void> {
+  const { data: studentNumber, error: snError } = await this.supabase.client
+    .rpc('generate_student_number', { p_church_id: this.churchId });
+  if (snError) throw new Error(snError.message);
+
+  if (!row['first_name'] || !row['last_name']) {
+    throw new Error('First name and last name are required');
+  }
+
+  const { error } = await this.supabase.client.from('students').insert({
+    church_id: this.churchId,
+    student_number: studentNumber,
+    first_name: row['first_name'],
+    middle_name: row['middle_name'] || null,
+    last_name: row['last_name'],
+    date_of_birth: row['date_of_birth'] || null,
+    gender: row['gender']?.toLowerCase() || null,
+    class_id: classId,
+    parent_name: row['parent_name'] || null,
+    parent_phone: row['parent_phone'] || row['phone'] || null,
+    parent_email: row['parent_email'] || row['email'] || null,
+    address: row['address'] || null,
+    is_active: true,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
 }

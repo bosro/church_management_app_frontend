@@ -131,6 +131,8 @@ export class AddStudent implements OnInit, OnDestroy {
     Object.values(this.studentForm.controls).forEach((c) => c.markAsTouched());
   }
 
+
+  
   getError(field: string): string {
     const control = this.studentForm.get(field);
     if (!control?.errors || !control.touched) return '';
@@ -141,3 +143,5 @@ export class AddStudent implements OnInit, OnDestroy {
     return 'Invalid input';
   }
 }
+
+

@@ -19,6 +19,7 @@ import { RouterModule } from '@angular/router';
 import { ReportsRoutingModule } from './reports-routing.module';
 import { GradingScaleComponent } from './components/settings/grading-scale/grading-scale';
 import { SubjectsList } from './components/settings/subjects-list/subjects-list';
+import { ImportStudents } from './components/add-student/import-students/import-students';
 
 
 
@@ -40,7 +41,8 @@ import { SubjectsList } from './components/settings/subjects-list/subjects-list'
     EditStudent,
     StudentDetail,
     GradingScaleComponent,
-    SubjectsList
+    SubjectsList,
+    ImportStudents
   ],
   imports: [
     CommonModule,
