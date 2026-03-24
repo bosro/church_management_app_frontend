@@ -1,0 +1,167 @@
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+  <div class="dashboard-content">
+    <app-header></app-header>
+    <div class="dashboard-body">
+      <div class="import-container">
+
+        <div class="page-header">
+          <div class="header-left">
+            <button class="back-btn" (click)="cancel()" [disabled]="uploading">
+              <i class="ri-arrow-left-line"></i>
+            </button>
+            <div>
+              <h1>Import Students</h1>
+              <p class="subtitle">Upload a CSV or Excel file to enrol multiple students at once</p>
+            </div>
+          </div>
+        </div>
+
+        <div *ngIf="successMessage" class="success-alert">
+          <i class="ri-checkbox-circle-line"></i>
+          <span>{{ successMessage }}</span>
+        </div>
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i>
+          <span>{{ errorMessage }}</span>
+          <button class="close-btn" (click)="errorMessage = ''"><i class="ri-close-line"></i></button>
+        </div>
+
+        <div class="import-card">
+          <!-- Instructions -->
+          <div class="instructions-section">
+            <h3><i class="ri-information-line"></i> Instructions</h3>
+            <ol>
+              <li><strong>Download the template</strong> and fill in student data</li>
+              <li><strong>Class name must exactly match</strong> a class in your system (e.g. "Primary 3", "JHS 1")</li>
+              <li><strong>Required fields:</strong> First Name, Last Name, Class</li>
+              <li><strong>Remove the # instruction rows</strong> before uploading</li>
+              <li><strong>Upload</strong> and review the results</li>
+            </ol>
+            <button class="btn-template" (click)="downloadTemplate()">
+              <i class="ri-download-line"></i> Download CSV Template
+            </button>
+          </div>
+
+          <!-- Upload -->
+          <div class="upload-section">
+            <div class="dropzone" [class.dragover]="dragOver" [class.has-file]="selectedFile"
+              (dragover)="onDragOver($event)" (dragleave)="onDragLeave($event)" (drop)="onDrop($event)">
+
+              <div *ngIf="!selectedFile" class="dropzone-content">
+                <i class="ri-upload-cloud-line"></i>
+                <h4>Drag & Drop your file here</h4>
+                <p>or</p>
+                <label class="btn-browse">
+                  <i class="ri-folder-open-line"></i> Browse Files
+                  <input type="file" accept=".csv,.CSV,.xlsx,.XLSX,.xls,.XLS"
+                    (change)="onFileSelected($event)" [disabled]="uploading" hidden />
+                </label>
+                <span class="file-hint">
+                  <i class="ri-information-line"></i> Max 10MB • .CSV, .XLSX, .XLS
+                </span>
+              </div>
+
+              <div *ngIf="selectedFile && !importResults" class="file-selected">
+                <div class="file-info">
+                  <i class="ri-file-text-line"></i>
+                  <div class="file-details">
+                    <p class="file-name">{{ selectedFile.name }}</p>
+                    <p class="file-size">{{ formatFileSize(selectedFile.size) }}</p>
+                  </div>
+                  <button class="btn-remove" *ngIf="!uploading" (click)="removeFile()">
+                    <i class="ri-close-line"></i>
+                  </button>
+                </div>
+
+                <div *ngIf="uploading" class="upload-progress">
+                  <div class="progress-bar">
+                    <div class="progress-fill" [style.width.%]="uploadProgress"></div>
+                  </div>
+                  <p class="progress-text">
+                    <i class="ri-loader-4-line spin"></i> Processing... {{ uploadProgress }}%
+                  </p>
+                </div>
+
+                <button *ngIf="!uploading" class="btn-upload" (click)="uploadFile()">
+                  <i class="ri-upload-2-line"></i> Start Import
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Results -->
+          <div *ngIf="importResults" class="results-section">
+            <h3><i class="ri-file-list-3-line"></i> Import Results</h3>
+
+            <div class="results-summary">
+              <div class="result-item success">
+                <i class="ri-checkbox-circle-fill"></i>
+                <div>
+                  <p class="result-count">{{ importResults.success }}</p>
+                  <p class="result-label">Students Imported</p>
+                </div>
+              </div>
+              <div class="result-item error" *ngIf="importResults.failed > 0">
+                <i class="ri-error-warning-fill"></i>
+                <div>
+                  <p class="result-count">{{ importResults.failed }}</p>
+                  <p class="result-label">Failed</p>
+                </div>
+              </div>
+            </div>
+
+            <div *ngIf="importResults.errors.length > 0" class="error-details">
+              <h4><i class="ri-alert-line"></i> Errors ({{ importResults.errors.length }})</h4>
+              <div class="error-list">
+                <div *ngFor="let error of importResults.errors; let i = index" class="error-item">
+                  <span class="error-number">{{ i + 1 }}</span>
+                  <i class="ri-alert-line"></i>
+                  <div class="error-text">
+                    <span class="error-message">{{ error.message }}</span>
+                    <span class="error-action missing" *ngIf="error.type === 'missing_name'">
+                      <i class="ri-edit-line"></i> Fill in First Name and Last Name for this row
+                    </span>
+                    <span class="error-action other" *ngIf="error.type === 'class_not_found'">
+                      <i class="ri-information-line"></i> Check that the class name exactly matches one in your system
+                    </span>
+                    <span class="error-action other" *ngIf="error.type === 'other'">
+                      <i class="ri-tools-line"></i> Fix this row and re-import
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div *ngIf="importResults.success > 0 && importResults.failed === 0" class="success-details">
+              <i class="ri-checkbox-circle-line"></i>
+              <h4>All students imported successfully!</h4>
+              <p>{{ importResults.success }} student{{ importResults.success > 1 ? 's' : '' }} have been enrolled.</p>
+            </div>
+
+            <div class="results-actions">
+              <button class="btn-secondary" (click)="removeFile()">
+                <i class="ri-upload-line"></i> Import Another File
+              </button>
+              <button class="btn-primary" (click)="goToStudents()">
+                <i class="ri-group-line"></i> View Students
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tips -->
+        <div class="tips-section" *ngIf="!importResults">
+          <h3><i class="ri-lightbulb-line"></i> Import Tips</h3>
+          <ul class="tips-list">
+            <li><i class="ri-checkbox-circle-line"></i> The <strong>Class</strong> column must exactly match a class name in your system</li>
+            <li><i class="ri-checkbox-circle-line"></i> Use YYYY-MM-DD for dates (e.g. 2015-04-10)</li>
+            <li><i class="ri-checkbox-circle-line"></i> Gender should be: male or female</li>
+            <li><i class="ri-checkbox-circle-line"></i> Phone numbers should be 10 digits without spaces</li>
+          </ul>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>

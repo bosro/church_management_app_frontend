@@ -21,7 +21,7 @@ import { SharedModule } from '../../shared/shared-module';
 import { GradingScaleComponent } from './components/settings/grading-scale/grading-scale';
 import { SubjectsList } from './components/settings/subjects-list/subjects-list';
 import { StudentFees } from './components/fees/student-fees/student-fees';
-
+import { ImportStudents } from './components/add-student/import-students/import-students';
 
 const routes: Routes = [
   {
@@ -48,6 +48,16 @@ const routes: Routes = [
   {
     path: 'students/add',
     component: AddStudent,
+    canActivate: [PermissionGuard],
+    data: {
+      roles: ['super_admin', 'church_admin', 'finance_officer'],
+      permission: 'school.manage',
+      requiresFeature: 'reports',
+    },
+  },
+  {
+    path: 'students/import',
+    component: ImportStudents,
     canActivate: [PermissionGuard],
     data: {
       roles: ['super_admin', 'church_admin', 'finance_officer'],
@@ -204,6 +214,6 @@ const routes: Routes = [
 
 @NgModule({
   imports: [RouterModule.forChild(routes)],
-  exports: [RouterModule, SharedModule]
+  exports: [RouterModule, SharedModule],
 })
-export class ReportsRoutingModule { }
+export class ReportsRoutingModule {}
