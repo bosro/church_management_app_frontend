@@ -604,3 +604,302 @@
     transform: translateY(0);
   }
 }
+
+
+
+// ─── MOBILE RESPONSIVENESS ────────────────────────────────
+
+@media (max-width: 768px) {
+  .fee-report-container {
+    padding: 12px 8px;
+  }
+
+  .page-header {
+    margin-bottom: 16px;
+    gap: 10px;
+
+    .header-left {
+      min-width: 0;
+      flex: 1;
+      h1 { font-size: 18px; }
+      .subtitle { font-size: 12px; }
+    }
+
+    .header-actions {
+      width: 100%;
+      justify-content: flex-end;
+      gap: 8px;
+
+      .btn-secondary {
+        flex: 1;
+        justify-content: center;
+        padding: 8px 12px;
+        font-size: 13px;
+      }
+    }
+  }
+
+  // ── Filters ────────────────────────────────────────────
+  .filters-card {
+    padding: 12px;
+    gap: 8px;
+
+    .filter-select {
+      flex: 1;
+      min-width: 0;
+      font-size: 13px;
+      padding: 8px 10px;
+    }
+  }
+
+  // ── Summary Cards: 2x2 grid ────────────────────────────
+  .summary-cards {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+
+    .summary-card {
+      padding: 14px 12px;
+      gap: 10px;
+      min-width: 0;
+      align-items: flex-start;
+
+      .card-icon {
+        width: 40px;
+        height: 40px;
+        min-width: 40px;
+        border-radius: 10px;
+        i { font-size: 18px; }
+      }
+
+      .card-label {
+        font-size: 11px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .card-value {
+        font-size: 15px;
+        word-break: break-word;
+        overflow-wrap: break-word;
+        line-height: 1.2;
+      }
+    }
+  }
+
+  // ── Report table: hide less critical columns ────────────
+  .report-table {
+    thead th, tbody td {
+      padding: 10px 10px;
+      font-size: 12px;
+    }
+
+    // Hide: # , Student No, on mobile
+    thead th:nth-child(1),
+    thead th:nth-child(3) { display: none; }
+
+    tbody tr td:nth-child(1),
+    tbody tr td:nth-child(3) { display: none; }
+
+    // Grand total row — adjust colspan via CSS
+    tfoot .grand-total-row {
+      td:nth-child(1) { display: none; }
+    }
+
+    .balance-cell strong { font-size: 13px; }
+  }
+
+  // ── Action buttons in table ────────────────────────────
+  .action-buttons {
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-start;
+
+    .btn-pay {
+      font-size: 11px;
+      padding: 5px 8px;
+    }
+  }
+
+  // ── Export modal ───────────────────────────────────────
+  .modal-overlay {
+    padding: 12px;
+    align-items: flex-end;
+  }
+
+  .export-modal {
+    padding: 1.25rem;
+    border-radius: 16px 16px 12px 12px;
+    max-height: 85vh;
+    overflow-y: auto;
+
+    .export-modal-header h3 { font-size: 1rem; }
+    .export-subtitle { margin-bottom: 1rem; }
+  }
+
+  .export-option {
+    padding: 0.75rem 1rem;
+    gap: 0.75rem;
+
+    .export-icon {
+      width: 38px;
+      height: 38px;
+      i { font-size: 1.2rem; }
+    }
+
+    .export-info {
+      strong { font-size: 0.875rem; }
+      span { font-size: 0.75rem; }
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  // On very small screens also hide Class column
+  .report-table {
+    thead th:nth-child(4),
+    tbody tr td:nth-child(4) { display: none; }
+
+    // Amount cols: tighten
+    thead th:nth-child(5),
+    thead th:nth-child(6),
+    thead th:nth-child(7),
+    tbody tr td:nth-child(5),
+    tbody tr td:nth-child(6),
+    tbody tr td:nth-child(7) {
+      padding: 10px 8px;
+      font-size: 11px;
+      white-space: nowrap;
+    }
+  }
+
+  .summary-cards {
+    grid-template-columns: repeat(2, 1fr);
+
+    .summary-card .card-value { font-size: 13px; }
+  }
+
+  .page-header .header-actions {
+    .btn-secondary:first-child { display: none; } // hide Print on tiny screens
+  }
+}
+
+
+// ─── Report Empty State ───────────────────────────────────
+.report-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 56px 24px 48px;
+  text-align: center;
+
+  .report-empty-illustration {
+    position: relative;
+    width: 100px;
+    height: 100px;
+    margin-bottom: 24px;
+
+    .empty-circles {
+      position: absolute;
+      inset: 0;
+
+      .circle {
+        position: absolute;
+        border-radius: 50%;
+        opacity: 0.15;
+
+        &.c1 {
+          width: 100px;
+          height: 100px;
+          background: #10b981;
+          top: 0; left: 0;
+        }
+        &.c2 {
+          width: 72px;
+          height: 72px;
+          background: #4f46e5;
+          top: 14px; left: 14px;
+        }
+        &.c3 {
+          width: 48px;
+          height: 48px;
+          background: #10b981;
+          top: 26px; left: 26px;
+        }
+      }
+    }
+
+    .empty-icon-wrap {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      i {
+        font-size: 42px;
+        color: #10b981;
+      }
+    }
+  }
+
+  h3 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #111827;
+    margin: 0 0 8px;
+  }
+
+  p {
+    font-size: 14px;
+    color: #6b7280;
+    margin: 0 0 4px;
+    line-height: 1.6;
+  }
+
+  .empty-sub {
+    font-size: 13px;
+    color: #9ca3af;
+    margin-bottom: 28px;
+  }
+
+  .empty-actions-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .btn-empty-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 9px 18px;
+    background: #4f46e5;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: "Nunito Sans", sans-serif;
+    transition: all 0.2s;
+    i { font-size: 15px; }
+    &:hover { background: #4338ca; }
+
+    &.secondary {
+      background: white;
+      color: #374151;
+      border: 1px solid #e5e7eb;
+      &:hover { background: #f9fafb; }
+    }
+  }
+
+  @media (max-width: 480px) {
+    padding: 40px 16px 36px;
+    h3 { font-size: 17px; }
+    .empty-actions-row { flex-direction: column; align-items: stretch; }
+    .btn-empty-action { justify-content: center; }
+  }
+}

@@ -215,3 +215,5 @@ export class RecordPayment implements OnInit, OnDestroy {
     }).format(amount || 0);
   }
 }
+
+

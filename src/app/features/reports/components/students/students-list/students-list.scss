@@ -603,3 +603,82 @@
   from { opacity: 0; transform: translateY(16px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
+
+
+
+// ─── Students-specific mobile fixes ──────────────────────
+
+@media (max-width: 768px) {
+  .students-container {
+    padding: 12px 8px;
+  }
+
+  .page-header {
+    .header-actions {
+      // Export + Import + Add Student — wrap nicely
+      flex-wrap: wrap;
+
+      .btn-secondary,
+      .btn-primary {
+        flex: 1;
+        min-width: 0;
+        justify-content: center;
+      }
+    }
+  }
+
+  .filters-card {
+    .filters-form {
+      flex-direction: column;
+      align-items: stretch;
+
+      .filter-group {
+        width: 100%;
+        min-width: 0;
+
+        &.search-group {
+          flex: unset;
+          min-width: 0;
+          width: 100%;
+        }
+
+        .search-input,
+        .filter-select {
+          width: 100%;
+          box-sizing: border-box;
+        }
+      }
+
+      .btn-clear {
+        align-self: flex-start;
+      }
+    }
+  }
+
+  // Hide less important columns, keep Name + Class + Status + Actions
+  .data-table {
+    thead th:nth-child(2), // Student No
+    thead th:nth-child(4), // Gender
+    thead th:nth-child(5)  // Parent
+    { display: none; }
+
+    tbody td:nth-child(2),
+    tbody td:nth-child(4),
+    tbody td:nth-child(5)
+    { display: none; }
+  }
+}
+
+@media (max-width: 480px) {
+  // On very small screens also hide Class column, show only Name + Status + Actions
+  .data-table {
+    thead th:nth-child(3) { display: none; }
+    tbody td:nth-child(3) { display: none; }
+  }
+
+  .page-header .header-actions {
+    .btn-secondary { display: none; } // hide Export/Import, keep Add Student
+    .btn-primary   { width: 100%; justify-content: center; }
+  }
+}

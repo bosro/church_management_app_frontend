@@ -20,6 +20,7 @@ import { ReportsRoutingModule } from './reports-routing.module';
 import { GradingScaleComponent } from './components/settings/grading-scale/grading-scale';
 import { SubjectsList } from './components/settings/subjects-list/subjects-list';
 import { ImportStudents } from './components/add-student/import-students/import-students';
+import { ExportBrandingSettings } from './components/export-branding-settings/export-branding-settings';
 
 
 
@@ -42,7 +43,8 @@ import { ImportStudents } from './components/add-student/import-students/import-
     StudentDetail,
     GradingScaleComponent,
     SubjectsList,
-    ImportStudents
+    ImportStudents,
+    ExportBrandingSettings
   ],
   imports: [
     CommonModule,

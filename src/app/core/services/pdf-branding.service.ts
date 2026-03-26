@@ -1,21 +1,21 @@
-// src/app/core/services/pdf-branding.service.ts
 import { Injectable } from '@angular/core';
 import { SupabaseService } from './supabase';
 import { AuthService } from './auth';
 
 export interface PdfBranding {
-  /** Church name — falls back to 'Churchman' if not set */
   name: string;
-  /** Base64 data URL of the logo, or null if unavailable */
   logoBase64: string | null;
-  /** Logo MIME type e.g. 'image/png' */
   logoMimeType: string;
+  address?: string;
+  phone?: string;
+  tagline?: string;
 }
+
+const STORAGE_KEY = 'churchman_export_branding';
 
 @Injectable({ providedIn: 'root' })
 export class PdfBrandingService {
 
-  /** In-memory cache so we don't re-fetch on every PDF export */
   private cache: PdfBranding | null = null;
 
   constructor(
@@ -23,14 +23,57 @@ export class PdfBrandingService {
     private authService: AuthService,
   ) {}
 
-  /**
-   * Fetches branding from the church profile.
-   * Returns cached result if already loaded.
-   * Always resolves — falls back to defaults on any error.
-   */
+  // ── Custom branding (localStorage) ───────────────────────
+
+  saveCustomBranding(branding: Partial<PdfBranding>): void {
+    const existing = this.getStoredBranding() || {};
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...existing, ...branding }));
+    this.cache = null; // clear cache so next getBranding() picks up changes
+  }
+
+  clearCustomBranding(): void {
+    localStorage.removeItem(STORAGE_KEY);
+    this.cache = null;
+  }
+
+  getStoredBranding(): Partial<PdfBranding> | null {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  // ── Main method — custom overrides church defaults ────────
+
   async getBranding(): Promise<PdfBranding> {
     if (this.cache) return this.cache;
 
+    const church = await this.fetchChurchBranding();
+    const custom = this.getStoredBranding();
+
+    const merged: PdfBranding = {
+      name: custom?.name?.trim() || church.name,
+      logoBase64: custom?.logoBase64 ?? church.logoBase64,
+      logoMimeType: custom?.logoMimeType || church.logoMimeType,
+      address: custom?.address?.trim() || church.address || '',
+      phone: custom?.phone?.trim() || church.phone || '',
+      tagline: custom?.tagline?.trim() || '',
+    };
+
+    this.cache = merged;
+    return merged;
+  }
+
+  /** Clear cached branding — call after user updates church logo/name */
+  clearCache(): void {
+    this.cache = null;
+  }
+
+  // ── Fetch church branding from Supabase ───────────────────
+
+  private async fetchChurchBranding(): Promise<PdfBranding> {
     const fallback: PdfBranding = {
       name: 'Churchman',
       logoBase64: null,
@@ -43,19 +86,23 @@ export class PdfBrandingService {
 
       const { data, error } = await this.supabase.client
         .from('churches')
-        .select('name, logo_url')
+        .select('name, logo_url, address, phone, city')
         .eq('id', churchId)
         .single();
 
       if (error || !data) return fallback;
 
+      const address = [data.address, data.city].filter(Boolean).join(', ');
+
       const branding: PdfBranding = {
         name: data.name?.trim() || 'Churchman',
         logoBase64: null,
         logoMimeType: 'image/png',
+        address,
+        phone: data.phone || '',
+        tagline: '',
       };
 
-      // Try to convert logo URL to base64 for jsPDF
       if (data.logo_url) {
         const b64 = await this.urlToBase64(data.logo_url);
         if (b64) {
@@ -64,7 +111,6 @@ export class PdfBrandingService {
         }
       }
 
-      this.cache = branding;
       return branding;
 
     } catch {
@@ -72,15 +118,22 @@ export class PdfBrandingService {
     }
   }
 
-  /** Clear cached branding — call this after the user updates their church logo/name */
-  clearCache(): void {
-    this.cache = null;
+  // ── Convert uploaded file to base64 ──────────────────────
+
+  fileToBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        resolve(result.split(',')[1]);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
   }
 
-  /**
-   * Fetches an image URL and converts it to a base64 data string
-   * that jsPDF can use with doc.addImage().
-   */
+  // ── Convert URL to base64 ─────────────────────────────────
+
   private async urlToBase64(
     url: string,
   ): Promise<{ data: string; mimeType: string } | null> {
@@ -89,7 +142,6 @@ export class PdfBrandingService {
       if (!response.ok) return null;
 
       const contentType = response.headers.get('content-type') || 'image/png';
-      // Only accept image types
       if (!contentType.startsWith('image/')) return null;
 
       const blob = await response.blob();
@@ -97,8 +149,6 @@ export class PdfBrandingService {
         const reader = new FileReader();
         reader.onloadend = () => {
           const result = reader.result as string;
-          // result is "data:image/png;base64,XXXX..."
-          // jsPDF addImage needs just the base64 part
           const base64 = result.split(',')[1];
           resolve(base64 ? { data: base64, mimeType: contentType } : null);
         };

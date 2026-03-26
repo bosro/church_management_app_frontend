@@ -95,6 +95,7 @@
         </div>
 
         <!-- Report Table -->
+        <!-- Report Card -->
         <div *ngIf="!loading" class="report-card">
           <!-- Print-only title -->
           <div class="report-title print-only">
@@ -102,7 +103,35 @@
             <p>{{ selectedTerm }} — {{ selectedYear }}</p>
           </div>
 
-          <div class="table-wrapper">
+          <!-- Empty state — shown instead of table when no data -->
+          <div *ngIf="studentSummaries.length === 0" class="report-empty">
+            <div class="report-empty-illustration">
+              <div class="empty-circles">
+                <div class="circle c1"></div>
+                <div class="circle c2"></div>
+                <div class="circle c3"></div>
+              </div>
+              <div class="empty-icon-wrap">
+                <i class="ri-checkbox-circle-line"></i>
+              </div>
+            </div>
+            <h3>All fees are cleared!</h3>
+            <p>No outstanding fees for <strong>{{ selectedTerm }} {{ selectedYear }}</strong>.</p>
+            <p class="empty-sub">All students are up to date with their payments.</p>
+            <div class="empty-actions-row">
+              <button class="btn-empty-action" (click)="router.navigate(['main/reports/fees/students'])">
+                <i class="ri-file-list-3-line"></i>
+                View Student Fees
+              </button>
+              <button class="btn-empty-action secondary" (click)="router.navigate(['main/reports/fees/structures'])">
+                <i class="ri-settings-3-line"></i>
+                Fee Structures
+              </button>
+            </div>
+          </div>
+
+          <!-- Table — only shown when there is data -->
+          <div *ngIf="studentSummaries.length > 0" class="table-wrapper">
             <table class="report-table">
               <thead>
                 <tr>
@@ -132,12 +161,10 @@
                   </td>
                   <td class="no-print">
                     <div class="action-buttons">
-                      <!-- Per-student PDF -->
                       <button class="btn-icon-small" (click)="exportStudentPDF(summary, $event)"
                         title="Download fee statement PDF">
                         <i class="ri-file-pdf-line"></i>
                       </button>
-                      <!-- Record payment -->
                       <button class="btn-pay" (click)="recordPayment(summary.student?.id); $event.stopPropagation()"
                         *ngIf="permissionService.school.fees">
                         <i class="ri-money-dollar-circle-line"></i>
@@ -146,23 +173,8 @@
                     </div>
                   </td>
                 </tr>
-
-                <!-- Empty state -->
-                <tr *ngIf="studentSummaries.length === 0">
-                  <td colspan="8">
-                    <div class="empty-state">
-                      <div class="empty-icon success">
-                        <i class="ri-checkbox-circle-line"></i>
-                      </div>
-                      <h3>All fees cleared!</h3>
-                      <p>No outstanding fees for {{ selectedTerm }} {{ selectedYear }}</p>
-                    </div>
-                  </td>
-                </tr>
               </tbody>
-
-              <!-- Grand total footer -->
-              <tfoot *ngIf="studentSummaries.length > 0">
+              <tfoot>
                 <tr class="grand-total-row">
                   <td colspan="4"><strong>GRAND TOTAL</strong></td>
                   <td class="text-right"><strong>{{ formatCurrency(grandTotalDue) }}</strong></td>
