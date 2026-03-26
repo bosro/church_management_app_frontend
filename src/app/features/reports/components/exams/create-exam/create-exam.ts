@@ -5,7 +5,12 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { SchoolService } from '../../../services/school.service';
 import { PermissionService } from '../../../../../core/services/permission.service';
-import { SchoolClass, TERMS } from '../../../../../models/school.model';
+import {
+  SchoolClass,
+  TERMS,
+  generateAcademicYears,
+  currentAcademicYear,
+} from '../../../../../models/school.model';
 
 @Component({
   selector: 'app-create-exam',
@@ -22,7 +27,7 @@ export class CreateExam implements OnInit, OnDestroy {
   errorMessage = '';
   successMessage = '';
   terms = TERMS;
-  academicYears: string[] = [];
+  academicYears: string[] = generateAcademicYears();
 
   constructor(
     private fb: FormBuilder,
@@ -36,14 +41,7 @@ export class CreateExam implements OnInit, OnDestroy {
       this.router.navigate(['/unauthorized']);
       return;
     }
-
-    const year = new Date().getFullYear();
-    this.academicYears = [
-      `${year}/${year + 1}`,
-      `${year - 1}/${year}`,
-    ];
-
-    this.initForm(year);
+    this.initForm();
     this.loadClasses();
   }
 
@@ -52,11 +50,11 @@ export class CreateExam implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  private initForm(year: number): void {
+  private initForm(): void {
     this.examForm = this.fb.group({
       exam_name: ['', [Validators.required, Validators.minLength(3)]],
       class_id: ['', Validators.required],
-      academic_year: [`${year}/${year + 1}`, Validators.required],
+      academic_year: [currentAcademicYear(), Validators.required],
       term: [TERMS[0], Validators.required],
       exam_date: [''],
       total_marks: [100, [Validators.required, Validators.min(1)]],
@@ -64,7 +62,8 @@ export class CreateExam implements OnInit, OnDestroy {
   }
 
   loadClasses(): void {
-    this.schoolService.getClasses()
+    this.schoolService
+      .getClasses()
       .pipe(takeUntil(this.destroy$))
       .subscribe({ next: (c) => (this.classes = c) });
   }
@@ -75,10 +74,8 @@ export class CreateExam implements OnInit, OnDestroy {
       this.errorMessage = 'Please fill in all required fields';
       return;
     }
-
     this.loading = true;
     this.errorMessage = '';
-
     this.schoolService
       .createExam(this.examForm.value)
       .pipe(takeUntil(this.destroy$))

@@ -4,7 +4,9 @@ import { takeUntil } from 'rxjs/operators';
 import { SchoolService } from '../../../services/school.service';
 import { PermissionService } from '../../../../../core/services/permission.service';
 import {
+  currentAcademicYear,
   FeeStructure,
+  generateAcademicYears,
   SchoolClass,
   TERMS,
 } from '../../../../../models/school.model';
@@ -72,9 +74,8 @@ export class FeeStructures implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    const year = new Date().getFullYear();
-    this.selectedYear = `${year}/${year + 1}`;
-    this.academicYears = [`${year}/${year + 1}`, `${year - 1}/${year}`];
+    this.academicYears = generateAcademicYears();
+    this.selectedYear = currentAcademicYear();
     this.loadClasses();
     this.loadFeeStructures();
   }

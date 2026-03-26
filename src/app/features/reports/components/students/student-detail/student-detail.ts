@@ -1,4 +1,3 @@
-
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { Subject } from 'rxjs';
@@ -6,7 +5,8 @@ import { takeUntil } from 'rxjs/operators';
 import { SchoolService } from '../../../services/school.service';
 import { PermissionService } from '../../../../../core/services/permission.service';
 import {
-  Student, StudentFee, FeePayment, TERMS
+  Student, StudentFee, FeePayment, TERMS,
+  generateAcademicYears, currentAcademicYear
 } from '../../../../../models/school.model';
 
 @Component({
@@ -28,10 +28,10 @@ export class StudentDetail implements OnInit, OnDestroy {
 
   activeTab: 'overview' | 'fees' | 'payments' = 'overview';
 
-  currentAcademicYear = '';
+  currentAcademicYear = currentAcademicYear();
   currentTerm = TERMS[0];
   terms = TERMS;
-  academicYears: string[] = [];
+  academicYears: string[] = generateAcademicYears();
 
   constructor(
     private schoolService: SchoolService,
@@ -42,12 +42,6 @@ export class StudentDetail implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.studentId = this.route.snapshot.paramMap.get('id') || '';
-    const year = new Date().getFullYear();
-    this.currentAcademicYear = `${year}/${year + 1}`;
-    this.academicYears = [
-      `${year}/${year + 1}`,
-      `${year - 1}/${year}`,
-    ];
     this.loadStudent();
   }
 
@@ -88,10 +82,12 @@ export class StudentDetail implements OnInit, OnDestroy {
   loadPayments(): void {
     this.schoolService
       .getPayments(
-        { studentId: this.studentId,
+        {
+          studentId: this.studentId,
           academicYear: this.currentAcademicYear,
-          term: this.currentTerm },
-        1, 50
+          term: this.currentTerm,
+        },
+        1, 50,
       )
       .pipe(takeUntil(this.destroy$))
       .subscribe({
@@ -105,7 +101,6 @@ export class StudentDetail implements OnInit, OnDestroy {
     this.loadPayments();
   }
 
-  // Navigation
   goBack(): void {
     this.router.navigate(['main/reports/students']);
   }
@@ -122,7 +117,6 @@ export class StudentDetail implements OnInit, OnDestroy {
     this.router.navigate(['main/reports/receipts', receiptNumber]);
   }
 
-  // Helpers
   getFullName(): string {
     if (!this.student) return '';
     return `${this.student.first_name} ${this.student.middle_name || ''} ${this.student.last_name}`.trim();
@@ -165,9 +159,11 @@ export class StudentDetail implements OnInit, OnDestroy {
     const today = new Date();
     const birth = new Date(dob);
     let age = today.getFullYear() - birth.getFullYear();
-    if (today.getMonth() < birth.getMonth() ||
-        (today.getMonth() === birth.getMonth() &&
-         today.getDate() < birth.getDate())) age--;
+    if (
+      today.getMonth() < birth.getMonth() ||
+      (today.getMonth() === birth.getMonth() &&
+        today.getDate() < birth.getDate())
+    ) age--;
     return age;
   }
 }

@@ -1,4 +1,3 @@
-
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { Subject } from 'rxjs';
@@ -8,7 +7,12 @@ import { PermissionService } from '../../../../../core/services/permission.servi
 import { AuthService } from '../../../../../core/services/auth';
 import { SupabaseService } from '../../../../../core/services/supabase';
 import {
-  Student, StudentFee, TERMS, PAYMENT_METHODS
+  Student,
+  StudentFee,
+  TERMS,
+  PAYMENT_METHODS,
+  currentAcademicYear,
+  generateAcademicYears,
 } from '../../../../../models/school.model';
 
 @Component({
@@ -60,12 +64,8 @@ export class RecordPayment implements OnInit, OnDestroy {
     }
 
     this.studentId = this.route.snapshot.paramMap.get('studentId') || '';
-    const year = new Date().getFullYear();
-    this.selectedYear = `${year}/${year + 1}`;
-    this.academicYears = [
-      `${year}/${year + 1}`,
-      `${year - 1}/${year}`,
-    ];
+    this.academicYears = generateAcademicYears();
+    this.selectedYear = currentAcademicYear();
 
     this.loadStudent();
   }
@@ -211,9 +211,8 @@ export class RecordPayment implements OnInit, OnDestroy {
 
   formatCurrency(amount: number): string {
     return new Intl.NumberFormat('en-GH', {
-      style: 'currency', currency: 'GHS',
+      style: 'currency',
+      currency: 'GHS',
     }).format(amount || 0);
   }
 }
-
-

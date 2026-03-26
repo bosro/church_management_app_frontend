@@ -531,3 +531,18 @@
     transform: rotate(360deg);
   }
 }
+
+
+.success-alert {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #d1fae5;
+  border: 1px solid #6ee7b7;
+  border-radius: 8px;
+  color: #065f46;
+  margin-bottom: 16px;
+  font-size: 14px;
+  font-weight: 500;
+}
