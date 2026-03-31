@@ -38,6 +38,36 @@
           <span>{{ errorMessage }}</span>
         </div>
 
+        <!-- Term/Year selector for fee data -->
+        <div class="term-fee-bar" *ngIf="permissionService.school.fees">
+          <div class="term-fee-bar-left">
+            <i class="ri-money-dollar-circle-line"></i>
+            <span>Fee data for:</span>
+            <select [(ngModel)]="feeTerm" (change)="onFeeFilterChange()" class="fee-filter-select">
+              <option *ngFor="let t of terms" [value]="t">{{ t }}</option>
+            </select>
+            <select [(ngModel)]="feeYear" (change)="onFeeFilterChange()" class="fee-filter-select">
+              <option *ngFor="let y of academicYears" [value]="y">{{ y }}</option>
+            </select>
+          </div>
+          <div class="term-fee-bar-right" *ngIf="selectedStudentIds.size > 0">
+            <span class="selection-count">
+              {{ selectedStudentIds.size }} selected
+            </span>
+            <button class="btn-bulk" (click)="exportSelected()">
+              <i class="ri-download-line"></i>
+              Export Selected
+            </button>
+            <button class="btn-bulk btn-bulk-print" (click)="printSelected()">
+              <i class="ri-printer-line"></i>
+              Print Selected
+            </button>
+            <button class="btn-bulk-clear" (click)="clearSelection()">
+              <i class="ri-close-line"></i>
+            </button>
+          </div>
+        </div>
+
         <!-- Filters -->
         <div class="filters-card">
           <form [formGroup]="filterForm" class="filters-form">
@@ -79,17 +109,37 @@
             <table class="data-table">
               <thead>
                 <tr>
+                  <!-- Select all checkbox -->
+                  <th class="checkbox-col" *ngIf="permissionService.school.fees">
+                    <label class="checkbox-wrap">
+                      <input type="checkbox" [checked]="allSelected" [indeterminate]="someSelected"
+                        (change)="toggleSelectAll($event)" />
+                    </label>
+                  </th>
                   <th>Student</th>
                   <th>Student No.</th>
                   <th>Class</th>
                   <th>Gender</th>
-                  <th>Parent/Guardian</th>
-                  <th>Status</th>
+                  <th *ngIf="permissionService.school.fees" class="text-right">Fees Due</th>
+                  <th *ngIf="permissionService.school.fees" class="text-right">Paid</th>
+                  <th *ngIf="permissionService.school.fees" class="text-right">Balance</th>
+                  <th *ngIf="permissionService.school.fees">Status</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                <tr *ngFor="let student of students" class="table-row" (click)="viewStudent(student.id)">
+                <tr *ngFor="let student of students" class="table-row" (click)="viewStudent(student.id)"
+                  [class.row-selected]="selectedStudentIds.has(student.id)">
+
+                  <!-- 1: Checkbox -->
+                  <td class="checkbox-col" *ngIf="permissionService.school.fees" (click)="$event.stopPropagation()">
+                    <label class="checkbox-wrap">
+                      <input type="checkbox" [checked]="selectedStudentIds.has(student.id)"
+                        (change)="toggleStudent(student.id, $event)" />
+                    </label>
+                  </td>
+
+                  <!-- 2: Student -->
                   <td>
                     <div class="student-cell">
                       <div class="avatar">
@@ -106,26 +156,58 @@
                       </div>
                     </div>
                   </td>
+
+                  <!-- 3: Student No -->
                   <td><span class="student-number">{{ student.student_number }}</span></td>
+
+                  <!-- 4: Class -->
                   <td>{{ student.class?.name || '—' }}</td>
+
+                  <!-- 5: Gender -->
                   <td class="capitalize">{{ student.gender || '—' }}</td>
-                  <td>
-                    <div *ngIf="student.parent_name">
-                      <p class="parent-name">{{ student.parent_name }}</p>
-                      <p class="parent-phone">{{ student.parent_phone }}</p>
-                    </div>
-                    <span *ngIf="!student.parent_name">—</span>
+
+                  <!-- 6: Fees Due -->
+                  <td class="text-right fee-amount" *ngIf="permissionService.school.fees">
+                    {{ getStudentFeeData(student.id)?.totalDue != null
+                    ? formatCurrency(getStudentFeeData(student.id).totalDue)
+                    : '—' }}
                   </td>
-                  <td>
-                    <span class="status-badge" [class.active]="student.is_active" [class.inactive]="!student.is_active">
-                      {{ student.is_active ? 'Active' : 'Inactive' }}
+
+                  <!-- 7: Paid -->
+                  <td class="text-right fee-amount paid" *ngIf="permissionService.school.fees">
+                    {{ getStudentFeeData(student.id)?.totalPaid != null
+                    ? formatCurrency(getStudentFeeData(student.id).totalPaid)
+                    : '—' }}
+                  </td>
+
+                  <!-- 8: Balance -->
+                  <td class="text-right fee-amount"
+                    [class.outstanding]="(getStudentFeeData(student.id)?.totalBalance || 0) > 0"
+                    *ngIf="permissionService.school.fees">
+                    {{ getStudentFeeData(student.id)?.totalBalance != null
+                    ? formatCurrency(getStudentFeeData(student.id).totalBalance)
+                    : '—' }}
+                  </td>
+
+                  <!-- 9: Status -->
+                  <td *ngIf="permissionService.school.fees">
+                    <span *ngIf="getStudentFeeData(student.id) as fd" class="status-badge"
+                      [ngClass]="'status-' + fd.status">
+                      {{ fd.status | titlecase }}
                     </span>
+                    <span *ngIf="!getStudentFeeData(student.id)">—</span>
                   </td>
+
+                  <!-- 10: Actions -->
                   <td>
                     <div class="action-buttons">
                       <button class="btn-icon-small" (click)="editStudent(student.id, $event)"
                         *ngIf="permissionService.school.manage" title="Edit">
                         <i class="ri-edit-line"></i>
+                      </button>
+                      <button class="btn-icon-small" (click)="exportStudentStatement(student.id, $event)"
+                        *ngIf="permissionService.school.fees" title="Export fee statement">
+                        <i class="ri-file-pdf-line"></i>
                       </button>
                     </div>
                   </td>
@@ -133,16 +215,13 @@
 
                 <!-- Empty state -->
                 <tr *ngIf="students.length === 0">
-                  <td colspan="7">
+                  <td [attr.colspan]="permissionService.school.fees ? 10 : 6">
                     <div class="empty-state">
-                      <div class="empty-icon">
-                        <i class="ri-user-line"></i>
-                      </div>
+                      <div class="empty-icon"><i class="ri-user-line"></i></div>
                       <h3>No students found</h3>
                       <p>Try adjusting your filters or add your first student</p>
                       <button class="btn-primary-small" (click)="addStudent()" *ngIf="permissionService.school.manage">
-                        <i class="ri-user-add-line"></i>
-                        Add First Student
+                        <i class="ri-user-add-line"></i> Add First Student
                       </button>
                     </div>
                   </td>
@@ -174,57 +253,91 @@
 <!-- Export Modal -->
 <div class="modal-overlay" *ngIf="showExportModal" (click)="showExportModal = false">
   <div class="export-modal" (click)="$event.stopPropagation()">
-
     <div class="export-modal-header">
-      <h3>
-        <i class="ri-download-2-line"></i>
-        Export Students
-      </h3>
+      <h3><i class="ri-download-2-line"></i> Export Students</h3>
       <button class="modal-close-btn" (click)="showExportModal = false">
         <i class="ri-close-line"></i>
       </button>
     </div>
-
     <p class="export-subtitle">
       {{ totalStudents }} student{{ totalStudents !== 1 ? 's' : '' }} will be exported
-      based on your current filters
     </p>
-
     <div class="export-options">
-
       <button class="export-option" (click)="exportAs('csv')">
-        <div class="export-icon csv">
-          <i class="ri-file-text-line"></i>
-        </div>
-        <div class="export-info">
-          <strong>CSV</strong>
-          <span>Plain text, works with any spreadsheet app</span>
-        </div>
+        <div class="export-icon csv"><i class="ri-file-text-line"></i></div>
+        <div class="export-info"><strong>CSV</strong><span>Plain text, works with any spreadsheet</span></div>
         <i class="ri-arrow-right-s-line export-arrow"></i>
       </button>
-
       <button class="export-option" (click)="exportAs('xlsx')">
-        <div class="export-icon excel">
-          <i class="ri-file-excel-2-line"></i>
-        </div>
-        <div class="export-info">
-          <strong>Excel (.xlsx)</strong>
-          <span>Formatted workbook with a summary sheet</span>
-        </div>
+        <div class="export-icon excel"><i class="ri-file-excel-2-line"></i></div>
+        <div class="export-info"><strong>Excel (.xlsx)</strong><span>Formatted workbook with summary</span></div>
         <i class="ri-arrow-right-s-line export-arrow"></i>
       </button>
-
       <button class="export-option" (click)="exportAs('pdf')">
-        <div class="export-icon pdf">
-          <i class="ri-file-pdf-2-line"></i>
-        </div>
-        <div class="export-info">
-          <strong>PDF</strong>
-          <span>Branded report, ready to print or share</span>
-        </div>
+        <div class="export-icon pdf"><i class="ri-file-pdf-2-line"></i></div>
+        <div class="export-info"><strong>PDF</strong><span>Branded report, ready to print</span></div>
         <i class="ri-arrow-right-s-line export-arrow"></i>
       </button>
-
     </div>
+  </div>
+</div>
+
+<!-- Branding Modal -->
+<div class="modal-overlay" *ngIf="showBrandingModal" (click)="showBrandingModal = false">
+  <app-export-branding (close)="showBrandingModal = false" (saved)="successMessage = 'Export branding saved!'">
+  </app-export-branding>
+</div>
+
+<!-- Print area (hidden, rendered for printing) -->
+<div id="print-statements" class="print-only">
+  <div *ngFor="let s of printStatements; let i = index" [class.page-break]="i > 0" class="print-statement">
+    <div class="ps-header">
+      <h2>{{ printBrandingName }}</h2>
+      <p>Fee Statement — {{ feeTerm }} {{ feeYear }}</p>
+    </div>
+    <div class="ps-student">
+      <strong>{{ s.studentName }}</strong>
+      <span>{{ s.studentNumber }}</span>
+      <span>{{ s.className }}</span>
+    </div>
+    <table class="ps-table">
+      <thead>
+        <tr>
+          <th class="checkbox-col" *ngIf="permissionService.school.fees">
+            <label class="checkbox-wrap">
+              <input type="checkbox" [checked]="allSelected" [indeterminate]="someSelected"
+                (change)="toggleSelectAll($event)" />
+            </label>
+          </th>
+          <th>Student</th>
+          <th>Student No.</th>
+          <th>Class</th>
+          <th>Gender</th>
+          <th *ngIf="permissionService.school.fees" class="text-right">Fees Due</th>
+          <th *ngIf="permissionService.school.fees" class="text-right">Paid</th>
+          <th *ngIf="permissionService.school.fees" class="text-right">Balance</th>
+          <th *ngIf="permissionService.school.fees">Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let f of s.fees">
+          <td>{{ f.feeName }}</td>
+          <td>{{ f.amountDue | currency:'GHS':'symbol':'1.2-2' }}</td>
+          <td>{{ f.amountPaid | currency:'GHS':'symbol':'1.2-2' }}</td>
+          <td>{{ f.balance | currency:'GHS':'symbol':'1.2-2' }}</td>
+          <td>{{ f.status | titlecase }}</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td><strong>TOTAL</strong></td>
+          <td><strong>{{ s.totalDue | currency:'GHS':'symbol':'1.2-2' }}</strong></td>
+          <td><strong>{{ s.totalPaid | currency:'GHS':'symbol':'1.2-2' }}</strong></td>
+          <td><strong>{{ s.totalBalance | currency:'GHS':'symbol':'1.2-2' }}</strong></td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
   </div>
 </div>

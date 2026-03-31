@@ -4,7 +4,9 @@ import { takeUntil } from 'rxjs/operators';
 import { SchoolService } from '../../../services/school.service';
 import { PermissionService } from '../../../../../core/services/permission.service';
 import {
+  currentAcademicYear,
   FeeStructure,
+  generateAcademicYears,
   SchoolClass,
   TERMS,
 } from '../../../../../models/school.model';
@@ -13,6 +15,7 @@ import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { PdfBrandingService } from '../../../../../core/services/pdf-branding.service';
+import { ClassFeeExportService } from '../../../services/class-fee-export.service';
 
 @Component({
   selector: 'app-fee-structures',
@@ -42,6 +45,17 @@ export class FeeStructures implements OnInit, OnDestroy {
   showExportModal = false;
   exporting = false;
 
+  showDeleteModal = false;
+  feeToDelete: FeeStructure | null = null;
+
+  showAssignModal = false;
+  classToAssign: { id: string; name: string } | null = null;
+
+  showBrandingModal = false;
+  showClassExportModal = false;
+  exportingClass = false;
+  classExportTarget: { id: string; name: string } | null = null;
+
   feeForm = {
     class_id: '',
     fee_name: '',
@@ -56,12 +70,12 @@ export class FeeStructures implements OnInit, OnDestroy {
     public permissionService: PermissionService,
     public router: Router,
     private pdfBranding: PdfBrandingService,
+    private classFeeExport: ClassFeeExportService,
   ) {}
 
   ngOnInit(): void {
-    const year = new Date().getFullYear();
-    this.selectedYear = `${year}/${year + 1}`;
-    this.academicYears = [`${year}/${year + 1}`, `${year - 1}/${year}`];
+    this.academicYears = generateAcademicYears();
+    this.selectedYear = currentAcademicYear();
     this.loadClasses();
     this.loadFeeStructures();
   }
@@ -148,9 +162,76 @@ export class FeeStructures implements OnInit, OnDestroy {
     this.errorMessage = '';
   }
 
+  confirmDelete(fee: FeeStructure): void {
+    this.feeToDelete = fee;
+    this.showDeleteModal = true;
+  }
+
+  executeDelete(): void {
+    if (!this.feeToDelete) return;
+    this.processing = true;
+    this.schoolService
+      .deleteFeeStructure(this.feeToDelete.id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.successMessage = 'Fee deleted!';
+          this.processing = false;
+          this.showDeleteModal = false;
+          this.feeToDelete = null;
+          this.loadFeeStructures();
+          setTimeout(() => (this.successMessage = ''), 3000);
+        },
+        error: (err) => {
+          this.errorMessage = err.message || 'Failed to delete fee';
+          this.processing = false;
+        },
+      });
+  }
+
   closeModal(): void {
     this.showModal = false;
     this.editingFee = null;
+  }
+
+  openClassExport(classId: string, className: string): void {
+    this.classExportTarget = { id: classId, name: className };
+    this.showClassExportModal = true;
+  }
+
+  async exportClassAs(format: 'csv' | 'xlsx' | 'pdf'): Promise<void> {
+    if (!this.classExportTarget) return;
+    this.exportingClass = true;
+    this.showClassExportModal = false;
+    try {
+      const data = await this.classFeeExport.fetchClassFeeData(
+        this.classExportTarget.id,
+        this.classExportTarget.name,
+        this.selectedYear,
+        this.selectedTerm,
+      );
+      if (format === 'pdf') await this.classFeeExport.exportClassPDF(data);
+      else if (format === 'xlsx')
+        await this.classFeeExport.exportClassXLSX(data);
+      else this.classFeeExport.exportClassCSV(data);
+    } catch (e: any) {
+      this.errorMessage = 'Export failed: ' + e.message;
+    } finally {
+      this.exportingClass = false;
+    }
+  }
+
+  async exportStudentStatement(studentId: string, event: Event): Promise<void> {
+    event.stopPropagation();
+    try {
+      await this.classFeeExport.exportStudentPDF(
+        studentId,
+        this.selectedYear,
+        this.selectedTerm,
+      );
+    } catch (e: any) {
+      this.errorMessage = 'Export failed: ' + e.message;
+    }
   }
 
   saveFee(): void {
@@ -600,5 +681,36 @@ export class FeeStructures implements OnInit, OnDestroy {
       currency: 'GHS',
       currencyDisplay: 'code',
     }).format(amount || 0);
+  }
+
+  confirmAssign(classId: string, className: string): void {
+    this.classToAssign = { id: classId, name: className };
+    this.showAssignModal = true;
+  }
+
+  executeAssign(): void {
+    if (!this.classToAssign) return;
+    this.processing = true;
+    this.schoolService
+      .assignFeesToClass(
+        this.classToAssign.id,
+        this.selectedYear,
+        this.selectedTerm,
+      )
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.successMessage = `Fees assigned to all students in ${this.classToAssign?.name}!`;
+          this.processing = false;
+          this.showAssignModal = false;
+          this.classToAssign = null;
+          setTimeout(() => (this.successMessage = ''), 4000);
+        },
+        error: (err) => {
+          this.errorMessage = err.message || 'Failed to assign fees';
+          this.processing = false;
+          this.showAssignModal = false;
+        },
+      });
   }
 }

@@ -152,6 +152,27 @@ export class SchoolService {
     );
   }
 
+  getStudentFeesForMultiple(
+    studentIds: string[],
+    academicYear: string,
+    term: string,
+  ): Observable<any[]> {
+    return from(
+      this.supabase.client
+        .from('student_fees')
+        .select('*, fee_structure:fee_structures(fee_name, amount)')
+        .eq('church_id', this.churchId)
+        .eq('academic_year', academicYear)
+        .eq('term', term)
+        .in('student_id', studentIds),
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw error;
+        return data || [];
+      }),
+    );
+  }
+
   createStudent(data: Partial<Student>): Observable<Student> {
     return from(
       this.supabase.client.rpc('generate_student_number', {
@@ -343,7 +364,7 @@ export class SchoolService {
     return from(
       this.supabase.client
         .from('student_fees')
-        .select('*')
+        .select('*, fee_structure:fee_structures(fee_name, amount)')
         .eq('church_id', this.churchId)
         .eq('student_id', studentId)
         .eq('academic_year', academicYear)
@@ -351,10 +372,10 @@ export class SchoolService {
     ).pipe(
       map(({ data, error }) => {
         if (error) throw error;
-        return (data as StudentFee[]).map((f) => ({
+        return (data as any[]).map((f) => ({
           ...f,
-          balance: f.amount_due - f.amount_paid,
-        }));
+          fee_name: f.fee_structure?.fee_name || 'Unknown Fee',
+        })) as StudentFee[];
       }),
     );
   }
@@ -367,22 +388,19 @@ export class SchoolService {
     return from(
       this.supabase.client
         .from('student_fees')
-        .select('*, student:students(*, class:school_classes(*))')
+        .select(
+          '*, student:students(*, class:school_classes(*)), fee_structure:fee_structures(fee_name, amount)',
+        )
         .eq('church_id', this.churchId)
         .eq('academic_year', academicYear)
-        .eq('term', term)
-        .in(
-          'student_id',
-          this.supabase.client
-            .from('students')
-            .select('id')
-            .eq('class_id', classId)
-            .eq('church_id', this.churchId) as any,
-        ),
+        .eq('term', term),
     ).pipe(
       map(({ data, error }) => {
         if (error) throw error;
-        return data || [];
+        return (data || []).map((f: any) => ({
+          ...f,
+          fee_name: f.fee_structure?.fee_name || 'Unknown Fee',
+        }));
       }),
     );
   }
@@ -391,7 +409,9 @@ export class SchoolService {
     return from(
       this.supabase.client
         .from('student_fees')
-        .select('*, student:students(*, class:school_classes(*))')
+        .select(
+          '*, student:students(*, class:school_classes(*)), fee_structure:fee_structures(fee_name, amount)',
+        )
         .eq('church_id', this.churchId)
         .eq('academic_year', academicYear)
         .eq('term', term)
@@ -400,7 +420,10 @@ export class SchoolService {
     ).pipe(
       map(({ data, error }) => {
         if (error) throw error;
-        return data || [];
+        return (data || []).map((f: any) => ({
+          ...f,
+          fee_name: f.fee_structure?.fee_name || 'Unknown Fee',
+        }));
       }),
     );
   }
@@ -418,7 +441,10 @@ export class SchoolService {
   ): Observable<{ data: FeePayment[]; count: number }> {
     let query = this.supabase.client
       .from('fee_payments')
-      .select('*, student:students(*, class:school_classes(*))', { count: 'exact' })
+      .select(
+        '*, student:students(*, class:school_classes(*)), student_fee:student_fees(*, fee_structure:fee_structures(fee_name))',
+        { count: 'exact' },
+      )
       .eq('church_id', this.churchId);
 
     if (filters?.studentId) query = query.eq('student_id', filters.studentId);
@@ -434,7 +460,9 @@ export class SchoolService {
     return from(query).pipe(
       map(({ data, error, count }) => {
         if (error) throw error;
-        return { data: data as FeePayment[], count: count || 0 };
+        // Group by receipt_number to reconstruct FeePayment objects
+        const grouped = this.groupPaymentsByReceipt(data || []);
+        return { data: grouped, count: count || 0 };
       }),
     );
   }
@@ -443,16 +471,51 @@ export class SchoolService {
     return from(
       this.supabase.client
         .from('fee_payments')
-        .select('*, student:students(*, class:school_classes(*))')
+        .select(
+          '*, student:students(*, class:school_classes(*)), student_fee:student_fees(*, fee_structure:fee_structures(fee_name))',
+        )
         .eq('church_id', this.churchId)
-        .eq('receipt_number', receiptNumber)
-        .single(),
+        .eq('receipt_number', receiptNumber),
     ).pipe(
       map(({ data, error }) => {
         if (error) throw error;
-        return data as FeePayment;
+        const grouped = this.groupPaymentsByReceipt(data || []);
+        if (grouped.length === 0) throw new Error('Receipt not found');
+        return grouped[0];
       }),
     );
+  }
+
+  // Helper to group individual fee_payment rows into FeePayment objects
+  private groupPaymentsByReceipt(rows: any[]): FeePayment[] {
+    const map: { [receipt: string]: FeePayment } = {};
+    rows.forEach((row) => {
+      const rn = row.receipt_number;
+      if (!map[rn]) {
+        map[rn] = {
+          id: row.id,
+          church_id: row.church_id,
+          student_id: row.student_id,
+          student: row.student,
+          receipt_number: rn,
+          amount: 0,
+          payment_method: row.payment_method,
+          payment_date: row.payment_date,
+          academic_year: row.academic_year,
+          term: row.term,
+          received_by: row.received_by,
+          notes: row.notes,
+          fee_items: [],
+          created_at: row.created_at,
+        };
+      }
+      map[rn].amount += Number(row.amount);
+      map[rn].fee_items.push({
+        fee_name: row.student_fee?.fee_structure?.fee_name || 'Fee',
+        amount: Number(row.amount),
+      });
+    });
+    return Object.values(map);
   }
 
   recordPayment(paymentData: {
@@ -842,127 +905,157 @@ export class SchoolService {
     return n + (s[(v - 20) % 10] || s[v] || s[0]);
   }
 
-
   importStudentsFromFile(file: File): Observable<ImportResult> {
-  return from(this.processStudentFileImport(file));
-}
-
-private async processStudentFileImport(file: File): Promise<ImportResult> {
-  const ext = file.name.split('.').pop()?.toLowerCase();
-  if (ext === 'xlsx' || ext === 'xls') {
-    return this.processStudentExcelImport(file);
+    return from(this.processStudentFileImport(file));
   }
-  return this.processStudentCSVImport(file);
-}
 
-private async processStudentExcelImport(file: File): Promise<ImportResult> {
-  const buffer = await file.arrayBuffer();
-  const workbook = XLSX.read(buffer, { type: 'array', cellDates: true });
-  const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  const rows: any[] = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: false });
+  private async processStudentFileImport(file: File): Promise<ImportResult> {
+    const ext = file.name.split('.').pop()?.toLowerCase();
+    if (ext === 'xlsx' || ext === 'xls') {
+      return this.processStudentExcelImport(file);
+    }
+    return this.processStudentCSVImport(file);
+  }
 
-  if (!rows.length) throw new Error('File is empty or invalid');
+  private async processStudentExcelImport(file: File): Promise<ImportResult> {
+    const buffer = await file.arrayBuffer();
+    const workbook = XLSX.read(buffer, { type: 'array', cellDates: true });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rows: any[] = XLSX.utils.sheet_to_json(sheet, {
+      defval: '',
+      raw: false,
+    });
 
-  // Load classes once for name→id lookup
-  const { data: classes } = await this.supabase.client
-    .from('school_classes')
-    .select('id, name, academic_year')
-    .eq('church_id', this.churchId)
-    .eq('is_active', true);
+    if (!rows.length) throw new Error('File is empty or invalid');
 
-  const results: ImportResult = { success: 0, failed: 0, errors: [] };
+    // Load classes once for name→id lookup
+    const { data: classes } = await this.supabase.client
+      .from('school_classes')
+      .select('id, name, academic_year')
+      .eq('church_id', this.churchId)
+      .eq('is_active', true);
 
-  for (let i = 0; i < rows.length; i++) {
-    try {
-      const row: Record<string, string> = {};
-      Object.entries(rows[i]).forEach(([key, val]) => {
-        row[key.trim().toLowerCase().replace(/\s+/g, '_')] = String(val ?? '').trim();
+    const results: ImportResult = { success: 0, failed: 0, errors: [] };
+
+    for (let i = 0; i < rows.length; i++) {
+      try {
+        const row: Record<string, string> = {};
+        Object.entries(rows[i]).forEach(([key, val]) => {
+          row[key.trim().toLowerCase().replace(/\s+/g, '_')] = String(
+            val ?? '',
+          ).trim();
+        });
+
+        const classId = this.resolveClassId(
+          row['class'] || row['class_name'],
+          classes || [],
+        );
+        if (!classId)
+          throw new Error(
+            `Class "${row['class'] || row['class_name']}" not found`,
+          );
+
+        await this.insertStudentRow(row, classId);
+        results.success++;
+      } catch (err: any) {
+        results.failed++;
+        results.errors.push({ row: i + 2, error: err.message, data: '' });
+      }
+    }
+    return results;
+  }
+
+  private async processStudentCSVImport(file: File): Promise<ImportResult> {
+    const text = await file.text();
+    const lines = text
+      .split('\n')
+      .map((l) => l.trim())
+      .filter((l) => l && !l.startsWith('#'));
+    if (lines.length < 2) throw new Error('CSV file is empty or invalid');
+
+    const { data: classes } = await this.supabase.client
+      .from('school_classes')
+      .select('id, name, academic_year')
+      .eq('church_id', this.churchId)
+      .eq('is_active', true);
+
+    const headers = lines[0].split(',').map((h) =>
+      h
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, '_')
+        .replace(/[^a-z0-9_]/g, ''),
+    );
+
+    const results: ImportResult = { success: 0, failed: 0, errors: [] };
+
+    for (let i = 1; i < lines.length; i++) {
+      try {
+        const values = lines[i].split(',');
+        const row: Record<string, string> = {};
+        headers.forEach((h, idx) => {
+          row[h] = values[idx]?.trim() || '';
+        });
+
+        const classId = this.resolveClassId(
+          row['class'] || row['class_name'],
+          classes || [],
+        );
+        if (!classId)
+          throw new Error(
+            `Class "${row['class'] || row['class_name']}" not found`,
+          );
+
+        await this.insertStudentRow(row, classId);
+        results.success++;
+      } catch (err: any) {
+        results.failed++;
+        results.errors.push({ row: i + 1, error: err.message, data: lines[i] });
+      }
+    }
+    return results;
+  }
+
+  private resolveClassId(className: string, classes: any[]): string | null {
+    if (!className) return null;
+    const match = classes.find(
+      (c) => c.name.toLowerCase().trim() === className.toLowerCase().trim(),
+    );
+    return match?.id || null;
+  }
+
+  private async insertStudentRow(
+    row: Record<string, string>,
+    classId: string,
+  ): Promise<void> {
+    const { data: studentNumber, error: snError } =
+      await this.supabase.client.rpc('generate_student_number', {
+        p_church_id: this.churchId,
       });
+    if (snError) throw new Error(snError.message);
 
-      const classId = this.resolveClassId(row['class'] || row['class_name'], classes || []);
-      if (!classId) throw new Error(`Class "${row['class'] || row['class_name']}" not found`);
+    if (!row['first_name'] || !row['last_name']) {
+      throw new Error('First name and last name are required');
+    }
 
-      await this.insertStudentRow(row, classId);
-      results.success++;
-    } catch (err: any) {
-      results.failed++;
-      results.errors.push({ row: i + 2, error: err.message, data: '' });
+    const { error } = await this.supabase.client.from('students').insert({
+      church_id: this.churchId,
+      student_number: studentNumber,
+      first_name: row['first_name'],
+      middle_name: row['middle_name'] || null,
+      last_name: row['last_name'],
+      date_of_birth: row['date_of_birth'] || null,
+      gender: row['gender']?.toLowerCase() || null,
+      class_id: classId,
+      parent_name: row['parent_name'] || null,
+      parent_phone: row['parent_phone'] || row['phone'] || null,
+      parent_email: row['parent_email'] || row['email'] || null,
+      address: row['address'] || null,
+      is_active: true,
+    });
+
+    if (error) {
+      throw new Error(error.message);
     }
   }
-  return results;
-}
-
-private async processStudentCSVImport(file: File): Promise<ImportResult> {
-  const text = await file.text();
-  const lines = text.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#'));
-  if (lines.length < 2) throw new Error('CSV file is empty or invalid');
-
-  const { data: classes } = await this.supabase.client
-    .from('school_classes')
-    .select('id, name, academic_year')
-    .eq('church_id', this.churchId)
-    .eq('is_active', true);
-
-  const headers = lines[0].split(',').map(h =>
-    h.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '')
-  );
-
-  const results: ImportResult = { success: 0, failed: 0, errors: [] };
-
-  for (let i = 1; i < lines.length; i++) {
-    try {
-      const values = lines[i].split(',');
-      const row: Record<string, string> = {};
-      headers.forEach((h, idx) => { row[h] = values[idx]?.trim() || ''; });
-
-      const classId = this.resolveClassId(row['class'] || row['class_name'], classes || []);
-      if (!classId) throw new Error(`Class "${row['class'] || row['class_name']}" not found`);
-
-      await this.insertStudentRow(row, classId);
-      results.success++;
-    } catch (err: any) {
-      results.failed++;
-      results.errors.push({ row: i + 1, error: err.message, data: lines[i] });
-    }
-  }
-  return results;
-}
-
-private resolveClassId(className: string, classes: any[]): string | null {
-  if (!className) return null;
-  const match = classes.find(c =>
-    c.name.toLowerCase().trim() === className.toLowerCase().trim()
-  );
-  return match?.id || null;
-}
-
-private async insertStudentRow(row: Record<string, string>, classId: string): Promise<void> {
-  const { data: studentNumber, error: snError } = await this.supabase.client
-    .rpc('generate_student_number', { p_church_id: this.churchId });
-  if (snError) throw new Error(snError.message);
-
-  if (!row['first_name'] || !row['last_name']) {
-    throw new Error('First name and last name are required');
-  }
-
-  const { error } = await this.supabase.client.from('students').insert({
-    church_id: this.churchId,
-    student_number: studentNumber,
-    first_name: row['first_name'],
-    middle_name: row['middle_name'] || null,
-    last_name: row['last_name'],
-    date_of_birth: row['date_of_birth'] || null,
-    gender: row['gender']?.toLowerCase() || null,
-    class_id: classId,
-    parent_name: row['parent_name'] || null,
-    parent_phone: row['parent_phone'] || row['phone'] || null,
-    parent_email: row['parent_email'] || row['email'] || null,
-    address: row['address'] || null,
-    is_active: true,
-  });
-
-  if (error) {
-    throw new Error(error.message);
-  }
-}
 }

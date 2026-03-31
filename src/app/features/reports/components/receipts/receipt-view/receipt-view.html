@@ -11,10 +11,24 @@
             <i class="ri-arrow-left-line"></i>
             Back
           </button>
-          <button class="btn-primary" (click)="printReceipt()" *ngIf="payment">
-            <i class="ri-printer-line"></i>
-            Print Receipt
-          </button>
+          <div style="display:flex; gap:8px;">
+            <!-- Branding customisation -->
+            <button class="btn-secondary" (click)="showBrandingModal = true" *ngIf="payment"
+              title="Customise receipt branding">
+              <i class="ri-palette-line"></i>
+              Branding
+            </button>
+            <button class="btn-primary" (click)="printReceipt()" *ngIf="payment">
+              <i class="ri-printer-line"></i>
+              Print Receipt
+            </button>
+          </div>
+        </div>
+
+        <!-- Success alert -->
+        <div *ngIf="successMessage" class="success-alert no-print">
+          <i class="ri-checkbox-circle-line"></i>
+          {{ successMessage }}
         </div>
 
         <!-- Loading -->
@@ -38,8 +52,7 @@
             <!-- Header -->
             <div class="receipt-header">
               <div class="church-brand">
-                <img *ngIf="churchLogo" [src]="churchLogo"
-                     [alt]="churchName" class="church-logo" />
+                <img *ngIf="churchLogo" [src]="churchLogo" [alt]="churchName" class="church-logo" />
                 <div class="church-info">
                   <h1 class="church-name">{{ churchName }}</h1>
                   <p *ngIf="churchAddress">{{ churchAddress }}</p>
@@ -158,5 +171,11 @@
 
       </div>
     </div>
+  </div>
+
+
+  <div class="modal-overlay" *ngIf="showBrandingModal" (click)="showBrandingModal = false">
+    <app-export-branding (close)="showBrandingModal = false" (saved)="onBrandingSaved()">
+    </app-export-branding>
   </div>
 </div>

@@ -17,11 +17,19 @@
             </div>
           </div>
           <div class="header-actions">
-            <button class="btn-secondary" (click)="openExport()" [disabled]="exporting" *ngIf="groupedFees.length > 0">
+            <!-- Branding button -->
+            <button class="btn-icon-outline" (click)="showBrandingModal = true"
+              title="Customise export branding">
+              <i class="ri-palette-line" style="color: #4f46e5;"></i>
+            </button>
+            <!-- Bulk export all classes -->
+            <button class="btn-secondary" (click)="openExport()"
+              [disabled]="exporting" *ngIf="groupedFees.length > 0">
               <i class="ri-download-line"></i>
               {{ exporting ? 'Exporting...' : 'Export All' }}
             </button>
-            <button class="btn-primary" (click)="openCreateModal()" *ngIf="permissionService.school.fees">
+            <button class="btn-primary" (click)="openCreateModal()"
+              *ngIf="permissionService.school.fees">
               <i class="ri-add-line"></i>
               Add Fee
             </button>
@@ -68,14 +76,18 @@
                 </span>
               </div>
               <div class="class-actions">
-                <!-- Export this class as PDF -->
-                <button class="btn-icon-outline" (click)="exportClassPDF(group, $event)"
-                  title="Download fee structure PDF for this class">
-                  <i class="ri-file-pdf-line"></i>
+                <!-- Export this class fee statement — NOW INSIDE *ngFor so group exists -->
+                <button class="btn-icon-outline"
+                  (click)="openClassExport(group.class.id, group.class.name)"
+                  title="Export fee statement for this class"
+                  [disabled]="exportingClass">
+                  <i class="ri-download-line"></i>
                 </button>
                 <!-- Assign to students -->
-                <button class="btn-assign" (click)="assignFeesToClass(group.class.id)"
-                  *ngIf="permissionService.school.fees" title="Assign these fees to all students in this class">
+                <button class="btn-assign"
+                  (click)="confirmAssign(group.class.id, group.class.name)"
+                  *ngIf="permissionService.school.fees"
+                  title="Assign these fees to all students in this class">
                   <i class="ri-user-add-line"></i>
                   Assign to Students
                 </button>
@@ -105,7 +117,8 @@
                       <button class="btn-icon-small" (click)="openEditModal(fee)" title="Edit">
                         <i class="ri-edit-line"></i>
                       </button>
-                      <button class="btn-icon-small btn-danger" (click)="deleteFee(fee)" title="Delete">
+                      <button class="btn-icon-small btn-danger"
+                        (click)="confirmDelete(fee)" title="Delete">
                         <i class="ri-delete-bin-line"></i>
                       </button>
                     </div>
@@ -115,7 +128,9 @@
               <tfoot>
                 <tr class="total-row">
                   <td><strong>Total</strong></td>
-                  <td class="text-right"><strong>{{ formatCurrency(getClassTotal(group.fees)) }}</strong></td>
+                  <td class="text-right">
+                    <strong>{{ formatCurrency(getClassTotal(group.fees)) }}</strong>
+                  </td>
                   <td></td>
                   <td *ngIf="permissionService.school.fees"></td>
                 </tr>
@@ -130,7 +145,8 @@
             </div>
             <h3>No Fee Structures</h3>
             <p>Create fee structures for each class and term</p>
-            <button class="btn-primary" (click)="openCreateModal()" *ngIf="permissionService.school.fees">
+            <button class="btn-primary" (click)="openCreateModal()"
+              *ngIf="permissionService.school.fees">
               <i class="ri-add-line"></i>
               Add First Fee
             </button>
@@ -173,11 +189,13 @@
       </div>
       <div class="form-group">
         <label>Fee Name *</label>
-        <input type="text" [(ngModel)]="feeForm.fee_name" placeholder="e.g., Tuition, Sports Levy, PTA" />
+        <input type="text" [(ngModel)]="feeForm.fee_name"
+          placeholder="e.g., Tuition, Sports Levy, PTA" />
       </div>
       <div class="form-group">
         <label>Amount (GHS) *</label>
-        <input type="number" [(ngModel)]="feeForm.amount" min="0" step="0.01" placeholder="0.00" />
+        <input type="number" [(ngModel)]="feeForm.amount"
+          min="0" step="0.01" placeholder="0.00" />
       </div>
       <div class="form-group">
         <label class="checkbox-label">
@@ -190,7 +208,9 @@
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn-secondary" (click)="closeModal()" [disabled]="processing">Cancel</button>
+      <button class="btn-secondary" (click)="closeModal()" [disabled]="processing">
+        Cancel
+      </button>
       <button class="btn-primary" (click)="saveFee()" [disabled]="processing">
         {{ processing ? 'Saving...' : (editingFee ? 'Update Fee' : 'Add Fee') }}
       </button>
@@ -198,7 +218,7 @@
   </div>
 </div>
 
-<!-- Export Modal -->
+<!-- Bulk Export All Classes Modal -->
 <div class="modal-overlay" *ngIf="showExportModal" (click)="showExportModal = false">
   <div class="export-modal" (click)="$event.stopPropagation()">
     <div class="export-modal-header">
@@ -214,19 +234,127 @@
     <div class="export-options">
       <button class="export-option" (click)="exportAs('csv')">
         <div class="export-icon csv"><i class="ri-file-text-line"></i></div>
-        <div class="export-info"><strong>CSV</strong><span>All fee items in plain text</span></div>
+        <div class="export-info">
+          <strong>CSV</strong><span>All fee items in plain text</span>
+        </div>
         <i class="ri-arrow-right-s-line export-arrow"></i>
       </button>
       <button class="export-option" (click)="exportAs('xlsx')">
         <div class="export-icon excel"><i class="ri-file-excel-2-line"></i></div>
-        <div class="export-info"><strong>Excel (.xlsx)</strong><span>Detailed sheet + per-class summary</span></div>
+        <div class="export-info">
+          <strong>Excel (.xlsx)</strong><span>Detailed sheet + per-class summary</span>
+        </div>
         <i class="ri-arrow-right-s-line export-arrow"></i>
       </button>
       <button class="export-option" (click)="exportAs('pdf')">
         <div class="export-icon pdf"><i class="ri-file-pdf-2-line"></i></div>
-        <div class="export-info"><strong>PDF Report</strong><span>All classes, grouped, ready to print</span></div>
+        <div class="export-info">
+          <strong>PDF Report</strong><span>All classes, grouped, ready to print</span>
+        </div>
         <i class="ri-arrow-right-s-line export-arrow"></i>
       </button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal-overlay" *ngIf="showDeleteModal" (click)="showDeleteModal = false">
+  <div class="delete-modal" (click)="$event.stopPropagation()">
+    <div class="delete-modal-icon">
+      <i class="ri-delete-bin-line"></i>
+    </div>
+    <h3>Delete Fee</h3>
+    <p>Are you sure you want to delete
+      <strong>"{{ feeToDelete?.fee_name }}"</strong>?
+    </p>
+    <p class="delete-warning">This action cannot be undone.</p>
+    <div class="delete-modal-actions">
+      <button class="btn-cancel" (click)="showDeleteModal = false" [disabled]="processing">
+        Cancel
+      </button>
+      <button class="btn-confirm-delete" (click)="executeDelete()" [disabled]="processing">
+        <i class="ri-delete-bin-line"></i>
+        {{ processing ? 'Deleting...' : 'Yes, Delete' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Assign Confirmation Modal -->
+<div class="modal-overlay" *ngIf="showAssignModal" (click)="showAssignModal = false">
+  <div class="assign-modal" (click)="$event.stopPropagation()">
+    <div class="assign-modal-icon">
+      <i class="ri-user-add-line"></i>
+    </div>
+    <h3>Assign Fees to Students</h3>
+    <p>This will create fee records for all active students in
+      <strong>"{{ classToAssign?.name }}"</strong>.
+    </p>
+    <p class="assign-note">
+      <i class="ri-information-line"></i>
+      Students who already have these fees assigned will not be duplicated.
+    </p>
+    <div class="assign-modal-actions">
+      <button class="btn-cancel" (click)="showAssignModal = false" [disabled]="processing">
+        Cancel
+      </button>
+      <button class="btn-confirm-assign" (click)="executeAssign()" [disabled]="processing">
+        <i class="ri-user-add-line"></i>
+        {{ processing ? 'Assigning...' : 'Yes, Assign' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Branding Modal -->
+<div class="modal-overlay" *ngIf="showBrandingModal" (click)="showBrandingModal = false">
+  <app-export-branding
+    (close)="showBrandingModal = false"
+    (saved)="successMessage = 'Export branding saved!'">
+  </app-export-branding>
+</div>
+
+<!-- Class Export Modal -->
+<div class="modal-overlay" *ngIf="showClassExportModal" (click)="showClassExportModal = false">
+  <div class="export-modal" (click)="$event.stopPropagation()">
+    <div class="export-modal-header">
+      <h3><i class="ri-download-2-line"></i> Export — {{ classExportTarget?.name }}</h3>
+      <button class="modal-close-btn" (click)="showClassExportModal = false">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+    <p class="export-subtitle">
+      Full fee statement for all students in this class —
+      {{ selectedTerm }} {{ selectedYear }}
+    </p>
+    <div class="export-options">
+      <button class="export-option" (click)="exportClassAs('csv')">
+        <div class="export-icon csv"><i class="ri-file-text-line"></i></div>
+        <div class="export-info">
+          <strong>CSV</strong><span>All students, all fee items</span>
+        </div>
+        <i class="ri-arrow-right-s-line export-arrow"></i>
+      </button>
+      <button class="export-option" (click)="exportClassAs('xlsx')">
+        <div class="export-icon excel"><i class="ri-file-excel-2-line"></i></div>
+        <div class="export-info">
+          <strong>Excel (.xlsx)</strong><span>Detailed sheet + student summary</span>
+        </div>
+        <i class="ri-arrow-right-s-line export-arrow"></i>
+      </button>
+      <button class="export-option" (click)="exportClassAs('pdf')">
+        <div class="export-icon pdf"><i class="ri-file-pdf-2-line"></i></div>
+        <div class="export-info">
+          <strong>PDF Report</strong><span>Branded, ready to print or share</span>
+        </div>
+        <i class="ri-arrow-right-s-line export-arrow"></i>
+      </button>
+    </div>
+    <div class="export-branding-hint"
+      (click)="showClassExportModal = false; showBrandingModal = true">
+      <i class="ri-palette-line"></i>
+      <span>Customise export branding</span>
+      <i class="ri-arrow-right-s-line"></i>
     </div>
   </div>
 </div>

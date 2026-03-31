@@ -322,27 +322,40 @@ export class UserRolesService {
     phone_number: string | null;
     role: string;
   }): Observable<any> {
-    // Check quota before creating
     return this.subscriptionService.checkQuota('users').pipe(
       switchMap((quota) => {
         if (!quota.allowed) {
-          throw new Error(
-            `QUOTA_EXCEEDED:users:${quota.current}:${quota.limit}`,
+          return throwError(
+            () =>
+              new Error(`QUOTA_EXCEEDED:users:${quota.current}:${quota.limit}`),
           );
         }
+
+        // Get session first, then invoke
         return from(
-          this.supabase.client.functions.invoke('invite-user', {
-            body: {
-              email: userData.email,
-              full_name: userData.full_name,
-              role: userData.role,
-              church_id: this.authService.getChurchId(),
-              phone_number: userData.phone_number,
-            },
-          }),
+          this.supabase.client.auth
+            .getSession()
+            .then(({ data: { session } }) => {
+              if (!session?.access_token) {
+                throw new Error('No active session. Please log in again.');
+              }
+
+              return this.supabase.client.functions.invoke('invite-user', {
+                body: {
+                  email: userData.email,
+                  full_name: userData.full_name,
+                  role: userData.role,
+                  church_id: this.authService.getChurchId(),
+                  phone_number: userData.phone_number,
+                },
+                headers: {
+                  Authorization: `Bearer ${session.access_token}`,
+                },
+              });
+            }),
         );
       }),
-      map(({ data, error }) => {
+      map(({ data, error }: any) => {
         if (error) throw new Error(error.message);
         if (data?.error) throw new Error(data.error);
         return data;

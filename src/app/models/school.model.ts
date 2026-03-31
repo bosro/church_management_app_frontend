@@ -51,9 +51,10 @@ export interface StudentFee {
   student_id: string;
   student?: Student;
   fee_structure_id?: string;
+  fee_structure?: { fee_name: string; amount: number }; // add this
+  fee_name?: string; // populated from fee_structure join
   academic_year: string;
   term: string;
-  fee_name: string;
   amount_due: number;
   amount_paid: number;
   balance?: number;
@@ -75,7 +76,7 @@ export interface FeePayment {
   term: string;
   received_by?: string;
   notes?: string;
-  fee_items: { fee_name: string; amount: number }[];
+  fee_items: { fee_name: string; amount: number }[]; 
   created_at: string;
 }
 
@@ -189,6 +190,18 @@ export const PAYMENT_METHODS = [
 
 
 
+export function generateAcademicYears(currentYear?: number): string[] {
+  const y = currentYear || new Date().getFullYear();
+  return [
+    `${y + 1}/${y + 2}`,
+    `${y}/${y + 1}`,
+    `${y - 1}/${y}`,
+    `${y - 2}/${y - 1}`,
+  ];
+}
 
-
-
+export function currentAcademicYear(): string {
+  const y = new Date().getFullYear();
+  // If we're in the second half of the year, we're still in y/y+1
+  return `${y}/${y + 1}`;
+}

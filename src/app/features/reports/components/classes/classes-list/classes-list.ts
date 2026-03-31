@@ -5,7 +5,7 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { SchoolService } from '../../../services/school.service';
 import { PermissionService } from '../../../../../core/services/permission.service';
-import { SchoolClass, DEFAULT_CLASSES, TERMS } from '../../../../../models/school.model';
+import { SchoolClass, DEFAULT_CLASSES, TERMS, generateAcademicYears, currentAcademicYear } from '../../../../../models/school.model';
 
 @Component({
   selector: 'app-classes-list',
@@ -48,14 +48,9 @@ export class ClassesList implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    const year = new Date().getFullYear();
-    this.currentAcademicYear = `${year}/${year + 1}`;
-    this.selectedYear = this.currentAcademicYear;
-    this.academicYears = [
-      `${year}/${year + 1}`,
-      `${year - 1}/${year}`,
-      `${year - 2}/${year - 1}`,
-    ];
+    this.academicYears = generateAcademicYears();
+this.selectedYear = currentAcademicYear();
+
     this.loadClasses();
   }
 

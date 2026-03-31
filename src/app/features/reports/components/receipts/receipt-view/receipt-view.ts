@@ -1,4 +1,3 @@
-
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { Subject } from 'rxjs';
@@ -8,6 +7,7 @@ import { PermissionService } from '../../../../../core/services/permission.servi
 import { AuthService } from '../../../../../core/services/auth';
 import { SupabaseService } from '../../../../../core/services/supabase';
 import { FeePayment } from '../../../../../models/school.model';
+import { PdfBrandingService } from '../../../../../core/services/pdf-branding.service';
 
 @Component({
   selector: 'app-receipt-view',
@@ -26,12 +26,15 @@ export class ReceiptView implements OnInit, OnDestroy {
   churchPhone = '';
   loading = true;
   errorMessage = '';
+  successMessage = '';          // ← add
+  showBrandingModal = false;    // ← add
 
   constructor(
     private schoolService: SchoolService,
     public permissionService: PermissionService,
     private authService: AuthService,
     private supabase: SupabaseService,
+    private pdfBranding: PdfBrandingService,  // ← add
     private router: Router,
     private route: ActivatedRoute,
   ) {}
@@ -48,23 +51,14 @@ export class ReceiptView implements OnInit, OnDestroy {
   }
 
   private loadChurchInfo(): void {
-    const churchId = this.authService.getChurchId();
-    if (!churchId) return;
-
-    this.supabase.client
-      .from('churches')
-      .select('name, logo_url, address, phone, city')
-      .eq('id', churchId)
-      .single()
-      .then(({ data }) => {
-        if (data) {
-          this.churchName = data.name || '';
-          this.churchLogo = data.logo_url || '';
-          this.churchAddress = [data.address, data.city]
-            .filter(Boolean).join(', ');
-          this.churchPhone = data.phone || '';
-        }
-      });
+    this.pdfBranding.getBranding().then((branding) => {
+      this.churchName    = branding.name;
+      this.churchLogo    = branding.logoBase64
+        ? `data:${branding.logoMimeType};base64,${branding.logoBase64}`
+        : '';
+      this.churchAddress = branding.address || '';
+      this.churchPhone   = branding.phone   || '';
+    });
   }
 
   loadPayment(): void {
@@ -82,6 +76,13 @@ export class ReceiptView implements OnInit, OnDestroy {
           this.loading = false;
         },
       });
+  }
+
+  onBrandingSaved(): void {
+    this.successMessage = 'Branding updated — changes apply on next print.';
+    // Re-fetch so the receipt header updates immediately
+    this.loadChurchInfo();
+    setTimeout(() => (this.successMessage = ''), 3000);
   }
 
   printReceipt(): void {

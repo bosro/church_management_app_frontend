@@ -4,7 +4,7 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { SchoolService } from '../../../services/school.service';
 import { PermissionService } from '../../../../../core/services/permission.service';
-import { SchoolClass, TERMS } from '../../../../../models/school.model';
+import { currentAcademicYear, generateAcademicYears, SchoolClass, TERMS } from '../../../../../models/school.model';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -41,9 +41,8 @@ export class FeeReport implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    const year = new Date().getFullYear();
-    this.selectedYear = `${year}/${year + 1}`;
-    this.academicYears = [`${year}/${year + 1}`, `${year - 1}/${year}`];
+      this.academicYears = generateAcademicYears();
+   this.selectedYear = currentAcademicYear();
     this.loadClasses();
     this.loadReport();
   }
@@ -320,3 +319,5 @@ export class FeeReport implements OnInit, OnDestroy {
     }).format(amount || 0);
   }
 }
+
+

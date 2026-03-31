@@ -1,11 +1,13 @@
-
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { SchoolService } from '../../../services/school.service';
 import { PermissionService } from '../../../../../core/services/permission.service';
-import { Exam, SchoolClass, TERMS } from '../../../../../models/school.model';
+import {
+  Exam, SchoolClass, TERMS,
+  generateAcademicYears, currentAcademicYear
+} from '../../../../../models/school.model';
 
 @Component({
   selector: 'app-exams-list',
@@ -23,10 +25,10 @@ export class ExamsList implements OnInit, OnDestroy {
   successMessage = '';
 
   selectedTerm = TERMS[0];
-  selectedYear = '';
+  selectedYear = currentAcademicYear();
   selectedClassId = '';
   terms = TERMS;
-  academicYears: string[] = [];
+  academicYears: string[] = generateAcademicYears();
 
   constructor(
     private schoolService: SchoolService,
@@ -35,12 +37,6 @@ export class ExamsList implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    const year = new Date().getFullYear();
-    this.selectedYear = `${year}/${year + 1}`;
-    this.academicYears = [
-      `${year}/${year + 1}`,
-      `${year - 1}/${year}`,
-    ];
     this.loadClasses();
     this.loadExams();
   }

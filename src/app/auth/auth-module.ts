@@ -10,6 +10,7 @@ import { AuthRoutingModule } from './auth-routing.module';
 import { SharedModule } from '../shared/shared-module';
 import { EmailConfirmed } from './components/email-confirmed/email-confirmed';
 import { ResetPassword } from './components/reset-password/reset-password';
+import { AcceptInvite } from './components/accept-invite/accept-invite';
 
 
 
@@ -21,7 +22,8 @@ import { ResetPassword } from './components/reset-password/reset-password';
     ForgotPassword,
     AuthLayout,
     EmailConfirmed,
-    ResetPassword
+    ResetPassword,
+    AcceptInvite
   ],
   imports: [
     CommonModule,
