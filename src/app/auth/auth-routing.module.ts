@@ -20,12 +20,12 @@ const routes: Routes = [
       { path: 'signup', component: Signup },
       // { path: 'otp-verification', component: OtpVerification },
       { path: 'forgot-password', component: ForgotPassword },
-       { path: 'reset-password', component: ResetPassword },
-           { path: 'accept-invite', component: AcceptInvite }, 
+      { path: 'reset-password', component: ResetPassword },
+      { path: 'accept-invite', component: AcceptInvite },
       {
         path: 'email-confirmed',
         component: EmailConfirmed,
-            data: { title: 'Email Confirmed' }
+        data: { title: 'Email Confirmed' },
       },
     ],
   },

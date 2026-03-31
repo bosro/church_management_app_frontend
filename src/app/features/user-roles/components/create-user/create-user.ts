@@ -83,6 +83,16 @@ export class CreateUser implements OnInit, OnDestroy {
         `Upgrade to add more users.`;
       this.showUpgradeModal = true;
       this.submitting = false;
+    } else if (
+      error.message?.includes('already been registered') ||
+      error.message?.includes('already registered') ||
+      error.message?.includes('User already registered') ||
+      error.message?.includes('already exists')
+    ) {
+      this.errorMessage =
+        `A user with the email "${this.userForm.value.email}" is already registered. ` +
+        `Please use a different email address or manage the existing user from the Users list.`;
+      this.submitting = false;
     } else {
       this.errorMessage =
         error.message || 'Failed to create user. Please try again.';
