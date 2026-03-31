@@ -8,6 +8,7 @@ import { Signup } from './components/signup/signup';
 import { AuthLayout } from './components/auth-layout/auth-layout';
 import { EmailConfirmed } from './components/email-confirmed/email-confirmed';
 import { ResetPassword } from './components/reset-password/reset-password';
+import { AcceptInvite } from './components/accept-invite/accept-invite';
 
 const routes: Routes = [
   {
@@ -20,6 +21,7 @@ const routes: Routes = [
       // { path: 'otp-verification', component: OtpVerification },
       { path: 'forgot-password', component: ForgotPassword },
        { path: 'reset-password', component: ResetPassword },
+           { path: 'accept-invite', component: AcceptInvite }, 
       {
         path: 'email-confirmed',
         component: EmailConfirmed,
