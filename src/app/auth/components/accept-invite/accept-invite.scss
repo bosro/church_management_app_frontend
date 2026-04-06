@@ -24,7 +24,7 @@
   padding: 2.5rem;
   width: 100%;
   max-width: 440px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+  // box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
 
   .card-header {
     text-align: center;
@@ -132,8 +132,7 @@
       outline: none;
       border-color: #5b21b6;
       background: white;
-      box-shadow: 0 0 0 3px rgba(91, 33, 182, 0.08);
-    }
+     }
     &.error {
       border-color: #f87171;
     }

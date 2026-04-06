@@ -6,4 +6,34 @@
 <!-- Show app when auth is ready -->
 <div *ngIf="authInitialized">
   <router-outlet></router-outlet>
+
+  <!-- PWA Update Banner -->
+<div class="pwa-update-banner" *ngIf="updateAvailable" @slideUp>
+  <div class="update-content">
+    <div class="update-icon">
+      <i class="ri-refresh-line"></i>
+    </div>
+    <div class="update-text">
+      <span class="update-title">Update available</span>
+      <span class="update-sub">A new version of Churchman is ready</span>
+    </div>
+    <div class="update-actions">
+      <button class="update-btn" (click)="updateApp()">Update now</button>
+      <button class="dismiss-btn" (click)="dismissUpdate()" aria-label="Dismiss">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+  </div>
 </div>
+
+<!-- Offline Banner -->
+<div class="offline-banner" *ngIf="isOffline" @slideUp>
+  <div class="offline-content">
+    <i class="ri-wifi-off-line"></i>
+    <span>You're offline — some features may be unavailable</span>
+  </div>
+</div>
+</div>
+
+
+
