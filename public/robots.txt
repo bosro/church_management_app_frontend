@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+
+# Block auth pages from indexing
+Disallow: /auth/
+Disallow: /main/
+
+# Allow landing/marketing pages
+Allow: /
+
+Sitemap: https://web.churchmann.org/sitemap.xml

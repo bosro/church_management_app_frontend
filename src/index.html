@@ -2,13 +2,107 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Churchman.</title>
+
+  <!-- Primary SEO -->
+  <title>Churchman. — Church Management Software Churches</title>
+  <meta name="description" content="Churchman is a powerful church management platform built for churches worldwide. Manage members, attendance, giving, events, communications and more — all in one place.">
+  <meta name="keywords" content="church management software Ghana, church app Ghana, church management system West Africa, church software Africa, church software worldwide, member management church Ghana, member management church, member management church worldwide, churchman, churchmann, church attendance app, giving management church">
+  <meta name="author" content="Churchman">
+  <meta name="robots" content="index, follow">
+  <meta name="theme-color" content="#5B21B6">
+
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.6.0/remixicon.css" integrity="sha512-kJlvECunwXftkPwyvHbclArO8wszgBGisiLeuDFwNM8ws+wKIw0sv1os3ClWZOcrEB2eRXULYUsm8OVRGJKwGA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <meta name="google-site-verification" content="vL9qfj2RwL4yP1QwgdlmxSo6O_qAfeWM45ux0wHMTs8" />
+
+  <!-- Open Graph (Facebook, WhatsApp, LinkedIn) -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://web.churchmann.org">
+  <meta property="og:title" content="Churchman. — Church Management Software for African Churches">
+  <meta property="og:description" content="Manage your church members, attendance, giving, events and communications with Churchman — built specifically for Ghanaian, West African, Africa and worldwide churches.">
+  <meta property="og:image" content="https://web.churchmann.org/assets/images/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:site_name" content="Churchman">
+  <meta property="og:locale" content="en_GH">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:url" content="https://web.churchmann.org">
+  <meta name="twitter:title" content="Churchman. — Church Management Software for African Churches">
+  <meta name="twitter:description" content="Manage your church members, attendance, giving, events and communications with Churchman — built for African churches and churches Worldwide.">
+  <meta name="twitter:image" content="https://web.churchmann.org/assets/images/og-image.png">
+
+  <!-- PWA -->
+  <link rel="manifest" href="assets/manifest.webmanifest">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Churchman">
+
+
+
+  <!-- Apple Touch Icons -->
+  <link rel="apple-touch-icon" href="/assets/icons/icon-152x152.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="/assets/icons/icon-152x152.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/icon-180x180.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/icon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/icon-16x16.png">
   <link rel="icon" type="image/x-icon" href="/assets/images/logo3.png">
+
+  <!-- Structured Data (JSON-LD) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Churchman",
+    "alternateName": ["Churchmann", "Churchman App", "Churchman Church Management"],
+    "description": "Churchman is a comprehensive church management platform built for Ghanaian and West African churches. Features include member management, attendance tracking, giving/finance management, event planning, communications, and more.",
+    "url": "https://web.churchmann.org",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Web, Android, iOS",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "GHS"
+    },
+    "creator": {
+      "@type": "Organization",
+      "name": "Churchman",
+      "url": "https://churchmann.org"
+    },
+    "featureList": [
+      "Member Management",
+      "Attendance Tracking",
+      "Giving and Finance Management",
+      "Event Planning",
+      "Church Communications",
+      "Role-based Access Control",
+      "Branch Management",
+      "Reports and Analytics"
+    ],
+    "screenshot": "https://web.churchmann.org/assets/images/og-image.png",
+    "inLanguage": "en",
+    "availableOnDevice": "Desktop, Mobile, Tablet"
+  }
+  </script>
+
+  <!-- Remixicon -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.6.0/remixicon.css" integrity="sha512-kJlvECunwXftkPwyvHbclArO8wszgBGisiLeuDFwNM8ws+wKIw0sv1os3ClWZOcrEB2eRXULYUsm8OVRGJKwGA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 </head>
 <body>
   <app-root></app-root>
+
+  <!-- PWA install prompt helper -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/ngsw-worker.js');
+      });
+    }
+  </script>
 </body>
 </html>

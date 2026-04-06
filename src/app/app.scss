@@ -38,3 +38,203 @@
     transform: rotate(360deg);
   }
 }
+
+
+
+// PWA Update Banner
+.pwa-update-banner {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
+  background: #ffffff;
+  border: 1px solid #E5E7EB;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.07), 0 10px 15px -3px rgba(0,0,0,0.08);
+  max-width: 360px;
+  width: calc(100vw - 48px);
+
+  @media (max-width: 768px) {
+    bottom: 0;
+    right: 0;
+    left: 0;
+    max-width: 100%;
+    width: 100%;
+    border-radius: 16px 16px 0 0;
+    border-bottom: none;
+    border-left: none;
+    border-right: none;
+    border-top: 1px solid #E5E7EB;
+    box-shadow: 0 -4px 24px rgba(0,0,0,0.08);
+  }
+
+  .update-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+
+    @media (max-width: 768px) {
+      padding: 16px 20px;
+      padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    }
+  }
+
+  .update-icon {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    background: #EDE9FE;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    i {
+      font-size: 18px;
+      color: #7C3AED;
+    }
+  }
+
+  .update-text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+
+    .update-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #111827;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .update-sub {
+      font-size: 12px;
+      color: #6B7280;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+
+  .update-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .update-btn {
+    background: #7C3AED;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    padding: 7px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s;
+
+    &:hover {
+      background: #6D28D9;
+    }
+
+    &:active {
+      background: #5B21B6;
+    }
+  }
+
+  .dismiss-btn {
+    background: transparent;
+    border: 1px solid #E5E7EB;
+    border-radius: 6px;
+    color: #9CA3AF;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.2s;
+
+    &:hover {
+      background: #F3F4F6;
+      color: #6B7280;
+      border-color: #D1D5DB;
+    }
+  }
+}
+
+// Offline Banner
+.offline-banner {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9998;
+  background: #ffffff;
+  border: 1px solid #FCA5A5;
+  border-left: 3px solid #EF4444;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.07);
+  max-width: 320px;
+  width: calc(100vw - 48px);
+
+  @media (max-width: 768px) {
+    bottom: 0;
+    right: 0;
+    left: 0;
+    max-width: 100%;
+    width: 100%;
+    border-radius: 16px 16px 0 0;
+    border-left: 1px solid #FCA5A5;
+    border-top: 3px solid #EF4444;
+    border-bottom: none;
+    box-shadow: 0 -4px 24px rgba(0,0,0,0.08);
+  }
+
+  .offline-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+
+    @media (max-width: 768px) {
+      justify-content: center;
+      padding: 14px 20px;
+      padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+    }
+
+    i {
+      font-size: 16px;
+      color: #EF4444;
+      flex-shrink: 0;
+    }
+
+    span {
+      font-size: 13px;
+      color: #374151;
+      font-weight: 500;
+    }
+  }
+}
+
+// Reduced motion
+@media (prefers-reduced-motion: reduce) {
+  .pwa-update-banner,
+  .offline-banner {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+// Print
+@media print {
+  .pwa-update-banner,
+  .offline-banner { display: none; }
+}
