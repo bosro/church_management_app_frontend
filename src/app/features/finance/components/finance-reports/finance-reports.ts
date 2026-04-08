@@ -8,6 +8,10 @@ import {
   GivingStatistics,
   TopGiver,
 } from '../../services/finance.service';
+import {
+  CategoryGivingStat,
+  CategoryGiver,
+} from '../../../../models/giving.model';
 import { Router } from '@angular/router';
 import { PermissionService } from '../../../../core/services/permission.service';
 import { Location } from '@angular/common';
@@ -37,6 +41,19 @@ export class FinanceReports implements OnInit, OnDestroy {
   startDateControl = new FormControl('');
   endDateControl = new FormControl('');
 
+  // ── Category breakdown ──────────────────────────────────────
+  categoryStats: CategoryGivingStat[] = [];
+  loadingCategoryStats = false;
+
+  // Category drill-down
+  selectedCategory: CategoryGivingStat | null = null;
+  categoryGivers: CategoryGiver[] = [];
+  loadingGivers = false;
+
+  // Category filter date range (separate from export dates)
+  categoryStartDate = new FormControl('');
+  categoryEndDate = new FormControl('');
+
   // Permissions
   canViewFinance = false;
 
@@ -44,13 +61,24 @@ export class FinanceReports implements OnInit, OnDestroy {
   showPledgesExportModal = false;
   exporting = false;
 
+  // Icon map for categories (cycles through a palette)
+  private iconPalette = [
+    { icon: 'ri-hand-heart-line', bg: '#DDD6FE', color: '#5B21B6' },
+    { icon: 'ri-money-dollar-circle-line', bg: '#D1FAE5', color: '#059669' },
+    { icon: 'ri-building-line', bg: '#DBEAFE', color: '#2563EB' },
+    { icon: 'ri-heart-line', bg: '#FCE7F3', color: '#DB2777' },
+    { icon: 'ri-star-line', bg: '#FEF3C7', color: '#D97706' },
+    { icon: 'ri-gift-line', bg: '#FEE2E2', color: '#DC2626' },
+    { icon: 'ri-plant-line', bg: '#ECFDF5', color: '#10B981' },
+    { icon: 'ri-home-heart-line', bg: '#EFF6FF', color: '#3B82F6' },
+  ];
+
   constructor(
     private financeService: FinanceService,
     private router: Router,
     public permissionService: PermissionService,
     private location: Location,
   ) {
-    // Generate year options (current year and 9 years back)
     const currentYear = new Date().getFullYear();
     for (let i = 0; i < 10; i++) {
       this.years.push(currentYear - i);
@@ -60,6 +88,7 @@ export class FinanceReports implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.checkPermissions();
     this.loadReports();
+    this.loadCategoryStats();
   }
 
   ngOnDestroy(): void {
@@ -78,11 +107,12 @@ export class FinanceReports implements OnInit, OnDestroy {
     }
   }
 
+  // ── Overview stats & top givers ────────────────────────────
+
   loadReports(): void {
     this.loading = true;
     this.errorMessage = '';
 
-    // Load statistics
     this.financeService
       .getGivingStatistics(this.selectedYear)
       .pipe(takeUntil(this.destroy$))
@@ -94,11 +124,9 @@ export class FinanceReports implements OnInit, OnDestroy {
         error: (error) => {
           this.errorMessage = error.message || 'Failed to load statistics';
           this.loading = false;
-          console.error('Error loading statistics:', error);
         },
       });
 
-    // Load top givers
     this.financeService
       .getTopGivers(10, this.selectedYear)
       .pipe(takeUntil(this.destroy$))
@@ -106,15 +134,119 @@ export class FinanceReports implements OnInit, OnDestroy {
         next: (givers) => {
           this.topGivers = givers;
         },
-        error: (error) => {
-          console.error('Error loading top givers:', error);
-        },
+        error: () => {},
       });
   }
 
   onYearChange(): void {
     this.loadReports();
+    this.loadCategoryStats();
+    // Reset drill-down when year changes
+    this.selectedCategory = null;
+    this.categoryGivers = [];
   }
+
+  // ── Category breakdown ────────────────────────────────────
+
+  loadCategoryStats(): void {
+    this.loadingCategoryStats = true;
+
+    const start = this.categoryStartDate.value || undefined;
+    const end = this.categoryEndDate.value || undefined;
+    const year = start || end ? undefined : this.selectedYear;
+
+    this.financeService
+      .getCategoryGivingStats(year, start, end)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (stats) => {
+          this.categoryStats = stats;
+          this.loadingCategoryStats = false;
+          // Refresh drill-down if a category is already selected
+          if (this.selectedCategory) {
+            const refreshed = stats.find(
+              (s) => s.category_id === this.selectedCategory!.category_id,
+            );
+            if (refreshed) {
+              this.selectedCategory = refreshed;
+              this.loadCategoryGivers(refreshed.category_id);
+            }
+          }
+        },
+        error: () => {
+          this.loadingCategoryStats = false;
+        },
+      });
+  }
+
+  applyCategoryFilters(): void {
+    this.selectedCategory = null;
+    this.categoryGivers = [];
+    this.loadCategoryStats();
+  }
+
+  clearCategoryFilters(): void {
+    this.categoryStartDate.setValue('');
+    this.categoryEndDate.setValue('');
+    this.selectedCategory = null;
+    this.categoryGivers = [];
+    this.loadCategoryStats();
+  }
+
+  selectCategory(stat: CategoryGivingStat): void {
+    if (this.selectedCategory?.category_id === stat.category_id) {
+      // Toggle off
+      this.selectedCategory = null;
+      this.categoryGivers = [];
+      return;
+    }
+    this.selectedCategory = stat;
+    this.loadCategoryGivers(stat.category_id);
+  }
+
+  private loadCategoryGivers(categoryId: string): void {
+    this.loadingGivers = true;
+    this.categoryGivers = [];
+
+    const start = this.categoryStartDate.value || undefined;
+    const end = this.categoryEndDate.value || undefined;
+    const year = start || end ? undefined : this.selectedYear;
+
+    this.financeService
+      .getCategoryGivers(categoryId, year, start, end)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (givers) => {
+          this.categoryGivers = givers;
+          this.loadingGivers = false;
+        },
+        error: () => {
+          this.loadingGivers = false;
+        },
+      });
+  }
+
+  getCategoryIcon(index: number): string {
+    return this.iconPalette[index % this.iconPalette.length].icon;
+  }
+
+  getCategoryIconBg(index: number): string {
+    return this.iconPalette[index % this.iconPalette.length].bg;
+  }
+
+  getCategoryIconColor(index: number): string {
+    return this.iconPalette[index % this.iconPalette.length].color;
+  }
+
+  getGiverInitials(name: string): string {
+    const parts = name.trim().split(' ');
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  }
+
+  // ── Export helpers ─────────────────────────────────────────
 
   exportGivingReport(): void {
     const startDate = this.startDateControl.value || '';
@@ -125,13 +257,11 @@ export class FinanceReports implements OnInit, OnDestroy {
       setTimeout(() => (this.errorMessage = ''), 3000);
       return;
     }
-
     if (new Date(startDate) > new Date(endDate)) {
       this.errorMessage = 'Start date cannot be after end date';
       setTimeout(() => (this.errorMessage = ''), 3000);
       return;
     }
-
     this.showGivingExportModal = true;
   }
 
@@ -153,7 +283,6 @@ export class FinanceReports implements OnInit, OnDestroy {
             this.showSuccess('Giving report exported successfully!');
             this.exporting = false;
           } else {
-            // Re-fetch raw data for Excel/PDF
             this.financeService
               .getGivingTransactions(1, 10000, { startDate, endDate })
               .pipe(takeUntil(this.destroy$))
@@ -211,7 +340,6 @@ export class FinanceReports implements OnInit, OnDestroy {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Giving Transactions');
 
-    // Summary sheet
     const total = data.reduce((sum, t) => sum + (t.amount || 0), 0);
     const summaryData = [
       {
@@ -253,7 +381,6 @@ export class FinanceReports implements OnInit, OnDestroy {
       year: 'numeric',
     });
 
-    // Header
     doc.setFillColor(91, 33, 182);
     doc.rect(0, 0, pageWidth, 22, 'F');
     doc.setTextColor(255, 255, 255);
@@ -268,7 +395,6 @@ export class FinanceReports implements OnInit, OnDestroy {
     doc.setFontSize(9);
     doc.text(`Exported: ${today}`, pageWidth - 14, 14, { align: 'right' });
 
-    // Period banner
     doc.setFillColor(245, 243, 255);
     doc.rect(0, 22, pageWidth, 10, 'F');
     doc.setTextColor(91, 33, 182);
@@ -278,7 +404,6 @@ export class FinanceReports implements OnInit, OnDestroy {
       align: 'center',
     });
 
-    // Stats row
     const total = data.reduce((sum, t) => sum + (t.amount || 0), 0);
     const avg = data.length ? total / data.length : 0;
     doc.setFillColor(249, 250, 251);
@@ -341,13 +466,13 @@ export class FinanceReports implements OnInit, OnDestroy {
         7: { cellWidth: 24 },
         8: { cellWidth: 30 },
       },
-      didDrawPage: (data) => {
+      didDrawPage: (d) => {
         const pageCount = (doc as any).internal.getNumberOfPages();
         doc.setFontSize(8);
         doc.setTextColor(156, 163, 175);
         doc.setFont('helvetica', 'normal');
         doc.text(
-          `Page ${data.pageNumber} of ${pageCount}  •  Churchman Church Management`,
+          `Page ${d.pageNumber} of ${pageCount}  •  Churchman Church Management`,
           pageWidth / 2,
           doc.internal.pageSize.getHeight() - 6,
           { align: 'center' },
@@ -450,7 +575,6 @@ export class FinanceReports implements OnInit, OnDestroy {
       { wch: 14 },
       { wch: 12 },
     ];
-
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Pledges');
 
@@ -460,7 +584,6 @@ export class FinanceReports implements OnInit, OnDestroy {
     );
     const totalPaid = data.reduce((sum, p) => sum + (p.amount_paid || 0), 0);
     const fulfilled = data.filter((p) => p.is_fulfilled).length;
-
     const summaryData = [
       { Info: 'Total Pledges', Value: data.length },
       { Info: 'Total Pledged (GHS)', Value: totalPledged.toFixed(2) },
@@ -499,7 +622,6 @@ export class FinanceReports implements OnInit, OnDestroy {
       year: 'numeric',
     });
 
-    // Header
     doc.setFillColor(91, 33, 182);
     doc.rect(0, 0, pageWidth, 22, 'F');
     doc.setTextColor(255, 255, 255);
@@ -512,7 +634,6 @@ export class FinanceReports implements OnInit, OnDestroy {
     doc.setFontSize(9);
     doc.text(`Exported: ${today}`, pageWidth - 14, 14, { align: 'right' });
 
-    // Stats row
     const totalPledged = data.reduce(
       (sum, p) => sum + (p.pledge_amount || 0),
       0,
@@ -591,13 +712,13 @@ export class FinanceReports implements OnInit, OnDestroy {
         8: { cellWidth: 24 },
         9: { halign: 'center', cellWidth: 20 },
       },
-      didDrawPage: (data) => {
+      didDrawPage: (d) => {
         const pageCount = (doc as any).internal.getNumberOfPages();
         doc.setFontSize(8);
         doc.setTextColor(156, 163, 175);
         doc.setFont('helvetica', 'normal');
         doc.text(
-          `Page ${data.pageNumber} of ${pageCount}  •  Churchman Church Management`,
+          `Page ${d.pageNumber} of ${pageCount}  •  Churchman Church Management`,
           pageWidth / 2,
           doc.internal.pageSize.getHeight() - 6,
           { align: 'center' },
@@ -630,7 +751,7 @@ export class FinanceReports implements OnInit, OnDestroy {
   formatCurrency(amount: number, currency: string = 'GHS'): string {
     return new Intl.NumberFormat('en-GH', {
       style: 'currency',
-      currency: currency,
+      currency,
     }).format(amount || 0);
   }
 

@@ -1,0 +1,252 @@
+<!-- src/app/features/attendance/components/attendance-links-manager/attendance-links-manager.html -->
+<div class="al-container">
+
+  <!-- Alerts -->
+  <div *ngIf="successMessage" class="al-alert al-alert--success">
+    <i class="ri-checkbox-circle-line"></i>
+    <span>{{ successMessage }}</span>
+  </div>
+  <div *ngIf="errorMessage" class="al-alert al-alert--error">
+    <i class="ri-error-warning-line"></i>
+    <span>{{ errorMessage }}</span>
+  </div>
+
+  <!-- Header row -->
+  <div class="al-header">
+    <div class="al-header__left">
+      <i class="ri-links-line"></i>
+      <span>Attendance Links</span>
+      <span class="al-badge">{{ links.length }}</span>
+    </div>
+    <button class="al-btn-create" (click)="openCreateModal()"
+      *ngIf="permissionService.isAdmin || permissionService.attendance.manage">
+      <i class="ri-add-line"></i>
+      New Link
+    </button>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="al-loading">
+    <i class="ri-loader-4-line al-spin"></i>
+    <span>Loading links...</span>
+  </div>
+
+  <!-- Link cards -->
+  <div *ngIf="!loading" class="al-links">
+    <div *ngFor="let link of links" class="al-link-card"
+      [class.al-link-card--inactive]="!link.is_active || linkService.isExpired(link) || linkService.isMaxedOut(link)">
+
+      <!-- Status + token row -->
+      <div class="al-link-card__top">
+        <span class="al-status-badge" [ngClass]="linkService.getStatusClass(link)">
+          <i class="ri-radio-button-fill"></i>
+          {{ linkService.getLinkStatus(link) }}
+        </span>
+        <span class="al-token">{{ link.link_token.substring(0, 14) }}...</span>
+      </div>
+
+      <!-- Meta row -->
+      <div class="al-link-card__meta">
+        <span class="al-meta-item">
+          <i class="ri-time-line"></i>
+          {{ linkService.formatExpiry(link.expires_at) }}
+        </span>
+        <span class="al-meta-item">
+          <i class="ri-user-line"></i>
+          {{ link.current_uses }} {{ link.max_uses ? '/ ' + link.max_uses : '/ ∞' }} uses
+        </span>
+      </div>
+
+      <!-- Actions row -->
+      <div class="al-link-card__actions">
+        <!-- Copy -->
+        <button class="al-btn al-btn--copy" (click)="copyLink(link)"
+          [disabled]="!link.is_active || linkService.isExpired(link) || linkService.isMaxedOut(link)"
+          title="Copy link">
+          <i class="ri-file-copy-line"></i>
+          Copy
+        </button>
+
+        <!-- QR -->
+        <button class="al-btn al-btn--qr" (click)="openQRModal(link)"
+          [disabled]="!link.is_active || linkService.isExpired(link) || linkService.isMaxedOut(link)"
+          title="Show QR code">
+          <i class="ri-qr-code-line"></i>
+          QR
+        </button>
+
+        <!-- Toggle active — only for non-expired non-maxed -->
+        <ng-container *ngIf="!linkService.isExpired(link) && !linkService.isMaxedOut(link)
+          && (permissionService.isAdmin || permissionService.attendance.manage)">
+          <button *ngIf="link.is_active" class="al-btn al-btn--deactivate" (click)="toggleActive(link)"
+            title="Deactivate">
+            <i class="ri-toggle-line"></i>
+            Deactivate
+          </button>
+          <button *ngIf="!link.is_active" class="al-btn al-btn--activate" (click)="toggleActive(link)"
+            title="Activate">
+            <i class="ri-toggle-fill"></i>
+            Activate
+          </button>
+        </ng-container>
+
+        <!-- Delete -->
+        <button class="al-btn al-btn--delete" (click)="deleteLink(link.id)"
+          *ngIf="permissionService.isAdmin || permissionService.attendance.manage"
+          title="Delete">
+          <i class="ri-delete-bin-line"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Empty -->
+    <div *ngIf="links.length === 0" class="al-empty">
+      <i class="ri-links-line"></i>
+      <p>No attendance links yet</p>
+      <button class="al-btn-create al-btn-create--outline" (click)="openCreateModal()"
+        *ngIf="permissionService.isAdmin || permissionService.attendance.manage">
+        <i class="ri-add-line"></i>
+        Create First Link
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Create Modal ─────────────────────────────────────────────── -->
+<div *ngIf="showCreateModal" class="al-modal-overlay" (click)="closeCreateModal()">
+  <div class="al-modal" (click)="$event.stopPropagation()">
+    <div class="al-modal__header">
+      <h3>
+        <i class="ri-links-line"></i>
+        Create Attendance Link
+      </h3>
+      <button class="al-modal__close" (click)="closeCreateModal()">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+
+    <div class="al-modal__body">
+      <p class="al-modal__event-name">
+        <i class="ri-calendar-event-line"></i>
+        {{ eventName }}
+      </p>
+
+      <!-- Expiry toggle -->
+      <div class="al-form-group">
+        <div class="al-toggle-row">
+          <div class="al-toggle-row__text">
+            <label>Link Expiration</label>
+            <p>Set when this link stops working</p>
+          </div>
+          <label class="al-toggle">
+            <input type="checkbox" [(ngModel)]="hasExpiry" />
+            <span class="al-toggle__slider"></span>
+          </label>
+        </div>
+        <div *ngIf="hasExpiry" class="al-input-row">
+          <input type="number" [(ngModel)]="expiresInHours" min="1" max="720" placeholder="24" />
+          <span class="al-input-suffix">hours</span>
+        </div>
+        <p *ngIf="!hasExpiry" class="al-no-limit">
+          <i class="ri-infinity-line"></i> Link never expires
+        </p>
+      </div>
+
+      <!-- Max uses toggle -->
+      <div class="al-form-group">
+        <div class="al-toggle-row">
+          <div class="al-toggle-row__text">
+            <label>Maximum Uses</label>
+            <p>Limit how many check-ins this link allows</p>
+          </div>
+          <label class="al-toggle">
+            <input type="checkbox" [(ngModel)]="hasMaxUses" />
+            <span class="al-toggle__slider"></span>
+          </label>
+        </div>
+        <div *ngIf="hasMaxUses" class="al-input-row">
+          <input type="number" [(ngModel)]="maxUses" min="1" placeholder="e.g. 100" />
+          <span class="al-input-suffix">uses</span>
+        </div>
+        <p *ngIf="!hasMaxUses" class="al-no-limit">
+          <i class="ri-infinity-line"></i> Unlimited check-ins allowed
+        </p>
+      </div>
+
+      <div *ngIf="errorMessage" class="al-error-msg">
+        <i class="ri-error-warning-line"></i>
+        {{ errorMessage }}
+      </div>
+    </div>
+
+    <div class="al-modal__footer">
+      <button class="al-modal__btn al-modal__btn--cancel" (click)="closeCreateModal()" [disabled]="creating">
+        Cancel
+      </button>
+      <button class="al-modal__btn al-modal__btn--create" (click)="createLink()" [disabled]="creating">
+        <i class="ri-loader-4-line al-spin" *ngIf="creating"></i>
+        <i class="ri-add-line" *ngIf="!creating"></i>
+        {{ creating ? 'Creating...' : 'Create Link' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── QR Modal ─────────────────────────────────────────────────── -->
+<div *ngIf="showQRModal" class="al-modal-overlay" (click)="closeQRModal()">
+  <div class="al-modal al-modal--qr" (click)="$event.stopPropagation()">
+    <div class="al-modal__header">
+      <h3>
+        <i class="ri-qr-code-line"></i>
+        Attendance QR Code
+      </h3>
+      <button class="al-modal__close" (click)="closeQRModal()">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+
+    <div class="al-modal__body">
+      <div class="al-qr-wrapper">
+        <qr-code [value]="qrCodeValue" [size]="260" [errorCorrectionLevel]="'M'"
+          [darkColor]="'#000000FF'" [lightColor]="'#FFFFFFFF'"></qr-code>
+      </div>
+
+      <p class="al-qr-hint">Scan to log attendance for <strong>{{ eventName }}</strong></p>
+
+      <div class="al-qr-link-row">
+        <input type="text" [value]="qrCodeValue" readonly class="al-qr-link-input" />
+        <button class="al-qr-copy-btn" (click)="copyQRLink()" title="Copy">
+          <i class="ri-file-copy-line"></i>
+        </button>
+      </div>
+
+      <div class="al-qr-details" *ngIf="selectedLinkForQR">
+        <div class="al-qr-detail-row">
+          <span>Expires</span>
+          <span>{{ linkService.formatExpiry(selectedLinkForQR.expires_at) }}</span>
+        </div>
+        <div class="al-qr-detail-row" *ngIf="selectedLinkForQR.max_uses">
+          <span>Uses</span>
+          <span>{{ selectedLinkForQR.current_uses }} / {{ selectedLinkForQR.max_uses }}</span>
+        </div>
+        <div class="al-qr-detail-row">
+          <span>Status</span>
+          <span class="al-status-badge" [ngClass]="linkService.getStatusClass(selectedLinkForQR)">
+            {{ linkService.getLinkStatus(selectedLinkForQR) }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="al-modal__footer">
+      <button class="al-modal__btn al-modal__btn--cancel" (click)="closeQRModal()">
+        Close
+      </button>
+      <button class="al-modal__btn al-modal__btn--create" (click)="downloadQRCode()">
+        <i class="ri-download-line"></i>
+        Download QR
+      </button>
+    </div>
+  </div>
+</div>

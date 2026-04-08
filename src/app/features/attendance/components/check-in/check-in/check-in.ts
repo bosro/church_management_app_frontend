@@ -214,3 +214,7 @@ export class CheckIn implements OnInit, OnDestroy {
     return classes[eventType] || '';
   }
 }
+
+
+
+

@@ -52,21 +52,11 @@
                   <label class="btn-upload" [class.disabled]="loading || uploadingPhoto">
                     <i class="ri-upload-2-line"></i>
                     <span>Upload Photo</span>
-                    <input
-                      type="file"
-                      accept="image/jpeg,image/png,image/gif"
-                      (change)="onPhotoSelected($event)"
-                      [disabled]="loading || uploadingPhoto"
-                      hidden
-                    />
+                    <input type="file" accept="image/jpeg,image/png,image/gif" (change)="onPhotoSelected($event)"
+                      [disabled]="loading || uploadingPhoto" hidden />
                   </label>
-                  <button
-                    *ngIf="photoPreview"
-                    type="button"
-                    class="btn-remove"
-                    (click)="removePhoto()"
-                    [disabled]="loading || uploadingPhoto"
-                  >
+                  <button *ngIf="photoPreview" type="button" class="btn-remove" (click)="removePhoto()"
+                    [disabled]="loading || uploadingPhoto">
                     <i class="ri-delete-bin-line"></i>
                     Remove
                   </button>
@@ -81,17 +71,10 @@
               <div class="form-row">
                 <div class="form-group">
                   <label for="first_name">First Name <span class="required">*</span></label>
-                  <input
-                    id="first_name"
-                    type="text"
-                    formControlName="first_name"
-                    placeholder="Enter first name"
-                    [class.error]="memberForm.get('first_name')?.invalid && memberForm.get('first_name')?.touched"
-                  />
-                  <span
-                    *ngIf="memberForm.get('first_name')?.invalid && memberForm.get('first_name')?.touched"
-                    class="error-message"
-                  >
+                  <input id="first_name" type="text" formControlName="first_name" placeholder="Enter first name"
+                    [class.error]="memberForm.get('first_name')?.invalid && memberForm.get('first_name')?.touched" />
+                  <span *ngIf="memberForm.get('first_name')?.invalid && memberForm.get('first_name')?.touched"
+                    class="error-message">
                     <i class="ri-error-warning-line"></i>
                     {{ getErrorMessage('first_name') }}
                   </span>
@@ -99,27 +82,16 @@
 
                 <div class="form-group">
                   <label for="middle_name">Middle Name</label>
-                  <input
-                    id="middle_name"
-                    type="text"
-                    formControlName="middle_name"
-                    placeholder="Enter middle name (optional)"
-                  />
+                  <input id="middle_name" type="text" formControlName="middle_name"
+                    placeholder="Enter middle name (optional)" />
                 </div>
 
                 <div class="form-group">
                   <label for="last_name">Last Name <span class="required">*</span></label>
-                  <input
-                    id="last_name"
-                    type="text"
-                    formControlName="last_name"
-                    placeholder="Enter last name"
-                    [class.error]="memberForm.get('last_name')?.invalid && memberForm.get('last_name')?.touched"
-                  />
-                  <span
-                    *ngIf="memberForm.get('last_name')?.invalid && memberForm.get('last_name')?.touched"
-                    class="error-message"
-                  >
+                  <input id="last_name" type="text" formControlName="last_name" placeholder="Enter last name"
+                    [class.error]="memberForm.get('last_name')?.invalid && memberForm.get('last_name')?.touched" />
+                  <span *ngIf="memberForm.get('last_name')?.invalid && memberForm.get('last_name')?.touched"
+                    class="error-message">
                     <i class="ri-error-warning-line"></i>
                     {{ getErrorMessage('last_name') }}
                   </span>
@@ -129,12 +101,7 @@
               <div class="form-row">
                 <div class="form-group">
                   <label for="date_of_birth">Date of Birth</label>
-                  <input
-                    id="date_of_birth"
-                    type="date"
-                    formControlName="date_of_birth"
-                    [max]="today"
-                  />
+                  <input id="date_of_birth" type="date" formControlName="date_of_birth" [max]="today" />
                 </div>
 
                 <div class="form-group">
@@ -165,18 +132,11 @@
               <div class="form-row">
                 <div class="form-group">
                   <label for="phone_primary">Primary Phone</label>
-                  <input
-                    id="phone_primary"
-                    type="tel"
-                    formControlName="phone_primary"
-                    placeholder="0XXXXXXXXX"
+                  <input id="phone_primary" type="tel" formControlName="phone_primary" placeholder="0XXXXXXXXX"
                     maxlength="10"
-                    [class.error]="memberForm.get('phone_primary')?.invalid && memberForm.get('phone_primary')?.touched"
-                  />
-                  <span
-                    *ngIf="memberForm.get('phone_primary')?.invalid && memberForm.get('phone_primary')?.touched"
-                    class="error-message"
-                  >
+                    [class.error]="memberForm.get('phone_primary')?.invalid && memberForm.get('phone_primary')?.touched" />
+                  <span *ngIf="memberForm.get('phone_primary')?.invalid && memberForm.get('phone_primary')?.touched"
+                    class="error-message">
                     <i class="ri-error-warning-line"></i>
                     {{ getErrorMessage('phone_primary') }}
                   </span>
@@ -184,18 +144,11 @@
 
                 <div class="form-group">
                   <label for="phone_secondary">Secondary Phone</label>
-                  <input
-                    id="phone_secondary"
-                    type="tel"
-                    formControlName="phone_secondary"
-                    placeholder="0XXXXXXXXX (optional)"
-                    maxlength="10"
-                    [class.error]="memberForm.get('phone_secondary')?.invalid && memberForm.get('phone_secondary')?.touched"
-                  />
-                  <span
-                    *ngIf="memberForm.get('phone_secondary')?.invalid && memberForm.get('phone_secondary')?.touched"
-                    class="error-message"
-                  >
+                  <input id="phone_secondary" type="tel" formControlName="phone_secondary"
+                    placeholder="0XXXXXXXXX (optional)" maxlength="10"
+                    [class.error]="memberForm.get('phone_secondary')?.invalid && memberForm.get('phone_secondary')?.touched" />
+                  <span *ngIf="memberForm.get('phone_secondary')?.invalid && memberForm.get('phone_secondary')?.touched"
+                    class="error-message">
                     <i class="ri-error-warning-line"></i>
                     {{ getErrorMessage('phone_secondary') }}
                   </span>
@@ -203,17 +156,10 @@
 
                 <div class="form-group">
                   <label for="email">Email</label>
-                  <input
-                    id="email"
-                    type="email"
-                    formControlName="email"
-                    placeholder="email@example.com"
-                    [class.error]="memberForm.get('email')?.invalid && memberForm.get('email')?.touched"
-                  />
-                  <span
-                    *ngIf="memberForm.get('email')?.invalid && memberForm.get('email')?.touched"
-                    class="error-message"
-                  >
+                  <input id="email" type="email" formControlName="email" placeholder="email@example.com"
+                    [class.error]="memberForm.get('email')?.invalid && memberForm.get('email')?.touched" />
+                  <span *ngIf="memberForm.get('email')?.invalid && memberForm.get('email')?.touched"
+                    class="error-message">
                     <i class="ri-error-warning-line"></i>
                     {{ getErrorMessage('email') }}
                   </span>
@@ -223,24 +169,14 @@
               <div class="form-row">
                 <div class="form-group full-width">
                   <label for="address">Address</label>
-                  <input
-                    id="address"
-                    type="text"
-                    formControlName="address"
-                    placeholder="Enter residential address"
-                  />
+                  <input id="address" type="text" formControlName="address" placeholder="Enter residential address" />
                 </div>
               </div>
 
               <div class="form-row">
                 <div class="form-group">
                   <label for="city">City</label>
-                  <input
-                    id="city"
-                    type="text"
-                    formControlName="city"
-                    placeholder="Enter city"
-                  />
+                  <input id="city" type="text" formControlName="city" placeholder="Enter city" />
                 </div>
               </div>
             </div>
@@ -251,22 +187,12 @@
               <div class="form-row">
                 <div class="form-group">
                   <label for="occupation">Occupation</label>
-                  <input
-                    id="occupation"
-                    type="text"
-                    formControlName="occupation"
-                    placeholder="Enter occupation"
-                  />
+                  <input id="occupation" type="text" formControlName="occupation" placeholder="Enter occupation" />
                 </div>
 
                 <div class="form-group">
                   <label for="employer">Employer</label>
-                  <input
-                    id="employer"
-                    type="text"
-                    formControlName="employer"
-                    placeholder="Enter employer"
-                  />
+                  <input id="employer" type="text" formControlName="employer" placeholder="Enter employer" />
                 </div>
 
                 <div class="form-group">
@@ -281,34 +207,47 @@
               </div>
             </div>
 
+            <!-- Cell Group -->
+            <div class="form-card">
+              <h3>Cell Group</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="cell_group_id">Cell Group</label>
+                  <select id="cell_group_id" formControlName="cell_group_id">
+                    <option value="">
+                      {{ loadingCellGroups ? 'Loading...' : 'Select cell group (optional)' }}
+                    </option>
+                    <option *ngFor="let group of cellGroups" [value]="group.id">
+                      {{ group.name }}
+                      <ng-container *ngIf="group.meeting_day"> · {{ group.meeting_day }}</ng-container>
+                    </option>
+                  </select>
+                  <span class="field-hint" *ngIf="cellGroups.length === 0 && !loadingCellGroups">
+                    <i class="ri-information-line"></i>
+                    No cell groups found. Create one from the admin panel.
+                  </span>
+                </div>
+              </div>
+            </div>
+
             <!-- Emergency Contact -->
             <div class="form-card">
               <h3>Emergency Contact</h3>
               <div class="form-row">
                 <div class="form-group">
                   <label for="emergency_contact_name">Contact Name</label>
-                  <input
-                    id="emergency_contact_name"
-                    type="text"
-                    formControlName="emergency_contact_name"
-                    placeholder="Enter contact name"
-                  />
+                  <input id="emergency_contact_name" type="text" formControlName="emergency_contact_name"
+                    placeholder="Enter contact name" />
                 </div>
 
                 <div class="form-group">
                   <label for="emergency_contact_phone">Contact Phone</label>
-                  <input
-                    id="emergency_contact_phone"
-                    type="tel"
-                    formControlName="emergency_contact_phone"
-                    placeholder="0XXXXXXXXX"
-                    maxlength="10"
-                    [class.error]="memberForm.get('emergency_contact_phone')?.invalid && memberForm.get('emergency_contact_phone')?.touched"
-                  />
+                  <input id="emergency_contact_phone" type="tel" formControlName="emergency_contact_phone"
+                    placeholder="0XXXXXXXXX" maxlength="10"
+                    [class.error]="memberForm.get('emergency_contact_phone')?.invalid && memberForm.get('emergency_contact_phone')?.touched" />
                   <span
                     *ngIf="memberForm.get('emergency_contact_phone')?.invalid && memberForm.get('emergency_contact_phone')?.touched"
-                    class="error-message"
-                  >
+                    class="error-message">
                     <i class="ri-error-warning-line"></i>
                     {{ getErrorMessage('emergency_contact_phone') }}
                   </span>
@@ -316,12 +255,8 @@
 
                 <div class="form-group">
                   <label for="emergency_contact_relationship">Relationship</label>
-                  <input
-                    id="emergency_contact_relationship"
-                    type="text"
-                    formControlName="emergency_contact_relationship"
-                    placeholder="e.g., Spouse, Parent, Sibling"
-                  />
+                  <input id="emergency_contact_relationship" type="text"
+                    formControlName="emergency_contact_relationship" placeholder="e.g., Spouse, Parent, Sibling" />
                 </div>
               </div>
             </div>
@@ -332,37 +267,21 @@
               <div class="form-row">
                 <div class="form-group">
                   <label for="baptism_date">Baptism Date</label>
-                  <input
-                    id="baptism_date"
-                    type="date"
-                    formControlName="baptism_date"
-                    [max]="today"
-                  />
+                  <input id="baptism_date" type="date" formControlName="baptism_date" [max]="today" />
                 </div>
 
                 <div class="form-group">
                   <label for="baptism_location">Baptism Location</label>
-                  <input
-                    id="baptism_location"
-                    type="text"
-                    formControlName="baptism_location"
-                    placeholder="Enter location"
-                  />
+                  <input id="baptism_location" type="text" formControlName="baptism_location"
+                    placeholder="Enter location" />
                 </div>
 
                 <div class="form-group">
                   <label for="join_date">Join Date <span class="required">*</span></label>
-                  <input
-                    id="join_date"
-                    type="date"
-                    formControlName="join_date"
-                    [max]="today"
-                    [class.error]="memberForm.get('join_date')?.invalid && memberForm.get('join_date')?.touched"
-                  />
-                  <span
-                    *ngIf="memberForm.get('join_date')?.invalid && memberForm.get('join_date')?.touched"
-                    class="error-message"
-                  >
+                  <input id="join_date" type="date" formControlName="join_date" [max]="today"
+                    [class.error]="memberForm.get('join_date')?.invalid && memberForm.get('join_date')?.touched" />
+                  <span *ngIf="memberForm.get('join_date')?.invalid && memberForm.get('join_date')?.touched"
+                    class="error-message">
                     <i class="ri-error-warning-line"></i>
                     {{ getErrorMessage('join_date') }}
                   </span>
@@ -396,13 +315,8 @@
               <div class="form-row">
                 <div class="form-group full-width">
                   <label for="notes">Notes</label>
-                  <textarea
-                    id="notes"
-                    formControlName="notes"
-                    placeholder="Additional notes about the member..."
-                    rows="4"
-                    maxlength="500"
-                  ></textarea>
+                  <textarea id="notes" formControlName="notes" placeholder="Additional notes about the member..."
+                    rows="4" maxlength="500"></textarea>
                   <span class="char-count">
                     {{ memberForm.get('notes')?.value?.length || 0 }} / 500
                   </span>
@@ -413,20 +327,11 @@
 
           <!-- Form Actions -->
           <div class="form-actions">
-            <button
-              type="button"
-              class="btn-secondary"
-              (click)="cancel()"
-              [disabled]="loading || uploadingPhoto"
-            >
+            <button type="button" class="btn-secondary" (click)="cancel()" [disabled]="loading || uploadingPhoto">
               <i class="ri-close-line"></i>
               Cancel
             </button>
-            <button
-              type="submit"
-              class="btn-primary"
-              [disabled]="loading || uploadingPhoto || memberForm.invalid"
-            >
+            <button type="submit" class="btn-primary" [disabled]="loading || uploadingPhoto || memberForm.invalid">
               <span *ngIf="!loading && !uploadingPhoto">
                 <i class="ri-user-add-line"></i>
                 Add Member
@@ -444,9 +349,6 @@
 
   </div>
 
-  <app-upgrade-modal
-  [show]="showUpgradeModal"
-  [trigger]="upgradeModalTrigger"
-  (closed)="showUpgradeModal = false">
-</app-upgrade-modal>
+  <app-upgrade-modal [show]="showUpgradeModal" [trigger]="upgradeModalTrigger" (closed)="showUpgradeModal = false">
+  </app-upgrade-modal>
 </div>

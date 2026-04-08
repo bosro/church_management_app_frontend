@@ -18,6 +18,7 @@ import {
   MemberGivingTransaction,
   MemberPledge,
   MemberMinistryAssignment,
+  CellGroup,
 } from '../../../models/member.model';
 import { SubscriptionService } from '../../../core/services/subscription.service';
 import * as XLSX from 'xlsx';
@@ -948,195 +949,225 @@ export class MemberService {
     );
   }
 
-
-
   // ── Attendance ────────────────────────────────────────────────────────────────
 
-getMemberAttendanceSummary(memberId: string): Observable<MemberAttendanceSummary | null> {
-  return from(
-    this.supabase.client
-      .from('member_attendance_summary')
-      .select('*')
-      .eq('member_id', memberId)
-      .maybeSingle(),
-  ).pipe(
-    map(({ data, error }) => {
-      if (error) throw new Error(error.message);
-      if (!data) return null;
-      return {
-        member_id: data.member_id,
-        total_attendance: Number(data.total_attendance ?? 0),
-        last_attendance: data.last_attendance ?? null,
-        attendance_last_30_days: Number(data.attendance_last_30_days ?? 0),
-        attendance_this_year: Number(data.attendance_this_year ?? 0),
-      } as MemberAttendanceSummary;
-    }),
-    catchError(() => of(null)),
-  );
-}
+  getMemberAttendanceSummary(
+    memberId: string,
+  ): Observable<MemberAttendanceSummary | null> {
+    return from(
+      this.supabase.client
+        .from('member_attendance_summary')
+        .select('*')
+        .eq('member_id', memberId)
+        .maybeSingle(),
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw new Error(error.message);
+        if (!data) return null;
+        return {
+          member_id: data.member_id,
+          total_attendance: Number(data.total_attendance ?? 0),
+          last_attendance: data.last_attendance ?? null,
+          attendance_last_30_days: Number(data.attendance_last_30_days ?? 0),
+          attendance_this_year: Number(data.attendance_this_year ?? 0),
+        } as MemberAttendanceSummary;
+      }),
+      catchError(() => of(null)),
+    );
+  }
 
-getMemberAttendanceRecords(
-  memberId: string,
-  page: number = 1,
-  pageSize: number = 15,
-): Observable<{ data: MemberAttendanceRecord[]; count: number }> {
-  const offset = (page - 1) * pageSize;
-  return from(
-    this.supabase.client
-      .from('attendance_records')
-      .select(
-        `id, checked_in_at, check_in_method, notes,
+  getMemberAttendanceRecords(
+    memberId: string,
+    page: number = 1,
+    pageSize: number = 15,
+  ): Observable<{ data: MemberAttendanceRecord[]; count: number }> {
+    const offset = (page - 1) * pageSize;
+    return from(
+      this.supabase.client
+        .from('attendance_records')
+        .select(
+          `id, checked_in_at, check_in_method, notes,
          attendance_events!inner(event_name, event_type, event_date, event_time, location)`,
-        { count: 'exact' },
-      )
-      .eq('member_id', memberId)
-      .order('checked_in_at', { ascending: false })
-      .range(offset, offset + pageSize - 1),
-  ).pipe(
-    map(({ data, error, count }) => {
-      if (error) throw new Error(error.message);
-      const records: MemberAttendanceRecord[] = (data || []).map((r: any) => ({
-        id: r.id,
-        attendance_event_id: r.attendance_event_id,
-        checked_in_at: r.checked_in_at,
-        check_in_method: r.check_in_method,
-        notes: r.notes,
-        event_name: r.attendance_events?.event_name ?? '—',
-        event_type: r.attendance_events?.event_type ?? '—',
-        event_date: r.attendance_events?.event_date ?? '',
-        event_time: r.attendance_events?.event_time ?? null,
-        location: r.attendance_events?.location ?? null,
-      }));
-      return { data: records, count: count ?? 0 };
-    }),
-    catchError(() => of({ data: [], count: 0 })),
-  );
-}
+          { count: 'exact' },
+        )
+        .eq('member_id', memberId)
+        .order('checked_in_at', { ascending: false })
+        .range(offset, offset + pageSize - 1),
+    ).pipe(
+      map(({ data, error, count }) => {
+        if (error) throw new Error(error.message);
+        const records: MemberAttendanceRecord[] = (data || []).map(
+          (r: any) => ({
+            id: r.id,
+            attendance_event_id: r.attendance_event_id,
+            checked_in_at: r.checked_in_at,
+            check_in_method: r.check_in_method,
+            notes: r.notes,
+            event_name: r.attendance_events?.event_name ?? '—',
+            event_type: r.attendance_events?.event_type ?? '—',
+            event_date: r.attendance_events?.event_date ?? '',
+            event_time: r.attendance_events?.event_time ?? null,
+            location: r.attendance_events?.location ?? null,
+          }),
+        );
+        return { data: records, count: count ?? 0 };
+      }),
+      catchError(() => of({ data: [], count: 0 })),
+    );
+  }
 
-// ── Giving ─────────────────────────────────────────────────────────────────────
+  // ── Giving ─────────────────────────────────────────────────────────────────────
 
-getMemberGivingSummary(memberId: string): Observable<MemberGivingSummary | null> {
-  return from(
-    this.supabase.client
-      .from('member_giving_summary')
-      .select('*')
-      .eq('member_id', memberId)
-      .maybeSingle(),
-  ).pipe(
-    map(({ data, error }) => {
-      if (error) throw new Error(error.message);
-      if (!data) return null;
-      return {
-        total_transactions: Number(data.total_transactions ?? 0),
-        total_given: Number(data.total_given ?? 0),
-        avg_transaction: Number(data.avg_transaction ?? 0),
-        last_giving_date: data.last_giving_date ?? null,
-        first_giving_date: data.first_giving_date ?? null,
-      } as MemberGivingSummary;
-    }),
-    catchError(() => of(null)),
-  );
-}
+  getMemberGivingSummary(
+    memberId: string,
+  ): Observable<MemberGivingSummary | null> {
+    return from(
+      this.supabase.client
+        .from('member_giving_summary')
+        .select('*')
+        .eq('member_id', memberId)
+        .maybeSingle(),
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw new Error(error.message);
+        if (!data) return null;
+        return {
+          total_transactions: Number(data.total_transactions ?? 0),
+          total_given: Number(data.total_given ?? 0),
+          avg_transaction: Number(data.avg_transaction ?? 0),
+          last_giving_date: data.last_giving_date ?? null,
+          first_giving_date: data.first_giving_date ?? null,
+        } as MemberGivingSummary;
+      }),
+      catchError(() => of(null)),
+    );
+  }
 
-getMemberGivingTransactions(
-  memberId: string,
-  page: number = 1,
-  pageSize: number = 15,
-): Observable<{ data: MemberGivingTransaction[]; count: number }> {
-  const offset = (page - 1) * pageSize;
-  return from(
-    this.supabase.client
-      .from('giving_transactions')
-      .select(
-        `id, amount, currency, payment_method, transaction_reference,
+  getMemberGivingTransactions(
+    memberId: string,
+    page: number = 1,
+    pageSize: number = 15,
+  ): Observable<{ data: MemberGivingTransaction[]; count: number }> {
+    const offset = (page - 1) * pageSize;
+    return from(
+      this.supabase.client
+        .from('giving_transactions')
+        .select(
+          `id, amount, currency, payment_method, transaction_reference,
          transaction_date, fiscal_year, notes, created_at,
          giving_categories!inner(name)`,
-        { count: 'exact' },
-      )
-      .eq('member_id', memberId)
-      .order('transaction_date', { ascending: false })
-      .range(offset, offset + pageSize - 1),
-  ).pipe(
-    map(({ data, error, count }) => {
-      if (error) throw new Error(error.message);
-      const transactions: MemberGivingTransaction[] = (data || []).map((t: any) => ({
-        id: t.id,
-        amount: Number(t.amount),
-        currency: t.currency ?? 'GHS',
-        payment_method: t.payment_method,
-        transaction_reference: t.transaction_reference ?? null,
-        transaction_date: t.transaction_date,
-        fiscal_year: t.fiscal_year ?? null,
-        notes: t.notes ?? null,
-        created_at: t.created_at,
-        category_name: t.giving_categories?.name ?? '—',
-      }));
-      return { data: transactions, count: count ?? 0 };
-    }),
-    catchError(() => of({ data: [], count: 0 })),
-  );
-}
+          { count: 'exact' },
+        )
+        .eq('member_id', memberId)
+        .order('transaction_date', { ascending: false })
+        .range(offset, offset + pageSize - 1),
+    ).pipe(
+      map(({ data, error, count }) => {
+        if (error) throw new Error(error.message);
+        const transactions: MemberGivingTransaction[] = (data || []).map(
+          (t: any) => ({
+            id: t.id,
+            amount: Number(t.amount),
+            currency: t.currency ?? 'GHS',
+            payment_method: t.payment_method,
+            transaction_reference: t.transaction_reference ?? null,
+            transaction_date: t.transaction_date,
+            fiscal_year: t.fiscal_year ?? null,
+            notes: t.notes ?? null,
+            created_at: t.created_at,
+            category_name: t.giving_categories?.name ?? '—',
+          }),
+        );
+        return { data: transactions, count: count ?? 0 };
+      }),
+      catchError(() => of({ data: [], count: 0 })),
+    );
+  }
 
-getMemberPledges(memberId: string): Observable<MemberPledge[]> {
-  return from(
-    this.supabase.client
-      .from('pledges')
-      .select(
-        `id, pledge_amount, amount_paid, currency, pledge_date,
+  getMemberPledges(memberId: string): Observable<MemberPledge[]> {
+    return from(
+      this.supabase.client
+        .from('pledges')
+        .select(
+          `id, pledge_amount, amount_paid, currency, pledge_date,
          due_date, is_fulfilled, notes,
          giving_categories(name)`,
-      )
-      .eq('member_id', memberId)
-      .order('pledge_date', { ascending: false }),
-  ).pipe(
-    map(({ data, error }) => {
-      if (error) throw new Error(error.message);
-      return (data || []).map((p: any) => ({
-        id: p.id,
-        pledge_amount: Number(p.pledge_amount),
-        amount_paid: Number(p.amount_paid ?? 0),
-        currency: p.currency ?? 'GHS',
-        pledge_date: p.pledge_date,
-        due_date: p.due_date ?? null,
-        is_fulfilled: p.is_fulfilled ?? false,
-        notes: p.notes ?? null,
-        category_name: p.giving_categories?.name ?? null,
-      })) as MemberPledge[];
-    }),
-    catchError(() => of([])),
-  );
-}
+        )
+        .eq('member_id', memberId)
+        .order('pledge_date', { ascending: false }),
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw new Error(error.message);
+        return (data || []).map((p: any) => ({
+          id: p.id,
+          pledge_amount: Number(p.pledge_amount),
+          amount_paid: Number(p.amount_paid ?? 0),
+          currency: p.currency ?? 'GHS',
+          pledge_date: p.pledge_date,
+          due_date: p.due_date ?? null,
+          is_fulfilled: p.is_fulfilled ?? false,
+          notes: p.notes ?? null,
+          category_name: p.giving_categories?.name ?? null,
+        })) as MemberPledge[];
+      }),
+      catchError(() => of([])),
+    );
+  }
 
-// ── Ministries ────────────────────────────────────────────────────────────────
+  // ── Ministries ────────────────────────────────────────────────────────────────
 
-getMemberMinistries(memberId: string): Observable<MemberMinistryAssignment[]> {
-  return from(
-    this.supabase.client
-      .from('ministry_members')
-      .select(
-        `id, ministry_id, role, joined_date, is_active,
+  getMemberMinistries(
+    memberId: string,
+  ): Observable<MemberMinistryAssignment[]> {
+    return from(
+      this.supabase.client
+        .from('ministry_members')
+        .select(
+          `id, ministry_id, role, joined_date, is_active,
          ministries!inner(name, description, category, meeting_day,
                           meeting_time, meeting_location, meeting_schedule)`,
-      )
-      .eq('member_id', memberId)
-      .order('joined_date', { ascending: false }),
+        )
+        .eq('member_id', memberId)
+        .order('joined_date', { ascending: false }),
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw new Error(error.message);
+        return (data || []).map((m: any) => ({
+          id: m.id,
+          ministry_id: m.ministry_id,
+          role: m.role ?? null,
+          joined_date: m.joined_date,
+          is_active: m.is_active ?? false,
+          ministry_name: m.ministries?.name ?? '—',
+          ministry_description: m.ministries?.description ?? null,
+          ministry_category: m.ministries?.category ?? null,
+          meeting_day: m.ministries?.meeting_day ?? null,
+          meeting_time: m.ministries?.meeting_time ?? null,
+          meeting_location: m.ministries?.meeting_location ?? null,
+          meeting_schedule: m.ministries?.meeting_schedule ?? null,
+        })) as MemberMinistryAssignment[];
+      }),
+      catchError(() => of([])),
+    );
+  }
+
+
+
+  // ── Cell Groups ───────────────────────────────────────────────────────────────
+
+getCellGroups(): Observable<CellGroup[]> {
+  const churchId = this.getChurchId();
+  return from(
+    this.supabase.client
+      .from('cell_groups')
+      .select('id, name, branch_id, leader_id, meeting_day, meeting_time, meeting_location, is_active')
+      .eq('church_id', churchId)
+      .eq('is_active', true)
+      .order('name', { ascending: true }),
   ).pipe(
     map(({ data, error }) => {
       if (error) throw new Error(error.message);
-      return (data || []).map((m: any) => ({
-        id: m.id,
-        ministry_id: m.ministry_id,
-        role: m.role ?? null,
-        joined_date: m.joined_date,
-        is_active: m.is_active ?? false,
-        ministry_name: m.ministries?.name ?? '—',
-        ministry_description: m.ministries?.description ?? null,
-        ministry_category: m.ministries?.category ?? null,
-        meeting_day: m.ministries?.meeting_day ?? null,
-        meeting_time: m.ministries?.meeting_time ?? null,
-        meeting_location: m.ministries?.meeting_location ?? null,
-        meeting_schedule: m.ministries?.meeting_schedule ?? null,
-      })) as MemberMinistryAssignment[];
+      return (data || []) as CellGroup[];
     }),
     catchError(() => of([])),
   );

@@ -2,7 +2,7 @@
 .dashboard-layout {
   display: flex;
   min-height: 100vh;
-  background: #F9FAFB;
+  background: #f9fafb;
 }
 
 .dashboard-content {
@@ -41,22 +41,22 @@
   padding: 0.625rem 1rem;
   background: white;
   color: #374151;
-  border: 1px solid #E5E7EB;
+  border: 1px solid #e5e7eb;
   border-radius: 8px;
   font-size: 0.9375rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
   margin-bottom: 1.5rem;
-  font-family: 'Nunito Sans', sans-serif;
+  font-family: "Nunito Sans", sans-serif;
 
   i {
     font-size: 1.125rem;
   }
 
   &:hover {
-    background: #F9FAFB;
-    border-color: #D1D5DB;
+    background: #f9fafb;
+    border-color: #d1d5db;
   }
 
   @media (max-width: 768px) {
@@ -87,7 +87,7 @@
 
     .subtitle {
       font-size: 0.9375rem;
-      color: #6B7280;
+      color: #6b7280;
       margin: 0;
     }
   }
@@ -97,7 +97,7 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.75rem 1.25rem;
-    background: #5B21B6;
+    background: #5b21b6;
     color: white;
     border: none;
     border-radius: 8px;
@@ -105,14 +105,14 @@
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
-    font-family: 'Nunito Sans', sans-serif;
+    font-family: "Nunito Sans", sans-serif;
 
     i {
       font-size: 1.125rem;
     }
 
     &:hover {
-      background: #6D28D9;
+      background: #6d28d9;
       transform: translateY(-2px);
     }
   }
@@ -123,8 +123,8 @@
   align-items: center;
   gap: 0.75rem;
   padding: 1rem 1.25rem;
-  background: #D1FAE5;
-  border: 1px solid #6EE7B7;
+  background: #d1fae5;
+  border: 1px solid #6ee7b7;
   border-radius: 8px;
   margin-bottom: 1.5rem;
   animation: slideDown 0.3s ease;
@@ -136,7 +136,7 @@
 
   span {
     font-size: 0.9375rem;
-    color: #065F46;
+    color: #065f46;
     font-weight: 500;
   }
 }
@@ -146,20 +146,20 @@
   align-items: center;
   gap: 0.75rem;
   padding: 1rem 1.25rem;
-  background: #FEE2E2;
-  border: 1px solid #FCA5A5;
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
   border-radius: 8px;
   margin-bottom: 1.5rem;
   animation: slideDown 0.3s ease;
 
   i {
     font-size: 1.25rem;
-    color: #DC2626;
+    color: #dc2626;
   }
 
   span {
     font-size: 0.9375rem;
-    color: #991B1B;
+    color: #991b1b;
     font-weight: 500;
   }
 }
@@ -197,8 +197,8 @@
       align-items: center;
       gap: 0.75rem;
       padding: 0.75rem 1rem;
-      background: #F5F3FF;
-      border: 1px solid #E9D5FF;
+      background: #f5f3ff;
+      border: 1px solid #e9d5ff;
       border-radius: 8px;
 
       .pastor-avatar {
@@ -220,7 +220,7 @@
           display: flex;
           align-items: center;
           justify-content: center;
-          background: linear-gradient(135deg, #7C3AED 0%, #5B21B6 100%);
+          background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
           color: white;
           font-weight: 700;
           font-size: 0.875rem;
@@ -234,7 +234,7 @@
 
         .pastor-label {
           font-size: 0.75rem;
-          color: #7C3AED;
+          color: #7c3aed;
           font-weight: 600;
           text-transform: uppercase;
           letter-spacing: 0.05em;
@@ -254,18 +254,18 @@
         align-items: center;
         justify-content: center;
         background: white;
-        border: 1px solid #FCA5A5;
+        border: 1px solid #fca5a5;
         border-radius: 6px;
         cursor: pointer;
         transition: all 0.2s;
 
         i {
           font-size: 1rem;
-          color: #DC2626;
+          color: #dc2626;
         }
 
         &:hover {
-          background: #FEE2E2;
+          background: #fee2e2;
           transform: scale(1.05);
         }
       }
@@ -276,7 +276,7 @@
       align-items: center;
       gap: 0.5rem;
       padding: 0.75rem 1.25rem;
-      background: #7C3AED;
+      background: #7c3aed;
       color: white;
       border: none;
       border-radius: 8px;
@@ -284,14 +284,14 @@
       font-weight: 600;
       cursor: pointer;
       transition: all 0.2s;
-      font-family: 'Nunito Sans', sans-serif;
+      font-family: "Nunito Sans", sans-serif;
 
       i {
         font-size: 1rem;
       }
 
       &:hover {
-        background: #6D28D9;
+        background: #6d28d9;
         transform: translateY(-2px);
       }
     }
@@ -317,7 +317,7 @@
       .info-label {
         font-size: 0.875rem;
         font-weight: 600;
-        color: #6B7280;
+        color: #6b7280;
       }
 
       .info-value {
@@ -333,7 +333,7 @@
   display: flex;
   gap: 0.5rem;
   margin-bottom: 2rem;
-  border-bottom: 2px solid #E5E7EB;
+  border-bottom: 2px solid #e5e7eb;
 
   .tab-btn {
     display: flex;
@@ -343,26 +343,26 @@
     background: transparent;
     border: none;
     border-bottom: 3px solid transparent;
-    color: #6B7280;
+    color: #6b7280;
     font-size: 0.9375rem;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
     margin-bottom: -2px;
-    font-family: 'Nunito Sans', sans-serif;
+    font-family: "Nunito Sans", sans-serif;
 
     i {
       font-size: 1.125rem;
     }
 
     &:hover {
-      color: #5B21B6;
-      background: #F9FAFB;
+      color: #5b21b6;
+      background: #f9fafb;
     }
 
     &.active {
-      color: #5B21B6;
-      border-bottom-color: #5B21B6;
+      color: #5b21b6;
+      border-bottom-color: #5b21b6;
     }
   }
 
@@ -404,7 +404,7 @@
 
     .insights-updated {
       font-size: 0.875rem;
-      color: #6B7280;
+      color: #6b7280;
       margin: 0.25rem 0 0 0;
     }
 
@@ -415,22 +415,22 @@
       padding: 0.75rem 1.25rem;
       background: white;
       color: #374151;
-      border: 1px solid #E5E7EB;
+      border: 1px solid #e5e7eb;
       border-radius: 8px;
       font-size: 0.9375rem;
       font-weight: 600;
       cursor: pointer;
       transition: all 0.2s;
-      font-family: 'Nunito Sans', sans-serif;
+      font-family: "Nunito Sans", sans-serif;
 
       i {
         font-size: 1.125rem;
       }
 
       &:hover {
-        background: #F9FAFB;
-        border-color: #5B21B6;
-        color: #5B21B6;
+        background: #f9fafb;
+        border-color: #5b21b6;
+        color: #5b21b6;
       }
     }
   }
@@ -445,8 +445,8 @@
       align-items: flex-start;
       gap: 1rem;
       padding: 1.5rem;
-      background: #F9FAFB;
-      border: 1px solid #E5E7EB;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
       border-radius: 10px;
       transition: all 0.2s;
 
@@ -475,7 +475,7 @@
         .insight-label {
           font-size: 0.875rem;
           font-weight: 600;
-          color: #6B7280;
+          color: #6b7280;
           margin-bottom: 0.5rem;
           display: block;
         }
@@ -502,7 +502,7 @@
 
         .insight-meta {
           font-size: 0.8125rem;
-          color: #9CA3AF;
+          color: #9ca3af;
         }
       }
     }
@@ -537,7 +537,7 @@
     .view-toggle {
       display: flex;
       gap: 0.25rem;
-      background: #F9FAFB;
+      background: #f9fafb;
       padding: 0.25rem;
       border-radius: 8px;
 
@@ -555,11 +555,11 @@
 
         i {
           font-size: 1.125rem;
-          color: #6B7280;
+          color: #6b7280;
         }
 
         &:hover {
-          background: #E5E7EB;
+          background: #e5e7eb;
         }
 
         &.active {
@@ -567,7 +567,7 @@
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 
           i {
-            color: #5B21B6;
+            color: #5b21b6;
           }
         }
       }
@@ -580,22 +580,22 @@
       padding: 0.75rem 1.25rem;
       background: white;
       color: #374151;
-      border: 1px solid #E5E7EB;
+      border: 1px solid #e5e7eb;
       border-radius: 8px;
       font-size: 0.9375rem;
       font-weight: 600;
       cursor: pointer;
       transition: all 0.2s;
-      font-family: 'Nunito Sans', sans-serif;
+      font-family: "Nunito Sans", sans-serif;
 
       i {
         font-size: 1.125rem;
       }
 
       &:hover {
-        background: #F9FAFB;
-        border-color: #5B21B6;
-        color: #5B21B6;
+        background: #f9fafb;
+        border-color: #5b21b6;
+        color: #5b21b6;
       }
 
       &:disabled {
@@ -617,8 +617,8 @@
 
     thead {
       tr {
-        background: #F9FAFB;
-        border-bottom: 2px solid #E5E7EB;
+        background: #f9fafb;
+        border-bottom: 2px solid #e5e7eb;
 
         th {
           padding: 1rem;
@@ -634,11 +634,11 @@
 
     tbody {
       tr {
-        border-bottom: 1px solid #E5E7EB;
+        border-bottom: 1px solid #e5e7eb;
         transition: all 0.2s;
 
         &:hover {
-          background: #F9FAFB;
+          background: #f9fafb;
         }
 
         td {
@@ -678,22 +678,22 @@
             width: 32px;
             height: 32px;
             background: white;
-            border: 1px solid #E5E7EB;
+            border: 1px solid #e5e7eb;
             border-radius: 6px;
             cursor: pointer;
             transition: all 0.2s;
 
             i {
               font-size: 1rem;
-              color: #6B7280;
+              color: #6b7280;
             }
 
             &:hover {
-              background: #FEE2E2;
-              border-color: #FCA5A5;
+              background: #fee2e2;
+              border-color: #fca5a5;
 
               i {
-                color: #DC2626;
+                color: #dc2626;
               }
             }
           }
@@ -713,15 +713,15 @@
       align-items: center;
       gap: 1rem;
       padding: 1rem;
-      background: #F9FAFB;
-      border: 1px solid #E5E7EB;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
       border-radius: 10px;
       transition: all 0.2s;
       position: relative;
 
       &:hover {
-        background: #F5F3FF;
-        border-color: #C4B5FD;
+        background: #f5f3ff;
+        border-color: #c4b5fd;
       }
 
       .member-photo {
@@ -751,7 +751,7 @@
 
         p {
           font-size: 0.875rem;
-          color: #6B7280;
+          color: #6b7280;
           margin: 0;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -760,7 +760,7 @@
 
         .assigned-date {
           font-size: 0.75rem;
-          color: #9CA3AF;
+          color: #9ca3af;
           display: block;
           margin-top: 0.25rem;
         }
@@ -773,22 +773,22 @@
         align-items: center;
         justify-content: center;
         background: white;
-        border: 1px solid #E5E7EB;
+        border: 1px solid #e5e7eb;
         border-radius: 6px;
         cursor: pointer;
         transition: all 0.2s;
 
         i {
           font-size: 1rem;
-          color: #6B7280;
+          color: #6b7280;
         }
 
         &:hover {
-          background: #FEE2E2;
-          border-color: #FCA5A5;
+          background: #fee2e2;
+          border-color: #fca5a5;
 
           i {
-            color: #DC2626;
+            color: #dc2626;
           }
         }
       }
@@ -810,7 +810,7 @@
 
   i {
     font-size: 4rem;
-    color: #D1D5DB;
+    color: #d1d5db;
     margin-bottom: 1rem;
   }
 
@@ -823,7 +823,7 @@
 
   p {
     font-size: 1rem;
-    color: #6B7280;
+    color: #6b7280;
     margin: 0 0 1.5rem 0;
   }
 
@@ -832,17 +832,17 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.875rem 1.5rem;
-    background: #5B21B6;
+    background: #5b21b6;
     color: white;
     border: none;
     border-radius: 8px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
-    font-family: 'Nunito Sans', sans-serif;
+    font-family: "Nunito Sans", sans-serif;
 
     &:hover {
-      background: #6D28D9;
+      background: #6d28d9;
       transform: translateY(-2px);
     }
   }
@@ -862,23 +862,23 @@
     gap: 0.5rem;
     padding: 0.625rem 1rem;
     background: white;
-    border: 1px solid #E5E7EB;
+    border: 1px solid #e5e7eb;
     border-radius: 8px;
     font-size: 0.9375rem;
     font-weight: 600;
     color: #374151;
     cursor: pointer;
     transition: all 0.2s;
-    font-family: 'Nunito Sans', sans-serif;
+    font-family: "Nunito Sans", sans-serif;
 
     i {
       font-size: 1.125rem;
     }
 
     &:hover:not(:disabled) {
-      background: #F9FAFB;
-      border-color: #5B21B6;
-      color: #5B21B6;
+      background: #f9fafb;
+      border-color: #5b21b6;
+      color: #5b21b6;
     }
 
     &:disabled {
@@ -890,7 +890,7 @@
   .pagination-pages {
     .page-info {
       font-size: 0.875rem;
-      color: #6B7280;
+      color: #6b7280;
     }
   }
 }
@@ -923,7 +923,7 @@
       justify-content: space-between;
       align-items: center;
       padding: 1.5rem;
-      border-bottom: 1px solid #E5E7EB;
+      border-bottom: 1px solid #e5e7eb;
 
       h2 {
         font-size: 1.5rem;
@@ -938,7 +938,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        background: #F3F4F6;
+        background: #f3f4f6;
         border: none;
         border-radius: 6px;
         cursor: pointer;
@@ -946,11 +946,11 @@
 
         i {
           font-size: 1.25rem;
-          color: #6B7280;
+          color: #6b7280;
         }
 
         &:hover {
-          background: #E5E7EB;
+          background: #e5e7eb;
         }
       }
     }
@@ -965,21 +965,21 @@
         align-items: flex-start;
         gap: 0.75rem;
         padding: 1rem;
-        background: #EFF6FF;
-        border: 1px solid #BFDBFE;
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
         border-radius: 8px;
         margin-bottom: 1.5rem;
 
         i {
           font-size: 1.25rem;
-          color: #3B82F6;
+          color: #3b82f6;
           flex-shrink: 0;
           margin-top: 0.125rem;
         }
 
         p {
           font-size: 0.875rem;
-          color: #1E40AF;
+          color: #1e40af;
           margin: 0;
           line-height: 1.5;
         }
@@ -995,22 +995,22 @@
           top: 50%;
           transform: translateY(-50%);
           font-size: 1.25rem;
-          color: #9CA3AF;
+          color: #9ca3af;
         }
 
         input {
           width: 100%;
           padding: 0.875rem 1rem 0.875rem 3rem;
-          border: 1px solid #E5E7EB;
+          border: 1px solid #e5e7eb;
           border-radius: 8px;
           font-size: 0.9375rem;
-          background: #F9FAFB;
+          background: #f9fafb;
           transition: all 0.2s;
-          font-family: 'Nunito Sans', sans-serif;
+          font-family: "Nunito Sans", sans-serif;
 
           &:focus {
             outline: none;
-            border-color: #5B21B6;
+            border-color: #5b21b6;
             background: white;
           }
         }
@@ -1021,20 +1021,46 @@
         flex-direction: column;
         gap: 0.75rem;
 
+        .role-badge {
+          display: inline-block;
+          margin-top: 0.25rem;
+          padding: 0.125rem 0.5rem;
+          background: #ede9fe;
+          color: #7c3aed;
+          border-radius: 10px;
+          font-size: 0.6875rem;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+        }
+
         .modal-member-item {
           display: flex;
           align-items: center;
           gap: 1rem;
           padding: 1rem;
-          background: #F9FAFB;
-          border: 1px solid #E5E7EB;
+          background: #f9fafb;
+          border: 1px solid #e5e7eb;
           border-radius: 10px;
           cursor: pointer;
           transition: all 0.2s;
 
+          .role-badge {
+            display: inline-block;
+            margin-top: 0.25rem;
+            padding: 0.125rem 0.5rem;
+            background: #ede9fe;
+            color: #7c3aed;
+            border-radius: 10px;
+            font-size: 0.6875rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+          }
+
           &:hover {
-            background: #F5F3FF;
-            border-color: #C4B5FD;
+            background: #f5f3ff;
+            border-color: #c4b5fd;
           }
 
           .member-photo-small {
@@ -1055,6 +1081,19 @@
             flex: 1;
             min-width: 0;
 
+            .role-badge {
+              display: inline-block;
+              margin-top: 0.25rem;
+              padding: 0.125rem 0.5rem;
+              background: #ede9fe;
+              color: #7c3aed;
+              border-radius: 10px;
+              font-size: 0.6875rem;
+              font-weight: 700;
+              text-transform: uppercase;
+              letter-spacing: 0.04em;
+            }
+
             h4 {
               font-size: 0.9375rem;
               font-weight: 700;
@@ -1064,7 +1103,7 @@
 
             p {
               font-size: 0.875rem;
-              color: #6B7280;
+              color: #6b7280;
               margin: 0;
               overflow: hidden;
               text-overflow: ellipsis;
@@ -1074,7 +1113,7 @@
 
           > i {
             font-size: 1.5rem;
-            color: #5B21B6;
+            color: #5b21b6;
           }
         }
 
@@ -1088,20 +1127,20 @@
 
           i {
             font-size: 3rem;
-            color: #D1D5DB;
+            color: #d1d5db;
             margin-bottom: 0.75rem;
           }
 
           p {
             font-size: 1rem;
-            color: #6B7280;
+            color: #6b7280;
             margin: 0;
             font-weight: 600;
           }
 
           .no-results-hint {
             font-size: 0.875rem;
-            color: #9CA3AF;
+            color: #9ca3af;
             margin-top: 0.5rem;
             display: block;
           }
@@ -1205,5 +1244,3 @@
     min-width: 600px;
   }
 }
-
-

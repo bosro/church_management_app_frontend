@@ -54,8 +54,8 @@
                 <p>or</p>
                 <label class="btn-browse">
                   <i class="ri-folder-open-line"></i> Browse Files
-                  <input type="file" accept=".csv,.CSV,.xlsx,.XLSX,.xls,.XLS"
-                    (change)="onFileSelected($event)" [disabled]="uploading" hidden />
+                  <input type="file" accept=".csv,.CSV,.xlsx,.XLSX,.xls,.XLS" (change)="onFileSelected($event)"
+                    [disabled]="uploading" hidden />
                 </label>
                 <span class="file-hint">
                   <i class="ri-information-line"></i> Max 10MB • .CSV, .XLSX, .XLS
@@ -72,6 +72,35 @@
                   <button class="btn-remove" *ngIf="!uploading" (click)="removeFile()">
                     <i class="ri-close-line"></i>
                   </button>
+                </div>
+
+                <!-- Default class picker — shown whenever a file is selected -->
+                <!-- If the file already has a Class column, this is used only as a fallback -->
+                <div *ngIf="showClassPicker" class="default-class-section">
+                  <div class="default-class-card" [class.jms-hint]="detectedFormat === 'jms_admission'">
+                    <div class="default-class-header">
+                      <i class="ri-school-line"></i>
+                      <div>
+                        <p class="default-class-title">
+                          {{ detectedFormat === 'jms_admission'
+                          ? 'Assign a Class (Recommended)'
+                          : 'Default Class (Optional)' }}
+                        </p>
+                        <p class="default-class-hint">
+                          {{ detectedFormat === 'jms_admission'
+                          ? 'This admission form has no Class column — select a class to enrol all students into.'
+                          : 'If your file has no Class column, students will be assigned to this class. Leave blank to
+                          skip.' }}
+                        </p>
+                      </div>
+                    </div>
+                    <select [(ngModel)]="defaultClassId" class="class-select" [disabled]="uploading">
+                      <option value="">— No default class —</option>
+                      <option *ngFor="let c of classes" [value]="c.id">
+                        {{ c.name }} ({{ c.academic_year }})
+                      </option>
+                    </select>
+                  </div>
                 </div>
 
                 <div *ngIf="uploading" class="upload-progress">
@@ -154,7 +183,8 @@
         <div class="tips-section" *ngIf="!importResults">
           <h3><i class="ri-lightbulb-line"></i> Import Tips</h3>
           <ul class="tips-list">
-            <li><i class="ri-checkbox-circle-line"></i> The <strong>Class</strong> column must exactly match a class name in your system</li>
+            <li><i class="ri-checkbox-circle-line"></i> The <strong>Class</strong> column must exactly match a class
+              name in your system</li>
             <li><i class="ri-checkbox-circle-line"></i> Use YYYY-MM-DD for dates (e.g. 2015-04-10)</li>
             <li><i class="ri-checkbox-circle-line"></i> Gender should be: male or female</li>
             <li><i class="ri-checkbox-circle-line"></i> Phone numbers should be 10 digits without spaces</li>

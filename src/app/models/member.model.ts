@@ -216,3 +216,107 @@ export interface MemberMinistryAssignment {
   meeting_location: string | null;
   meeting_schedule: string | null;
 }
+
+
+
+
+// src/app/models/member.model.ts
+// ADD these interfaces and update MemberCreateInput / Member
+
+export interface CellGroup {
+  id: string;
+  church_id: string;
+  branch_id?: string;
+  name: string;
+  description?: string;
+  leader_id?: string;
+  meeting_day?: string;
+  meeting_time?: string;
+  meeting_location?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// Update Member interface — add cell_group_id
+export interface Member {
+  id: string;
+  church_id: string;
+  branch_id?: string;
+  user_id?: string;
+  cell_group_id?: string;          // ← ADD
+  member_number: string;
+  first_name: string;
+  middle_name?: string;
+  last_name: string;
+  date_of_birth?: string;
+  gender?: Gender;
+  marital_status?: MaritalStatus;
+  phone_primary?: string;
+  phone_secondary?: string;
+  email?: string;
+  address?: string;
+  city?: string;
+  occupation?: string;
+  employer?: string;
+  education_level?: string;
+  photo_url?: string;
+  emergency_contact_name?: string;
+  emergency_contact_phone?: string;
+  emergency_contact_relationship?: string;
+  baptism_date?: string;
+  baptism_location?: string;
+  join_date: string;
+  membership_status: MembershipStatus;
+  is_new_convert: boolean;
+  is_visitor: boolean;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Update MemberCreateInput — add cell_group_id
+export interface MemberCreateInput {
+  first_name: string;
+  middle_name?: string;
+  last_name: string;
+  date_of_birth?: string;
+  gender?: Gender;
+  marital_status?: MaritalStatus;
+  phone_primary?: string;
+  phone_secondary?: string;
+  email?: string;
+  address?: string;
+  city?: string;
+  occupation?: string;
+  employer?: string;
+  education_level?: string;
+  emergency_contact_name?: string;
+  emergency_contact_phone?: string;
+  emergency_contact_relationship?: string;
+  baptism_date?: string;
+  baptism_location?: string;
+  join_date: string;
+  is_new_convert?: boolean;
+  is_visitor?: boolean;
+  notes?: string;
+  branch_id?: string;
+  cell_group_id?: string;          // ← ADD
+}
+
+
+
+export interface MemberSearchFilters {
+  search_term?: string;
+  gender_filter?: Gender;
+  status_filter?: MembershipStatus;
+  branch_filter?: string;
+  ministry_filter?: string;
+  cell_group_filter?: string;      // ← ADD
+  min_age?: number;
+  max_age?: number;
+}
+
+
+
+

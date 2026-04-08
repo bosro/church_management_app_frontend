@@ -225,3 +225,6 @@ export class AttendanceDetail implements OnInit, OnDestroy {
     return 'rate-low';
   }
 }
+
+
+

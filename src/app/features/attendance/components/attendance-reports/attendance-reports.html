@@ -50,8 +50,10 @@
                 <label for="service_type">Service Type</label>
                 <select id="service_type" formControlName="service_type">
                   <option value="">All Services</option>
-                  <option *ngFor="let type of serviceTypes" [value]="type">{{ type }}</option>
-                </select>
+                  <option *ngFor="let type of serviceTypes" [value]="type.value">
+                    {{ type.label }}
+                  </option>
+                </select>4
               </div>
 
               <div class="form-actions">

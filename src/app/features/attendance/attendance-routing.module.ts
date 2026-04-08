@@ -10,6 +10,7 @@ import { RoleGuard } from '../../core/guards/role-guard';
 import { CreateEvent } from './components/create-event/create-event/create-event';
 import { CheckIn } from './components/check-in/check-in/check-in';
 import { AttendanceVisitors } from './components/attendance-visitors/attendance-visitors';
+import { LinkCheckin } from './components/link-checkin/link-checkin';
 
 const routes: Routes = [
   {
@@ -18,7 +19,6 @@ const routes: Routes = [
     canActivate: [RoleGuard],
     data: {
       title: 'Attendance',
-      breadcrumb: 'Attendance',
       roles: [
         'super_admin',
         'church_admin',
@@ -28,14 +28,12 @@ const routes: Routes = [
       ],
     },
   },
-  // ✅ SPECIFIC ROUTES FIRST - These must come before ':id'
   {
     path: 'create',
     component: CreateEvent,
     canActivate: [RoleGuard],
     data: {
       title: 'Create Event',
-      breadcrumb: 'Create Event',
       roles: ['super_admin', 'church_admin', 'pastor', 'ministry_leader'],
     },
   },
@@ -45,7 +43,6 @@ const routes: Routes = [
     canActivate: [RoleGuard],
     data: {
       title: 'Attendance Reports',
-      breadcrumb: 'Reports',
       roles: [
         'super_admin',
         'church_admin',
@@ -57,11 +54,10 @@ const routes: Routes = [
   },
   {
     path: 'check-in',
-    component: CheckIn, // ✅ Use the new component
+    component: CheckIn,
     canActivate: [RoleGuard],
     data: {
       title: 'Check In',
-      breadcrumb: 'Check In',
       roles: [
         'super_admin',
         'church_admin',
@@ -72,14 +68,12 @@ const routes: Routes = [
       ],
     },
   },
-
   {
     path: 'visitors',
-    component: AttendanceVisitors, // we'll create this below
+    component: AttendanceVisitors,
     canActivate: [RoleGuard],
     data: {
       title: 'Visitors',
-      breadcrumb: 'Visitors',
       roles: [
         'super_admin',
         'church_admin',
@@ -92,19 +86,20 @@ const routes: Routes = [
   {
     path: 'qr-checkin/:eventId',
     component: QrCheckin,
-    data: {
-      title: 'Check In',
-      breadcrumb: 'QR Check-in',
-    },
+    // NO RoleGuard — public
   },
-  // ✅ PARAMETERIZED ROUTES LAST - ':id' must come after all specific routes
+  {
+    // ✅ MUST be before :id — link-checkin is a specific string segment
+    path: 'link-checkin/:token',
+    component: LinkCheckin,
+    // NO RoleGuard — public
+  },
   {
     path: ':id',
     component: AttendanceDetail,
     canActivate: [RoleGuard],
     data: {
       title: 'Event Details',
-      breadcrumb: 'Details',
       roles: [
         'super_admin',
         'church_admin',
@@ -120,7 +115,6 @@ const routes: Routes = [
     canActivate: [RoleGuard],
     data: {
       title: 'Mark Attendance',
-      breadcrumb: 'Mark Attendance',
       roles: [
         'super_admin',
         'church_admin',

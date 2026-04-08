@@ -1,3 +1,6 @@
+
+
+
 // src/app/models/giving.model.ts
 export type PaymentMethod =
   | 'cash'
@@ -102,5 +105,24 @@ export interface CreateTransactionData {
 
 
 
+export interface CategoryGivingStat {
+  category_id: string;
+  category_name: string;
+  total_amount: number;
+  transaction_count: number;
+  unique_givers: number;
+  avg_amount: number;
+  highest_amount: number;
+  percentage_of_total: number;
+}
 
-
+export interface CategoryGiver {
+  member_id: string | null;
+  member_name: string;
+  member_number: string;
+  photo_url: string | null;
+  total_amount: number;
+  transaction_count: number;
+  last_giving_date: string;
+  is_visitor: boolean;
+}

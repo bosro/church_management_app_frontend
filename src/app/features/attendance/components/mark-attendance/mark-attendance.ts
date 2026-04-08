@@ -18,6 +18,12 @@ import {
 import { Member } from '../../../../models/member.model';
 import { PermissionService } from '../../../../core/services/permission.service';
 
+interface EnrichedMember extends Member {
+  alreadyPresent?: boolean;
+  alreadyAbsent?: boolean;
+  recordId?: string;
+}
+
 @Component({
   selector: 'app-mark-attendance',
   standalone: false,
@@ -34,9 +40,9 @@ export class MarkAttendance implements OnInit, OnDestroy {
   errorMessage = '';
   successMessage = '';
 
-  // Member search
+  // Search
   searchControl = new FormControl('');
-  searchResults: Member[] = [];
+  searchResults: EnrichedMember[] = [];
   searching = false;
 
   // Visitor form
@@ -46,15 +52,39 @@ export class MarkAttendance implements OnInit, OnDestroy {
   visitorEmail = '';
   addingVisitor = false;
 
-  // Bulk check-in
+  // Bulk
   selectedMembers: Set<string> = new Set();
   bulkCheckInMode = false;
 
-  // QR Code
-  qrCodeData: string = '';
+  // QR
+  qrCodeData = '';
   showQRCode = false;
 
-  // Permissions
+  // Past event flag
+  isEventPast = false;
+  isEventToday = false;
+
+  // Absence modal (for list items only)
+  showAbsenceModal = false;
+  absenceTargetRecord: AttendanceRecord | null = null;
+  absenceTargetMemberId: string | null = null;
+  absenceTargetName = '';
+  absenceReason = '';
+  markingAbsent = false;
+
+  // Edit reason modal
+  showEditReasonModal = false;
+  editReasonRecord: AttendanceRecord | null = null;
+  editReasonText = '';
+  updatingReason = false;
+
+  // Active tab
+  activeTab: 'present' | 'absent' = 'present';
+
+  // Spawn next occurrence
+  hasNextOccurrence = false;
+  spawningNext = false;
+
   canMarkAttendance = false;
 
   constructor(
@@ -85,10 +115,7 @@ export class MarkAttendance implements OnInit, OnDestroy {
     this.canMarkAttendance =
       this.permissionService.isAdmin ||
       this.permissionService.attendance.checkin;
-
-    if (!this.canMarkAttendance) {
-      this.router.navigate(['/unauthorized']);
-    }
+    if (!this.canMarkAttendance) this.router.navigate(['/unauthorized']);
   }
 
   private loadEvent(): void {
@@ -98,25 +125,38 @@ export class MarkAttendance implements OnInit, OnDestroy {
       .subscribe({
         next: (event) => {
           this.event = event;
+          this.isEventPast = this.attendanceService.isEventPast(
+            event.event_date,
+          );
+          this.isEventToday = this.attendanceService.isEventToday(
+            event.event_date,
+          );
+
+          // Check if recurring + past → see if next occurrence exists
+          if (event.is_recurring && this.isEventPast) {
+            this.attendanceService
+              .hasNextOccurrence(event)
+              .pipe(takeUntil(this.destroy$))
+              .subscribe((has) => (this.hasNextOccurrence = has));
+          }
         },
         error: (error) => {
           this.errorMessage = error.message || 'Failed to load event';
-          console.error('Load event error:', error);
         },
       });
   }
 
-  private loadAttendanceRecords(): void {
+  loadAttendanceRecords(): void {
     this.attendanceService
       .getAttendanceRecords(this.eventId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (records) => {
           this.attendanceRecords = records;
+          // Re-enrich search results with updated status
+          this.enrichSearchResults();
         },
-        error: (error) => {
-          console.error('Error loading attendance records:', error);
-        },
+        error: (error) => console.error('Error loading records:', error),
       });
   }
 
@@ -137,67 +177,189 @@ export class MarkAttendance implements OnInit, OnDestroy {
       )
       .subscribe({
         next: (members) => {
-          // Filter out already checked-in members
-          this.searchResults = members.filter(
-            (m) => !this.attendanceRecords.some((r) => r.member_id === m.id),
-          );
+          this.searchResults = this.enrichMembers(members);
           this.searching = false;
         },
-        error: (error) => {
-          console.error('Search error:', error);
+        error: () => {
           this.searching = false;
         },
       });
   }
 
-  checkInMember(memberId: string): void {
+  private enrichMembers(members: Member[]): EnrichedMember[] {
+    return members.map((m) => {
+      const rec = this.attendanceRecords.find((r) => r.member_id === m.id);
+      return {
+        ...m,
+        alreadyPresent: rec?.status === 'present',
+        alreadyAbsent: rec?.status === 'absent',
+        recordId: rec?.id,
+      };
+    });
+  }
+
+  private enrichSearchResults(): void {
+    if (this.searchResults.length > 0) {
+      this.searchResults = this.enrichMembers(this.searchResults);
+    }
+  }
+
+  // ── Computed ──────────────────────────────────────────────────
+  get presentRecords(): AttendanceRecord[] {
+    return this.attendanceRecords.filter((r) => r.status === 'present');
+  }
+
+  get absentRecords(): AttendanceRecord[] {
+    return this.attendanceRecords.filter((r) => r.status === 'absent');
+  }
+
+  // ── Check in from search result ───────────────────────────────
+  checkInMember(member: EnrichedMember): void {
+    if (this.isEventPast && !this.isEventToday) return;
+    if (member.alreadyPresent) return;
+
     this.loading = true;
     this.errorMessage = '';
 
     this.attendanceService
-      .checkInMember(this.eventId, memberId, 'manual')
+      .checkInMember(this.eventId, member.id, 'manual')
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
-          this.successMessage = 'Member checked in successfully!';
+          this.successMessage = `${member.first_name} checked in!`;
           this.loadAttendanceRecords();
           this.loadEvent();
-          this.searchControl.setValue('');
-          this.searchResults = [];
           this.loading = false;
-
-          setTimeout(() => {
-            this.successMessage = '';
-          }, 3000);
+          setTimeout(() => (this.successMessage = ''), 3000);
         },
         error: (error) => {
           this.loading = false;
-
-          // ✅ Handle duplicate check-in error
-          if (error?.error?.code === '23505') {
-            this.errorMessage =
-              'This member has already been checked in for this event';
-          } else {
-            this.errorMessage = error.message || 'Failed to check in member';
-          }
-
-          console.error('Check-in error:', error);
-
-          // Clear search
-          this.searchControl.setValue('');
-          this.searchResults = [];
+          this.errorMessage = error.message || 'Failed to check in member';
         },
       });
   }
 
+  // ── Mark absent from search result (inline, no modal needed) ──
+  markAbsentInline(member: EnrichedMember): void {
+    if (this.isEventPast && !this.isEventToday) return;
+    if (member.alreadyAbsent) return;
+
+    // Open modal pre-populated with member
+    this.absenceTargetMemberId = member.id;
+    this.absenceTargetName = `${member.first_name} ${member.last_name}`;
+    this.absenceTargetRecord = null;
+    this.absenceReason = '';
+    this.showAbsenceModal = true;
+  }
+
+  // ── Mark absent from existing present record ──────────────────
+  openAbsenceModalForRecord(record: AttendanceRecord): void {
+    this.absenceTargetRecord = record;
+    this.absenceTargetMemberId = record.member_id || null;
+    this.absenceTargetName = this.getAttendanceName(record);
+    this.absenceReason = '';
+    this.showAbsenceModal = true;
+  }
+
+  confirmMarkAbsent(): void {
+    const memberId = this.absenceTargetMemberId;
+    if (!memberId) return;
+
+    this.markingAbsent = true;
+
+    this.attendanceService
+      .markMemberAbsent(this.eventId, memberId, this.absenceReason || undefined)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.successMessage = `${this.absenceTargetName} marked absent.`;
+          this.loadAttendanceRecords();
+          this.loadEvent();
+          this.closeAbsenceModal();
+          this.markingAbsent = false;
+          setTimeout(() => (this.successMessage = ''), 3000);
+        },
+        error: (error) => {
+          this.markingAbsent = false;
+          this.errorMessage = error.message || 'Failed to mark absent';
+        },
+      });
+  }
+
+  closeAbsenceModal(): void {
+    this.showAbsenceModal = false;
+    this.absenceTargetRecord = null;
+    this.absenceTargetMemberId = null;
+    this.absenceTargetName = '';
+    this.absenceReason = '';
+  }
+
+  // ── Edit reason ───────────────────────────────────────────────
+  openEditReasonModal(record: AttendanceRecord): void {
+    this.editReasonRecord = record;
+    this.editReasonText = record.absence_reason || '';
+    this.showEditReasonModal = true;
+  }
+
+  confirmUpdateReason(): void {
+    if (!this.editReasonRecord) return;
+    this.updatingReason = true;
+
+    this.attendanceService
+      .updateAbsenceReason(this.editReasonRecord.id, this.editReasonText)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.successMessage = 'Reason updated.';
+          this.loadAttendanceRecords();
+          this.closeEditReasonModal();
+          this.updatingReason = false;
+          setTimeout(() => (this.successMessage = ''), 3000);
+        },
+        error: (error) => {
+          this.updatingReason = false;
+          this.errorMessage = error.message || 'Failed to update reason';
+        },
+      });
+  }
+
+  closeEditReasonModal(): void {
+    this.showEditReasonModal = false;
+    this.editReasonRecord = null;
+    this.editReasonText = '';
+  }
+
+  // ── Flip absent → present ──────────────────────────────────────
+  markPresentFromAbsent(record: AttendanceRecord): void {
+    if (!record.member_id || (this.isEventPast && !this.isEventToday)) return;
+    this.loading = true;
+
+    this.attendanceService
+      .checkInMember(this.eventId, record.member_id, 'manual')
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.successMessage = 'Marked as present.';
+          this.loadAttendanceRecords();
+          this.loadEvent();
+          this.loading = false;
+          setTimeout(() => (this.successMessage = ''), 3000);
+        },
+        error: (error) => {
+          this.loading = false;
+          this.errorMessage = error.message || 'Failed to mark present';
+        },
+      });
+  }
+
+  // ── Visitor ───────────────────────────────────────────────────
   checkInVisitor(): void {
     if (!this.visitorName.trim()) {
       this.errorMessage = 'Visitor name is required';
       return;
     }
-
-    const nameParts = this.visitorName.trim().split(/\s+/);
-    if (nameParts.length < 2) {
+    const parts = this.visitorName.trim().split(/\s+/);
+    if (parts.length < 2) {
       this.errorMessage = 'Please enter both first and last name';
       return;
     }
@@ -205,43 +367,26 @@ export class MarkAttendance implements OnInit, OnDestroy {
     this.addingVisitor = true;
     this.errorMessage = '';
 
-    const firstName = nameParts[0];
-    const lastName = nameParts.slice(1).join(' ');
-
     this.attendanceService
       .checkInVisitor(this.eventId, {
-        first_name: firstName,
-        last_name: lastName,
+        first_name: parts[0],
+        last_name: parts.slice(1).join(' '),
         phone: this.visitorPhone || undefined,
         email: this.visitorEmail || undefined,
       })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
-          this.successMessage = 'Visitor checked in successfully!';
+          this.successMessage = 'Visitor checked in!';
           this.loadAttendanceRecords();
           this.loadEvent();
           this.toggleVisitorForm();
           this.addingVisitor = false;
-
-          setTimeout(() => {
-            this.successMessage = '';
-          }, 3000);
+          setTimeout(() => (this.successMessage = ''), 3000);
         },
         error: (error) => {
           this.addingVisitor = false;
-
-          // ✅ Handle duplicate check-in error
-          if (error?.error?.code === '23505') {
-            this.errorMessage =
-              'This visitor has already been checked in for this event';
-          } else {
-            this.errorMessage = error.message || 'Failed to check in visitor';
-          }
-
-          console.error('Visitor check-in error:', error);
-
-          // Keep form open so user can modify the visitor details
+          this.errorMessage = error.message || 'Failed to check in visitor';
         },
       });
   }
@@ -255,90 +400,86 @@ export class MarkAttendance implements OnInit, OnDestroy {
     }
   }
 
+  // ── Bulk ──────────────────────────────────────────────────────
   toggleBulkMode(): void {
     this.bulkCheckInMode = !this.bulkCheckInMode;
     this.selectedMembers.clear();
   }
 
-  toggleMemberSelection(memberId: string): void {
-    if (this.selectedMembers.has(memberId)) {
-      this.selectedMembers.delete(memberId);
-    } else {
-      this.selectedMembers.add(memberId);
-    }
-  }
-
   bulkCheckIn(): void {
     if (this.selectedMembers.size === 0) {
-      this.errorMessage = 'Please select at least one member';
+      this.errorMessage = 'Select at least one member';
       return;
     }
-
     this.loading = true;
-    this.errorMessage = '';
-
-    const memberIds = Array.from(this.selectedMembers);
 
     this.attendanceService
-      .bulkCheckIn(this.eventId, memberIds)
+      .bulkCheckIn(this.eventId, Array.from(this.selectedMembers))
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (result) => {
-          this.successMessage = `Successfully checked in ${result.success} member${result.success !== 1 ? 's' : ''}`;
-          if (result.errors.length > 0) {
-            this.errorMessage = `${result.errors.length} error${result.errors.length !== 1 ? 's' : ''} occurred`;
-          }
+          this.successMessage = `Checked in ${result.success} member(s)`;
           this.loadAttendanceRecords();
           this.loadEvent();
           this.toggleBulkMode();
           this.loading = false;
-
-          setTimeout(() => {
-            this.successMessage = '';
-            if (result.errors.length === 0) {
-              this.errorMessage = '';
-            }
-          }, 5000);
+          setTimeout(() => (this.successMessage = ''), 5000);
         },
         error: (error) => {
           this.loading = false;
-          this.errorMessage = error.message || 'Failed to check in members';
-          console.error('Bulk check-in error:', error);
+          this.errorMessage = error.message || 'Bulk check-in failed';
         },
       });
   }
 
   removeAttendance(recordId: string): void {
-    // Only admins or users with manage permission can remove records
     if (
       !this.permissionService.isAdmin &&
       !this.permissionService.attendance.manage
     ) {
-      this.errorMessage =
-        'You do not have permission to remove attendance records';
-      setTimeout(() => (this.errorMessage = ''), 3000);
+      this.errorMessage = 'No permission to remove records';
       return;
     }
-
-    if (!confirm('Are you sure you want to remove this attendance record?')) {
-      return;
-    }
+    if (!confirm('Remove this attendance record?')) return;
 
     this.attendanceService
       .removeAttendanceRecord(recordId, this.eventId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
-          this.successMessage = 'Attendance record removed';
+          this.successMessage = 'Record removed';
           this.loadAttendanceRecords();
           this.loadEvent();
-          setTimeout(() => {
-            this.successMessage = '';
-          }, 3000);
+          setTimeout(() => (this.successMessage = ''), 3000);
         },
         error: (error) => {
-          this.errorMessage = error.message || 'Failed to remove record';
-          console.error('Remove error:', error);
+          this.errorMessage = error.message || 'Failed to remove';
+        },
+      });
+  }
+
+  // ── Recurring: spawn next ─────────────────────────────────────
+  spawnNextOccurrence(): void {
+    if (!this.event || !this.event.is_recurring) return;
+    this.spawningNext = true;
+
+    this.attendanceService
+      .spawnNextOccurrence(this.event)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (newEvent) => {
+          this.spawningNext = false;
+          this.hasNextOccurrence = true;
+          this.successMessage = 'Next occurrence created!';
+          setTimeout(() => {
+            this.successMessage = '';
+            this.router.navigate(['main/attendance', newEvent.id]);
+          }, 1500);
+        },
+        error: (error) => {
+          this.spawningNext = false;
+          this.errorMessage =
+            error.message || 'Failed to create next occurrence';
         },
       });
   }
@@ -355,31 +496,23 @@ export class MarkAttendance implements OnInit, OnDestroy {
     this.router.navigate(['main/attendance', this.eventId]);
   }
 
-  // Helper methods
-  getMemberFullName(member: {
+  getMemberFullName(m: {
     first_name: string;
     middle_name?: string;
     last_name: string;
   }): string {
-    const parts = [
-      member.first_name,
-      member.middle_name,
-      member.last_name,
-    ].filter(Boolean);
-    return parts.join(' ');
+    return [m.first_name, m.middle_name, m.last_name].filter(Boolean).join(' ');
   }
 
-  getMemberInitials(member: { first_name: string; last_name: string }): string {
-    return `${member.first_name[0]}${member.last_name[0]}`.toUpperCase();
+  getMemberInitials(m: { first_name: string; last_name: string }): string {
+    return `${m.first_name[0]}${m.last_name[0]}`.toUpperCase();
   }
 
   getAttendanceName(record: AttendanceRecord): string {
-    if (record.member) {
+    if (record.member)
       return `${record.member.first_name} ${record.member.last_name}`;
-    }
-    if (record.visitor) {
+    if (record.visitor)
       return `${record.visitor.first_name} ${record.visitor.last_name} (Visitor)`;
-    }
     return 'Unknown';
   }
 
@@ -388,5 +521,14 @@ export class MarkAttendance implements OnInit, OnDestroy {
       hour: '2-digit',
       minute: '2-digit',
     });
+  }
+
+  getFrequencyLabel(freq?: string): string {
+    const map: Record<string, string> = {
+      weekly: 'Weekly',
+      biweekly: 'Every 2 weeks',
+      monthly: 'Monthly',
+    };
+    return freq ? map[freq] || freq : '';
   }
 }

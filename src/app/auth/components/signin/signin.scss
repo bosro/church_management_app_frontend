@@ -349,3 +349,104 @@
 }
 
 
+
+
+
+
+// === Testimonials Strip ===
+.testimonials-strip {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  min-height: 90px;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.testimonial-pill {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  background: linear-gradient(135deg, #5B21B6 0%, #7C3AED 100%);
+  border-radius: 999px 999px 999px 8px; // pill with a small bottom-left notch
+  padding: 0.75rem 1.25rem 0.75rem 0.75rem;
+  box-shadow: 0 8px 24px rgba(91, 33, 182, 0.25);
+  position: absolute;
+  left: 0;
+  max-width: 100%;
+
+  // Hidden by default
+  opacity: 0;
+  transform: translateY(14px) scale(0.97);
+  pointer-events: none;
+  transition: opacity 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &.active {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+  }
+
+  &.exiting {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.96);
+  }
+
+  .pill-avatar {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.18);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    i {
+      font-size: 1.1rem;
+      color: #ffffff;
+    }
+  }
+
+  .pill-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+
+  .pill-quote {
+    font-size: 0.8125rem;
+    color: #EDE9FE;
+    line-height: 1.45;
+    margin: 0;
+    font-weight: 500;
+    font-family: 'Nunito Sans', sans-serif;
+  }
+
+  .pill-author {
+    font-size: 0.75rem;
+    color: #C4B5FD;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    font-family: 'Nunito Sans', sans-serif;
+  }
+}
+
+// Responsive adjustment
+@media (max-width: 640px) {
+  .testimonials-strip {
+    min-height: 100px;
+  }
+
+  .testimonial-pill {
+    border-radius: 16px 16px 16px 4px;
+    padding: 0.65rem 1rem 0.65rem 0.65rem;
+
+    .pill-quote {
+      font-size: 0.775rem;
+    }
+  }
+}

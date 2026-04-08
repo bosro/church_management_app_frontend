@@ -167,3 +167,6 @@ export class StudentDetail implements OnInit, OnDestroy {
     return age;
   }
 }
+
+
+
