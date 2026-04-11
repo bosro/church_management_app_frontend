@@ -1,5 +1,11 @@
 // src/app/features/finance/components/finance-reports/finance-reports.component.ts
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  OnDestroy,
+  ElementRef,
+  ViewChild,
+} from '@angular/core';
 import { FormControl } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
@@ -27,6 +33,8 @@ import autoTable from 'jspdf-autotable';
 })
 export class FinanceReports implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
+
+  @ViewChild('giversSection') giversSection!: ElementRef;
 
   loading = true;
   statistics: GivingStatistics | null = null;
@@ -195,13 +203,21 @@ export class FinanceReports implements OnInit, OnDestroy {
 
   selectCategory(stat: CategoryGivingStat): void {
     if (this.selectedCategory?.category_id === stat.category_id) {
-      // Toggle off
       this.selectedCategory = null;
       this.categoryGivers = [];
       return;
     }
     this.selectedCategory = stat;
     this.loadCategoryGivers(stat.category_id);
+
+    // Scroll to the drill-down table after a short delay
+    // (delay allows Angular to render the section first)
+    setTimeout(() => {
+      this.giversSection?.nativeElement?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    }, 150);
   }
 
   private loadCategoryGivers(categoryId: string): void {

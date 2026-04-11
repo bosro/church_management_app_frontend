@@ -886,55 +886,106 @@ export class FinanceService {
 
   // ==================== CATEGORY BREAKDOWN ====================
 
-getCategoryGivingStats(
-  fiscalYear?: number,
-  startDate?: string,
-  endDate?: string
-): Observable<CategoryGivingStat[]> {
-  const churchId = this.getChurchId();
-  const year = fiscalYear || null;
+  getCategoryGivingStats(
+    fiscalYear?: number,
+    startDate?: string,
+    endDate?: string,
+  ): Observable<CategoryGivingStat[]> {
+    return from(this.fetchCategoryStats(fiscalYear, startDate, endDate));
+  }
 
-  return from(
-    this.supabase.client.rpc('get_category_giving_stats', {
-      church_uuid: churchId,
-      fiscal_year: year,
-      start_date: startDate || null,
-      end_date: endDate || null,
-    })
-  ).pipe(
-    map(({ data, error }) => {
-      if (error) throw new Error(error.message);
-      return (data || []) as CategoryGivingStat[];
-    }),
-    catchError((err) => throwError(() => err))
-  );
-}
+  getCategoryGivers(
+    categoryId: string,
+    fiscalYear?: number,
+    startDate?: string,
+    endDate?: string,
+    limit: number = 50,
+  ): Observable<CategoryGiver[]> {
+    return from(
+      this.fetchCategoryGivers(
+        categoryId,
+        fiscalYear,
+        startDate,
+        endDate,
+        limit,
+      ),
+    );
+  }
 
-getCategoryGivers(
-  categoryId: string,
-  fiscalYear?: number,
-  startDate?: string,
-  endDate?: string,
-  limit: number = 50
-): Observable<CategoryGiver[]> {
-  const churchId = this.getChurchId();
-  const year = fiscalYear || null;
 
-  return from(
-    this.supabase.client.rpc('get_category_givers', {
-      church_uuid: churchId,
-      category_uuid: categoryId,
-      fiscal_year: year,
-      start_date: startDate || null,
-      end_date: endDate || null,
-      result_limit: limit,
-    })
-  ).pipe(
-    map(({ data, error }) => {
-      if (error) throw new Error(error.message);
-      return (data || []) as CategoryGiver[];
-    }),
-    catchError((err) => throwError(() => err))
-  );
-}
+  // ==================== CATEGORY BREAKDOWN ====================
+
+  private async fetchCategoryStats(
+    fiscalYear?: number,
+    startDate?: string,
+    endDate?: string,
+  ): Promise<CategoryGivingStat[]> {
+    const churchId = this.getChurchId();
+
+    // console.log(
+    //   '[FinanceService] getCategoryGivingStats church_id:',
+    //   churchId,
+    //   'year:',
+    //   fiscalYear,
+    // );
+
+    const { data, error } = await this.supabase.client.rpc(
+      'get_category_giving_stats',
+      {
+        church_uuid: churchId,
+        p_fiscal_year: fiscalYear ?? null,
+        p_start_date: startDate ?? null,
+        p_end_date: endDate ?? null,
+      },
+    );
+
+    // console.log(
+    //   '[FinanceService] category stats result:',
+    //   data,
+    //   'error:',
+    //   error,
+    // );
+
+    if (error) throw new Error(error.message);
+    return (data || []) as CategoryGivingStat[];
+  }
+
+  private async fetchCategoryGivers(
+    categoryId: string,
+    fiscalYear?: number,
+    startDate?: string,
+    endDate?: string,
+    limit: number = 50,
+  ): Promise<CategoryGiver[]> {
+    const churchId = this.getChurchId();
+
+    // console.log(
+    //   '[FinanceService] getCategoryGivers church_id:',
+    //   churchId,
+    //   'category:',
+    //   categoryId,
+    // );
+
+    const { data, error } = await this.supabase.client.rpc(
+      'get_category_givers',
+      {
+        church_uuid: churchId,
+        category_uuid: categoryId,
+        p_fiscal_year: fiscalYear ?? null,
+        p_start_date: startDate ?? null,
+        p_end_date: endDate ?? null,
+        result_limit: limit,
+      },
+    );
+
+    // console.log(
+    //   '[FinanceService] category givers result:',
+    //   data,
+    //   'error:',
+    //   error,
+    // );
+
+    if (error) throw new Error(error.message);
+    return (data || []) as CategoryGiver[];
+  }
 }

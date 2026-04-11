@@ -317,7 +317,7 @@ export class AuthService {
       throw new Error('Failed to create signup request');
     }
 
-    console.log('Signup request created:', signupRequest[0]);
+    // console.log('Signup request created:', signupRequest[0]);
 
     // Send notification to admins via edge function
     try {
@@ -372,7 +372,7 @@ export class AuthService {
           throw new Error('User creation failed');
         }
 
-        console.log('User created successfully:', data.user.id);
+        // console.log('User created successfully:', data.user.id);
 
         // Wait for profile creation trigger
         await new Promise((resolve) => setTimeout(resolve, 1000));
