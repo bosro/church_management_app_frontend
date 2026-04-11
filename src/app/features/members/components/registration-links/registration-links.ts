@@ -151,7 +151,7 @@ export class RegistrationLinks implements OnInit, OnDestroy {
   }
 
   showQRCode(link: any): void {
-    const fullUrl = `${window.location.origin}/register/${link.link_token}`;
+    const fullUrl = `${window.location.origin}/public/register/${link.link_token}`;
     this.qrCodeValue = fullUrl;
     this.selectedLinkForQR = link;
     this.showQRModal = true;
@@ -273,3 +273,7 @@ export class RegistrationLinks implements OnInit, OnDestroy {
     this.router.navigate(['main/members']);
   }
 }
+
+
+
+

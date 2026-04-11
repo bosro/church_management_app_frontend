@@ -58,25 +58,32 @@ export class PermissionGuard implements CanActivate, CanMatch {
       map(() => {
         const userRole = this.authService.getCurrentUserRole();
 
-        // Check feature flag first — if feature not enabled for this church,
-        // block access regardless of role or permission
-        if (requiredFeature && !this.authService.hasChurchFeature(requiredFeature)) {
-          return this.router.createUrlTree(['/unauthorized']);
-        }
-
-        // super_admin and church_admin always pass
-        if (userRole === 'super_admin' || userRole === 'church_admin') {
+        // ① Super admin bypasses EVERYTHING including feature flags
+        if (userRole === 'super_admin') {
           return true;
         }
 
-        // Check role
+        // ② Check feature flag — church must have this feature enabled
+        if (
+          requiredFeature &&
+          !this.authService.hasChurchFeature(requiredFeature)
+        ) {
+          return this.router.createUrlTree(['/unauthorized']);
+        }
+
+        // ③ church_admin always passes role/permission checks
+        if (userRole === 'church_admin') {
+          return true;
+        }
+
+        // ④ Check role
         if (requiredRoles && requiredRoles.length > 0) {
           if (this.authService.hasRole(requiredRoles)) {
             return true;
           }
         }
 
-        // Check permission
+        // ⑤ Check permission
         if (requiredPermission) {
           if (this.userRolesService.hasPermission(requiredPermission)) {
             return true;

@@ -7,6 +7,7 @@ import { PermissionGuard } from '../core/guards/permission.guard';
 import { Features } from './features/features';
 import { MemberRegistration } from './public/member-registration/member-registration';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { LinkCheckin } from './public/link-checkin/link-checkin';
 
 const routes: Routes = [
   {
@@ -110,6 +111,22 @@ const routes: Routes = [
         loadChildren: () =>
           import('./branches/branches-module').then((m) => m.BranchesModule),
       },
+      {
+        path: 'cells',
+        canActivate: [PermissionGuard],
+        data: {
+          roles: [
+            'super_admin',
+            'church_admin',
+            'pastor',
+            'group_leader',
+            'cell_leader',
+          ],
+          permission: 'members.view',
+        },
+        loadChildren: () =>
+          import('./cells/cells-module').then((m) => m.CellsModule),
+      },
 
       // Events — role OR permission
       {
@@ -194,15 +211,74 @@ const routes: Routes = [
       },
 
       {
-        path: 'reports',
-        loadChildren: () =>
-          import('./reports/reports-module').then((m) => m.ReportsModule),
+        path: 'voting',
         canActivate: [PermissionGuard],
         data: {
-          roles: ['super_admin', 'church_admin', 'pastor', 'finance_officer'],
-          permission: 'reports.view',
-          requiresFeature: 'reports',
+          roles: [
+            'super_admin',
+            'church_admin',
+            'pastor',
+            'member',
+            'group_leader',
+            'ministry_leader',
+            'finance_officer',
+            'senior_pastor',
+            'associate_pastor',
+            'elder',
+            'deacon',
+            'worship_leader',
+          ],
+          requiresFeature: 'voting', // ← ADD
         },
+        loadChildren: () =>
+          import('./voting/voting-module').then((m) => m.VotingModule),
+      },
+      {
+        path: 'job-hub',
+        canActivate: [PermissionGuard],
+        data: {
+          roles: [
+            'super_admin',
+            'church_admin',
+            'pastor',
+            'member',
+            'group_leader',
+            'ministry_leader',
+            'finance_officer',
+            'senior_pastor',
+            'associate_pastor',
+            'elder',
+            'deacon',
+            'worship_leader',
+          ],
+          requiresFeature: 'job_hub', // ← ADD
+        },
+        loadChildren: () =>
+          import('./job-hub/job-hub-module').then((m) => m.JobHubModule),
+      },
+
+      {
+        path: 'job-hub',
+        canActivate: [PermissionGuard],
+        data: {
+          roles: [
+            'super_admin',
+            'church_admin',
+            'pastor',
+            'member',
+            'group_leader',
+            'ministry_leader',
+            'finance_officer',
+            'senior_pastor',
+            'associate_pastor',
+            'elder',
+            'deacon',
+            'worship_leader',
+          ],
+          permission: 'job-hub.view',
+        },
+        loadChildren: () =>
+          import('./job-hub/job-hub-module').then((m) => m.JobHubModule),
       },
     ],
   },
@@ -217,7 +293,7 @@ const routes: Routes = [
 ];
 
 @NgModule({
-  declarations: [Features, MemberRegistration],
+  declarations: [Features],
   imports: [CommonModule, RouterModule.forChild(routes), ReactiveFormsModule],
 })
 export class FeaturesModule {}

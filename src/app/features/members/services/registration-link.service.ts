@@ -141,6 +141,10 @@ export class RegistrationLinkService {
   }
 
   getRegistrationUrl(token: string): string {
-    return `${window.location.origin}/register/${token}`;
+    return `${window.location.origin}/public/register/${token}`;
   }
 }
+
+
+
+

@@ -43,13 +43,13 @@ export class AttendanceReports implements OnInit, OnDestroy {
   };
 
   // Service Types
-  serviceTypes = [
-    'Sunday Service',
-    'Midweek Service',
-    'Prayer Meeting',
-    'Ministry Meeting',
-    'Special Event',
-  ];
+  serviceTypes: { value: string; label: string }[] = [
+  { value: 'sunday_service',   label: 'Sunday Service' },
+  { value: 'midweek_service',  label: 'Midweek Service' },
+  { value: 'prayer_meeting',   label: 'Prayer Meeting' },
+  { value: 'ministry_meeting', label: 'Ministry Meeting' },
+  { value: 'special_event',    label: 'Special Event' },
+];
 
   // Permissions
   canViewAttendance = false;
@@ -436,3 +436,8 @@ export class AttendanceReports implements OnInit, OnDestroy {
     });
   }
 }
+
+
+
+
+

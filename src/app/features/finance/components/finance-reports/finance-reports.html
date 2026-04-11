@@ -7,6 +7,7 @@
 
     <div class="dashboard-body">
       <div class="reports-container">
+
         <!-- Back Button -->
         <button class="btn-back" (click)="goBack()">
           <i class="ri-arrow-left-line"></i>
@@ -27,31 +28,33 @@
           </div>
         </div>
 
-        <!-- Success Message -->
+        <!-- Alerts -->
         <div *ngIf="successMessage" class="success-alert">
           <i class="ri-checkbox-circle-line"></i>
           <span>{{ successMessage }}</span>
         </div>
-
-        <!-- Error Message -->
         <div *ngIf="errorMessage" class="error-alert">
           <i class="ri-error-warning-line"></i>
           <span>{{ errorMessage }}</span>
         </div>
 
-        <!-- Loading State -->
+        <!-- Loading -->
         <div *ngIf="loading" class="loading-container">
           <app-loading-spinner message="Loading reports..."></app-loading-spinner>
         </div>
 
-        <!-- Reports Content -->
         <div *ngIf="!loading" class="reports-content">
-          <!-- Statistics Overview -->
-          <div class="stats-section">
-            <h2>Year Overview</h2>
+
+          <!-- ══════════════════════════════════════════════
+               SECTION 1 — Year Overview Stats
+          ══════════════════════════════════════════════ -->
+          <div class="reports-section">
+            <div class="section-title">
+              <h2>Year Overview — {{ selectedYear }}</h2>
+            </div>
             <div class="stats-grid">
               <div class="stat-card">
-                <div class="stat-icon" style="background: #D1FAE5; color: #059669;">
+                <div class="stat-icon" style="background:#D1FAE5;color:#059669;">
                   <i class="ri-money-dollar-circle-line"></i>
                 </div>
                 <div class="stat-info">
@@ -59,9 +62,8 @@
                   <h3 class="stat-value">{{ formatCurrency(statistics?.total_giving || 0) }}</h3>
                 </div>
               </div>
-
               <div class="stat-card">
-                <div class="stat-icon" style="background: #DBEAFE; color: #2563EB;">
+                <div class="stat-icon" style="background:#DBEAFE;color:#2563EB;">
                   <i class="ri-wallet-line"></i>
                 </div>
                 <div class="stat-info">
@@ -69,9 +71,8 @@
                   <h3 class="stat-value">{{ formatCurrency(statistics?.total_tithes || 0) }}</h3>
                 </div>
               </div>
-
               <div class="stat-card">
-                <div class="stat-icon" style="background: #DDD6FE; color: #7C3AED;">
+                <div class="stat-icon" style="background:#DDD6FE;color:#7C3AED;">
                   <i class="ri-hand-heart-line"></i>
                 </div>
                 <div class="stat-info">
@@ -79,9 +80,8 @@
                   <h3 class="stat-value">{{ formatCurrency(statistics?.total_offerings || 0) }}</h3>
                 </div>
               </div>
-
               <div class="stat-card">
-                <div class="stat-icon" style="background: #FED7AA; color: #EA580C;">
+                <div class="stat-icon" style="background:#FED7AA;color:#EA580C;">
                   <i class="ri-exchange-dollar-line"></i>
                 </div>
                 <div class="stat-info">
@@ -89,9 +89,8 @@
                   <h3 class="stat-value">{{ statistics?.total_transactions || 0 }}</h3>
                 </div>
               </div>
-
               <div class="stat-card">
-                <div class="stat-icon" style="background: #FEF3C7; color: #F59E0B;">
+                <div class="stat-icon" style="background:#FEF3C7;color:#F59E0B;">
                   <i class="ri-bar-chart-line"></i>
                 </div>
                 <div class="stat-info">
@@ -99,9 +98,8 @@
                   <h3 class="stat-value">{{ formatCurrency(statistics?.avg_giving || 0) }}</h3>
                 </div>
               </div>
-
               <div class="stat-card">
-                <div class="stat-icon" style="background: #FCE7F3; color: #DB2777;">
+                <div class="stat-icon" style="background:#FCE7F3;color:#DB2777;">
                   <i class="ri-arrow-up-line"></i>
                 </div>
                 <div class="stat-info">
@@ -112,18 +110,182 @@
             </div>
           </div>
 
-          <!-- Export Reports -->
-          <div class="export-section">
-            <h2>Export Reports</h2>
+          <!-- ══════════════════════════════════════════════
+               SECTION 2 — Category Breakdown
+          ══════════════════════════════════════════════ -->
+          <div class="reports-section">
+            <div class="section-title">
+              <h2>Category Breakdown</h2>
+              <p class="section-subtitle">Revenue and givers per giving category</p>
+            </div>
+
+            <!-- Category date filter -->
+            <div class="category-filter-bar">
+              <div class="filter-group">
+                <label>From</label>
+                <input type="date" [formControl]="categoryStartDate" class="filter-input" />
+              </div>
+              <div class="filter-group">
+                <label>To</label>
+                <input type="date" [formControl]="categoryEndDate" class="filter-input" />
+              </div>
+              <button class="btn-apply" (click)="applyCategoryFilters()">
+                <i class="ri-filter-3-line"></i> Apply
+              </button>
+              <button class="btn-clear-filter" (click)="clearCategoryFilters()">
+                <i class="ri-close-circle-line"></i> Clear
+              </button>
+            </div>
+
+            <!-- Category cards loading -->
+            <div *ngIf="loadingCategoryStats" class="loading-container">
+              <app-loading-spinner message="Loading category data..."></app-loading-spinner>
+            </div>
+
+            <!-- Category cards grid -->
+            <div *ngIf="!loadingCategoryStats" class="category-cards-grid">
+              <div *ngFor="let stat of categoryStats; let i = index" class="category-stat-card"
+                [class.active]="selectedCategory?.category_id === stat.category_id" (click)="selectCategory(stat)"
+                role="button" tabindex="0">
+                <!-- Percentage pill -->
+                <div class="category-pct-pill">{{ stat.percentage_of_total }}%</div>
+
+                <!-- Icon -->
+                <div class="category-card-icon" [style.background]="getCategoryIconBg(i)"
+                  [style.color]="getCategoryIconColor(i)">
+                  <i [class]="getCategoryIcon(i)"></i>
+                </div>
+
+                <h4 class="category-card-name">{{ stat.category_name }}</h4>
+
+                <div class="category-card-amount">
+                  {{ formatCurrency(stat.total_amount) }}
+                </div>
+
+                <div class="category-card-meta">
+                  <span>
+                    <i class="ri-exchange-line"></i>
+                    {{ stat.transaction_count }} txn{{ stat.transaction_count !== 1 ? 's' : '' }}
+                  </span>
+                  <span>
+                    <i class="ri-user-line"></i>
+                    {{ stat.unique_givers }} giver{{ stat.unique_givers !== 1 ? 's' : '' }}
+                  </span>
+                </div>
+
+                <div class="category-card-avg">
+                  Avg: {{ formatCurrency(stat.avg_amount) }}
+                </div>
+
+                <!-- Progress bar (percentage of total) -->
+                <div class="category-progress-track">
+                  <div class="category-progress-fill" [style.width.%]="stat.percentage_of_total"
+                    [style.background]="getCategoryIconColor(i)">
+                  </div>
+                </div>
+
+                <div class="category-card-cta">
+                  <span>{{ selectedCategory?.category_id === stat.category_id ? 'Hide givers' : 'View givers' }}</span>
+                  <i
+                    [class]="selectedCategory?.category_id === stat.category_id ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'"></i>
+                </div>
+              </div>
+
+              <!-- Empty state -->
+              <div *ngIf="categoryStats.length === 0" class="category-empty">
+                <i class="ri-folder-open-line"></i>
+                <p>No category data found for the selected period</p>
+              </div>
+            </div>
+
+            <!-- ── Drill-down: Givers for selected category ── -->
+            <div *ngIf="selectedCategory" class="givers-drilldown">
+              <div class="givers-drilldown-header">
+                <div class="givers-drilldown-title">
+                  <i class="ri-user-star-line"></i>
+                  <h3>Givers — {{ selectedCategory.category_name }}</h3>
+                </div>
+                <div class="givers-drilldown-summary">
+                  <span class="ds-pill green">
+                    {{ formatCurrency(selectedCategory.total_amount) }} total
+                  </span>
+                  <span class="ds-pill blue">
+                    {{ selectedCategory.transaction_count }} transactions
+                  </span>
+                  <span class="ds-pill purple">
+                    {{ selectedCategory.unique_givers }} unique givers
+                  </span>
+                </div>
+              </div>
+
+              <!-- Loading givers -->
+              <div *ngIf="loadingGivers" class="loading-container">
+                <app-loading-spinner message="Loading givers..."></app-loading-spinner>
+              </div>
+
+              <!-- Givers table -->
+              <div *ngIf="!loadingGivers" class="givers-table-wrapper">
+                <table class="givers-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Giver</th>
+                      <th>Member No.</th>
+                      <th>Transactions</th>
+                      <th>Total Given</th>
+                      <th>Last Gave</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let giver of categoryGivers; let j = index">
+                      <td class="rank-cell">{{ j + 1 }}</td>
+                      <td>
+                        <div class="giver-cell">
+                          <div class="giver-avatar">
+                            <img *ngIf="giver.photo_url" [src]="giver.photo_url" [alt]="giver.member_name" />
+                            <div *ngIf="!giver.photo_url" class="giver-initials">
+                              {{ getGiverInitials(giver.member_name) }}
+                            </div>
+                          </div>
+                          <div class="giver-name-wrap">
+                            <span class="giver-name">{{ giver.member_name }}</span>
+                            <span *ngIf="giver.is_visitor" class="visitor-badge">Visitor</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="mono-cell">{{ giver.member_number }}</td>
+                      <td class="center-cell">{{ giver.transaction_count }}</td>
+                      <td class="amount-cell">{{ formatCurrency(giver.total_amount) }}</td>
+                      <td class="date-cell">{{ giver.last_giving_date | date:'MMM d, y' }}</td>
+                    </tr>
+
+                    <tr *ngIf="categoryGivers.length === 0" class="empty-row">
+                      <td colspan="6">
+                        <div class="table-empty">
+                          <i class="ri-user-line"></i>
+                          <p>No givers found for this category</p>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- ══════════════════════════════════════════════
+               SECTION 3 — Export Reports
+          ══════════════════════════════════════════════ -->
+          <div class="reports-section">
+            <div class="section-title">
+              <h2>Export Reports</h2>
+            </div>
             <div class="export-grid">
               <!-- Giving Report -->
               <div class="export-card">
-                <div class="export-icon">
-                  <i class="ri-file-chart-line"></i>
-                </div>
+                <div class="export-icon"><i class="ri-file-chart-line"></i></div>
                 <h3>Giving Transactions</h3>
                 <p>Export all giving transactions with filters</p>
-
                 <div class="date-filters">
                   <div class="filter-group">
                     <label>Start Date</label>
@@ -134,25 +296,19 @@
                     <input type="date" [formControl]="endDateControl" />
                   </div>
                 </div>
-
                 <button class="btn-export" (click)="exportGivingReport()" [disabled]="exporting"
                   *ngIf="permissionService.isAdmin || permissionService.finance.reports">
                   <i class="ri-download-line"></i>
                   {{ exporting ? 'Exporting...' : 'Export Report' }}
                 </button>
-
               </div>
 
               <!-- Pledges Report -->
               <div class="export-card">
-                <div class="export-icon">
-                  <i class="ri-hand-heart-line"></i>
-                </div>
+                <div class="export-icon"><i class="ri-hand-heart-line"></i></div>
                 <h3>Pledges Report</h3>
                 <p>Export all pledges with payment status</p>
-
                 <div class="spacer"></div>
-
                 <button class="btn-export" (click)="exportPledgesReport()" [disabled]="exporting"
                   *ngIf="permissionService.isAdmin || permissionService.finance.reports">
                   <i class="ri-download-line"></i>
@@ -162,9 +318,13 @@
             </div>
           </div>
 
-          <!-- Top Givers -->
-          <div class="top-givers-section">
-            <h2>Top Givers ({{ selectedYear }})</h2>
+          <!-- ══════════════════════════════════════════════
+               SECTION 4 — Top Givers
+          ══════════════════════════════════════════════ -->
+          <div class="reports-section">
+            <div class="section-title">
+              <h2>Top Givers ({{ selectedYear }})</h2>
+            </div>
             <div class="top-givers-card">
               <div class="givers-list">
                 <div *ngFor="let giver of topGivers; let i = index" class="giver-row">
@@ -173,14 +333,14 @@
                   </div>
                   <div class="giver-info">
                     <p class="giver-name">{{ giver.member_name }}</p>
-                    <p class="giver-count">{{ giver.transaction_count }} transaction{{ giver.transaction_count > 1 ? 's'
-                      : '' }}</p>
+                    <p class="giver-count">
+                      {{ giver.transaction_count }} transaction{{ giver.transaction_count > 1 ? 's' : '' }}
+                    </p>
                   </div>
                   <div class="giver-amount">
                     <p class="amount">{{ formatCurrency(giver.total_amount) }}</p>
                   </div>
                 </div>
-
                 <div *ngIf="topGivers.length === 0" class="empty-state">
                   <i class="ri-user-star-line"></i>
                   <p>No data available for this period</p>
@@ -188,12 +348,13 @@
               </div>
             </div>
           </div>
-        </div>
+
+        </div><!-- /reports-content -->
       </div>
     </div>
   </div>
 
-
+  <!-- ── Giving Export Modal ── -->
   <div class="modal-overlay" *ngIf="showGivingExportModal" (click)="showGivingExportModal = false">
     <div class="export-modal" (click)="$event.stopPropagation()">
       <div class="export-modal-header">
@@ -227,7 +388,7 @@
           <div class="export-icon pdf"><i class="ri-file-pdf-2-line"></i></div>
           <div class="export-info">
             <strong>PDF</strong>
-            <span>Branded report with totals, ready to print or share</span>
+            <span>Branded report ready to print or share</span>
           </div>
           <i class="ri-arrow-right-s-line export-arrow"></i>
         </button>
@@ -235,7 +396,7 @@
     </div>
   </div>
 
-  <!-- Pledges Export Modal -->
+  <!-- ── Pledges Export Modal ── -->
   <div class="modal-overlay" *ngIf="showPledgesExportModal" (click)="showPledgesExportModal = false">
     <div class="export-modal" (click)="$event.stopPropagation()">
       <div class="export-modal-header">
@@ -244,31 +405,26 @@
           <i class="ri-close-line"></i>
         </button>
       </div>
-      <p class="export-subtitle">
-        Choose format for all pledges with payment status
-      </p>
+      <p class="export-subtitle">Choose format for all pledges with payment status</p>
       <div class="export-options">
         <button class="export-option" (click)="exportPledgesAs('csv')">
           <div class="export-icon csv"><i class="ri-file-text-line"></i></div>
           <div class="export-info">
-            <strong>CSV</strong>
-            <span>Plain text, works with any spreadsheet app</span>
+            <strong>CSV</strong><span>Plain text, works with any spreadsheet app</span>
           </div>
           <i class="ri-arrow-right-s-line export-arrow"></i>
         </button>
         <button class="export-option" (click)="exportPledgesAs('excel')">
           <div class="export-icon excel"><i class="ri-file-excel-2-line"></i></div>
           <div class="export-info">
-            <strong>Excel (.xlsx)</strong>
-            <span>Formatted workbook with summary sheet</span>
+            <strong>Excel (.xlsx)</strong><span>Formatted workbook with summary sheet</span>
           </div>
           <i class="ri-arrow-right-s-line export-arrow"></i>
         </button>
         <button class="export-option" (click)="exportPledgesAs('pdf')">
           <div class="export-icon pdf"><i class="ri-file-pdf-2-line"></i></div>
           <div class="export-info">
-            <strong>PDF</strong>
-            <span>Branded report with totals, ready to print or share</span>
+            <strong>PDF</strong><span>Branded report ready to print or share</span>
           </div>
           <i class="ri-arrow-right-s-line export-arrow"></i>
         </button>

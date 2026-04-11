@@ -33,11 +33,7 @@
                 </p>
               </div>
             </div>
-            <button
-              *ngIf="canManageBranches"
-              class="btn-primary"
-              (click)="editBranch()"
-            >
+            <button *ngIf="canManageBranches" class="btn-primary" (click)="editBranch()">
               <i class="ri-edit-line"></i>
               Edit Branch
             </button>
@@ -63,9 +59,8 @@
               <div class="pastor-section" *ngIf="canManageBranches">
                 <div class="pastor-info" *ngIf="branch.pastor">
                   <div class="pastor-avatar">
-                    <img *ngIf="branch.pastor.avatar_url"
-                         [src]="branch.pastor.avatar_url"
-                         [alt]="branch.pastor.full_name" />
+                    <img *ngIf="branch.pastor.avatar_url" [src]="branch.pastor.avatar_url"
+                      [alt]="branch.pastor.full_name" />
                     <div *ngIf="!branch.pastor.avatar_url" class="avatar-placeholder">
                       {{ getPastorInitials(branch.pastor) }}
                     </div>
@@ -79,11 +74,7 @@
                   </button>
                 </div>
 
-                <button
-                  *ngIf="!branch.pastor"
-                  class="btn-assign-pastor"
-                  (click)="openAssignPastorModal()"
-                >
+                <button *ngIf="!branch.pastor" class="btn-assign-pastor" (click)="openAssignPastorModal()">
                   <i class="ri-user-add-line"></i>
                   Assign Pastor
                 </button>
@@ -135,21 +126,13 @@
 
           <!-- Tabs Navigation -->
           <div class="tabs-navigation">
-            <button
-              class="tab-btn"
-              [class.active]="activeTab === 'members'"
-              (click)="switchTab('members')"
-            >
+            <button class="tab-btn" [class.active]="activeTab === 'members'" (click)="switchTab('members')">
               <i class="ri-group-line"></i>
               <span>Members ({{ totalMembers }})</span>
             </button>
 
-            <button
-              *ngIf="canViewInsights"
-              class="tab-btn"
-              [class.active]="activeTab === 'insights'"
-              (click)="switchTab('insights')"
-            >
+            <button *ngIf="canViewInsights" class="tab-btn" [class.active]="activeTab === 'insights'"
+              (click)="switchTab('insights')">
               <i class="ri-line-chart-line"></i>
               <span>Insights</span>
             </button>
@@ -294,30 +277,17 @@
               <div class="header-actions">
                 <!-- View Toggle -->
                 <div class="view-toggle">
-                  <button
-                    class="toggle-btn"
-                    [class.active]="viewMode === 'table'"
-                    (click)="toggleView('table')"
-                    title="Table View"
-                  >
+                  <button class="toggle-btn" [class.active]="viewMode === 'table'" (click)="toggleView('table')"
+                    title="Table View">
                     <i class="ri-table-line"></i>
                   </button>
-                  <button
-                    class="toggle-btn"
-                    [class.active]="viewMode === 'card'"
-                    (click)="toggleView('card')"
-                    title="Card View"
-                  >
+                  <button class="toggle-btn" [class.active]="viewMode === 'card'" (click)="toggleView('card')"
+                    title="Card View">
                     <i class="ri-layout-grid-line"></i>
                   </button>
                 </div>
 
-                <button
-                  *ngIf="canAssignMembers"
-                  class="btn-secondary"
-                  (click)="openAssignModal()"
-                  [disabled]="loading"
-                >
+                <button *ngIf="canAssignMembers" class="btn-secondary" (click)="openAssignModal()" [disabled]="loading">
                   <i class="ri-user-add-line"></i>
                   Assign Member
                 </button>
@@ -355,11 +325,8 @@
                     <td>{{ formatPhoneNumber(branchMember.member?.phone_primary || '') }}</td>
                     <td>{{ branchMember.created_at | date:'MMM d, y' }}</td>
                     <td *ngIf="canAssignMembers">
-                      <button
-                        class="remove-btn"
-                        (click)="removeMember(branchMember.id)"
-                        title="Remove member from branch"
-                      >
+                      <button class="remove-btn" (click)="removeMember(branchMember.id)"
+                        title="Remove member from branch">
                         <i class="ri-delete-bin-line"></i>
                       </button>
                     </td>
@@ -372,11 +339,7 @@
                 <i class="ri-group-line"></i>
                 <h3>No Members Assigned</h3>
                 <p>Assign members to this branch to get started</p>
-                <button
-                  *ngIf="canAssignMembers"
-                  class="btn-primary"
-                  (click)="openAssignModal()"
-                >
+                <button *ngIf="canAssignMembers" class="btn-primary" (click)="openAssignModal()">
                   <i class="ri-user-add-line"></i>
                   Assign Member
                 </button>
@@ -399,12 +362,8 @@
                     Assigned {{ branchMember.created_at | date:'MMM d, y' }}
                   </span>
                 </div>
-                <button
-                  *ngIf="canAssignMembers"
-                  class="remove-btn"
-                  (click)="removeMember(branchMember.id, $event)"
-                  title="Remove member from branch"
-                >
+                <button *ngIf="canAssignMembers" class="remove-btn" (click)="removeMember(branchMember.id, $event)"
+                  title="Remove member from branch">
                   <i class="ri-close-line"></i>
                 </button>
               </div>
@@ -414,11 +373,7 @@
                 <i class="ri-group-line"></i>
                 <h3>No Members Assigned</h3>
                 <p>Assign members to this branch to get started</p>
-                <button
-                  *ngIf="canAssignMembers"
-                  class="btn-primary"
-                  (click)="openAssignModal()"
-                >
+                <button *ngIf="canAssignMembers" class="btn-primary" (click)="openAssignModal()">
                   <i class="ri-user-add-line"></i>
                   Assign Member
                 </button>
@@ -427,11 +382,7 @@
 
             <!-- Pagination -->
             <div class="pagination" *ngIf="totalPages > 1 && !loading">
-              <button
-                class="pagination-btn"
-                [disabled]="currentPage === 1"
-                (click)="previousPage()"
-              >
+              <button class="pagination-btn" [disabled]="currentPage === 1" (click)="previousPage()">
                 <i class="ri-arrow-left-s-line"></i>
                 Previous
               </button>
@@ -442,11 +393,7 @@
                 </span>
               </div>
 
-              <button
-                class="pagination-btn"
-                [disabled]="currentPage === totalPages"
-                (click)="nextPage()"
-              >
+              <button class="pagination-btn" [disabled]="currentPage === totalPages" (click)="nextPage()">
                 Next
                 <i class="ri-arrow-right-s-line"></i>
               </button>
@@ -483,21 +430,12 @@
       <!-- Search -->
       <div class="search-box">
         <i class="ri-search-line"></i>
-        <input
-          type="text"
-          [(ngModel)]="searchTerm"
-          (ngModelChange)="filterMembers()"
-          placeholder="Search members..."
-        />
+        <input type="text" [(ngModel)]="searchTerm" (ngModelChange)="filterMembers()" placeholder="Search members..." />
       </div>
 
       <!-- Members List -->
       <div class="modal-members-list">
-        <div
-          *ngFor="let member of filteredMembers"
-          class="modal-member-item"
-          (click)="assignMember(member.id)"
-        >
+        <div *ngFor="let member of filteredMembers" class="modal-member-item" (click)="assignMember(member.id)">
           <div class="member-photo-small">
             <img [src]="member.photo_url || 'assets/images/default-avatar.png'" [alt]="member.first_name" />
           </div>
@@ -517,44 +455,78 @@
   </div>
 </div>
 
-<!-- Assign Pastor Modal -->
+<!-- Assign Pastor Modal — replace entirely -->
 <div class="modal-overlay" *ngIf="showAssignPastorModal" (click)="closeAssignPastorModal()">
   <div class="modal-content" (click)="$event.stopPropagation()">
     <div class="modal-header">
-      <h2>Assign Branch Pastor</h2>
+      <h2>Assign Branch Leader</h2>
       <button class="close-btn" (click)="closeAssignPastorModal()">
         <i class="ri-close-line"></i>
       </button>
     </div>
 
     <div class="modal-body">
+      <!-- Info box -->
       <div class="modal-info-box">
         <i class="ri-information-line"></i>
-        <p>The selected pastor will receive an email with instructions to set up their account and access the branch dashboard.</p>
+        <p>
+          Select a leader to assign to this branch. They already have
+          account access — no email will be sent.
+        </p>
+      </div>
+
+      <!-- Loading State -->
+      <div *ngIf="loadingPastors" class="pastor-loading">
+        <div class="pastor-loading-spinner">
+          <i class="ri-loader-4-line spin"></i>
+        </div>
+        <p>Loading available leaders...</p>
       </div>
 
       <!-- Pastors List -->
-      <div class="modal-members-list">
-        <div
-          *ngFor="let pastor of availablePastors"
-          class="modal-member-item"
-          (click)="assignPastor(pastor.id, true)"
-        >
-          <div class="member-photo-small">
-            <img [src]="pastor.avatar_url || 'assets/images/default-avatar.png'" [alt]="pastor.full_name" />
+      <div *ngIf="!loadingPastors" class="modal-members-list">
+
+        <!-- Has results -->
+        <ng-container *ngIf="availablePastors.length > 0">
+          <div
+            *ngFor="let pastor of availablePastors"
+            class="modal-member-item"
+            (click)="assignPastor(pastor.id, false)"
+          >
+            <div class="member-photo-small">
+              <img
+                [src]="pastor.avatar_url || 'assets/images/default-avatar.png'"
+                [alt]="pastor.full_name"
+              />
+            </div>
+            <div class="member-details">
+              <h4>{{ pastor.full_name }}</h4>
+              <p>{{ pastor.email }}</p>
+              <span class="role-badge">{{ pastor.role | titlecase }}</span>
+            </div>
+            <i class="ri-add-circle-line"></i>
           </div>
-          <div class="member-details">
-            <h4>{{ pastor.full_name }}</h4>
-            <p>{{ pastor.email }}</p>
+        </ng-container>
+
+        <!-- Empty State -->
+        <div *ngIf="availablePastors.length === 0" class="pastor-empty-state">
+          <div class="pastor-empty-icon">
+            <i class="ri-user-search-line"></i>
           </div>
-          <i class="ri-add-circle-line"></i>
+          <h4>No Leaders Available</h4>
+          <p>
+            All eligible users are already assigned to branches, or no
+            leaders have been added yet.
+          </p>
+          <div class="pastor-empty-hint">
+            <i class="ri-arrow-right-circle-line"></i>
+            <span>
+              Go to <strong>User Roles</strong> and add a user with a
+              pastor, ministry leader, or group leader role first.
+            </span>
+          </div>
         </div>
 
-        <div *ngIf="availablePastors.length === 0" class="no-results">
-          <i class="ri-user-search-line"></i>
-          <p>No available pastors</p>
-          <span class="no-results-hint">All pastors are already assigned to branches</span>
-        </div>
       </div>
     </div>
   </div>

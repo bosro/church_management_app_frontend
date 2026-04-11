@@ -1,0 +1,147 @@
+<!-- src/app/features/job-hub/components/job-hub-manage/job-hub-manage.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+  <div class="dashboard-content">
+    <app-header></app-header>
+    <div class="dashboard-body">
+      <div class="manage-container">
+
+        <div *ngIf="loadingData" class="loading-container">
+          <app-loading-spinner message="Loading..."></app-loading-spinner>
+        </div>
+
+        <div *ngIf="!loadingData">
+          <div class="page-header">
+            <button class="back-btn" (click)="cancel()">
+              <i class="ri-arrow-left-line"></i>
+            </button>
+            <div>
+              <h1>{{ isEdit ? 'Edit Job Post' : 'Post a Job' }}</h1>
+              <p class="subtitle">{{ isEdit ? 'Update job details' : 'Share a job opportunity with the community' }}</p>
+            </div>
+          </div>
+
+          <div *ngIf="successMessage" class="success-alert">
+            <i class="ri-checkbox-circle-line"></i><span>{{ successMessage }}</span>
+          </div>
+          <div *ngIf="errorMessage" class="error-alert">
+            <i class="ri-error-warning-line"></i><span>{{ errorMessage }}</span>
+          </div>
+
+          <form [formGroup]="form" (ngSubmit)="onSubmit()">
+            <div class="form-card">
+
+              <!-- Job Details -->
+              <div class="form-section">
+                <h3>Job Details</h3>
+                <div class="form-grid">
+                  <div class="form-group full-width">
+                    <label>Job Title *</label>
+                    <input type="text" formControlName="title" placeholder="e.g., Software Developer, Accountant"
+                      [class.error]="form.get('title')?.invalid && form.get('title')?.touched" />
+                    <span class="error-msg">{{ getError('title') }}</span>
+                  </div>
+
+                  <div class="form-group">
+                    <label>Company / Organisation</label>
+                    <input type="text" formControlName="company_name" placeholder="e.g., Acme Ltd" />
+                  </div>
+
+                  <div class="form-group">
+                    <label>Job Type *</label>
+                    <select formControlName="job_type">
+                      <option *ngFor="let t of jobTypes" [value]="t.value">{{ t.label }}</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label>Location</label>
+                    <input type="text" formControlName="location" placeholder="e.g., Accra, Remote, Hybrid" />
+                  </div>
+
+                  <div class="form-group">
+                    <label>Salary / Compensation</label>
+                    <input type="text" formControlName="salary_range" placeholder="e.g., GHS 2,000 – 3,500 / month" />
+                  </div>
+
+                  <div class="form-group">
+                    <label>Closing Date</label>
+                    <input type="date" formControlName="expires_at" />
+                    <span class="field-hint">Leave blank for no expiry</span>
+                  </div>
+
+                  <div class="form-group full-width">
+                    <label>Job Description *</label>
+                    <textarea formControlName="description" rows="5"
+                      placeholder="Describe the role, responsibilities, and what you're looking for..."
+                      [class.error]="form.get('description')?.invalid && form.get('description')?.touched"></textarea>
+                    <span class="error-msg">{{ getError('description') }}</span>
+                  </div>
+
+                  <div class="form-group full-width">
+                    <label>Requirements</label>
+                    <textarea formControlName="requirements" rows="4"
+                      placeholder="List the qualifications, skills, or experience required..."></textarea>
+                  </div>
+
+                  <div class="form-group full-width">
+                    <label>Benefits</label>
+                    <textarea formControlName="benefits" rows="3"
+                      placeholder="Health insurance, pension, flexible hours..."></textarea>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Contact Details -->
+              <div class="form-section">
+                <h3>Contact Information</h3>
+                <p class="section-hint">How should interested candidates reach out?</p>
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label>Contact Person</label>
+                    <input type="text" formControlName="contact_name" placeholder="e.g., HR Manager" />
+                  </div>
+
+                  <div class="form-group">
+                    <label>Contact Email</label>
+                    <input type="email" formControlName="contact_email" placeholder="hr@company.com"
+                      [class.error]="form.get('contact_email')?.invalid && form.get('contact_email')?.touched" />
+                    <span class="error-msg">{{ getError('contact_email') }}</span>
+                  </div>
+
+                  <div class="form-group">
+                    <label>Contact Phone</label>
+                    <input type="tel" formControlName="contact_phone" placeholder="+233 24 000 0000" />
+                  </div>
+
+                  <div class="form-group">
+                    <label>Application URL</label>
+                    <input type="url" formControlName="application_url" placeholder="https://..." />
+                    <span class="field-hint">Link to an online application form</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Actions -->
+              <div class="form-actions">
+                <button type="button" class="btn-secondary" (click)="cancel()" [disabled]="loading">
+                  Cancel
+                </button>
+                <button type="submit" class="btn-primary" [disabled]="loading || form.invalid">
+                  <span *ngIf="!loading">
+                    <i class="ri-save-line"></i>
+                    {{ isEdit ? 'Update Job' : 'Post Job' }}
+                  </span>
+                  <span *ngIf="loading">
+                    <i class="ri-loader-4-line spin"></i>
+                    {{ isEdit ? 'Updating...' : 'Posting...' }}
+                  </span>
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

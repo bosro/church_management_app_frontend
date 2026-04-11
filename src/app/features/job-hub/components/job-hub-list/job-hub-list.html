@@ -1,0 +1,200 @@
+<!-- src/app/features/job-hub/components/job-hub-list/job-hub-list.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+  <div class="dashboard-content">
+    <app-header></app-header>
+    <div class="dashboard-body">
+      <div class="job-container">
+
+        <!-- Header -->
+        <div class="page-header">
+          <div class="header-left">
+            <div class="header-icon">
+              <i class="ri-briefcase-line"></i>
+            </div>
+            <div>
+              <h1>Job Hub</h1>
+              <p class="subtitle">Opportunities shared within the church community</p>
+            </div>
+          </div>
+          <div class="header-actions">
+            <button *ngIf="canManage && jobs.length > 0" class="btn-secondary" (click)="toggleShowAll()">
+              <i class="ri-eye-line"></i>
+              {{ showAll ? 'Show Active Only' : 'Show All' }}
+            </button>
+            <button *ngIf="canManage" class="btn-primary" (click)="createJob()">
+              <i class="ri-add-line"></i>
+              Post Job
+            </button>
+          </div>
+        </div>
+
+        <!-- Alerts -->
+        <div *ngIf="successMessage" class="success-alert">
+          <i class="ri-checkbox-circle-line"></i><span>{{ successMessage }}</span>
+        </div>
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i><span>{{ errorMessage }}</span>
+        </div>
+
+        <!-- Stats & Filters -->
+        <div class="controls-row" *ngIf="!loading && jobs.length > 0">
+          <div class="stats-pills">
+            <div class="stat-pill stat-active">
+              <i class="ri-briefcase-line"></i>
+              <span>{{ getActiveCount() }} Active</span>
+            </div>
+            <div class="stat-pill stat-expired" *ngIf="canManage && getExpiredCount() > 0">
+              <i class="ri-time-line"></i>
+              <span>{{ getExpiredCount() }} Expired</span>
+            </div>
+          </div>
+
+          <div class="filters">
+            <div class="search-box">
+              <i class="ri-search-line"></i>
+              <input
+                type="text"
+                [(ngModel)]="searchTerm"
+                (ngModelChange)="applyFilters()"
+                placeholder="Search jobs..."
+              />
+            </div>
+            <select [(ngModel)]="selectedType" (ngModelChange)="applyFilters()" class="type-filter">
+              <option *ngFor="let t of jobTypes" [value]="t.value">{{ t.label }}</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Loading -->
+        <div *ngIf="loading" class="loading-container">
+          <app-loading-spinner message="Loading jobs..."></app-loading-spinner>
+        </div>
+
+        <!-- Jobs List -->
+        <div *ngIf="!loading" class="jobs-list">
+
+          <div
+            *ngFor="let job of filteredJobs"
+            class="job-card"
+            [class.inactive]="!job.is_active || job.is_expired"
+            (click)="viewJob(job.id)"
+          >
+            <div class="job-card-left">
+              <div class="company-logo">
+                <i class="ri-building-line"></i>
+              </div>
+            </div>
+
+            <div class="job-card-body">
+              <div class="job-top">
+                <div class="job-title-row">
+                  <h3>{{ job.title }}</h3>
+                  <div class="job-badges">
+                    <span class="type-badge" [class]="getJobTypeClass(job.job_type)">
+                      {{ getJobTypeLabel(job.job_type) }}
+                    </span>
+                    <span class="expired-badge" *ngIf="job.is_expired">Expired</span>
+                    <span class="inactive-badge" *ngIf="!job.is_active && !job.is_expired">Inactive</span>
+                  </div>
+                </div>
+
+                <div class="admin-actions" *ngIf="canManage" (click)="$event.stopPropagation()">
+                  <button class="btn-icon-sm" (click)="editJob(job.id, $event)" title="Edit">
+                    <i class="ri-edit-line"></i>
+                  </button>
+                  <button
+                    class="btn-icon-sm"
+                    [class.btn-activate]="!job.is_active"
+                    [class.btn-deactivate]="job.is_active"
+                    (click)="toggleStatus(job, $event)"
+                    [title]="job.is_active ? 'Deactivate' : 'Activate'"
+                  >
+                    <i [class]="job.is_active ? 'ri-eye-off-line' : 'ri-eye-line'"></i>
+                  </button>
+                  <button class="btn-icon-sm btn-delete" (click)="openDeleteModal(job, $event)" title="Delete">
+                    <i class="ri-delete-bin-line"></i>
+                  </button>
+                </div>
+              </div>
+
+              <div class="job-meta">
+                <span *ngIf="job.company_name" class="meta-item">
+                  <i class="ri-building-2-line"></i> {{ job.company_name }}
+                </span>
+                <span *ngIf="job.location" class="meta-item">
+                  <i class="ri-map-pin-line"></i> {{ job.location }}
+                </span>
+                <span *ngIf="job.salary_range" class="meta-item">
+                  <i class="ri-money-dollar-circle-line"></i> {{ job.salary_range }}
+                </span>
+                <span class="meta-item meta-date">
+                  <i class="ri-calendar-line"></i>
+                  Posted {{ job.created_at | date:'MMM d, y' }}
+                </span>
+              </div>
+
+              <p class="job-excerpt">{{ job.description }}</p>
+
+              <div class="job-footer">
+                <div class="expiry-info" *ngIf="job.expires_at && !job.is_expired">
+                  <i class="ri-time-line"></i>
+                  <span>{{ job.days_remaining }} day{{ job.days_remaining !== 1 ? 's' : '' }} remaining</span>
+                </div>
+                <button class="btn-view-job">
+                  View Details <i class="ri-arrow-right-line"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- No results after filter -->
+          <div *ngIf="filteredJobs.length === 0 && jobs.length > 0" class="empty-filter">
+            <i class="ri-search-line"></i>
+            <p>No jobs match your search</p>
+            <span>Try different keywords or clear the filters</span>
+          </div>
+
+          <!-- Empty State -->
+          <div *ngIf="jobs.length === 0" class="empty-state">
+            <div class="empty-icon">
+              <i class="ri-briefcase-line"></i>
+            </div>
+            <h3>No Jobs Posted Yet</h3>
+            <p>Job opportunities shared within the church community will appear here.</p>
+            <button *ngIf="canManage" class="btn-primary" (click)="createJob()">
+              <i class="ri-add-line"></i>
+              Post First Job
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     DELETE JOB CONFIRM MODAL
+══════════════════════════════════════════════════ -->
+<div class="modal-overlay" *ngIf="showDeleteModal" (click)="closeDeleteModal()">
+  <div class="modal-confirm" (click)="$event.stopPropagation()">
+    <div class="confirm-icon">
+      <i class="ri-delete-bin-line"></i>
+    </div>
+    <h2>Delete Job Post?</h2>
+    <p>
+      You are about to permanently delete <strong>"{{ jobToDelete?.title }}"</strong>.
+      This action cannot be undone.
+    </p>
+    <div class="confirm-actions">
+      <button class="btn-secondary" (click)="closeDeleteModal()" [disabled]="deletingJob">
+        Cancel
+      </button>
+      <button class="btn-danger-solid" (click)="confirmDelete()" [disabled]="deletingJob">
+        <span *ngIf="!deletingJob"><i class="ri-delete-bin-line"></i> Delete Job</span>
+        <span *ngIf="deletingJob"><i class="ri-loader-4-line spin"></i> Deleting...</span>
+      </button>
+    </div>
+  </div>
+</div>

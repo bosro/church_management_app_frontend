@@ -298,8 +298,15 @@ export class UsersList implements OnInit, OnDestroy {
       super_admin: 'role-super-admin',
       church_admin: 'role-admin',
       pastor: 'role-pastor',
+      senior_pastor: 'role-pastor',
+      associate_pastor: 'role-pastor',
       finance_officer: 'role-finance',
+      ministry_leader: 'role-ministry',
       group_leader: 'role-leader',
+      cell_leader: 'role-cell',
+      elder: 'role-elder',
+      deacon: 'role-elder',
+      worship_leader: 'role-worship',
       member: 'role-member',
     };
     return classes[role] || 'role-member';
@@ -310,13 +317,20 @@ export class UsersList implements OnInit, OnDestroy {
       super_admin: 'Super Admin',
       church_admin: 'Church Admin',
       pastor: 'Pastor',
+      senior_pastor: 'Senior Pastor',
+      associate_pastor: 'Associate Pastor',
       finance_officer: 'Finance Officer',
+      ministry_leader: 'Ministry Leader',
       group_leader: 'Group Leader',
+      cell_leader: 'Cell Leader',
+      elder: 'Elder',
+      deacon: 'Deacon',
+      worship_leader: 'Worship Leader',
       member: 'Member',
     };
     return (
       labels[role] ||
-      role.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase())
+      role.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
     );
   }
 
@@ -325,7 +339,3 @@ export class UsersList implements OnInit, OnDestroy {
     this.successMessage = '';
   }
 }
-
-
-
-

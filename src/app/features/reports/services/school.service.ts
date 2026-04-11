@@ -905,30 +905,162 @@ export class SchoolService {
     return n + (s[(v - 20) % 10] || s[v] || s[0]);
   }
 
-  importStudentsFromFile(file: File): Observable<ImportResult> {
-    return from(this.processStudentFileImport(file));
+  importStudentsFromFile(
+    file: File,
+    defaultClassId?: string,
+  ): Observable<ImportResult> {
+    return from(this.processStudentFileImport(file, defaultClassId));
   }
 
-  private async processStudentFileImport(file: File): Promise<ImportResult> {
+  private async processStudentFileImport(
+    file: File,
+    defaultClassId?: string,
+  ): Promise<ImportResult> {
     const ext = file.name.split('.').pop()?.toLowerCase();
     if (ext === 'xlsx' || ext === 'xls') {
-      return this.processStudentExcelImport(file);
+      return this.processStudentExcelImport(file, defaultClassId);
     }
-    return this.processStudentCSVImport(file);
+    return this.processStudentCSVImport(file, defaultClassId);
   }
 
-  private async processStudentExcelImport(file: File): Promise<ImportResult> {
+  // ── Format detection ─────────────────────────────────────
+
+  private detectExcelFormat(headers: string[]): 'jms_admission' | 'standard' {
+    const upper = headers.map((h) => (h || '').toString().trim().toUpperCase());
+    const jmsSignatures = [
+      'STUDENT NAME',
+      "FATHER'S NAME",
+      "MOTHER'S NAME",
+      'NEXT OF KING',
+      'N.O.K CONTACT',
+      'BLOOD GROUP',
+    ];
+    const hits = jmsSignatures.filter((sig) => upper.includes(sig)).length;
+    return hits >= 2 ? 'jms_admission' : 'standard';
+  }
+
+  // ── Name parsing ──────────────────────────────────────────
+
+  private parseStudentName(fullName: string): {
+    first_name: string;
+    last_name: string;
+    middle_name: string;
+  } {
+    const parts = (fullName || '').trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0)
+      return { first_name: '', last_name: '', middle_name: '' };
+    if (parts.length === 1)
+      return { first_name: parts[0], last_name: parts[0], middle_name: '' };
+    if (parts.length === 2)
+      return { first_name: parts[0], last_name: parts[1], middle_name: '' };
+    return {
+      first_name: parts[0],
+      middle_name: parts.slice(1, -1).join(' '),
+      last_name: parts[parts.length - 1],
+    };
+  }
+
+  // ── Gender normalisation ──────────────────────────────────
+
+  private normalizeGender(raw: string): string | null {
+    const val = (raw || '').trim().toLowerCase();
+    if (['male', 'm', 'boy'].includes(val)) return 'male';
+    if (['female', 'f', 'girl'].includes(val)) return 'female';
+    return val || null;
+  }
+
+  // ── Date normalisation ────────────────────────────────────
+
+  private normalizeDateOfBirth(raw: any): string | null {
+    if (raw === null || raw === undefined || raw === '') return null;
+    const str = raw.toString().trim();
+
+    // Already YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+
+    // DD/MM/YYYY  or  DD-MM-YYYY  or  DD.MM.YYYY
+    const dmy = str.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/);
+    if (dmy) {
+      const [, d, m, y] = dmy;
+      return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+    }
+
+    // MM/DD/YY(YY)
+    const mdy = str.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
+    if (mdy) {
+      const [, m, d, y] = mdy;
+      const year = y.length === 2 ? `20${y}` : y;
+      return `${year}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+    }
+
+    // Excel serial number (e.g. 44927)
+    if (/^\d{5}$/.test(str)) {
+      const epoch = new Date(1899, 11, 30);
+      const date = new Date(epoch.getTime() + parseInt(str, 10) * 86_400_000);
+      if (!isNaN(date.getTime())) return date.toISOString().split('T')[0];
+    }
+
+    // Native Date parse as last resort
+    const parsed = new Date(str);
+    if (!isNaN(parsed.getTime())) return parsed.toISOString().split('T')[0];
+
+    return null; // unparseable — store null rather than crash
+  }
+
+  // ── JMS Admission Form row → internal row ─────────────────
+
+  private mapJmsRow(rawRow: Record<string, any>): Record<string, string> {
+    // Build an uppercase-keyed lookup so column header casing doesn't matter
+    const r: Record<string, string> = {};
+    Object.entries(rawRow).forEach(([k, v]) => {
+      r[k.trim().toUpperCase()] = String(v ?? '').trim();
+    });
+
+    const nameParsed = this.parseStudentName(r['STUDENT NAME'] || '');
+
+    // Parent: Next of Kin preferred, then Father's, then Mother's
+    const parentName =
+      r['NEXT OF KING'] || r["FATHER'S NAME"] || r["MOTHER'S NAME"] || '';
+
+    // Phone: NOK contact preferred, then general CONTACT
+    const parentPhone = r['N.O.K CONTACT'] || r['CONTACT'] || '';
+
+    return {
+      first_name: nameParsed.first_name,
+      middle_name: nameParsed.middle_name,
+      last_name: nameParsed.last_name,
+      date_of_birth: r['BIRTH DATE'] || '',
+      gender: r['GENDER'] || '',
+      // JMS form has no class column — will use defaultClassId if provided
+      class: r['CLASS'] || r['CLASS NAME'] || '',
+      parent_name: parentName,
+      parent_phone: parentPhone,
+      parent_email: r['E-MAIL'] || r['EMAIL'] || '',
+      address: r['ADDRESS'] || '',
+    };
+  }
+
+  // ── Excel import ──────────────────────────────────────────
+
+  private async processStudentExcelImport(
+    file: File,
+    defaultClassId?: string,
+  ): Promise<ImportResult> {
     const buffer = await file.arrayBuffer();
-    const workbook = XLSX.read(buffer, { type: 'array', cellDates: true });
+    // raw:true so we get the raw Excel value for dates (serial numbers)
+    // then we handle conversion ourselves via normalizeDateOfBirth
+    const workbook = XLSX.read(buffer, { type: 'array', raw: true });
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const rows: any[] = XLSX.utils.sheet_to_json(sheet, {
       defval: '',
-      raw: false,
+      raw: true,
     });
 
-    if (!rows.length) throw new Error('File is empty or invalid');
+    if (!rows.length) throw new Error('File is empty or has no data rows');
 
-    // Load classes once for name→id lookup
+    const headers = Object.keys(rows[0]);
+    const format = this.detectExcelFormat(headers);
+
     const { data: classes } = await this.supabase.client
       .from('school_classes')
       .select('id, name, academic_year')
@@ -939,38 +1071,77 @@ export class SchoolService {
 
     for (let i = 0; i < rows.length; i++) {
       try {
-        const row: Record<string, string> = {};
-        Object.entries(rows[i]).forEach(([key, val]) => {
-          row[key.trim().toLowerCase().replace(/\s+/g, '_')] = String(
-            val ?? '',
-          ).trim();
-        });
+        let row: Record<string, string>;
 
-        const classId = this.resolveClassId(
-          row['class'] || row['class_name'],
-          classes || [],
-        );
-        if (!classId)
+        if (format === 'jms_admission') {
+          row = this.mapJmsRow(rows[i]);
+        } else {
+          // Standard format
+          row = {};
+          Object.entries(rows[i]).forEach(([key, val]) => {
+            row[key.trim().toLowerCase().replace(/\s+/g, '_')] = String(
+              val ?? '',
+            ).trim();
+          });
+        }
+
+        // Normalise date and gender regardless of format
+        row['date_of_birth'] =
+          this.normalizeDateOfBirth(row['date_of_birth']) || '';
+        row['gender'] = this.normalizeGender(row['gender']) || '';
+
+        // Skip entirely blank rows (common in JMS form — blank rows below headers)
+        const hasData = Object.values(row).some((v) => v !== '');
+        if (!hasData) continue;
+
+        // Validate required name fields
+        if (!row['first_name'] || !row['last_name']) {
           throw new Error(
-            `Class "${row['class'] || row['class_name']}" not found`,
+            format === 'jms_admission'
+              ? 'STUDENT NAME is missing or could not be split into first/last name'
+              : 'First Name and Last Name are required',
           );
+        }
 
-        await this.insertStudentRow(row, classId);
+        // Class resolution — inline class column wins; defaultClassId is fallback
+        let resolvedClassId: string | null = null;
+        const classNameInRow = row['class'] || row['class_name'] || '';
+
+        if (classNameInRow) {
+          resolvedClassId = this.resolveClassId(classNameInRow, classes || []);
+          if (!resolvedClassId) {
+            throw new Error(
+              `Class "${classNameInRow}" not found. Check it matches exactly (e.g. "Primary 3", "JHS 1")`,
+            );
+          }
+        } else if (defaultClassId) {
+          resolvedClassId = defaultClassId;
+        }
+        // else: no class at all — still valid, class_id will be null
+
+        await this.insertStudentRow(row, resolvedClassId);
         results.success++;
       } catch (err: any) {
         results.failed++;
         results.errors.push({ row: i + 2, error: err.message, data: '' });
       }
     }
+
     return results;
   }
 
-  private async processStudentCSVImport(file: File): Promise<ImportResult> {
+  // ── CSV import ────────────────────────────────────────────
+
+  private async processStudentCSVImport(
+    file: File,
+    defaultClassId?: string,
+  ): Promise<ImportResult> {
     const text = await file.text();
     const lines = text
       .split('\n')
       .map((l) => l.trim())
       .filter((l) => l && !l.startsWith('#'));
+
     if (lines.length < 2) throw new Error('CSV file is empty or invalid');
 
     const { data: classes } = await this.supabase.client
@@ -997,24 +1168,34 @@ export class SchoolService {
           row[h] = values[idx]?.trim() || '';
         });
 
-        const classId = this.resolveClassId(
-          row['class'] || row['class_name'],
-          classes || [],
-        );
-        if (!classId)
-          throw new Error(
-            `Class "${row['class'] || row['class_name']}" not found`,
-          );
+        row['date_of_birth'] =
+          this.normalizeDateOfBirth(row['date_of_birth']) || '';
+        row['gender'] = this.normalizeGender(row['gender']) || '';
 
-        await this.insertStudentRow(row, classId);
+        const classNameInRow = row['class'] || row['class_name'] || '';
+        let resolvedClassId: string | null = null;
+
+        if (classNameInRow) {
+          resolvedClassId = this.resolveClassId(classNameInRow, classes || []);
+          if (!resolvedClassId) {
+            throw new Error(`Class "${classNameInRow}" not found`);
+          }
+        } else if (defaultClassId) {
+          resolvedClassId = defaultClassId;
+        }
+
+        await this.insertStudentRow(row, resolvedClassId);
         results.success++;
       } catch (err: any) {
         results.failed++;
         results.errors.push({ row: i + 1, error: err.message, data: lines[i] });
       }
     }
+
     return results;
   }
+
+  // ── Helpers ───────────────────────────────────────────────
 
   private resolveClassId(className: string, classes: any[]): string | null {
     if (!className) return null;
@@ -1026,7 +1207,7 @@ export class SchoolService {
 
   private async insertStudentRow(
     row: Record<string, string>,
-    classId: string,
+    classId: string | null,
   ): Promise<void> {
     const { data: studentNumber, error: snError } =
       await this.supabase.client.rpc('generate_student_number', {
@@ -1045,8 +1226,8 @@ export class SchoolService {
       middle_name: row['middle_name'] || null,
       last_name: row['last_name'],
       date_of_birth: row['date_of_birth'] || null,
-      gender: row['gender']?.toLowerCase() || null,
-      class_id: classId,
+      gender: row['gender'] || null,
+      class_id: classId || null,
       parent_name: row['parent_name'] || null,
       parent_phone: row['parent_phone'] || row['phone'] || null,
       parent_email: row['parent_email'] || row['email'] || null,
@@ -1054,8 +1235,6 @@ export class SchoolService {
       is_active: true,
     });
 
-    if (error) {
-      throw new Error(error.message);
-    }
+    if (error) throw new Error(error.message);
   }
 }

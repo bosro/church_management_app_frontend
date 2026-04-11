@@ -6,6 +6,8 @@ import {
   GivingCategory,
   Pledge,
   PaymentMethod,
+  CategoryGiver,
+  CategoryGivingStat,
 } from '../../../models/giving.model';
 import { SupabaseService } from '../../../core/services/supabase';
 import { AuthService } from '../../../core/services/auth';
@@ -881,4 +883,58 @@ export class FinanceService {
       catchError((err) => throwError(() => err)),
     );
   }
+
+  // ==================== CATEGORY BREAKDOWN ====================
+
+getCategoryGivingStats(
+  fiscalYear?: number,
+  startDate?: string,
+  endDate?: string
+): Observable<CategoryGivingStat[]> {
+  const churchId = this.getChurchId();
+  const year = fiscalYear || null;
+
+  return from(
+    this.supabase.client.rpc('get_category_giving_stats', {
+      church_uuid: churchId,
+      fiscal_year: year,
+      start_date: startDate || null,
+      end_date: endDate || null,
+    })
+  ).pipe(
+    map(({ data, error }) => {
+      if (error) throw new Error(error.message);
+      return (data || []) as CategoryGivingStat[];
+    }),
+    catchError((err) => throwError(() => err))
+  );
+}
+
+getCategoryGivers(
+  categoryId: string,
+  fiscalYear?: number,
+  startDate?: string,
+  endDate?: string,
+  limit: number = 50
+): Observable<CategoryGiver[]> {
+  const churchId = this.getChurchId();
+  const year = fiscalYear || null;
+
+  return from(
+    this.supabase.client.rpc('get_category_givers', {
+      church_uuid: churchId,
+      category_uuid: categoryId,
+      fiscal_year: year,
+      start_date: startDate || null,
+      end_date: endDate || null,
+      result_limit: limit,
+    })
+  ).pipe(
+    map(({ data, error }) => {
+      if (error) throw new Error(error.message);
+      return (data || []) as CategoryGiver[];
+    }),
+    catchError((err) => throwError(() => err))
+  );
+}
 }

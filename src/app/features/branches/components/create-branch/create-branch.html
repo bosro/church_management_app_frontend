@@ -36,49 +36,38 @@
           <form [formGroup]="branchForm" (ngSubmit)="onSubmit()">
             <!-- Basic Information -->
             <div class="form-section">
-              <h3>Basic Information</h3>
+  <h3>Basic Information</h3>
 
-              <div class="form-grid">
-                <!-- Branch Name -->
-                <div class="form-group full-width">
-                  <label for="name">Branch Name *</label>
-                  <input
-                    id="name"
-                    type="text"
-                    formControlName="name"
-                    placeholder="e.g., Main Campus, Downtown Branch"
-                    [class.error]="branchForm.get('name')?.invalid && branchForm.get('name')?.touched"
-                  />
-                  <span
-                    *ngIf="branchForm.get('name')?.invalid && branchForm.get('name')?.touched"
-                    class="error-message"
-                  >
-                    {{ getErrorMessage('name') }}
-                  </span>
-                </div>
+  <div class="form-grid">
+    <!-- Branch Name -->
+    <div class="form-group full-width">
+      <label for="name">Branch Name *</label>
+      <input
+        id="name"
+        type="text"
+        formControlName="name"
+        placeholder="e.g., Main Campus, Downtown Branch"
+        [class.error]="branchForm.get('name')?.invalid && branchForm.get('name')?.touched"
+      />
+      <span
+        *ngIf="branchForm.get('name')?.invalid && branchForm.get('name')?.touched"
+        class="error-message"
+      >
+        {{ getErrorMessage('name') }}
+      </span>
+    </div>
 
-                <!-- Pastor Name -->
-                <div class="form-group full-width">
-                  <label for="pastor_name">Pastor/Leader Name</label>
-                  <input
-                    id="pastor_name"
-                    type="text"
-                    formControlName="pastor_name"
-                    placeholder="e.g., Rev. John Doe"
-                  />
-                </div>
-
-                <!-- Established Date -->
-                <div class="form-group">
-                  <label for="established_date">Established Date</label>
-                  <input
-                    id="established_date"
-                    type="date"
-                    formControlName="established_date"
-                  />
-                </div>
-              </div>
-            </div>
+    <!-- Established Date -->
+    <div class="form-group">
+      <label for="established_date">Established Date</label>
+      <input
+        id="established_date"
+        type="date"
+        formControlName="established_date"
+      />
+    </div>
+  </div>
+</div>
 
             <!-- Contact Information -->
             <div class="form-section">

@@ -1,3 +1,4 @@
+// src/app/features/admin/admin-module.ts
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { SignupRequests } from './signup-requests/signup-requests';
@@ -9,7 +10,7 @@ import { Churches } from './churches/churches';
 import { SharedModule } from '../../shared/shared-module';
 import { AdminLayout } from './admin-layout/admin-layout';
 import { SuperAdminDashboard } from './super-admin-dashboard/super-admin-dashboard';
-
+import { Plans } from './plans/plans'; // ← ADD
 
 const routes: Routes = [
   {
@@ -18,31 +19,15 @@ const routes: Routes = [
     canActivate: [RoleGuard],
     data: { roles: ['super_admin'] },
     children: [
-      {
-        path: 'dashboard', // ✅ NEW
-        component: SuperAdminDashboard
-      },
-      {
-        path: 'signup-requests',
-        component: SignupRequests
-      },
-      {
-        path: 'users',
-        component: Users
-      },
-      {
-        path: 'churches',
-        component: Churches
-      },
-      {
-        path: '',
-        redirectTo: 'dashboard', // ✅ Changed from signup-requests
-        pathMatch: 'full'
-      }
-    ]
-  }
+      { path: 'dashboard', component: SuperAdminDashboard },
+      { path: 'signup-requests', component: SignupRequests },
+      { path: 'users', component: Users },
+      { path: 'churches', component: Churches },
+      { path: 'plans', component: Plans }, // ← ADD
+      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+    ],
+  },
 ];
-
 
 @NgModule({
   declarations: [
@@ -50,15 +35,15 @@ const routes: Routes = [
     Users,
     Churches,
     AdminLayout,
-    AdminLayout,
-    SuperAdminDashboard
+    SuperAdminDashboard,
+    Plans, // ← ADD (removed duplicate AdminLayout)
   ],
   imports: [
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
     SharedModule,
-    RouterModule.forChild(routes)
-  ]
+    RouterModule.forChild(routes),
+  ],
 })
-export class AdminModule { }
+export class AdminModule {}

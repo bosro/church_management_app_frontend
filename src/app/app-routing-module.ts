@@ -6,6 +6,7 @@ import { RouterModule, Routes } from '@angular/router';
 import { AuthGuard } from './core/guards/auth-guard';
 import { Unauthorized } from './shared/components/unauthorized/unauthorized';
 import { MemberRegistration } from './features/public/member-registration/member-registration';
+import { LinkCheckin } from './features/public/link-checkin/link-checkin';
 
 const routes: Routes = [
   // Default: redirect to auth
@@ -19,6 +20,12 @@ const routes: Routes = [
     path: 'auth',
     loadChildren: () => import('./auth/auth-module').then((m) => m.AuthModule),
   },
+  {
+    path: 'public',
+    loadChildren: () =>
+      import('./features/public/public.module').then((m) => m.PublicModule),
+  },
+
   // Protected main app routes
   {
     path: 'main',
@@ -26,10 +33,8 @@ const routes: Routes = [
       import('./features/features-module').then((m) => m.FeaturesModule),
     canActivate: [AuthGuard],
   },
-  {
-    path: 'register/:token',
-    component: MemberRegistration,
-  },
+
+
   {
     path: 'unauthorized',
     component: Unauthorized,
@@ -52,3 +57,6 @@ const routes: Routes = [
   exports: [RouterModule],
 })
 export class AppRoutingModule {}
+
+
+

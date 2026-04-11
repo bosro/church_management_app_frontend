@@ -1,5 +1,21 @@
 <!-- src/app/features/auth/components/signin/signin.component.html -->
 <div class="signin-container">
+
+  <!-- Testimonials Pill Animation -->
+  <div class="testimonials-strip">
+    <div class="testimonial-pill" *ngFor="let t of testimonials; let i = index" [class.active]="activeIndex === i"
+      [class.exiting]="exitingIndex === i">
+      <div class="pill-avatar">
+        <i class="ri-building-line"></i>
+      </div>
+      <div class="pill-body">
+        <p class="pill-quote">{{ t.quote }}</p>
+        <span class="pill-author">{{ t.author }}</span>
+      </div>
+    </div>
+  </div>
+
+
   <div class="signin-card">
     <div class="signin-header">
       <h1>Welcome to Churchman.</h1>
@@ -19,18 +35,10 @@
         <label for="email">Email</label>
         <div class="input-wrapper">
           <i class="ri-mail-line input-icon"></i>
-          <input
-            id="email"
-            type="email"
-            formControlName="email"
-            placeholder="cephanstianmoah@gmail.com"
-            [class.error]="signinForm.get('email')?.invalid && signinForm.get('email')?.touched"
-          />
+          <input id="email" type="email" formControlName="email" placeholder="cephanstianmoah@gmail.com"
+            [class.error]="signinForm.get('email')?.invalid && signinForm.get('email')?.touched" />
         </div>
-        <span
-          *ngIf="signinForm.get('email')?.invalid && signinForm.get('email')?.touched"
-          class="error-message"
-        >
+        <span *ngIf="signinForm.get('email')?.invalid && signinForm.get('email')?.touched" class="error-message">
           {{ getErrorMessage('email') }}
         </span>
       </div>
@@ -40,26 +48,14 @@
         <label for="password">Password</label>
         <div class="input-wrapper password-wrapper">
           <i class="ri-lock-line input-icon"></i>
-          <input
-            id="password"
-            [type]="showPassword ? 'text' : 'password'"
-            formControlName="password"
+          <input id="password" [type]="showPassword ? 'text' : 'password'" formControlName="password"
             placeholder="Start typing..."
-            [class.error]="signinForm.get('password')?.invalid && signinForm.get('password')?.touched"
-          />
-          <button
-            type="button"
-            class="toggle-password"
-            (click)="togglePasswordVisibility()"
-            tabindex="-1"
-          >
+            [class.error]="signinForm.get('password')?.invalid && signinForm.get('password')?.touched" />
+          <button type="button" class="toggle-password" (click)="togglePasswordVisibility()" tabindex="-1">
             <i [class]="showPassword ? 'ri-eye-off-line' : 'ri-eye-line'"></i>
           </button>
         </div>
-        <span
-          *ngIf="signinForm.get('password')?.invalid && signinForm.get('password')?.touched"
-          class="error-message"
-        >
+        <span *ngIf="signinForm.get('password')?.invalid && signinForm.get('password')?.touched" class="error-message">
           {{ getErrorMessage('password') }}
         </span>
       </div>
@@ -67,11 +63,7 @@
       <!-- Remember Me & Forgot Password -->
       <div class="form-actions">
         <label class="remember-me">
-          <input
-            type="checkbox"
-            [checked]="rememberMe"
-            (change)="toggleRememberMe()"
-          />
+          <input type="checkbox" [checked]="rememberMe" (change)="toggleRememberMe()" />
           <span>Remember me</span>
         </label>
         <a routerLink="/auth/forgot-password" class="forgot-link">Recover password</a>
@@ -79,21 +71,12 @@
 
       <!-- Submit Buttons -->
       <div class="button-group">
-        <button
-          type="submit"
-          class="btn-primary"
-          [disabled]="loading"
-        >
+        <button type="submit" class="btn-primary" [disabled]="loading">
           <span *ngIf="!loading">Sign In</span>
           <span *ngIf="loading">Signing in...</span>
         </button>
 
-        <button
-          type="button"
-          class="btn-secondary"
-          routerLink="/auth/signup"
-          [disabled]="loading"
-        >
+        <button type="button" class="btn-secondary" routerLink="/auth/signup" [disabled]="loading">
           Sign Up
         </button>
       </div>
@@ -117,6 +100,3 @@
     </div> -->
   </div>
 </div>
-
-
-

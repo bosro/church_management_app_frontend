@@ -1,0 +1,407 @@
+<!-- src/app/features/voting/components/voting-detail/voting-detail.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+  <div class="dashboard-content">
+    <app-header></app-header>
+    <div class="dashboard-body">
+
+      <div *ngIf="loading" class="loading-container">
+        <app-loading-spinner size="large" message="Loading..."></app-loading-spinner>
+      </div>
+
+      <div *ngIf="!loading && category" class="detail-container">
+
+        <button class="btn-back" (click)="goBack()">
+          <i class="ri-arrow-left-line"></i> Back to Voting
+        </button>
+
+        <!-- Hero -->
+        <div class="detail-hero" [class]="'hero-' + (category.status || 'upcoming')">
+          <div class="hero-pattern"></div>
+          <div class="hero-content">
+            <div class="hero-left">
+              <span class="hero-status-badge">
+                <i class="ri-checkbox-blank-circle-fill"></i>
+                {{ getStatusLabel(category.status) }}
+              </span>
+              <h1>{{ category.title }}</h1>
+              <p *ngIf="category.description">{{ category.description }}</p>
+              <div class="hero-dates">
+                <div class="hero-date">
+                  <i class="ri-calendar-line"></i>
+                  <span>Voting: {{ formatDate(category.voting_start_at) }} – {{ formatDate(category.voting_end_at) }}</span>
+                </div>
+                <div class="hero-date" *ngIf="category.nominations_start_at">
+                  <i class="ri-user-add-line"></i>
+                  <span>Nominations: {{ formatDate(category.nominations_start_at) }} – {{ formatDate(category.nominations_end_at || '') }}</span>
+                </div>
+              </div>
+            </div>
+            <div class="hero-right">
+              <div class="vote-budget">
+                <div class="budget-circle">
+                  <span class="budget-num">{{ votesRemaining }}</span>
+                  <span class="budget-label">left</span>
+                </div>
+                <p>of {{ maxVotes }} vote{{ maxVotes !== 1 ? 's' : '' }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Alerts -->
+        <div *ngIf="successMessage" class="success-alert">
+          <i class="ri-checkbox-circle-line"></i><span>{{ successMessage }}</span>
+        </div>
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i><span>{{ errorMessage }}</span>
+        </div>
+
+        <!-- Actions Bar -->
+        <div class="actions-bar">
+          <div class="tabs" *ngIf="canManage">
+            <button class="tab-btn" [class.active]="activeTab === 'vote'" (click)="activeTab = 'vote'">
+              <i class="ri-vote-line"></i> Voting View
+            </button>
+            <button class="tab-btn" [class.active]="activeTab === 'manage'" (click)="activeTab = 'manage'">
+              <i class="ri-settings-3-line"></i> Manage Nominees
+              <span class="tab-badge" *ngIf="allNominees.length > 0">{{ allNominees.length }}</span>
+            </button>
+          </div>
+          <div class="actions-right">
+            <button *ngIf="isNominationsOpen" class="btn-nominate" (click)="openNominateModal()">
+              <i class="ri-user-add-line"></i> Nominate Someone
+            </button>
+          </div>
+        </div>
+
+        <!-- ══ VOTING TAB ══ -->
+        <div *ngIf="activeTab === 'vote'">
+
+          <div *ngIf="isVotingOpen && votesRemaining > 0" class="info-banner info-purple">
+            <i class="ri-information-line"></i>
+            <span>You have <strong>{{ votesRemaining }}</strong> vote{{ votesRemaining !== 1 ? 's' : '' }} remaining. Click a nominee card to cast your vote.</span>
+          </div>
+          <div *ngIf="isVotingOpen && votesRemaining === 0" class="info-banner info-green">
+            <i class="ri-checkbox-circle-line"></i>
+            <span>You've used all your votes! You can click a voted nominee to remove your vote.</span>
+          </div>
+          <div *ngIf="category.status === 'upcoming'" class="info-banner info-blue">
+            <i class="ri-time-line"></i>
+            <span>Voting opens on {{ formatDate(category.voting_start_at) }}.</span>
+          </div>
+          <div *ngIf="category.status === 'nominations_open'" class="info-banner info-blue">
+            <i class="ri-user-add-line"></i>
+            <span>Nominations are open! Submit your nominations before voting begins.</span>
+          </div>
+          <div *ngIf="category.status === 'closed'" class="info-banner info-green">
+            <i class="ri-trophy-line"></i>
+            <span>Voting has closed. Here are the final results.</span>
+          </div>
+
+          <div *ngIf="loadingNominees" class="loading-container">
+            <app-loading-spinner message="Loading nominees..."></app-loading-spinner>
+          </div>
+
+          <div *ngIf="!loadingNominees" class="nominees-grid">
+            <div
+              *ngFor="let nominee of nominees; let i = index"
+              class="nominee-card"
+              [class.voted]="nominee.has_voted"
+              [class.voting-open]="isVotingOpen"
+              (click)="isVotingOpen ? castVote(nominee) : null"
+            >
+              <div class="rank-badge" *ngIf="category.status === 'closed' || category.show_results">#{{ i + 1 }}</div>
+              <div class="voted-check" *ngIf="nominee.has_voted"><i class="ri-check-line"></i></div>
+
+              <div class="nominee-photo">
+                <img *ngIf="nominee.nominee_photo_url" [src]="nominee.nominee_photo_url" [alt]="nominee.nominee_name" />
+                <div *ngIf="!nominee.nominee_photo_url" class="photo-placeholder">
+                  {{ nominee.nominee_name.charAt(0).toUpperCase() }}
+                </div>
+              </div>
+
+              <div class="nominee-info">
+                <h4>{{ nominee.nominee_name }}</h4>
+                <p *ngIf="nominee.nominee_description">{{ nominee.nominee_description }}</p>
+              </div>
+
+              <div class="vote-bar-container" *ngIf="category.status === 'closed' || category.show_results">
+                <div class="vote-bar">
+                  <div class="vote-bar-fill" [style.width.%]="getVotePercent(nominee)"></div>
+                </div>
+                <div class="vote-stats">
+                  <span>{{ nominee.vote_count }} vote{{ nominee.vote_count !== 1 ? 's' : '' }}</span>
+                  <span>{{ getVotePercent(nominee) }}%</span>
+                </div>
+              </div>
+
+              <div class="vote-action" *ngIf="isVotingOpen">
+                <div *ngIf="voting[nominee.id]" class="vote-loading"><i class="ri-loader-4-line spin"></i></div>
+                <div *ngIf="!voting[nominee.id]">
+                  <span *ngIf="nominee.has_voted" class="voted-label"><i class="ri-check-double-line"></i> Voted — click to remove</span>
+                  <span *ngIf="!nominee.has_voted" class="vote-label"><i class="ri-thumb-up-line"></i> Vote</span>
+                </div>
+              </div>
+            </div>
+
+            <div *ngIf="nominees.length === 0" class="empty-nominees">
+              <i class="ri-user-search-line"></i>
+              <p>No approved nominees yet.</p>
+              <span *ngIf="isNominationsOpen">Be the first to nominate a member!</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ══ MANAGE TAB (admin only) ══ -->
+        <div *ngIf="activeTab === 'manage' && canManage">
+
+          <!-- Explainer boxes -->
+          <div class="explainer-row">
+            <div class="explainer-box explainer-pending">
+              <div class="explainer-icon"><i class="ri-time-line"></i></div>
+              <div>
+                <strong>Pending</strong>
+                <p>Nominations submitted by members that haven't been reviewed yet. Approve them to make them visible on the voting ballot.</p>
+              </div>
+            </div>
+            <div class="explainer-box explainer-approved">
+              <div class="explainer-icon"><i class="ri-checkbox-circle-line"></i></div>
+              <div>
+                <strong>Approved</strong>
+                <p>Nominees visible to all members in the Voting View. Members can vote for these people.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="manage-section">
+            <div class="manage-header">
+              <h3>All Nominations ({{ allNominees.length }})</h3>
+              <div class="manage-legend">
+                <span class="legend-dot pending"></span> Pending approval
+                <span class="legend-dot approved"></span> On ballot
+              </div>
+            </div>
+
+            <div class="manage-table-wrapper">
+              <table class="manage-table" *ngIf="allNominees.length > 0">
+                <thead>
+                  <tr>
+                    <th>Member</th>
+                    <th>Reason / Note</th>
+                    <th>Status</th>
+                    <th>Votes</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let n of allNominees" [class.row-pending]="!n.is_approved">
+                    <td>
+                      <div class="nominee-cell">
+                        <div class="nominee-avatar">
+                          <img *ngIf="n.nominee_photo_url" [src]="n.nominee_photo_url" [alt]="n.nominee_name" />
+                          <div *ngIf="!n.nominee_photo_url" class="avatar-placeholder-sm">
+                            {{ n.nominee_name.charAt(0).toUpperCase() }}
+                          </div>
+                        </div>
+                        <span class="nominee-name-cell">{{ n.nominee_name }}</span>
+                      </div>
+                    </td>
+                    <td class="desc-cell">{{ n.nominee_description || '—' }}</td>
+                    <td>
+                      <span class="approval-badge" [class.approved]="n.is_approved">
+                        <i [class]="n.is_approved ? 'ri-checkbox-circle-line' : 'ri-time-line'"></i>
+                        {{ n.is_approved ? 'On Ballot' : 'Pending' }}
+                      </span>
+                    </td>
+                    <td class="votes-cell">{{ n.vote_count }}</td>
+                    <td>
+                      <div class="table-actions">
+                        <button *ngIf="!n.is_approved" class="btn-sm btn-approve" (click)="approveNominee(n)">
+                          <i class="ri-check-line"></i> Approve
+                        </button>
+                        <button class="btn-sm btn-remove" (click)="openDeleteNomineeModal(n)">
+                          <i class="ri-delete-bin-line"></i>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <div *ngIf="allNominees.length === 0" class="empty-manage">
+                <i class="ri-user-add-line"></i>
+                <p>No nominations submitted yet</p>
+                <span>Members can nominate by clicking "Nominate Someone"</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /detail-container -->
+
+      <div *ngIf="!loading && !category && errorMessage" class="not-found">
+        <i class="ri-error-warning-line"></i>
+        <h3>Category Not Found</h3>
+        <p>{{ errorMessage }}</p>
+        <button class="btn-primary" (click)="goBack()">Go Back</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     NOMINATE MODAL — Member Search
+══════════════════════════════════════════════════ -->
+<div class="modal-overlay" *ngIf="showNominateModal" (click)="closeNominateModal()">
+  <div class="modal-content modal-nominate" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div class="modal-header-icon">
+        <i class="ri-user-add-line"></i>
+      </div>
+      <div>
+        <h2>Nominate a Member</h2>
+        <p>Search for a church member to nominate for this award.</p>
+      </div>
+      <button class="close-btn" (click)="closeNominateModal()">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <!-- Step 1: search -->
+      <div class="form-group" *ngIf="!selectedMember">
+        <label>Search Church Members</label>
+        <div class="member-search-box">
+          <i class="ri-search-line search-icon"></i>
+          <input
+            type="text"
+            [(ngModel)]="memberSearchTerm"
+            (ngModelChange)="onMemberSearch($event)"
+            placeholder="Type a name to search..."
+            class="member-search-input"
+            autocomplete="off"
+          />
+          <div *ngIf="searchingMembers" class="search-spinner">
+            <i class="ri-loader-4-line spin"></i>
+          </div>
+        </div>
+
+        <!-- Search hint -->
+        <p class="search-hint" *ngIf="memberSearchTerm.length === 0">
+          <i class="ri-information-line"></i>
+          Type at least 2 characters to search members
+        </p>
+        <p class="search-hint" *ngIf="memberSearchTerm.length === 1">
+          <i class="ri-information-line"></i>
+          Type one more character...
+        </p>
+
+        <!-- Results -->
+        <div class="member-results" *ngIf="memberSearchResults.length > 0">
+          <div
+            *ngFor="let member of memberSearchResults"
+            class="member-result-item"
+            (click)="selectMember(member)"
+          >
+            <div class="result-photo">
+              <img *ngIf="member.photo_url" [src]="member.photo_url" [alt]="getMemberFullName(member)" />
+              <div *ngIf="!member.photo_url" class="result-placeholder">
+                {{ member.first_name.charAt(0) }}{{ member.last_name.charAt(0) }}
+              </div>
+            </div>
+            <div class="result-info">
+              <span class="result-name">{{ getMemberFullName(member) }}</span>
+              <span class="result-meta">{{ member.email || member.phone_primary || '' }}</span>
+            </div>
+            <i class="ri-add-circle-line result-add"></i>
+          </div>
+        </div>
+
+        <!-- No results -->
+        <div class="no-results" *ngIf="!searchingMembers && memberSearchTerm.length >= 2 && memberSearchResults.length === 0">
+          <i class="ri-user-search-line"></i>
+          <p>No members found for "{{ memberSearchTerm }}"</p>
+        </div>
+      </div>
+
+      <!-- Step 2: selected member + note -->
+      <div *ngIf="selectedMember">
+        <div class="selected-member-card">
+          <div class="selected-photo">
+            <img *ngIf="selectedMember.photo_url" [src]="selectedMember.photo_url" [alt]="getMemberFullName(selectedMember)" />
+            <div *ngIf="!selectedMember.photo_url" class="selected-placeholder">
+              {{ selectedMember.first_name.charAt(0) }}{{ selectedMember.last_name.charAt(0) }}
+            </div>
+          </div>
+          <div class="selected-info">
+            <h4>{{ getMemberFullName(selectedMember) }}</h4>
+            <p>{{ selectedMember.email || selectedMember.phone_primary || 'Church member' }}</p>
+          </div>
+          <button class="btn-change" (click)="clearSelectedMember()">
+            <i class="ri-refresh-line"></i> Change
+          </button>
+        </div>
+
+        <div class="form-group" style="margin-top: 1.25rem;">
+          <label>Why are you nominating them? <span class="optional-label">Optional</span></label>
+          <textarea
+            [(ngModel)]="nominationNote"
+            placeholder="e.g., Always the first to volunteer, dedicated to the youth ministry..."
+            class="form-input"
+            rows="3"
+          ></textarea>
+        </div>
+
+        <div class="modal-info-box">
+          <i class="ri-information-line"></i>
+          <p>Your nomination will be reviewed by an admin before it appears on the ballot.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-secondary" (click)="closeNominateModal()">Cancel</button>
+      <button
+        class="btn-primary"
+        (click)="submitNomination()"
+        [disabled]="!selectedMember || submittingNomination"
+      >
+        <span *ngIf="!submittingNomination">
+          <i class="ri-send-plane-line"></i> Submit Nomination
+        </span>
+        <span *ngIf="submittingNomination">
+          <i class="ri-loader-4-line spin"></i> Submitting...
+        </span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     DELETE NOMINEE CONFIRM MODAL
+══════════════════════════════════════════════════ -->
+<div class="modal-overlay" *ngIf="showDeleteNomineeModal" (click)="closeDeleteNomineeModal()">
+  <div class="modal-content modal-confirm" (click)="$event.stopPropagation()">
+    <div class="confirm-icon confirm-danger">
+      <i class="ri-delete-bin-line"></i>
+    </div>
+    <h2>Remove Nominee?</h2>
+    <p>
+      You are about to remove <strong>{{ nomineeToDelete?.nominee_name }}</strong> from the nominees list.
+      <span *ngIf="(nomineeToDelete?.vote_count || 0) > 0" class="warning-note">
+        This nominee has {{ nomineeToDelete?.vote_count }} vote{{ nomineeToDelete?.vote_count !== 1 ? 's' : '' }} which will also be removed.
+      </span>
+    </p>
+    <div class="confirm-actions">
+      <button class="btn-secondary" (click)="closeDeleteNomineeModal()" [disabled]="deletingNominee">
+        Cancel
+      </button>
+      <button class="btn-danger-solid" (click)="confirmDeleteNominee()" [disabled]="deletingNominee">
+        <span *ngIf="!deletingNominee"><i class="ri-delete-bin-line"></i> Yes, Remove</span>
+        <span *ngIf="deletingNominee"><i class="ri-loader-4-line spin"></i> Removing...</span>
+      </button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,255 @@
+<!-- src/app/features/attendance/components/link-checkin/link-checkin.html -->
+<div class="lc-page">
+  <div class="lc-card">
+
+    <!-- Logo -->
+    <div class="lc-logo">
+      <img src="assets/images/logo.png" alt="Churchman" />
+    </div>
+
+    <!-- LOADING -->
+    <div *ngIf="pageState === 'loading'" class="lc-state lc-state--loading">
+      <div class="lc-spinner"></div>
+      <p>Verifying link...</p>
+    </div>
+
+    <!-- INVALID / EXPIRED / DEACTIVATED / MAXED -->
+    <div *ngIf="pageState === 'invalid' || pageState === 'expired' || pageState === 'deactivated' || pageState === 'maxed'"
+      class="lc-state lc-state--error">
+      <div class="lc-state__icon lc-state__icon--error">
+        <i class="ri-close-circle-fill"></i>
+      </div>
+      <h2 *ngIf="pageState === 'expired'">Link Expired</h2>
+      <h2 *ngIf="pageState === 'deactivated'">Link Deactivated</h2>
+      <h2 *ngIf="pageState === 'maxed'">Link Full</h2>
+      <h2 *ngIf="pageState === 'invalid'">Invalid Link</h2>
+      <p>{{ invalidReason }}</p>
+      <div *ngIf="event" class="lc-event-pill">
+        <i class="ri-calendar-event-line"></i>
+        {{ event.event_name }}
+      </div>
+    </div>
+
+    <!-- SEARCH STATE -->
+    <ng-container *ngIf="pageState === 'search'">
+
+      <!-- Event info -->
+      <div class="lc-event-info" *ngIf="event">
+        <h1>{{ event.event_name }}</h1>
+        <div class="lc-event-meta">
+          <span>
+            <i class="ri-calendar-line"></i>
+            {{ formatEventDate(event.event_date) }}
+          </span>
+          <span *ngIf="event.event_time">
+            <i class="ri-time-line"></i>
+            {{ formatTime(event.event_time) }}
+          </span>
+          <span *ngIf="event.location">
+            <i class="ri-map-pin-line"></i>
+            {{ event.location }}
+          </span>
+        </div>
+      </div>
+
+      <div class="lc-divider"></div>
+
+      <!-- Member search -->
+      <div class="lc-search-area">
+        <h2>Check In</h2>
+        <p>Search your name to log your attendance</p>
+
+        <div class="lc-search-box">
+          <i class="ri-search-line lc-search-icon"></i>
+          <input
+            type="text"
+            [formControl]="searchControl"
+            placeholder="Enter your name..."
+            class="lc-search-input"
+            autocomplete="off"
+          />
+          <i *ngIf="searching" class="ri-loader-4-line lc-searching-icon"></i>
+        </div>
+
+        <!-- Search results -->
+        <div class="lc-results" *ngIf="searchResults.length > 0">
+          <div *ngFor="let member of searchResults" class="lc-result-item"
+            (click)="checkIn(member.id)">
+            <div class="lc-avatar">
+              <img *ngIf="member.photo_url" [src]="member.photo_url"
+                [alt]="getMemberFullName(member)" />
+              <div *ngIf="!member.photo_url" class="lc-avatar__placeholder">
+                {{ getMemberInitials(member) }}
+              </div>
+            </div>
+            <div class="lc-result-info">
+              <p class="lc-result-name">{{ getMemberFullName(member) }}</p>
+              <p class="lc-result-meta">{{ member.member_number }}</p>
+            </div>
+            <i class="ri-arrow-right-circle-fill lc-result-arrow"></i>
+          </div>
+        </div>
+
+        <!-- No results hint -->
+        <div *ngIf="searchControl.value && !searching && searchResults.length === 0"
+          class="lc-no-results">
+          <i class="ri-user-search-line"></i>
+          <p>No members found</p>
+        </div>
+      </div>
+
+      <!-- ── Guest / Visitor section ── -->
+      <div class="lc-visitor-divider">
+        <span>visiting or not a member?</span>
+      </div>
+
+      <button class="lc-visitor-btn" (click)="openVisitorForm()">
+        <i class="ri-user-add-line"></i>
+        Check in as a Guest / Visitor
+      </button>
+
+    </ng-container>
+
+    <!-- VISITOR FORM STATE -->
+    <ng-container *ngIf="pageState === 'visitor-form'">
+
+      <div class="lc-event-info" *ngIf="event">
+        <h1>{{ event.event_name }}</h1>
+      </div>
+
+      <div class="lc-divider"></div>
+
+      <div class="lc-visitor-form-area">
+        <div class="lc-visitor-form-header">
+          <button class="lc-back-btn" (click)="backToSearch()">
+            <i class="ri-arrow-left-line"></i>
+          </button>
+          <div>
+            <h2>Guest Check-In</h2>
+            <p>Enter your details to log your attendance</p>
+          </div>
+        </div>
+
+        <div class="lc-form-group">
+          <label>First Name *</label>
+          <input
+            type="text"
+            [(ngModel)]="visitorFirstName"
+            placeholder="Your first name"
+            class="lc-form-input"
+          />
+        </div>
+
+        <div class="lc-form-group">
+          <label>Last Name *</label>
+          <input
+            type="text"
+            [(ngModel)]="visitorLastName"
+            placeholder="Your last name"
+            class="lc-form-input"
+          />
+        </div>
+
+        <div class="lc-form-group">
+          <label>
+            Phone
+            <span class="lc-optional">(optional)</span>
+          </label>
+          <input
+            type="tel"
+            [(ngModel)]="visitorPhone"
+            placeholder="Your phone number"
+            class="lc-form-input"
+          />
+        </div>
+
+        <div class="lc-form-group">
+          <label>
+            Email
+            <span class="lc-optional">(optional)</span>
+          </label>
+          <input
+            type="email"
+            [(ngModel)]="visitorEmail"
+            placeholder="Your email address"
+            class="lc-form-input"
+          />
+        </div>
+
+        <div *ngIf="visitorFormError" class="lc-form-error">
+          <i class="ri-error-warning-line"></i>
+          {{ visitorFormError }}
+        </div>
+
+        <button class="lc-checkin-btn" (click)="checkInAsVisitor()">
+          <i class="ri-checkbox-circle-line"></i>
+          Check In as Guest
+        </button>
+      </div>
+
+    </ng-container>
+
+    <!-- CHECKING IN -->
+    <div *ngIf="pageState === 'checking-in'" class="lc-state lc-state--loading">
+      <div class="lc-spinner"></div>
+      <p>Checking you in...</p>
+    </div>
+
+    <!-- ALREADY CHECKED IN -->
+    <div *ngIf="pageState === 'already-checked-in'" class="lc-state">
+      <div class="lc-state__icon lc-state__icon--warn">
+        <i class="ri-information-fill"></i>
+      </div>
+      <h2>Already Checked In</h2>
+      <p>You've already been checked in for this event.</p>
+    </div>
+
+    <!-- SUCCESS -->
+    <div *ngIf="pageState === 'success'" class="lc-state lc-state--success">
+      <div class="lc-state__icon lc-state__icon--success">
+        <i class="ri-checkbox-circle-fill"></i>
+      </div>
+      <h2>Welcome!</h2>
+
+      <!-- Member success -->
+      <div *ngIf="!wasVisitor && checkedInMember" class="lc-success-member">
+        <div class="lc-avatar lc-avatar--large">
+          <img *ngIf="checkedInMember.photo_url"
+            [src]="checkedInMember.photo_url"
+            [alt]="getMemberFullName(checkedInMember)" />
+          <div *ngIf="!checkedInMember.photo_url" class="lc-avatar__placeholder">
+            {{ getMemberInitials(checkedInMember) }}
+          </div>
+        </div>
+        <p class="lc-success-name">{{ getMemberFullName(checkedInMember) }}</p>
+      </div>
+
+      <!-- Visitor success -->
+      <div *ngIf="wasVisitor" class="lc-success-member">
+        <div class="lc-avatar lc-avatar--large">
+          <div class="lc-avatar__placeholder lc-avatar__placeholder--visitor">
+            <i class="ri-user-smile-line"></i>
+          </div>
+        </div>
+        <p class="lc-success-name">{{ checkedInVisitorName }}</p>
+        <span class="lc-guest-tag">Guest</span>
+      </div>
+
+      <p class="lc-success-time">
+        Checked in at {{ checkInTime | date:'shortTime' }}
+      </p>
+      <p class="lc-success-event" *ngIf="event">{{ event.event_name }}</p>
+
+      <div class="lc-auto-reset">
+        <i class="ri-refresh-line"></i>
+        Resetting in a moment...
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="lc-footer">
+      <p>Powered by Churchman</p>
+    </div>
+
+  </div>
+</div>

@@ -1,6 +1,8 @@
 // src/app/features/attendance/services/attendance.service.ts
+// Replace the entire file with this:
+
 import { Injectable } from '@angular/core';
-import { Observable, from, throwError, of } from 'rxjs';
+import { Observable, from, throwError } from 'rxjs';
 import { catchError, map, switchMap } from 'rxjs/operators';
 import { SupabaseService } from '../../../core/services/supabase';
 import { AuthService } from '../../../core/services/auth';
@@ -8,6 +10,7 @@ import {
   AttendanceEvent,
   AttendanceEventType,
   AttendanceRecord,
+  AttendanceStatus,
   Visitor,
   AttendanceStatistics,
   AttendanceReportData,
@@ -17,9 +20,7 @@ import {
 } from '../../../models/attendance.model';
 import { UserRolesService } from '../../user-roles/services/user-roles';
 
-@Injectable({
-  providedIn: 'root',
-})
+@Injectable({ providedIn: 'root' })
 export class AttendanceService {
   constructor(
     private supabase: SupabaseService,
@@ -73,11 +74,9 @@ export class AttendanceService {
           .select('*', { count: 'exact' })
           .eq('church_id', churchId);
 
-        // Branch pastor only sees their branch events
         if (isBranchPastor && branchId) {
           query = query.eq('branch_id', branchId);
         }
-
         if (filters?.eventType)
           query = query.eq('event_type', filters.eventType);
         if (filters?.startDate)
@@ -110,13 +109,11 @@ export class AttendanceService {
         if (!data) throw new Error('Event not found');
         return data as AttendanceEvent;
       }),
-      catchError((err) => {
-        console.error('Error loading event:', err);
-        return throwError(() => err);
-      }),
+      catchError((err) => throwError(() => err)),
     );
   }
 
+  // ── Create event — updated to support recurrence ───────────────
   createAttendanceEvent(eventData: {
     event_type: AttendanceEventType;
     event_name: string;
@@ -125,20 +122,19 @@ export class AttendanceService {
     location?: string;
     expected_attendance?: number;
     notes?: string;
+    is_recurring?: boolean;
+    recurrence_frequency?: string;
+    recurrence_day_of_week?: number;
   }): Observable<AttendanceEvent> {
     const churchId = this.authService.getChurchId();
     const userId = this.authService.getUserId();
-    const branchId = this.authService.getBranchId(); // auto-set branch
-
-    const eventDate = new Date(eventData.event_date);
-    if (isNaN(eventDate.getTime())) {
-      return throwError(() => new Error('Invalid event date'));
-    }
+    const branchId = this.authService.getBranchId();
+    const groupId = eventData.is_recurring ? crypto.randomUUID() : null;
 
     return from(
       this.supabase.insert<AttendanceEvent>('attendance_events', {
         church_id: churchId,
-        branch_id: branchId || null, // set if pastor
+        branch_id: branchId || null,
         event_type: eventData.event_type,
         event_name: eventData.event_name.trim(),
         event_date: eventData.event_date,
@@ -147,6 +143,15 @@ export class AttendanceService {
         expected_attendance: eventData.expected_attendance || null,
         notes: eventData.notes?.trim() || null,
         total_attendance: 0,
+        total_absent: 0,
+        is_recurring: eventData.is_recurring ?? false,
+        recurrence_frequency: eventData.is_recurring
+          ? eventData.recurrence_frequency || null
+          : null,
+        recurrence_day_of_week: eventData.is_recurring
+          ? (eventData.recurrence_day_of_week ?? null)
+          : null,
+        recurrence_group_id: groupId,
         created_by: userId,
       } as any),
     ).pipe(
@@ -160,6 +165,92 @@ export class AttendanceService {
     );
   }
 
+  // ── Spawn next occurrence of a recurring event ─────────────────
+  spawnNextOccurrence(event: AttendanceEvent): Observable<AttendanceEvent> {
+    if (!event.is_recurring || !event.recurrence_frequency) {
+      return throwError(() => new Error('Not a recurring event'));
+    }
+
+    const nextDate = this.calculateNextOccurrence(
+      event.event_date,
+      event.recurrence_frequency as any,
+      event.recurrence_day_of_week,
+    );
+
+    const churchId = this.authService.getChurchId();
+    const userId = this.authService.getUserId();
+
+    return from(
+      this.supabase.insert<AttendanceEvent>('attendance_events', {
+        church_id: churchId,
+        branch_id: event.branch_id || null,
+        event_type: event.event_type,
+        event_name: event.event_name,
+        event_date: nextDate,
+        event_time: event.event_time || null,
+        location: event.location || null,
+        expected_attendance: event.expected_attendance || null,
+        notes: event.notes || null,
+        total_attendance: 0,
+        total_absent: 0,
+        is_recurring: true,
+        recurrence_frequency: event.recurrence_frequency,
+        recurrence_day_of_week: event.recurrence_day_of_week,
+        recurrence_group_id: event.recurrence_group_id,
+        parent_event_id: event.id,
+        created_by: userId,
+      } as any),
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw new Error(error.message);
+        if (!data || data.length === 0)
+          throw new Error('Failed to spawn occurrence');
+        return data[0];
+      }),
+      catchError((err) => throwError(() => err)),
+    );
+  }
+
+  // Check if a next occurrence already exists for this recurring event
+  hasNextOccurrence(event: AttendanceEvent): Observable<boolean> {
+    if (!event.recurrence_group_id) return from(Promise.resolve(false));
+
+    const nextDate = this.calculateNextOccurrence(
+      event.event_date,
+      event.recurrence_frequency as any,
+      event.recurrence_day_of_week,
+    );
+
+    return from(
+      this.supabase.client
+        .from('attendance_events')
+        .select('id', { count: 'exact', head: true })
+        .eq('recurrence_group_id', event.recurrence_group_id)
+        .eq('event_date', nextDate),
+    ).pipe(
+      map(({ count }) => (count ?? 0) > 0),
+      catchError(() => from(Promise.resolve(false))),
+    );
+  }
+
+  private calculateNextOccurrence(
+    fromDate: string,
+    frequency: 'weekly' | 'biweekly' | 'monthly',
+    dayOfWeek?: number,
+  ): string {
+    const date = new Date(fromDate);
+
+    if (frequency === 'weekly') {
+      date.setDate(date.getDate() + 7);
+    } else if (frequency === 'biweekly') {
+      date.setDate(date.getDate() + 14);
+    } else if (frequency === 'monthly') {
+      date.setMonth(date.getMonth() + 1);
+    }
+
+    return date.toISOString().split('T')[0];
+  }
+
   updateAttendanceEvent(
     eventId: string,
     eventData: Partial<AttendanceEvent>,
@@ -168,7 +259,6 @@ export class AttendanceService {
 
     return from(
       (async () => {
-        // Verify ownership
         const { data: existing } = await this.supabase.client
           .from('attendance_events')
           .select('id')
@@ -176,19 +266,15 @@ export class AttendanceService {
           .eq('church_id', churchId)
           .single();
 
-        if (!existing) {
-          throw new Error('Event not found or access denied');
-        }
-
-        const updateData = {
-          ...eventData,
-          updated_at: new Date().toISOString(),
-        };
+        if (!existing) throw new Error('Event not found or access denied');
 
         return this.supabase.update<AttendanceEvent>(
           'attendance_events',
           eventId,
-          updateData,
+          {
+            ...eventData,
+            updated_at: new Date().toISOString(),
+          },
         );
       })(),
     ).pipe(
@@ -198,10 +284,7 @@ export class AttendanceService {
           throw new Error('Failed to update event');
         return data[0];
       }),
-      catchError((err) => {
-        console.error('Error updating event:', err);
-        return throwError(() => err);
-      }),
+      catchError((err) => throwError(() => err)),
     );
   }
 
@@ -210,7 +293,6 @@ export class AttendanceService {
 
     return from(
       (async () => {
-        // Verify ownership
         const { data: existing } = await this.supabase.client
           .from('attendance_events')
           .select('id, total_attendance')
@@ -218,16 +300,7 @@ export class AttendanceService {
           .eq('church_id', churchId)
           .single();
 
-        if (!existing) {
-          throw new Error('Event not found or access denied');
-        }
-
-        // Warn if event has attendance records
-        if (existing.total_attendance > 0) {
-          console.warn(
-            `Deleting event with ${existing.total_attendance} attendance records`,
-          );
-        }
+        if (!existing) throw new Error('Event not found or access denied');
 
         return this.supabase.delete('attendance_events', eventId);
       })(),
@@ -235,10 +308,7 @@ export class AttendanceService {
       map(({ error }) => {
         if (error) throw new Error(error.message);
       }),
-      catchError((err) => {
-        console.error('Error deleting event:', err);
-        return throwError(() => err);
-      }),
+      catchError((err) => throwError(() => err)),
     );
   }
 
@@ -246,20 +316,16 @@ export class AttendanceService {
 
   getAttendanceRecords(
     eventId: string,
-    filters?: {
-      memberType?: 'member' | 'visitor';
-    },
+    filters?: { memberType?: 'member' | 'visitor'; status?: AttendanceStatus },
   ): Observable<AttendanceRecord[]> {
     return from(
       (async () => {
         let query = this.supabase.client
           .from('attendance_records')
           .select(
-            `
-            *,
+            `*,
             member:members(id, first_name, last_name, middle_name, photo_url, member_number),
-            visitor:visitors(id, first_name, last_name)
-          `,
+            visitor:visitors(id, first_name, last_name)`,
           )
           .eq('attendance_event_id', eventId);
 
@@ -269,20 +335,18 @@ export class AttendanceService {
           query = query.not('visitor_id', 'is', null);
         }
 
+        if (filters?.status) {
+          query = query.eq('status', filters.status);
+        }
+
         const { data, error } = await query.order('checked_in_at', {
           ascending: false,
         });
 
         if (error) throw new Error(error.message);
-
         return data as AttendanceRecord[];
       })(),
-    ).pipe(
-      catchError((err) => {
-        console.error('Error loading attendance records:', err);
-        return throwError(() => err);
-      }),
-    );
+    ).pipe(catchError((err) => throwError(() => err)));
   }
 
   checkInMember(
@@ -295,7 +359,6 @@ export class AttendanceService {
 
     return from(
       (async () => {
-        // Verify event exists and belongs to church
         const { data: event } = await this.supabase.client
           .from('attendance_events')
           .select('id')
@@ -303,23 +366,43 @@ export class AttendanceService {
           .eq('church_id', churchId)
           .single();
 
-        if (!event) {
-          throw new Error('Event not found or access denied');
-        }
+        if (!event) throw new Error('Event not found or access denied');
 
-        // Check if already checked in
+        // Check if record exists (could be absent record)
         const { data: existing } = await this.supabase.client
           .from('attendance_records')
-          .select('id')
+          .select('id, status')
           .eq('attendance_event_id', eventId)
           .eq('member_id', memberId)
           .maybeSingle();
 
         if (existing) {
-          throw new Error('Member already checked in for this event');
+          if (existing.status === 'present') {
+            throw new Error('Member already checked in for this event');
+          }
+          // Update absent record to present
+          const { data, error } = await this.supabase.client
+            .from('attendance_records')
+            .update({
+              status: 'present',
+              absence_reason: null,
+              checked_in_at: new Date().toISOString(),
+              checked_in_by: userId,
+              check_in_method: method,
+            })
+            .eq('id', existing.id)
+            .select(
+              `*,
+              member:members(id, first_name, last_name, middle_name, photo_url, member_number),
+              visitor:visitors(id, first_name, last_name)`,
+            )
+            .single();
+
+          if (error) throw new Error(error.message);
+          await this.updateEventAttendanceCount(eventId);
+          return data as AttendanceRecord;
         }
 
-        // Verify member exists
         const { data: member } = await this.supabase.client
           .from('members')
           .select('id')
@@ -327,11 +410,8 @@ export class AttendanceService {
           .eq('church_id', churchId)
           .single();
 
-        if (!member) {
-          throw new Error('Member not found');
-        }
+        if (!member) throw new Error('Member not found');
 
-        // Create attendance record
         const { data, error } = await this.supabase.insert<AttendanceRecord>(
           'attendance_records',
           {
@@ -340,21 +420,144 @@ export class AttendanceService {
             checked_in_at: new Date().toISOString(),
             checked_in_by: userId,
             check_in_method: method,
+            status: 'present',
           } as any,
         );
 
         if (error) throw new Error(error.message);
-
-        // Update event total attendance
         await this.updateEventAttendanceCount(eventId);
-
         return data![0];
       })(),
+    ).pipe(catchError((err) => throwError(() => err)));
+  }
+
+  // ==================== MARK ABSENT ====================
+
+  markMemberAbsent(
+    eventId: string,
+    memberId: string,
+    reason?: string,
+  ): Observable<AttendanceRecord> {
+    const userId = this.authService.getUserId();
+    const churchId = this.authService.getChurchId();
+
+    return from(
+      (async () => {
+        const { data: event } = await this.supabase.client
+          .from('attendance_events')
+          .select('id')
+          .eq('id', eventId)
+          .eq('church_id', churchId)
+          .single();
+
+        if (!event) throw new Error('Event not found or access denied');
+
+        // Check if record already exists
+        const { data: existing } = await this.supabase.client
+          .from('attendance_records')
+          .select('id, status')
+          .eq('attendance_event_id', eventId)
+          .eq('member_id', memberId)
+          .maybeSingle();
+
+        if (existing) {
+          if (existing.status === 'absent') {
+            // Update reason only
+            const { data, error } = await this.supabase.client
+              .from('attendance_records')
+              .update({
+                absence_reason: reason || null,
+                checked_in_by: userId,
+              })
+              .eq('id', existing.id)
+              .select(
+                `*,
+                member:members(id, first_name, last_name, middle_name, photo_url, member_number),
+                visitor:visitors(id, first_name, last_name)`,
+              )
+              .single();
+
+            if (error) throw new Error(error.message);
+            return data as AttendanceRecord;
+          }
+
+          // Was present, flip to absent
+          const { data, error } = await this.supabase.client
+            .from('attendance_records')
+            .update({
+              status: 'absent',
+              absence_reason: reason || null,
+              checked_in_by: userId,
+            })
+            .eq('id', existing.id)
+            .select(
+              `*,
+              member:members(id, first_name, last_name, middle_name, photo_url, member_number),
+              visitor:visitors(id, first_name, last_name)`,
+            )
+            .single();
+
+          if (error) throw new Error(error.message);
+          await this.updateEventAttendanceCount(eventId);
+          return data as AttendanceRecord;
+        }
+
+        // No record yet — create absent record
+        const { data: member } = await this.supabase.client
+          .from('members')
+          .select('id')
+          .eq('id', memberId)
+          .eq('church_id', churchId)
+          .single();
+
+        if (!member) throw new Error('Member not found');
+
+        const { data, error } = await this.supabase.client
+          .from('attendance_records')
+          .insert({
+            attendance_event_id: eventId,
+            member_id: memberId,
+            checked_in_at: new Date().toISOString(),
+            checked_in_by: userId,
+            check_in_method: 'manual',
+            status: 'absent',
+            absence_reason: reason || null,
+          })
+          .select(
+            `*,
+            member:members(id, first_name, last_name, middle_name, photo_url, member_number),
+            visitor:visitors(id, first_name, last_name)`,
+          )
+          .single();
+
+        if (error) throw new Error(error.message);
+        await this.updateEventAttendanceCount(eventId);
+        return data as AttendanceRecord;
+      })(),
+    ).pipe(catchError((err) => throwError(() => err)));
+  }
+
+  updateAbsenceReason(
+    recordId: string,
+    reason: string,
+  ): Observable<AttendanceRecord> {
+    return from(
+      this.supabase.client
+        .from('attendance_records')
+        .update({ absence_reason: reason })
+        .eq('id', recordId)
+        .select(
+          `*,
+          member:members(id, first_name, last_name, middle_name, photo_url, member_number),
+          visitor:visitors(id, first_name, last_name)`,
+        )
+        .single(),
     ).pipe(
-      catchError((err) => {
-        console.error('Check-in error:', err);
-        return throwError(() => err);
+      map(({ data, error }) => {
+        if (error) throw new Error(error.message);
+        return data as AttendanceRecord;
       }),
+      catchError((err) => throwError(() => err)),
     );
   }
 
@@ -365,14 +568,12 @@ export class AttendanceService {
     const churchId = this.authService.getChurchId();
     const userId = this.authService.getUserId();
 
-    // Validate required fields
     if (!visitorData.first_name || !visitorData.last_name) {
       return throwError(() => new Error('Visitor name is required'));
     }
 
     return from(
       (async () => {
-        // Verify event exists
         const { data: event } = await this.supabase.client
           .from('attendance_events')
           .select('id')
@@ -380,11 +581,8 @@ export class AttendanceService {
           .eq('church_id', churchId)
           .single();
 
-        if (!event) {
-          throw new Error('Event not found or access denied');
-        }
+        if (!event) throw new Error('Event not found or access denied');
 
-        // Check for existing visitor by phone or email
         let visitor: Visitor | null = null;
 
         if (visitorData.phone || visitorData.email) {
@@ -404,13 +602,11 @@ export class AttendanceService {
         }
 
         if (visitor) {
-          // Update existing visitor
           await this.supabase.update('visitors', visitor.id, {
             last_visit_date: new Date().toISOString().split('T')[0],
             visit_count: visitor.visit_count + 1,
           });
         } else {
-          // Create new visitor
           const { data: newVisitor, error: visitorError } =
             await this.supabase.insert<Visitor>('visitors', {
               church_id: churchId,
@@ -431,7 +627,6 @@ export class AttendanceService {
           visitor = newVisitor![0];
         }
 
-        // Create attendance record
         const { data: attendanceData, error: attendanceError } =
           await this.supabase.insert<AttendanceRecord>('attendance_records', {
             attendance_event_id: eventId,
@@ -439,21 +634,14 @@ export class AttendanceService {
             checked_in_at: new Date().toISOString(),
             checked_in_by: userId,
             check_in_method: 'manual',
+            status: 'present',
           } as any);
 
         if (attendanceError) throw new Error(attendanceError.message);
-
-        // Update event total attendance
         await this.updateEventAttendanceCount(eventId);
-
         return attendanceData![0];
       })(),
-    ).pipe(
-      catchError((err) => {
-        console.error('Visitor check-in error:', err);
-        return throwError(() => err);
-      }),
-    );
+    ).pipe(catchError((err) => throwError(() => err)));
   }
 
   bulkCheckIn(
@@ -482,12 +670,7 @@ export class AttendanceService {
 
         return { success, errors, failed_members };
       })(),
-    ).pipe(
-      catchError((err) => {
-        console.error('Bulk check-in error:', err);
-        return throwError(() => err);
-      }),
-    );
+    ).pipe(catchError((err) => throwError(() => err)));
   }
 
   removeAttendanceRecord(recordId: string, eventId: string): Observable<void> {
@@ -495,7 +678,6 @@ export class AttendanceService {
 
     return from(
       (async () => {
-        // Verify event belongs to church
         const { data: event } = await this.supabase.client
           .from('attendance_events')
           .select('id')
@@ -503,9 +685,7 @@ export class AttendanceService {
           .eq('church_id', churchId)
           .single();
 
-        if (!event) {
-          throw new Error('Event not found or access denied');
-        }
+        if (!event) throw new Error('Event not found or access denied');
 
         const { error } = await this.supabase.delete(
           'attendance_records',
@@ -513,26 +693,32 @@ export class AttendanceService {
         );
         if (error) throw new Error(error.message);
 
-        // Update event total attendance
         await this.updateEventAttendanceCount(eventId);
       })(),
-    ).pipe(
-      catchError((err) => {
-        console.error('Error removing attendance record:', err);
-        return throwError(() => err);
-      }),
-    );
+    ).pipe(catchError((err) => throwError(() => err)));
   }
 
   private async updateEventAttendanceCount(eventId: string): Promise<void> {
-    const { count } = await this.supabase.client
+    const { count: presentCount } = await this.supabase.client
       .from('attendance_records')
       .select('*', { count: 'exact', head: true })
-      .eq('attendance_event_id', eventId);
+      .eq('attendance_event_id', eventId)
+      .eq('status', 'present');
 
-    await this.supabase.update('attendance_events', eventId, {
-      total_attendance: count || 0,
-    });
+    const { count: absentCount } = await this.supabase.client
+      .from('attendance_records')
+      .select('*', { count: 'exact', head: true })
+      .eq('attendance_event_id', eventId)
+      .eq('status', 'absent');
+
+    await this.supabase.client
+      .from('attendance_events')
+      .update({
+        total_attendance: presentCount || 0,
+        total_absent: absentCount || 0,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', eventId);
   }
 
   // ==================== STATISTICS & REPORTS ====================
@@ -554,7 +740,6 @@ export class AttendanceService {
           .select('*', { count: 'exact', head: true })
           .eq('church_id', churchId);
 
-        // Branch pastor only sees their branch
         if (isBranchPastor && branchId) {
           eventsQuery = eventsQuery.eq('branch_id', branchId);
           visitorsQuery = visitorsQuery.eq('branch_id', branchId);
@@ -600,33 +785,24 @@ export class AttendanceService {
         let query = this.supabase.client
           .from('attendance_events')
           .select(
-            `
-            id,
-            event_type,
-            event_date,
-            expected_attendance,
-            total_attendance
-          `,
+            `id, event_type, event_date, expected_attendance, total_attendance, total_absent`,
           )
           .eq('church_id', churchId)
           .gte('event_date', startDate)
           .lte('event_date', endDate)
           .order('event_date', { ascending: false });
 
-        if (serviceType) {
-          query = query.eq('event_type', serviceType);
-        }
+        if (serviceType) query = query.eq('event_type', serviceType);
 
         const { data: events, error } = await query;
-
         if (error) throw new Error(error.message);
 
-        // Transform to report format
-        const reports: AttendanceReportData[] = (events || []).map((event) => {
+        return (events || []).map((event) => {
           const totalMembers =
             event.expected_attendance || event.total_attendance;
           const totalPresent = event.total_attendance;
-          const totalAbsent = Math.max(0, totalMembers - totalPresent);
+          const totalAbsent =
+            event.total_absent || Math.max(0, totalMembers - totalPresent);
           const attendanceRate =
             totalMembers > 0
               ? Math.round((totalPresent / totalMembers) * 100)
@@ -641,15 +817,8 @@ export class AttendanceService {
             attendance_rate: attendanceRate,
           };
         });
-
-        return reports;
       })(),
-    ).pipe(
-      catchError((err) => {
-        console.error('Error loading report:', err);
-        return throwError(() => err);
-      }),
-    );
+    ).pipe(catchError((err) => throwError(() => err)));
   }
 
   // ==================== VISITORS ====================
@@ -671,15 +840,9 @@ export class AttendanceService {
           .range(offset, offset + pageSize - 1);
 
         if (error) throw new Error(error.message);
-
         return { data: data as Visitor[], count: count || 0 };
       })(),
-    ).pipe(
-      catchError((err) => {
-        console.error('Error loading visitors:', err);
-        return throwError(() => err);
-      }),
-    );
+    ).pipe(catchError((err) => throwError(() => err)));
   }
 
   convertVisitorToMember(
@@ -695,10 +858,7 @@ export class AttendanceService {
       map(({ error }) => {
         if (error) throw new Error(error.message);
       }),
-      catchError((err) => {
-        console.error('Error converting visitor:', err);
-        return throwError(() => err);
-      }),
+      catchError((err) => throwError(() => err)),
     );
   }
 
@@ -709,12 +869,10 @@ export class AttendanceService {
     return `${baseUrl}/attendance/qr-checkin/${eventId}`;
   }
 
-  // Update the verifyQRCheckIn to use the public method
   verifyQRCheckIn(
     eventId: string,
     memberId: string,
   ): Observable<AttendanceRecord> {
-    // Use public method instead of authenticated check-in
     return this.publicQRCheckIn(eventId, memberId);
   }
 
@@ -723,50 +881,45 @@ export class AttendanceService {
   exportAttendanceReport(eventId: string): Observable<Blob> {
     return this.getAttendanceRecords(eventId).pipe(
       map((records) => {
-        // FIXED HEADERS - Now includes separate Date and Time columns
         const headers = [
           'Name',
           'Type',
           'Member Number',
+          'Status',
+          'Absence Reason',
           'Check-in Date',
           'Check-in Time',
           'Check-in Method',
         ];
 
-        const rows = records.map((record: any) => {
-          // Get member/visitor name
+        const rows = records.map((record: AttendanceRecord) => {
           const name = record.member
             ? `${record.member.first_name} ${record.member.last_name}`
             : record.visitor
               ? `${record.visitor.first_name} ${record.visitor.last_name}`
               : 'Unknown';
 
-          // Get type
           const type = record.member ? 'Member' : 'Visitor';
-
-          // Get member number
           const memberNumber = record.member?.member_number || 'N/A';
+          const status = record.status === 'present' ? 'Present' : 'Absent';
+          const absenceReason = record.absence_reason || '';
 
-          // Parse the checked_in_at timestamp
           const checkedInDate = new Date(record.checked_in_at);
-
-          // Format date (DD/MM/YYYY)
-          const checkInDate = checkedInDate.toLocaleDateString('en-GB'); // e.g., 13/03/2026
-
-          // Format time (HH:MM:SS)
+          const checkInDate = checkedInDate.toLocaleDateString('en-GB');
           const checkInTime = checkedInDate.toLocaleTimeString('en-GB', {
             hour: '2-digit',
             minute: '2-digit',
             second: '2-digit',
-          }); // e.g., 09:37:28
+          });
 
-          // Get check-in method
           const checkInMethod = record.check_in_method || 'manual';
 
           return [
             name,
             type,
             memberNumber,
+            status,
+            absenceReason,
             checkInDate,
             checkInTime,
             checkInMethod,
@@ -780,10 +933,7 @@ export class AttendanceService {
 
         return new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       }),
-      catchError((err) => {
-        console.error('Export error:', err);
-        return throwError(() => err);
-      }),
+      catchError((err) => throwError(() => err)),
     );
   }
 
@@ -797,10 +947,7 @@ export class AttendanceService {
       this.supabase.client
         .from('attendance_records')
         .select(
-          `
-          *,
-          event:attendance_events(id, event_name, event_type, event_date)
-        `,
+          `*, event:attendance_events(id, event_name, event_type, event_date)`,
         )
         .eq('member_id', memberId)
         .order('checked_in_at', { ascending: false })
@@ -810,12 +957,11 @@ export class AttendanceService {
         if (error) throw new Error(error.message);
         return data as any[];
       }),
-      catchError((err) => {
-        console.error('Error loading member history:', err);
-        return throwError(() => err);
-      }),
+      catchError((err) => throwError(() => err)),
     );
   }
+
+  // ==================== PUBLIC QR ====================
 
   publicQRCheckIn(
     eventId: string,
@@ -823,31 +969,26 @@ export class AttendanceService {
   ): Observable<AttendanceRecord> {
     return from(
       (async () => {
-        // NO church_id check - this is public
-        // Verify event exists
         const { data: event } = await this.supabase.client
           .from('attendance_events')
           .select('id, church_id')
           .eq('id', eventId)
           .single();
 
-        if (!event) {
-          throw new Error('Event not found');
-        }
+        if (!event) throw new Error('Event not found');
 
-        // Check if already checked in
+        // Check duplicate
         const { data: existing } = await this.supabase.client
           .from('attendance_records')
-          .select('id')
+          .select('id, status')
           .eq('attendance_event_id', eventId)
           .eq('member_id', memberId)
           .maybeSingle();
 
-        if (existing) {
+        if (existing?.status === 'present') {
           throw new Error('You have already checked in for this event');
         }
 
-        // Verify member exists and belongs to same church as event
         const { data: member } = await this.supabase.client
           .from('members')
           .select('id, church_id')
@@ -855,54 +996,160 @@ export class AttendanceService {
           .eq('church_id', event.church_id)
           .single();
 
-        if (!member) {
-          throw new Error('Member not found');
+        if (!member) throw new Error('Member not found');
+
+        if (existing?.status === 'absent') {
+          // Flip absent → present
+          const { data, error } = await this.supabase.client
+            .from('attendance_records')
+            .update({
+              status: 'present',
+              absence_reason: null,
+              checked_in_at: new Date().toISOString(),
+              check_in_method: 'qr_code',
+              checked_in_by: null,
+            })
+            .eq('id', existing.id)
+            .select()
+            .single();
+
+          if (error) throw new Error(error.message);
+          await this.updatePublicEventAttendanceCount(eventId);
+          return data as AttendanceRecord;
         }
 
-        // Create attendance record (NO userId required)
-        const { data, error } = await this.supabase.insert<AttendanceRecord>(
-          'attendance_records',
-          {
+        // Fresh insert — use raw client, no auth wrapper
+        const { data, error } = await this.supabase.client
+          .from('attendance_records')
+          .insert({
             attendance_event_id: eventId,
             member_id: memberId,
             checked_in_at: new Date().toISOString(),
-            checked_in_by: null, // ✅ No user - this is self-service
-            check_in_method: 'qr_code', // ✅ Important: Must be qr_code or self_service
-          } as any,
-        );
+            checked_in_by: null,
+            check_in_method: 'qr_code',
+            status: 'present',
+          })
+          .select()
+          .single();
 
         if (error) throw new Error(error.message);
-
-        // Update event total attendance
         await this.updatePublicEventAttendanceCount(eventId);
-
-        return data![0];
+        return data as AttendanceRecord;
       })(),
-    ).pipe(
-      catchError((err) => {
-        console.error('Public QR check-in error:', err);
-        return throwError(() => err);
-      }),
-    );
+    ).pipe(catchError((err) => throwError(() => err)));
   }
 
-  // Add this helper method for public attendance count updates
+  // Add this method to AttendanceService — public visitor check-in (no auth)
+checkInVisitorPublic(
+  eventId: string,
+  visitorData: { first_name: string; last_name: string; phone?: string; email?: string },
+): Observable<AttendanceRecord> {
+  return from(
+    (async () => {
+      // Get event's church_id without auth
+      const { data: event } = await this.supabase.client
+        .from('attendance_events')
+        .select('id, church_id')
+        .eq('id', eventId)
+        .single();
+
+      if (!event) throw new Error('Event not found');
+
+      // Check for existing visitor by phone or email
+      let visitorId: string | null = null;
+
+      if (visitorData.phone || visitorData.email) {
+        let q = this.supabase.client
+          .from('visitors')
+          .select('id, visit_count')
+          .eq('church_id', event.church_id);
+
+        if (visitorData.phone) q = q.eq('phone', visitorData.phone);
+        else if (visitorData.email) q = q.eq('email', visitorData.email);
+
+        const { data: existing } = await q.maybeSingle();
+
+        if (existing) {
+          // Update last visit
+          await this.supabase.client
+            .from('visitors')
+            .update({
+              last_visit_date: new Date().toISOString().split('T')[0],
+              visit_count: existing.visit_count + 1,
+            })
+            .eq('id', existing.id);
+
+          visitorId = existing.id;
+        }
+      }
+
+      if (!visitorId) {
+        // Create new visitor
+        const { data: newVisitor, error: vErr } = await this.supabase.client
+          .from('visitors')
+          .insert({
+            church_id: event.church_id,
+            first_name: visitorData.first_name,
+            last_name: visitorData.last_name,
+            phone: visitorData.phone || null,
+            email: visitorData.email || null,
+            first_visit_date: new Date().toISOString().split('T')[0],
+            last_visit_date: new Date().toISOString().split('T')[0],
+            visit_count: 1,
+            is_converted_to_member: false,
+          })
+          .select('id')
+          .single();
+
+        if (vErr) throw new Error(vErr.message);
+        visitorId = newVisitor!.id;
+      }
+
+      // Insert attendance record
+      const { data, error } = await this.supabase.client
+        .from('attendance_records')
+        .insert({
+          attendance_event_id: eventId,
+          visitor_id: visitorId,
+          checked_in_at: new Date().toISOString(),
+          checked_in_by: null,
+          check_in_method: 'self_service',
+          status: 'present',
+        })
+        .select()
+        .single();
+
+      if (error) throw new Error(error.message);
+      await this.updatePublicEventAttendanceCount(eventId);
+      return data as AttendanceRecord;
+    })(),
+  ).pipe(catchError((err) => throwError(() => err)));
+}
+
   private async updatePublicEventAttendanceCount(
     eventId: string,
   ): Promise<void> {
-    const { count } = await this.supabase.client
+    const { count: presentCount } = await this.supabase.client
       .from('attendance_records')
       .select('*', { count: 'exact', head: true })
-      .eq('attendance_event_id', eventId);
+      .eq('attendance_event_id', eventId)
+      .eq('status', 'present');
 
-    // Use public update (no auth required)
+    const { count: absentCount } = await this.supabase.client
+      .from('attendance_records')
+      .select('*', { count: 'exact', head: true })
+      .eq('attendance_event_id', eventId)
+      .eq('status', 'absent');
+
     await this.supabase.client
       .from('attendance_events')
-      .update({ total_attendance: count || 0 })
+      .update({
+        total_attendance: presentCount || 0,
+        total_absent: absentCount || 0,
+      })
       .eq('id', eventId);
   }
 
-  // Add public method to get event (no auth required)
   publicGetEvent(eventId: string): Observable<AttendanceEvent> {
     return from(
       this.supabase.client
@@ -916,10 +1163,24 @@ export class AttendanceService {
         if (!data) throw new Error('Event not found');
         return data as AttendanceEvent;
       }),
-      catchError((err) => {
-        console.error('Error loading event:', err);
-        return throwError(() => err);
-      }),
+      catchError((err) => throwError(() => err)),
     );
+  }
+
+  // ── Helper: is event date in the past ──────────────────────────
+  isEventPast(eventDate: string): boolean {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const eDate = new Date(eventDate);
+    eDate.setHours(0, 0, 0, 0);
+    return eDate < today;
+  }
+
+  isEventToday(eventDate: string): boolean {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const eDate = new Date(eventDate);
+    eDate.setHours(0, 0, 0, 0);
+    return eDate.getTime() === today.getTime();
   }
 }

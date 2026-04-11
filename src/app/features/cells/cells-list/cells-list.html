@@ -1,0 +1,362 @@
+<!-- src/app/features/cells/components/cells-list/cells-list.component.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+
+  <div class="dashboard-content">
+    <app-header></app-header>
+
+    <div class="dashboard-body">
+      <div class="cells-container">
+
+        <!-- Page Header -->
+        <div class="page-header">
+          <div class="header-left">
+            <h1>Cell Groups</h1>
+            <p class="subtitle">Organise members into small fellowship groups</p>
+          </div>
+          <button class="btn-primary" (click)="openCreateModal()" *ngIf="canManage">
+            <i class="ri-add-line"></i>
+            <span class="desktop-only">New Cell Group</span>
+          </button>
+        </div>
+
+        <!-- Alerts -->
+        <div *ngIf="successMessage" class="success-alert">
+          <i class="ri-checkbox-circle-line"></i>
+          <span>{{ successMessage }}</span>
+          <button class="alert-close" (click)="clearMessages()"><i class="ri-close-line"></i></button>
+        </div>
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i>
+          <span>{{ errorMessage }}</span>
+          <button class="alert-close" (click)="clearMessages()"><i class="ri-close-line"></i></button>
+        </div>
+
+        <!-- Stats chips -->
+        <div class="stats-row" *ngIf="!loading">
+          <div class="stat-chip">
+            <i class="ri-group-2-line"></i>
+            <span>{{ getActiveCellGroups().length }} Active Group{{ getActiveCellGroups().length !== 1 ? 's' : ''
+              }}</span>
+          </div>
+          <div class="stat-chip stat-chip--muted" *ngIf="getInactiveCellGroups().length > 0">
+            <i class="ri-archive-line"></i>
+            <span>{{ getInactiveCellGroups().length }} Inactive</span>
+          </div>
+        </div>
+
+        <!-- Loading -->
+        <div *ngIf="loading" class="loading-container">
+          <div class="spinner"></div>
+          <p>Loading cell groups...</p>
+        </div>
+
+        <!-- Grid -->
+        <div *ngIf="!loading" class="cells-grid">
+
+          <div *ngFor="let group of getActiveCellGroups()" class="cell-card">
+            <!-- Card Header -->
+            <div class="cell-card__top">
+              <div class="cell-icon">
+                <i class="ri-group-2-line"></i>
+              </div>
+              <div class="cell-card__actions" *ngIf="canManageGroup(group)">
+                <button class="btn-icon-sm" (click)="openEditModal(group)" title="Edit group">
+                  <i class="ri-edit-line"></i>
+                </button>
+                <!-- Deactivate only for full admins/pastors, not cell leaders -->
+                <button *ngIf="canManage" class="btn-icon-sm btn-icon-sm--danger" (click)="openDeleteModal(group)"
+                  title="Deactivate">
+                  <i class="ri-delete-bin-line"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Card Body -->
+            <div class="cell-card__body">
+              <h3>{{ group.name }}</h3>
+
+              <p class="cell-desc" *ngIf="group.description">{{ group.description }}</p>
+              <p class="cell-desc cell-desc--empty" *ngIf="!group.description">No description provided</p>
+
+              <div class="cell-meta">
+                <!-- Leader -->
+                <div class="cell-meta__row" *ngIf="group.leader_name">
+                  <i class="ri-user-star-line"></i>
+                  <span>{{ group.leader_name }}</span>
+                </div>
+                <div class="cell-meta__row cell-meta__row--muted" *ngIf="!group.leader_name">
+                  <i class="ri-user-line"></i>
+                  <span>No leader assigned</span>
+                </div>
+
+                <!-- Meeting day/time -->
+                <div class="cell-meta__row" *ngIf="group.meeting_day">
+                  <i class="ri-calendar-line"></i>
+                  <span>
+                    {{ group.meeting_day }}
+                    <ng-container *ngIf="group.meeting_time"> · {{ group.meeting_time }}</ng-container>
+                  </span>
+                </div>
+
+                <!-- Location -->
+                <div class="cell-meta__row" *ngIf="group.meeting_location">
+                  <i class="ri-map-pin-line"></i>
+                  <span>{{ group.meeting_location }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card Footer -->
+            <div class="cell-card__footer">
+              <div class="member-pill">
+                <i class="ri-user-3-line"></i>
+                <span>{{ group.member_count || 0 }} member{{ (group.member_count || 0) !== 1 ? 's' : '' }}</span>
+              </div>
+              <button class="btn-view-members" (click)="openMembersModal(group)">
+                <i class="ri-eye-line"></i>
+                View Members
+              </button>
+            </div>
+          </div>
+
+          <!-- Empty -->
+          <div *ngIf="getActiveCellGroups().length === 0" class="empty-state">
+            <i class="ri-group-2-line"></i>
+            <h3>No Cell Groups Yet</h3>
+            <p>Create your first cell group to start organising members into small fellowships.</p>
+            <button class="btn-primary" (click)="openCreateModal()" *ngIf="canManage">
+              <i class="ri-add-line"></i>
+              Create Cell Group
+            </button>
+          </div>
+
+        </div>
+
+        <!-- Inactive notice -->
+        <div *ngIf="!loading && getInactiveCellGroups().length > 0" class="inactive-notice">
+          <i class="ri-information-line"></i>
+          {{ getInactiveCellGroups().length }} deactivated group(s) are hidden from member dropdowns.
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ CREATE MODAL ═══════════════════════ -->
+<div class="modal-overlay" *ngIf="showCreateModal" (click)="closeCreateModal()">
+  <div class="modal-box" (click)="$event.stopPropagation()">
+
+    <div class="modal-box__header">
+      <h2><i class="ri-add-circle-line"></i> New Cell Group</h2>
+      <button class="modal-close" (click)="closeCreateModal()" [disabled]="isSubmitting">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+
+    <div class="modal-box__body" [formGroup]="cellForm">
+      <div *ngIf="errorMessage" class="inline-error">
+        <i class="ri-error-warning-line"></i> {{ errorMessage }}
+      </div>
+
+      <div class="fg">
+        <label>Group Name <span class="req">*</span></label>
+        <input type="text" formControlName="name" placeholder="e.g., Faith Warriors"
+          [class.fg__input--err]="cellForm.get('name')?.invalid && cellForm.get('name')?.touched" />
+        <span class="fg__err" *ngIf="cellForm.get('name')?.invalid && cellForm.get('name')?.touched">
+          {{ getErrorMessage('name') }}
+        </span>
+      </div>
+
+      <div class="fg">
+        <label>Description</label>
+        <textarea formControlName="description" rows="3"
+          placeholder="Short description of this cell group..."></textarea>
+      </div>
+
+      <div class="fg">
+        <label>Cell Leader</label>
+        <select formControlName="leader_id">
+          <option value="">Select a leader (optional)</option>
+          <option *ngFor="let l of leaders" [value]="l.id">
+            {{ l.full_name }} — {{ getRoleLabel(l.role) }}
+          </option>
+        </select>
+      </div>
+
+      <div class="fg-row">
+        <div class="fg">
+          <label>Meeting Day</label>
+          <select formControlName="meeting_day">
+            <option value="">Select day</option>
+            <option *ngFor="let d of meetingDays" [value]="d">{{ d }}</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Meeting Time</label>
+          <input type="time" formControlName="meeting_time" />
+        </div>
+      </div>
+
+      <div class="fg">
+        <label>Meeting Location</label>
+        <input type="text" formControlName="meeting_location" placeholder="e.g., Room 4, Member's Home" />
+      </div>
+    </div>
+
+    <div class="modal-box__footer">
+      <button class="btn-secondary" (click)="closeCreateModal()" [disabled]="isSubmitting">Cancel</button>
+      <button class="btn-primary" (click)="createCellGroup()" [disabled]="isSubmitting || cellForm.invalid">
+        <i *ngIf="!isSubmitting" class="ri-save-line"></i>
+        <i *ngIf="isSubmitting" class="ri-loader-4-line spin"></i>
+        {{ isSubmitting ? 'Creating...' : 'Create Group' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ EDIT MODAL ═══════════════════════ -->
+<div class="modal-overlay" *ngIf="showEditModal" (click)="closeEditModal()">
+  <div class="modal-box" (click)="$event.stopPropagation()">
+
+    <div class="modal-box__header">
+      <h2><i class="ri-edit-line"></i> Edit Cell Group</h2>
+      <button class="modal-close" (click)="closeEditModal()" [disabled]="isSubmitting">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+
+    <div class="modal-box__body" [formGroup]="cellForm">
+      <div *ngIf="errorMessage" class="inline-error">
+        <i class="ri-error-warning-line"></i> {{ errorMessage }}
+      </div>
+
+      <div class="fg">
+        <label>Group Name <span class="req">*</span></label>
+        <input type="text" formControlName="name"
+          [class.fg__input--err]="cellForm.get('name')?.invalid && cellForm.get('name')?.touched" />
+        <span class="fg__err" *ngIf="cellForm.get('name')?.invalid && cellForm.get('name')?.touched">
+          {{ getErrorMessage('name') }}
+        </span>
+      </div>
+
+      <div class="fg">
+        <label>Description</label>
+        <textarea formControlName="description" rows="3"></textarea>
+      </div>
+
+      <div class="fg">
+        <label>Cell Leader</label>
+        <select formControlName="leader_id">
+          <option value="">None</option>
+          <option *ngFor="let l of leaders" [value]="l.id">
+            {{ l.full_name }} — {{ getRoleLabel(l.role) }}
+          </option>
+        </select>
+      </div>
+
+      <div class="fg-row">
+        <div class="fg">
+          <label>Meeting Day</label>
+          <select formControlName="meeting_day">
+            <option value="">Select day</option>
+            <option *ngFor="let d of meetingDays" [value]="d">{{ d }}</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Meeting Time</label>
+          <input type="time" formControlName="meeting_time" />
+        </div>
+      </div>
+
+      <div class="fg">
+        <label>Meeting Location</label>
+        <input type="text" formControlName="meeting_location" />
+      </div>
+    </div>
+
+    <div class="modal-box__footer">
+      <button class="btn-secondary" (click)="closeEditModal()" [disabled]="isSubmitting">Cancel</button>
+      <button class="btn-primary" (click)="updateCellGroup()" [disabled]="isSubmitting || cellForm.invalid">
+        <i *ngIf="!isSubmitting" class="ri-save-line"></i>
+        <i *ngIf="isSubmitting" class="ri-loader-4-line spin"></i>
+        {{ isSubmitting ? 'Saving...' : 'Save Changes' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ MEMBERS MODAL ═══════════════════════ -->
+<div class="modal-overlay" *ngIf="showMembersModal" (click)="closeMembersModal()">
+  <div class="modal-box modal-box--wide" (click)="$event.stopPropagation()">
+
+    <div class="modal-box__header">
+      <h2><i class="ri-group-line"></i> {{ selectedGroup?.name }} — Members</h2>
+      <button class="modal-close" (click)="closeMembersModal()">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+
+    <div class="modal-box__body">
+      <div *ngIf="loadingMembers" class="loading-container">
+        <div class="spinner"></div>
+        <p>Loading members...</p>
+      </div>
+
+      <div *ngIf="!loadingMembers && groupMembers.length > 0" class="members-list">
+        <div *ngFor="let m of groupMembers" class="member-row">
+          <div class="member-avatar-sm">
+            <img *ngIf="m.photo_url" [src]="m.photo_url" [alt]="getMemberFullName(m)" />
+            <div *ngIf="!m.photo_url" class="avatar-init">{{ getMemberInitials(m) }}</div>
+          </div>
+          <div class="member-text">
+            <p class="member-name">{{ getMemberFullName(m) }}</p>
+            <p class="member-contact">{{ m.phone_primary || m.email || '—' }}</p>
+          </div>
+          <span class="status-dot" [class.status-dot--active]="m.membership_status === 'active'"></span>
+        </div>
+      </div>
+
+      <div *ngIf="!loadingMembers && groupMembers.length === 0" class="empty-sm">
+        <i class="ri-user-line"></i>
+        <p>No members in this group yet.</p>
+        <p class="empty-sm__hint">Assign members via the Members section.</p>
+      </div>
+    </div>
+
+    <div class="modal-box__footer">
+      <button class="btn-secondary" (click)="closeMembersModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ DEACTIVATE MODAL ═══════════════════════ -->
+<div class="modal-overlay" *ngIf="showDeleteModal" (click)="closeDeleteModal()">
+  <div class="modal-box modal-box--sm" (click)="$event.stopPropagation()">
+
+    <div class="modal-box__header modal-box__header--danger">
+      <div class="danger-icon"><i class="ri-error-warning-line"></i></div>
+      <button class="modal-close" (click)="closeDeleteModal()" [disabled]="isDeleting">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+
+    <div class="modal-box__body modal-box__body--center">
+      <h2>Deactivate Group?</h2>
+      <p>
+        <strong>{{ groupToDelete?.name }}</strong> will be hidden from member assignment dropdowns.
+        Members already in this group are unaffected.
+      </p>
+    </div>
+
+    <div class="modal-box__footer">
+      <button class="btn-secondary" (click)="closeDeleteModal()" [disabled]="isDeleting">Cancel</button>
+      <button class="btn-danger" (click)="confirmDelete()" [disabled]="isDeleting">
+        <i *ngIf="!isDeleting" class="ri-delete-bin-line"></i>
+        <div *ngIf="isDeleting" class="btn-spinner"></div>
+        {{ isDeleting ? 'Deactivating...' : 'Deactivate' }}
+      </button>
+    </div>
+  </div>
+</div>

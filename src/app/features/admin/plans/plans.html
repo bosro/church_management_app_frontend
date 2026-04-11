@@ -1,0 +1,213 @@
+<!-- src/app/features/admin/plans/plans.html -->
+<div class="plans-container">
+  <div class="page-header">
+    <div>
+      <h1>Subscription Plans</h1>
+      <p class="subtitle">Manage pricing tiers and feature access</p>
+    </div>
+    <button class="btn-primary" (click)="openCreateModal()">
+      <i class="ri-add-line"></i> New Plan
+    </button>
+  </div>
+
+  <div *ngIf="successMessage" class="alert alert-success">
+    <i class="ri-checkbox-circle-line"></i> {{ successMessage }}
+  </div>
+  <div *ngIf="errorMessage" class="alert alert-error">
+    <i class="ri-error-warning-line"></i> {{ errorMessage }}
+  </div>
+
+  <div *ngIf="loading" class="loading-state">
+    <div class="spinner"></div>
+    <p>Loading plans...</p>
+  </div>
+
+  <div *ngIf="!loading" class="plans-grid">
+    <div *ngFor="let plan of plans" class="plan-card">
+      <div class="plan-header">
+        <div class="plan-title">
+          <h3>{{ plan.name }}</h3>
+          <span class="plan-id">ID: {{ plan.id }}</span>
+        </div>
+        <div class="plan-price">
+          <span class="price-amount">{{ formatCurrency(plan.price_monthly) }}</span>
+          <span class="price-period">/month</span>
+        </div>
+      </div>
+
+      <div class="plan-limits">
+        <h4>Limits</h4>
+        <div class="limits-grid">
+          <div class="limit-item">
+            <i class="ri-group-line"></i>
+            <span>{{ getLimitLabel(plan.max_members) }} members</span>
+          </div>
+          <div class="limit-item">
+            <i class="ri-building-2-line"></i>
+            <span>{{ getLimitLabel(plan.max_branches) }} branches</span>
+          </div>
+          <div class="limit-item">
+            <i class="ri-user-settings-line"></i>
+            <span>{{ getLimitLabel(plan.max_users) }} users</span>
+          </div>
+          <div class="limit-item">
+            <i class="ri-calendar-event-line"></i>
+            <span>{{ getLimitLabel(plan.max_events) }} events</span>
+          </div>
+          <div class="limit-item">
+            <i class="ri-file-list-line"></i>
+            <span>{{ getLimitLabel(plan.max_forms) }} forms</span>
+          </div>
+          <div class="limit-item">
+            <i class="ri-team-line"></i>
+            <span>{{ getLimitLabel(plan.max_ministries) }} departments</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="plan-features">
+        <h4>Features</h4>
+        <div class="feature-list">
+          <div class="feature-item" [class.enabled]="plan.can_export">
+            <i [class]="plan.can_export ? 'ri-checkbox-circle-fill' : 'ri-close-circle-line'"></i>
+            Export Data
+          </div>
+          <div class="feature-item" [class.enabled]="plan.can_send_communications">
+            <i [class]="plan.can_send_communications ? 'ri-checkbox-circle-fill' : 'ri-close-circle-line'"></i>
+            Communications
+          </div>
+          <div class="feature-item" [class.enabled]="plan.can_use_reports">
+            <i [class]="plan.can_use_reports ? 'ri-checkbox-circle-fill' : 'ri-close-circle-line'"></i>
+            Reports
+          </div>
+          <div class="feature-item" [class.enabled]="plan.can_custom_branding">
+            <i [class]="plan.can_custom_branding ? 'ri-checkbox-circle-fill' : 'ri-close-circle-line'"></i>
+            Custom Branding
+          </div>
+        </div>
+      </div>
+
+      <div class="plan-actions">
+        <button class="btn btn-secondary" (click)="openEditModal(plan)">
+          <i class="ri-edit-line"></i> Edit
+        </button>
+        <button class="btn btn-danger" (click)="deletePlan(plan)">
+          <i class="ri-delete-bin-line"></i> Deactivate
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Create/Edit Modal -->
+<div class="modal-overlay" *ngIf="showCreateModal || showEditModal" (click)="closeModals()">
+  <div class="modal-content modal-lg" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>{{ showCreateModal ? 'New Plan' : 'Edit Plan' }}</h2>
+      <button class="close-btn" (click)="closeModals()"><i class="ri-close-line"></i></button>
+    </div>
+
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group" *ngIf="showCreateModal">
+          <label>Plan ID *</label>
+          <input type="text" class="form-control" [(ngModel)]="planForm.id"
+            placeholder="e.g. free, pro, growth" />
+          <small class="help-text">Lowercase, no spaces. Cannot change after creation.</small>
+        </div>
+        <div class="form-group">
+          <label>Plan Name *</label>
+          <input type="text" class="form-control" [(ngModel)]="planForm.name"
+            placeholder="e.g. Free, Pro, Growth" />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Monthly Price (GHS)</label>
+          <input type="number" class="form-control" [(ngModel)]="planForm.price_monthly"
+            min="0" step="0.01" />
+        </div>
+        <div class="form-group">
+          <label>Yearly Price (GHS)</label>
+          <input type="number" class="form-control" [(ngModel)]="planForm.price_yearly"
+            min="0" step="0.01" />
+        </div>
+      </div>
+
+      <h4 class="section-label">Limits (leave 0 for unlimited)</h4>
+      <div class="form-row three-col">
+        <div class="form-group">
+          <label>Max Members</label>
+          <input type="number" class="form-control" [(ngModel)]="planForm.max_members" min="0" />
+        </div>
+        <div class="form-group">
+          <label>Max Branches</label>
+          <input type="number" class="form-control" [(ngModel)]="planForm.max_branches" min="0" />
+        </div>
+        <div class="form-group">
+          <label>Max Users</label>
+          <input type="number" class="form-control" [(ngModel)]="planForm.max_users" min="0" />
+        </div>
+        <div class="form-group">
+          <label>Max Events</label>
+          <input type="number" class="form-control" [(ngModel)]="planForm.max_events" min="0" />
+        </div>
+        <div class="form-group">
+          <label>Max Forms</label>
+          <input type="number" class="form-control" [(ngModel)]="planForm.max_forms" min="0" />
+        </div>
+        <div class="form-group">
+          <label>Max Departments</label>
+          <input type="number" class="form-control" [(ngModel)]="planForm.max_ministries" min="0" />
+        </div>
+      </div>
+
+      <h4 class="section-label">Feature Access</h4>
+      <div class="feature-toggles-modal">
+        <label class="toggle-row">
+          <span>Export Data</span>
+          <label class="toggle">
+            <input type="checkbox" [(ngModel)]="planForm.can_export" />
+            <span class="toggle-slider"></span>
+          </label>
+        </label>
+        <label class="toggle-row">
+          <span>Send Communications</span>
+          <label class="toggle">
+            <input type="checkbox" [(ngModel)]="planForm.can_send_communications" />
+            <span class="toggle-slider"></span>
+          </label>
+        </label>
+        <label class="toggle-row">
+          <span>Reports Module</span>
+          <label class="toggle">
+            <input type="checkbox" [(ngModel)]="planForm.can_use_reports" />
+            <span class="toggle-slider"></span>
+          </label>
+        </label>
+        <label class="toggle-row">
+          <span>Custom Branding</span>
+          <label class="toggle">
+            <input type="checkbox" [(ngModel)]="planForm.can_custom_branding" />
+            <span class="toggle-slider"></span>
+          </label>
+        </label>
+      </div>
+
+      <div *ngIf="errorMessage" class="alert alert-error" style="margin-top:1rem">
+        <i class="ri-error-warning-line"></i> {{ errorMessage }}
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-secondary" (click)="closeModals()" [disabled]="processing">Cancel</button>
+      <button class="btn btn-primary"
+        (click)="showCreateModal ? createPlan() : updatePlan()"
+        [disabled]="processing">
+        <i class="ri-save-line"></i>
+        {{ processing ? 'Saving...' : showCreateModal ? 'Create Plan' : 'Update Plan' }}
+      </button>
+    </div>
+  </div>
+</div>

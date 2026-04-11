@@ -191,16 +191,22 @@ export class UserRolesService {
     );
   }
 
-  getAssignableRoles(): { value: string; label: string }[] {
-    return [
-      { value: 'church_admin', label: 'Church Admin' },
-      { value: 'pastor', label: 'Pastor' },
-      { value: 'finance_officer', label: 'Finance Officer' },
-      { value: 'ministry_leader', label: 'Ministry Leader' },
-      { value: 'group_leader', label: 'Group Leader' },
-      { value: 'member', label: 'Member' },
-    ];
-  }
+ getAssignableRoles(): { value: string; label: string }[] {
+  return [
+    { value: 'church_admin',    label: 'Church Admin' },
+    { value: 'pastor',          label: 'Pastor' },
+    { value: 'senior_pastor',   label: 'Senior Pastor' },
+    { value: 'associate_pastor',label: 'Associate Pastor' },
+    { value: 'finance_officer', label: 'Finance Officer' },
+    { value: 'ministry_leader', label: 'Ministry Leader' },
+    { value: 'group_leader',    label: 'Group Leader' },
+    { value: 'cell_leader',     label: 'Cell Leader' },   // ← NEW
+    { value: 'elder',           label: 'Elder' },
+    { value: 'deacon',          label: 'Deacon' },
+    { value: 'worship_leader',  label: 'Worship Leader' },
+    { value: 'member',          label: 'Member' },
+  ];
+}
 
   deactivateUser(userId: string): Observable<void> {
     const churchId = this.getChurchId(); // Get fresh churchId

@@ -7,6 +7,8 @@ export type AttendanceEventType =
   | 'prayer_meeting';
 
 export type CheckInMethod = 'manual' | 'qr_code' | 'bulk' | 'self_service';
+export type AttendanceStatus = 'present' | 'absent';
+export type RecurrenceFrequency = 'weekly' | 'biweekly' | 'monthly';
 
 export interface AttendanceEvent {
   id: string;
@@ -20,7 +22,14 @@ export interface AttendanceEvent {
   location?: string;
   expected_attendance?: number;
   total_attendance: number;
+  total_absent: number;
   notes?: string;
+  // Recurrence
+  is_recurring: boolean;
+  recurrence_frequency?: RecurrenceFrequency;
+  recurrence_day_of_week?: number;
+  parent_event_id?: string;
+  recurrence_group_id?: string;
   created_by?: string;
   created_at: string;
   updated_at: string;
@@ -34,9 +43,9 @@ export interface AttendanceRecord {
   checked_in_at: string;
   checked_in_by?: string;
   check_in_method: CheckInMethod;
+  status: AttendanceStatus;
+  absence_reason?: string;
   notes?: string;
-
-  // Relations
   member?: {
     id: string;
     first_name: string;
@@ -105,4 +114,10 @@ export interface VisitorCheckInData {
   address?: string;
   referred_by?: string;
   notes?: string;
+}
+
+export interface MarkAbsentData {
+  memberId: string;
+  eventId: string;
+  reason?: string;
 }

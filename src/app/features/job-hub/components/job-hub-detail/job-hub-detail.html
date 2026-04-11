@@ -1,0 +1,193 @@
+<!-- src/app/features/job-hub/components/job-hub-detail/job-hub-detail.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+  <div class="dashboard-content">
+    <app-header></app-header>
+    <div class="dashboard-body">
+
+      <div *ngIf="loading" class="loading-container">
+        <app-loading-spinner size="large" message="Loading job..."></app-loading-spinner>
+      </div>
+
+      <div *ngIf="!loading && job" class="detail-container">
+        <button class="btn-back" (click)="goBack()">
+          <i class="ri-arrow-left-line"></i> Back to Jobs
+        </button>
+
+        <!-- Alerts -->
+        <div *ngIf="successMessage" class="success-alert">
+          <i class="ri-checkbox-circle-line"></i><span>{{ successMessage }}</span>
+        </div>
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i><span>{{ errorMessage }}</span>
+        </div>
+
+        <div class="detail-layout">
+          <!-- Main Content -->
+          <div class="detail-main">
+            <!-- Job Header Card -->
+            <div class="job-header-card">
+              <div class="job-header-top">
+                <div class="job-company-logo">
+                  <i class="ri-building-line"></i>
+                </div>
+                <div class="job-header-info">
+                  <div class="job-badges">
+                    <span class="type-badge">{{ getJobTypeLabel(job.job_type) }}</span>
+                    <span class="expired-badge" *ngIf="job.is_expired">Expired</span>
+                    <span class="inactive-badge" *ngIf="!job.is_active">Inactive</span>
+                  </div>
+                  <h1>{{ job.title }}</h1>
+                  <div class="job-meta">
+                    <span *ngIf="job.company_name" class="meta-item">
+                      <i class="ri-building-2-line"></i> {{ job.company_name }}
+                    </span>
+                    <span *ngIf="job.location" class="meta-item">
+                      <i class="ri-map-pin-line"></i> {{ job.location }}
+                    </span>
+                    <span *ngIf="job.salary_range" class="meta-item">
+                      <i class="ri-money-dollar-circle-line"></i> {{ job.salary_range }}
+                    </span>
+                  </div>
+                </div>
+                <div class="admin-actions" *ngIf="canManage">
+                  <button class="btn-icon" (click)="editJob()" title="Edit">
+                    <i class="ri-edit-line"></i>
+                  </button>
+                  <button class="btn-icon" (click)="toggleStatus()" [title]="job.is_active ? 'Deactivate' : 'Activate'">
+                    <i [class]="job.is_active ? 'ri-eye-off-line' : 'ri-eye-line'"></i>
+                  </button>
+                  <button class="btn-icon btn-danger" (click)="openDeleteModal()" title="Delete">
+                    <i class="ri-delete-bin-line"></i>
+                  </button>
+                </div>
+              </div>
+
+              <div class="expiry-row" *ngIf="job.expires_at">
+                <div *ngIf="!job.is_expired" class="expiry-info">
+                  <i class="ri-time-line"></i>
+                  <span>Closes in <strong>{{ job.days_remaining }} day{{ job.days_remaining !== 1 ? 's' : '' }}</strong></span>
+                </div>
+                <div *ngIf="job.is_expired" class="expiry-info expired">
+                  <i class="ri-time-line"></i>
+                  <span>Closed on {{ job.expires_at | date:'MMM d, y' }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Description -->
+            <div class="content-card">
+              <h2>About This Role</h2>
+              <div class="content-text">{{ job.description }}</div>
+            </div>
+
+            <!-- Requirements -->
+            <div class="content-card" *ngIf="job.requirements">
+              <h2>Requirements</h2>
+              <div class="content-text">{{ job.requirements }}</div>
+            </div>
+
+            <!-- Benefits -->
+            <div class="content-card" *ngIf="job.benefits">
+              <h2>Benefits</h2>
+              <div class="content-text">{{ job.benefits }}</div>
+            </div>
+          </div>
+
+          <!-- Sidebar Panel -->
+          <div class="detail-sidebar">
+            <!-- Apply Card -->
+            <div class="apply-card" *ngIf="!job.is_expired && job.is_active">
+              <h3>Interested?</h3>
+              <p>Apply for this position today.</p>
+              <button
+                class="btn-apply"
+                (click)="applyJob()"
+                [disabled]="!job.application_url && !job.contact_email"
+              >
+                <i class="ri-send-plane-line"></i>
+                Apply Now
+              </button>
+            </div>
+
+            <!-- Contact Info -->
+            <div class="info-panel">
+              <h3>Contact Information</h3>
+              <div class="info-list">
+                <div class="info-item" *ngIf="job.contact_name">
+                  <i class="ri-user-line"></i>
+                  <div>
+                    <span class="info-label">Contact Person</span>
+                    <span class="info-value">{{ job.contact_name }}</span>
+                  </div>
+                </div>
+                <div class="info-item" *ngIf="job.contact_email">
+                  <i class="ri-mail-line"></i>
+                  <div>
+                    <span class="info-label">Email</span>
+                    <a [href]="'mailto:' + job.contact_email" class="info-link">{{ job.contact_email }}</a>
+                  </div>
+                </div>
+                <div class="info-item" *ngIf="job.contact_phone">
+                  <i class="ri-phone-line"></i>
+                  <div>
+                    <span class="info-label">Phone</span>
+                    <a [href]="'tel:' + job.contact_phone" class="info-link">{{ job.contact_phone }}</a>
+                  </div>
+                </div>
+                <div class="info-item" *ngIf="job.application_url">
+                  <i class="ri-link"></i>
+                  <div>
+                    <span class="info-label">Application URL</span>
+                    <a [href]="job.application_url" target="_blank" class="info-link url-link">
+                      Apply Online <i class="ri-external-link-line"></i>
+                    </a>
+                  </div>
+                </div>
+                <div class="info-item">
+                  <i class="ri-calendar-line"></i>
+                  <div>
+                    <span class="info-label">Date Posted</span>
+                    <span class="info-value">{{ job.created_at | date:'MMM d, y' }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Not Found -->
+      <div *ngIf="!loading && !job" class="not-found">
+        <i class="ri-error-warning-line"></i>
+        <h3>Job Not Found</h3>
+        <p>{{ errorMessage }}</p>
+        <button class="btn-primary" (click)="goBack()">Go Back</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══ DELETE JOB CONFIRM MODAL ══ -->
+<div class="modal-overlay" *ngIf="showDeleteModal" (click)="closeDeleteModal()">
+  <div class="modal-confirm" (click)="$event.stopPropagation()">
+    <div class="confirm-icon">
+      <i class="ri-delete-bin-line"></i>
+    </div>
+    <h2>Delete This Job?</h2>
+    <p>
+      You are about to permanently delete <strong>"{{ job?.title }}"</strong>.
+      This cannot be undone.
+    </p>
+    <div class="confirm-actions">
+      <button class="btn-secondary-modal" (click)="closeDeleteModal()" [disabled]="deletingJob">
+        Cancel
+      </button>
+      <button class="btn-danger-solid" (click)="confirmDelete()" [disabled]="deletingJob">
+        <span *ngIf="!deletingJob"><i class="ri-delete-bin-line"></i> Delete Job</span>
+        <span *ngIf="deletingJob"><i class="ri-loader-4-line spin"></i> Deleting...</span>
+      </button>
+    </div>
+  </div>
+</div>

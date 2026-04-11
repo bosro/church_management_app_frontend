@@ -18,29 +18,79 @@ export class Signin implements OnInit {
   rememberMe = false;
   showPassword = false;
 
+  testimonials = [
+    {
+      quote:
+        'Churchman transformed how we track attendance and giving — a true blessing!',
+      author: 'Grace Chapel, Accra',
+    },
+    {
+      quote:
+        "Managing 3 branches used to be chaos. Now it's seamless and stress-free.",
+      author: 'Redeemed Life Church, Kumasi',
+    },
+    {
+      quote:
+        'Our pastors spend less time on admin and more time with the congregation.',
+      author: 'Fountain of Life Ministry',
+    },
+    {
+      quote:
+        'Member records, events, finances — all in one place. Absolutely incredible.',
+      author: 'Christ Embassy, Tema',
+    },
+    {
+      quote: 'The best investment our church leadership has made this decade.',
+      author: 'Living Waters Assembly',
+    },
+    {
+      quote:
+        'We onboarded 500 members in a week. The platform is fast and intuitive.',
+      author: 'Victory Worship Centre',
+    },
+  ];
+
+  activeIndex = 0;
+  exitingIndex = -1;
+  private testimonialTimer: any;
+
   constructor(
     private fb: FormBuilder,
     private authService: AuthService,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
   ) {}
 
   ngOnInit(): void {
     this.initForm();
-    this.returnUrl = this.route.snapshot.queryParams['returnUrl'] || 'main/dashboard';
-
-    // Load saved email if remember me was checked
+    this.returnUrl =
+      this.route.snapshot.queryParams['returnUrl'] || 'main/dashboard';
     const savedEmail = localStorage.getItem('rememberedEmail');
     if (savedEmail) {
       this.signinForm.patchValue({ email: savedEmail });
       this.rememberMe = true;
     }
+    this.startTestimonialCycle();
+  }
+
+  private startTestimonialCycle(): void {
+    this.testimonialTimer = setInterval(() => {
+      this.exitingIndex = this.activeIndex;
+      setTimeout(() => {
+        this.exitingIndex = -1;
+        this.activeIndex = (this.activeIndex + 1) % this.testimonials.length;
+      }, 500);
+    }, 4500);
+  }
+
+  ngOnDestroy(): void {
+    if (this.testimonialTimer) clearInterval(this.testimonialTimer);
   }
 
   private initForm(): void {
     this.signinForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
-      password: ['', [Validators.required, Validators.minLength(6)]]
+      password: ['', [Validators.required, Validators.minLength(6)]],
     });
   }
 
@@ -73,8 +123,9 @@ export class Signin implements OnInit {
       },
       error: (error) => {
         this.loading = false;
-        this.errorMessage = error.message || 'Invalid email or password. Please try again.';
-      }
+        this.errorMessage =
+          error.message || 'Invalid email or password. Please try again.';
+      },
     });
   }
 
@@ -85,7 +136,7 @@ export class Signin implements OnInit {
       },
       error: (error) => {
         this.errorMessage = 'Failed to sign in with Google. Please try again.';
-      }
+      },
     });
   }
 
@@ -94,7 +145,7 @@ export class Signin implements OnInit {
   }
 
   private markFormGroupTouched(formGroup: FormGroup): void {
-    Object.keys(formGroup.controls).forEach(key => {
+    Object.keys(formGroup.controls).forEach((key) => {
       const control = formGroup.get(key);
       control?.markAsTouched();
 
@@ -118,9 +169,3 @@ export class Signin implements OnInit {
     return '';
   }
 }
-
-
-
-
-
-

@@ -1,0 +1,600 @@
+// src/app/features/job-hub/components/job-hub-list/job-hub-list.scss
+.dashboard-layout {
+  display: flex;
+  min-height: 100vh;
+  background: #f9fafb;
+}
+.dashboard-content {
+  margin-left: 280px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  width: calc(100% - 280px);
+  @media (max-width: 768px) {
+    margin-left: 0;
+    width: 100%;
+  }
+}
+.dashboard-body {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+  @media (max-width: 768px) {
+    padding: 1rem;
+  }
+}
+.loading-container {
+  display: flex;
+  justify-content: center;
+  padding: 4rem 0;
+}
+.job-container {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+// ── Header ────────────────────────────────────────────
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.75rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .header-icon {
+    width: 52px;
+    height: 52px;
+    background: linear-gradient(135deg, #0369a1, #0284c7);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    i {
+      font-size: 1.75rem;
+      color: white;
+    }
+  }
+
+  h1 {
+    font-size: 1.875rem;
+    font-weight: 800;
+    color: #111827;
+    margin: 0 0 0.25rem;
+  }
+  .subtitle {
+    font-size: 0.9375rem;
+    color: #6b7280;
+    margin: 0;
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 0.75rem;
+  }
+}
+
+.btn-primary,
+.btn-secondary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 8px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: "Nunito Sans", sans-serif;
+  i {
+    font-size: 1.125rem;
+  }
+}
+.btn-primary {
+  background: #0284c7;
+  color: white;
+  border: none;
+  &:hover {
+    background: #0369a1;
+    transform: translateY(-2px);
+  }
+}
+.btn-secondary {
+  background: white;
+  color: #374151;
+  border: 1px solid #e5e7eb;
+  &:hover {
+    background: #f9fafb;
+  }
+}
+
+// Alerts
+.success-alert,
+.error-alert {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  i {
+    font-size: 1.25rem;
+  }
+}
+.success-alert {
+  background: #d1fae5;
+  border: 1px solid #6ee7b7;
+  color: #065f46;
+  i {
+    color: #059669;
+  }
+}
+.error-alert {
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  color: #991b1b;
+  i {
+    color: #dc2626;
+  }
+}
+
+// ── Controls Row ──────────────────────────────────────
+.controls-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.stats-pills {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.stat-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  i {
+    font-size: 1rem;
+  }
+  &.stat-active {
+    background: #dbeafe;
+    color: #1e40af;
+  }
+  &.stat-expired {
+    background: #fef3c7;
+    color: #92400e;
+  }
+}
+
+.filters {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.search-box {
+  position: relative;
+
+  i {
+    position: absolute;
+    left: 0.875rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.125rem;
+    color: #9ca3af;
+  }
+
+  input {
+    padding: 0.75rem 1rem 0.75rem 2.75rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 0.9375rem;
+    background: white;
+    font-family: "Nunito Sans", sans-serif;
+    width: 240px;
+    transition: all 0.2s;
+
+    &:focus {
+      outline: none;
+      border-color: #0284c7;
+    }
+  }
+}
+
+.type-filter {
+  padding: 0.75rem 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 0.9375rem;
+  background: white;
+  color: #374151;
+  font-family: "Nunito Sans", sans-serif;
+  cursor: pointer;
+
+  &:focus {
+    outline: none;
+    border-color: #0284c7;
+  }
+}
+
+// ── Jobs List ─────────────────────────────────────────
+.jobs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.job-card {
+  background: white;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  display: flex;
+  gap: 1.25rem;
+  padding: 1.5rem;
+  cursor: pointer;
+  transition: all 0.25s;
+
+  &:hover {
+    border-color: #bae6fd;
+    box-shadow: 0 4px 16px rgba(2, 132, 199, 0.08);
+    transform: translateY(-2px);
+  }
+
+  &.inactive {
+    opacity: 0.65;
+    &:hover {
+      opacity: 0.8;
+    }
+  }
+}
+
+.job-card-left {
+  flex-shrink: 0;
+
+  .company-logo {
+    width: 52px;
+    height: 52px;
+    background: linear-gradient(135deg, #e0f2fe, #bae6fd);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    i {
+      font-size: 1.5rem;
+      color: #0284c7;
+    }
+  }
+}
+
+.job-card-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.job-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.625rem;
+  gap: 0.75rem;
+}
+
+.job-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  flex: 1;
+
+  h3 {
+    font-size: 1.0625rem;
+    font-weight: 700;
+    color: #111827;
+    margin: 0;
+  }
+}
+
+.job-badges {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.type-badge {
+  padding: 0.2rem 0.625rem;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+
+  &.type-full {
+    background: #d1fae5;
+    color: #065f46;
+  }
+  &.type-part {
+    background: #dbeafe;
+    color: #1e40af;
+  }
+  &.type-contract {
+    background: #fef3c7;
+    color: #92400e;
+  }
+  &.type-volunteer {
+    background: #f3e8ff;
+    color: #6b21a8;
+  }
+  &.type-intern {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+}
+
+.expired-badge {
+  padding: 0.2rem 0.625rem;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.inactive-badge {
+  padding: 0.2rem 0.625rem;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.admin-actions {
+  display: flex;
+  gap: 0.375rem;
+  flex-shrink: 0;
+}
+
+.btn-icon-sm {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  i {
+    font-size: 0.875rem;
+    color: #6b7280;
+  }
+
+  &:hover {
+    background: white;
+    border-color: #0284c7;
+    i {
+      color: #0284c7;
+    }
+  }
+  &.btn-deactivate:hover {
+    background: #fef3c7;
+    border-color: #f59e0b;
+    i {
+      color: #d97706;
+    }
+  }
+  &.btn-activate:hover {
+    background: #d1fae5;
+    border-color: #6ee7b7;
+    i {
+      color: #059669;
+    }
+  }
+  &.btn-delete:hover {
+    background: #fee2e2;
+    border-color: #fca5a5;
+    i {
+      color: #dc2626;
+    }
+  }
+}
+
+.job-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+
+  .meta-item {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.8125rem;
+    color: #6b7280;
+    i {
+      font-size: 0.875rem;
+      color: #9ca3af;
+    }
+  }
+
+  .meta-date {
+    margin-left: auto;
+  }
+}
+
+.job-excerpt {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin: 0 0 0.875rem;
+  line-height: 1.6;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.job-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 0.875rem;
+  border-top: 1px solid #f3f4f6;
+}
+
+.expiry-info {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #d97706;
+  i {
+    font-size: 0.875rem;
+  }
+}
+
+.btn-view-job {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 1rem;
+  background: #e0f2fe;
+  color: #0284c7;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: "Nunito Sans", sans-serif;
+  i {
+    font-size: 1rem;
+  }
+  &:hover {
+    background: #bae6fd;
+  }
+}
+
+// ── Empty States ──────────────────────────────────────
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 5rem 2rem;
+  text-align: center;
+  background: white;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+
+  .empty-icon {
+    width: 80px;
+    height: 80px;
+    background: #e0f2fe;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.25rem;
+    i {
+      font-size: 2.5rem;
+      color: #0284c7;
+    }
+  }
+
+  h3 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #111827;
+    margin: 0 0 0.5rem;
+  }
+  p {
+    font-size: 1rem;
+    color: #6b7280;
+    margin: 0 0 1.5rem;
+    max-width: 360px;
+  }
+
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.875rem 1.5rem;
+    background: #0284c7;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: "Nunito Sans", sans-serif;
+    &:hover {
+      background: #0369a1;
+      transform: translateY(-2px);
+    }
+  }
+}
+
+.empty-filter {
+  text-align: center;
+  padding: 4rem 2rem;
+  background: white;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  i {
+    font-size: 2.5rem;
+    color: #d1d5db;
+    display: block;
+    margin-bottom: 0.75rem;
+  }
+  p {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #374151;
+    margin: 0 0 0.25rem;
+  }
+  span {
+    font-size: 0.9375rem;
+    color: #6b7280;
+  }
+}
+
+@media (max-width: 640px) {
+  .job-card {
+    flex-direction: column;
+  }
+  .controls-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .filters {
+    width: 100%;
+    flex-direction: column;
+  }
+  .search-box input {
+    width: 100%;
+  }
+  .type-filter {
+    width: 100%;
+  }
+  .meta-date {
+    margin-left: 0;
+  }
+}

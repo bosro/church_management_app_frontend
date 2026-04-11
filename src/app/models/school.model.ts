@@ -76,7 +76,7 @@ export interface FeePayment {
   term: string;
   received_by?: string;
   notes?: string;
-  fee_items: { fee_name: string; amount: number }[]; 
+  fee_items: { fee_name: string; amount: number }[];
   created_at: string;
 }
 
@@ -205,3 +205,6 @@ export function currentAcademicYear(): string {
   // If we're in the second half of the year, we're still in y/y+1
   return `${y}/${y + 1}`;
 }
+
+
+

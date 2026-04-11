@@ -86,3 +86,7 @@ export class AttendanceVisitors implements OnInit, OnDestroy {
     return `${visitor.first_name} ${visitor.last_name}`;
   }
 }
+
+
+
+

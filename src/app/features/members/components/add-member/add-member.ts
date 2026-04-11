@@ -6,7 +6,7 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { MemberService } from '../../services/member.service';
 import { AuthService } from '../../../../core/services/auth';
-import { MemberCreateInput } from '../../../../models/member.model';
+import { MemberCreateInput, CellGroup } from '../../../../models/member.model';
 import { PermissionService } from '../../../../core/services/permission.service';
 import { SubscriptionService } from '../../../../core/services/subscription.service';
 
@@ -53,9 +53,17 @@ export class AddMember implements OnInit, OnDestroy {
     'Other',
   ];
 
+  // Cell groups
+  cellGroups: CellGroup[] = [];
+  loadingCellGroups = false;
+
+  // Cell leader state
+  isCellLeader = false;
+  cellLeaderGroupId: string | null = null;
+  cellLeaderGroupName: string | null = null;
+
   // Permissions
   canAddMember = false;
-
   showUpgradeModal = false;
   upgradeModalTrigger = '';
 
@@ -71,6 +79,7 @@ export class AddMember implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.checkPermissions();
     this.initForm();
+    this.loadCellGroups();
   }
 
   ngOnDestroy(): void {
@@ -80,11 +89,44 @@ export class AddMember implements OnInit, OnDestroy {
 
   private checkPermissions(): void {
     this.canAddMember =
-      this.permissionService.isAdmin || this.permissionService.members.create;
+      this.permissionService.isAdmin ||
+      this.permissionService.members.create ||
+      this.authService.getCurrentUserRole() === 'cell_leader';
 
     if (!this.canAddMember) {
       this.router.navigate(['/unauthorized']);
     }
+  }
+
+  private loadCellGroups(): void {
+    this.loadingCellGroups = true;
+    const role = this.authService.getCurrentUserRole();
+    this.isCellLeader = role === 'cell_leader';
+
+    this.memberService
+      .getCellGroups()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (groups) => {
+          this.cellGroups = groups;
+          this.loadingCellGroups = false;
+
+          // Auto-assign cell leader to their own group and lock the field
+          if (this.isCellLeader) {
+            const userId = this.authService.getUserId();
+            const myGroup = groups.find((g) => g.leader_id === userId);
+            if (myGroup) {
+              this.cellLeaderGroupId = myGroup.id;
+              this.cellLeaderGroupName = myGroup.name;
+              this.memberForm.get('cell_group_id')?.setValue(myGroup.id);
+              this.memberForm.get('cell_group_id')?.disable();
+            }
+          }
+        },
+        error: () => {
+          this.loadingCellGroups = false;
+        },
+      });
   }
 
   handleError(error: any): void {
@@ -140,6 +182,7 @@ export class AddMember implements OnInit, OnDestroy {
       join_date: [today, [Validators.required]],
       is_new_convert: [false],
       is_visitor: [false],
+      cell_group_id: [''],
       notes: ['', [Validators.maxLength(500)]],
     });
   }
@@ -148,22 +191,18 @@ export class AddMember implements OnInit, OnDestroy {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files[0]) {
       const file = input.files[0];
-
       if (!file.type.startsWith('image/')) {
         this.errorMessage = 'Please select a valid image file (JPEG, PNG, GIF)';
         setTimeout(() => (this.errorMessage = ''), 3000);
         return;
       }
-
       if (file.size > 5 * 1024 * 1024) {
         this.errorMessage = 'Image size must be less than 5MB';
         setTimeout(() => (this.errorMessage = ''), 3000);
         return;
       }
-
       this.selectedPhoto = file;
       this.errorMessage = '';
-
       const reader = new FileReader();
       reader.onload = (e) => {
         this.photoPreview = e.target?.result as string;
@@ -203,13 +242,15 @@ export class AddMember implements OnInit, OnDestroy {
           }
         },
         error: (err) => {
+          this.loading = false;
           this.handleError(err);
         },
       });
   }
 
   private prepareMemberData(): MemberCreateInput {
-    const formValue = this.memberForm.value;
+    // getRawValue() includes disabled controls (cell_group_id when locked)
+    const formValue = this.memberForm.getRawValue();
 
     const memberData: MemberCreateInput = {
       first_name: formValue.first_name,
@@ -219,7 +260,6 @@ export class AddMember implements OnInit, OnDestroy {
       is_visitor: formValue.is_visitor || false,
     };
 
-    // Add optional fields only if they have values
     if (formValue.middle_name) memberData.middle_name = formValue.middle_name;
     if (formValue.date_of_birth)
       memberData.date_of_birth = formValue.date_of_birth;
@@ -249,15 +289,15 @@ export class AddMember implements OnInit, OnDestroy {
     if (formValue.baptism_location)
       memberData.baptism_location = formValue.baptism_location;
     if (formValue.notes) memberData.notes = formValue.notes;
+    if (formValue.cell_group_id)
+      memberData.cell_group_id = formValue.cell_group_id;
 
     return memberData;
   }
 
   private uploadPhoto(memberId: string): void {
     if (!this.selectedPhoto) return;
-
     this.uploadingPhoto = true;
-
     this.memberService
       .uploadMemberPhoto(memberId, this.selectedPhoto)
       .pipe(takeUntil(this.destroy$))
@@ -271,15 +311,13 @@ export class AddMember implements OnInit, OnDestroy {
                 this.uploadingPhoto = false;
                 this.showSuccessAndRedirect(memberId);
               },
-              error: (error) => {
-                console.error('Error updating photo URL:', error);
+              error: () => {
                 this.uploadingPhoto = false;
                 this.showSuccessAndRedirect(memberId);
               },
             });
         },
-        error: (error) => {
-          console.error('Error uploading photo:', error);
+        error: () => {
           this.uploadingPhoto = false;
           this.showSuccessAndRedirect(memberId);
         },
@@ -290,7 +328,6 @@ export class AddMember implements OnInit, OnDestroy {
     this.loading = false;
     this.successMessage = 'Member added successfully!';
     this.scrollToTop();
-
     setTimeout(() => {
       this.router.navigate(['main/members', memberId]);
     }, 1500);
@@ -312,59 +349,37 @@ export class AddMember implements OnInit, OnDestroy {
     Object.keys(formGroup.controls).forEach((key) => {
       const control = formGroup.get(key);
       control?.markAsTouched();
-
-      if (control instanceof FormGroup) {
-        this.markFormGroupTouched(control);
-      }
+      if (control instanceof FormGroup) this.markFormGroupTouched(control);
     });
   }
 
   getErrorMessage(fieldName: string): string {
     const control = this.memberForm.get(fieldName);
-
-    if (!control || !control.errors || !control.touched) {
-      return '';
-    }
-
-    if (control.hasError('required')) {
-      return 'This field is required';
-    }
-    if (control.hasError('email')) {
-      return 'Please enter a valid email address';
-    }
-    if (control.hasError('minlength')) {
-      const minLength = control.getError('minlength').requiredLength;
-      return `Minimum ${minLength} characters required`;
-    }
-    if (control.hasError('maxlength')) {
-      const maxLength = control.getError('maxlength').requiredLength;
-      return `Maximum ${maxLength} characters allowed`;
-    }
-    if (control.hasError('pattern')) {
-      if (fieldName.includes('phone')) {
-        return 'Please enter a valid 10-digit phone number (e.g., 0201234567)';
-      }
-      return 'Invalid format';
-    }
+    if (!control || !control.errors || !control.touched) return '';
+    if (control.hasError('required')) return 'This field is required';
+    if (control.hasError('email')) return 'Please enter a valid email address';
+    if (control.hasError('minlength'))
+      return `Minimum ${control.getError('minlength').requiredLength} characters required`;
+    if (control.hasError('maxlength'))
+      return `Maximum ${control.getError('maxlength').requiredLength} characters allowed`;
+    if (control.hasError('pattern') && fieldName.includes('phone'))
+      return 'Please enter a valid 10-digit phone number (e.g., 0201234567)';
     return 'Invalid input';
   }
 
   private scrollToTop(): void {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
-
   private scrollToFirstError(): void {
     const firstError = document.querySelector('.error-message');
-    if (firstError) {
+    if (firstError)
       firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
   }
 
   get today(): string {
     return new Date().toISOString().split('T')[0];
   }
 
-  // Helper for file size display
   formatFileSize(bytes: number): string {
     if (bytes < 1024) return bytes + ' bytes';
     else if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';

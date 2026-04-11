@@ -475,40 +475,26 @@ export class BranchesService {
 
   // ==================== NEW: BRANCH PASTOR MANAGEMENT ====================
 
-  /**
-   * Get all profiles with 'pastor' role who are not assigned to any branch
-   */
   getAvailablePastors(): Observable<BranchPastor[]> {
     const churchId = this.authService.getChurchId();
 
     return from(
       (async () => {
-        // Query users table (always populated) for pastor role
-        const { data: allPastors, error: pastorsError } =
-          await this.supabase.client
-            .from('users')
-            .select('id, full_name, email, phone_number')
-            .eq('church_id', churchId)
-            .eq('role', 'pastor')
-            .eq('is_active', true)
-            .order('full_name', { ascending: true });
+        // Query profiles — this is where your app roles live (USER-DEFINED enum)
+        // Show: pastor, senior_pastor, associate_pastor, elder, deacon,
+        //       worship_leader, ministry_leader, finance_officer, group_leader
+        // Hide: member, super_admin, church_admin
+        const { data: allUsers, error: usersError } = await this.supabase.client
+          .from('profiles')
+          .select(
+            'id, full_name, email, phone_number, avatar_url, role, branch_id',
+          )
+          .eq('church_id', churchId)
+          .eq('is_active', true)
+          .not('role', 'in', '("member","super_admin","church_admin")')
+          .order('full_name', { ascending: true });
 
-        if (pastorsError) throw new Error(pastorsError.message);
-
-        // Get avatar_urls from profiles separately (profiles may not exist for all)
-        const pastorIds = (allPastors || []).map((p) => p.id);
-
-        let avatarMap: Record<string, string | null> = {};
-        if (pastorIds.length > 0) {
-          const { data: profileData } = await this.supabase.client
-            .from('profiles')
-            .select('id, avatar_url')
-            .in('id', pastorIds);
-
-          (profileData || []).forEach((p) => {
-            avatarMap[p.id] = p.avatar_url;
-          });
-        }
+        if (usersError) throw new Error(usersError.message);
 
         // Get already-assigned pastor IDs from active branches
         const { data: assignedBranches } = await this.supabase.client
@@ -522,34 +508,32 @@ export class BranchesService {
           (assignedBranches || []).map((b) => b.pastor_id),
         );
 
-        // Return unassigned pastors with avatar
-        return (allPastors || [])
+        // Filter out already-assigned branch pastors
+        return (allUsers || [])
           .filter((u) => !assignedPastorIds.has(u.id))
           .map((u) => ({
             id: u.id,
             full_name: u.full_name,
             email: u.email,
             phone_number: u.phone_number,
-            avatar_url: avatarMap[u.id] || null,
+            avatar_url: u.avatar_url || null,
+            role: u.role,
           })) as BranchPastor[];
       })(),
     ).pipe(
       catchError((err) => {
-        console.error('Error loading available pastors:', err);
+        console.error('Error loading available leaders:', err);
         return throwError(() => err);
       }),
     );
   }
 
-  /**
-   * Assign a pastor to a branch
-   */
   assignBranchPastor(request: AssignBranchPastorRequest): Observable<void> {
     const churchId = this.authService.getChurchId();
 
     return from(
       (async () => {
-        // Verify branch exists
+        // Verify branch exists and has no pastor yet
         const { data: branch } = await this.supabase.client
           .from('branches')
           .select('id, name, pastor_id')
@@ -561,18 +545,23 @@ export class BranchesService {
         if (branch.pastor_id)
           throw new Error('This branch already has an assigned pastor');
 
-        // Verify user is a pastor
+        // Verify user exists in profiles and is not a member/admin
         const { data: userRecord } = await this.supabase.client
-          .from('users')
+          .from('profiles')
           .select('id, email, full_name, role')
           .eq('id', request.user_id)
           .eq('church_id', churchId)
-          .eq('role', 'pastor')
+          .eq('is_active', true)
           .single();
 
-        if (!userRecord) throw new Error('User not found or is not a pastor');
+        if (!userRecord) throw new Error('User not found');
 
-        // Check pastor not already assigned elsewhere
+        const blockedRoles = ['member', 'super_admin', 'church_admin'];
+        if (blockedRoles.includes(userRecord.role)) {
+          throw new Error('This user cannot be assigned as a branch leader');
+        }
+
+        // Check not already assigned to another branch as pastor
         const { data: existingAssignment } = await this.supabase.client
           .from('branches')
           .select('id, name')
@@ -582,11 +571,11 @@ export class BranchesService {
 
         if (existingAssignment) {
           throw new Error(
-            `This pastor is already assigned to ${existingAssignment.name}`,
+            `This person is already assigned to "${existingAssignment.name}"`,
           );
         }
 
-        // Update branch with pastor
+        // Assign to branch
         const { error: updateBranchError } = await this.supabase.client
           .from('branches')
           .update({
@@ -598,7 +587,7 @@ export class BranchesService {
 
         if (updateBranchError) throw new Error(updateBranchError.message);
 
-        // SET profiles.branch_id so pastor is scoped to this branch
+        // Scope this user to the branch in profiles
         const { error: profileError } = await this.supabase.client
           .from('profiles')
           .update({
@@ -609,28 +598,7 @@ export class BranchesService {
 
         if (profileError) throw new Error(profileError.message);
 
-        // SET users.branch_id too
-        const { error: userError } = await this.supabase.client
-          .from('users')
-          .update({
-            branch_id: request.branch_id,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', request.user_id);
-
-        if (userError) throw new Error(userError.message);
-
-        // Send welcome email if requested
-        if (request.send_welcome_email) {
-          try {
-            await this.supabase.client.auth.resetPasswordForEmail(
-              userRecord.email,
-              { redirectTo: `${window.location.origin}/auth/reset-password` },
-            );
-          } catch (emailErr) {
-            console.error('Error sending email:', emailErr);
-          }
-        }
+        // No email — user already has account access
       })(),
     ).pipe(
       catchError((err) => {
@@ -640,9 +608,6 @@ export class BranchesService {
     );
   }
 
-  /**
-   * Remove pastor from branch
-   */
   removeBranchPastor(branchId: string): Observable<void> {
     const churchId = this.authService.getChurchId();
 
@@ -671,7 +636,7 @@ export class BranchesService {
 
         if (branchError) throw new Error(branchError.message);
 
-        // CLEAR profiles.branch_id
+        // Clear profiles.branch_id for that user
         const { error: profileError } = await this.supabase.client
           .from('profiles')
           .update({
@@ -681,17 +646,6 @@ export class BranchesService {
           .eq('id', existing.pastor_id);
 
         if (profileError) throw new Error(profileError.message);
-
-        // CLEAR users.branch_id
-        const { error: userError } = await this.supabase.client
-          .from('users')
-          .update({
-            branch_id: null,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', existing.pastor_id);
-
-        if (userError) throw new Error(userError.message);
       })(),
     ).pipe(
       catchError((err) => {
@@ -700,7 +654,6 @@ export class BranchesService {
       }),
     );
   }
-
   /**
    * Get branch for current logged-in pastor
    */

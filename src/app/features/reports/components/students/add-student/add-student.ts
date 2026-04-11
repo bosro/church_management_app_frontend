@@ -132,7 +132,7 @@ export class AddStudent implements OnInit, OnDestroy {
   }
 
 
-  
+
   getError(field: string): string {
     const control = this.studentForm.get(field);
     if (!control?.errors || !control.touched) return '';
@@ -143,5 +143,8 @@ export class AddStudent implements OnInit, OnDestroy {
     return 'Invalid input';
   }
 }
+
+
+
 
 
