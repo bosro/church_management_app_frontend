@@ -176,7 +176,7 @@ export class AttendanceLinkService {
 
   // ── URL helpers ─────────────────────────────────────────────────
   getLinkUrl(token: string): string {
-    return `${window.location.origin}/attendance/link-checkin/${token}`;
+    return `${window.location.origin}/public/link-checkin/${token}`;
   }
 
   isExpired(link: AttendanceLink): boolean {

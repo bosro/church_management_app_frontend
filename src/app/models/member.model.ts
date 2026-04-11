@@ -223,6 +223,7 @@ export interface MemberMinistryAssignment {
 // src/app/models/member.model.ts
 // ADD these interfaces and update MemberCreateInput / Member
 
+
 export interface CellGroup {
   id: string;
   church_id: string;
@@ -236,6 +237,11 @@ export interface CellGroup {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  // from cell_groups_with_leader view
+  leader_name?: string | null;
+  leader_email?: string | null;
+  leader_avatar?: string | null;
+  member_count?: number | null;
 }
 
 // Update Member interface — add cell_group_id

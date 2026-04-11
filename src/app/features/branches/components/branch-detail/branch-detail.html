@@ -455,7 +455,7 @@
   </div>
 </div>
 
-<!-- Assign Pastor Modal -->
+<!-- Assign Pastor Modal — replace entirely -->
 <div class="modal-overlay" *ngIf="showAssignPastorModal" (click)="closeAssignPastorModal()">
   <div class="modal-content" (click)="$event.stopPropagation()">
     <div class="modal-header">
@@ -466,34 +466,67 @@
     </div>
 
     <div class="modal-body">
+      <!-- Info box -->
       <div class="modal-info-box">
         <i class="ri-information-line"></i>
         <p>
-          Select a leader to assign to this branch. They already have account
-          access — no email will be sent.
+          Select a leader to assign to this branch. They already have
+          account access — no email will be sent.
         </p>
       </div>
 
-      <div class="modal-members-list">
-        <div *ngFor="let pastor of availablePastors" class="modal-member-item" (click)="assignPastor(pastor.id, false)">
-          <div class="member-photo-small">
-            <img [src]="pastor.avatar_url || 'assets/images/default-avatar.png'" [alt]="pastor.full_name" />
+      <!-- Loading State -->
+      <div *ngIf="loadingPastors" class="pastor-loading">
+        <div class="pastor-loading-spinner">
+          <i class="ri-loader-4-line spin"></i>
+        </div>
+        <p>Loading available leaders...</p>
+      </div>
+
+      <!-- Pastors List -->
+      <div *ngIf="!loadingPastors" class="modal-members-list">
+
+        <!-- Has results -->
+        <ng-container *ngIf="availablePastors.length > 0">
+          <div
+            *ngFor="let pastor of availablePastors"
+            class="modal-member-item"
+            (click)="assignPastor(pastor.id, false)"
+          >
+            <div class="member-photo-small">
+              <img
+                [src]="pastor.avatar_url || 'assets/images/default-avatar.png'"
+                [alt]="pastor.full_name"
+              />
+            </div>
+            <div class="member-details">
+              <h4>{{ pastor.full_name }}</h4>
+              <p>{{ pastor.email }}</p>
+              <span class="role-badge">{{ pastor.role | titlecase }}</span>
+            </div>
+            <i class="ri-add-circle-line"></i>
           </div>
-          <div class="member-details">
-            <h4>{{ pastor.full_name }}</h4>
-            <p>{{ pastor.email }}</p>
-            <span class="role-badge">{{ pastor.role | titlecase }}</span>
+        </ng-container>
+
+        <!-- Empty State -->
+        <div *ngIf="availablePastors.length === 0" class="pastor-empty-state">
+          <div class="pastor-empty-icon">
+            <i class="ri-user-search-line"></i>
           </div>
-          <i class="ri-add-circle-line"></i>
+          <h4>No Leaders Available</h4>
+          <p>
+            All eligible users are already assigned to branches, or no
+            leaders have been added yet.
+          </p>
+          <div class="pastor-empty-hint">
+            <i class="ri-arrow-right-circle-line"></i>
+            <span>
+              Go to <strong>User Roles</strong> and add a user with a
+              pastor, ministry leader, or group leader role first.
+            </span>
+          </div>
         </div>
 
-        <div *ngIf="availablePastors.length === 0" class="no-results">
-          <i class="ri-user-search-line"></i>
-          <p>No available leaders</p>
-          <span class="no-results-hint">
-            All eligible users are already assigned to branches
-          </span>
-        </div>
       </div>
     </div>
   </div>

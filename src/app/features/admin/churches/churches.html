@@ -224,15 +224,37 @@
       <div class="form-group">
         <label>Enabled Features</label>
         <div class="feature-toggles">
+
           <label class="checkbox-label">
             <input type="checkbox" [checked]="churchForm.enabled_features.includes('reports')"
               (change)="toggleFeature('reports', $event)" />
-            <span>Reports Module</span>
+            <span>
+              <i class="ri-bar-chart-line"></i>
+              Reports &amp; School Module
+            </span>
           </label>
-          <!-- add more features here as you build them -->
+
+          <label class="checkbox-label">
+            <input type="checkbox" [checked]="churchForm.enabled_features.includes('voting')"
+              (change)="toggleFeature('voting', $event)" />
+            <span>
+              <i class="ri-award-line"></i>
+              Voting &amp; Nominations
+            </span>
+          </label>
+
+          <label class="checkbox-label">
+            <input type="checkbox" [checked]="churchForm.enabled_features.includes('job_hub')"
+              (change)="toggleFeature('job_hub', $event)" />
+            <span>
+              <i class="ri-briefcase-line"></i>
+              Job Hub
+            </span>
+          </label>
+
         </div>
         <small class="help-text">
-          Enable or disable entire modules for this church
+          Enable or disable feature modules for this church
         </small>
       </div>
 
@@ -307,15 +329,9 @@
       <div class="form-group">
         <label>Select Plan</label>
         <div class="plan-options">
-          <label
-            *ngFor="let plan of availablePlans"
-            class="plan-option"
+          <label *ngFor="let plan of availablePlans" class="plan-option"
             [class.selected]="subscriptionForm.plan_id === plan.id">
-            <input
-              type="radio"
-              [value]="plan.id"
-              [(ngModel)]="subscriptionForm.plan_id"
-            />
+            <input type="radio" [value]="plan.id" [(ngModel)]="subscriptionForm.plan_id" />
             <div class="plan-option-content">
               <div class="plan-option-header">
                 <span class="plan-option-name">{{ plan.name }}</span>
@@ -346,24 +362,16 @@
       <!-- Payment Reference -->
       <div class="form-group" *ngIf="subscriptionForm.plan_id !== 'free'">
         <label>Payment Reference</label>
-        <input
-          type="text"
-          class="form-control"
-          [(ngModel)]="subscriptionForm.payment_reference"
-          placeholder="e.g. MOMO-12345 or Bank ref"
-        />
+        <input type="text" class="form-control" [(ngModel)]="subscriptionForm.payment_reference"
+          placeholder="e.g. MOMO-12345 or Bank ref" />
         <small class="help-text">Record the payment reference for tracking</small>
       </div>
 
       <!-- Billing Email -->
       <div class="form-group">
         <label>Billing Email</label>
-        <input
-          type="email"
-          class="form-control"
-          [(ngModel)]="subscriptionForm.billing_email"
-          placeholder="billing@church.com"
-        />
+        <input type="email" class="form-control" [(ngModel)]="subscriptionForm.billing_email"
+          placeholder="billing@church.com" />
       </div>
 
       <div *ngIf="errorMessage" class="alert alert-error" style="margin-top:1rem;">

@@ -14,7 +14,8 @@
     </div>
 
     <!-- INVALID / EXPIRED / DEACTIVATED / MAXED -->
-    <div *ngIf="['invalid','expired','deactivated','maxed'].includes(pageState)" class="lc-state lc-state--error">
+    <div *ngIf="pageState === 'invalid' || pageState === 'expired' || pageState === 'deactivated' || pageState === 'maxed'"
+      class="lc-state lc-state--error">
       <div class="lc-state__icon lc-state__icon--error">
         <i class="ri-close-circle-fill"></i>
       </div>
@@ -31,6 +32,7 @@
 
     <!-- SEARCH STATE -->
     <ng-container *ngIf="pageState === 'search'">
+
       <!-- Event info -->
       <div class="lc-event-info" *ngIf="event">
         <h1>{{ event.event_name }}</h1>
@@ -52,7 +54,7 @@
 
       <div class="lc-divider"></div>
 
-      <!-- Search box -->
+      <!-- Member search -->
       <div class="lc-search-area">
         <h2>Check In</h2>
         <p>Search your name to log your attendance</p>
@@ -66,15 +68,16 @@
             class="lc-search-input"
             autocomplete="off"
           />
-          <i *ngIf="searching" class="ri-loader-4-line lc-spin lc-searching-icon"></i>
+          <i *ngIf="searching" class="ri-loader-4-line lc-searching-icon"></i>
         </div>
 
-        <!-- Results -->
+        <!-- Search results -->
         <div class="lc-results" *ngIf="searchResults.length > 0">
           <div *ngFor="let member of searchResults" class="lc-result-item"
             (click)="checkIn(member.id)">
             <div class="lc-avatar">
-              <img *ngIf="member.photo_url" [src]="member.photo_url" [alt]="getMemberFullName(member)" />
+              <img *ngIf="member.photo_url" [src]="member.photo_url"
+                [alt]="getMemberFullName(member)" />
               <div *ngIf="!member.photo_url" class="lc-avatar__placeholder">
                 {{ getMemberInitials(member) }}
               </div>
@@ -87,12 +90,103 @@
           </div>
         </div>
 
-        <!-- No results -->
-        <div *ngIf="searchControl.value && !searching && searchResults.length === 0" class="lc-no-results">
+        <!-- No results hint -->
+        <div *ngIf="searchControl.value && !searching && searchResults.length === 0"
+          class="lc-no-results">
           <i class="ri-user-search-line"></i>
-          <p>No members found. Please contact an usher.</p>
+          <p>No members found</p>
         </div>
       </div>
+
+      <!-- ── Guest / Visitor section ── -->
+      <div class="lc-visitor-divider">
+        <span>visiting or not a member?</span>
+      </div>
+
+      <button class="lc-visitor-btn" (click)="openVisitorForm()">
+        <i class="ri-user-add-line"></i>
+        Check in as a Guest / Visitor
+      </button>
+
+    </ng-container>
+
+    <!-- VISITOR FORM STATE -->
+    <ng-container *ngIf="pageState === 'visitor-form'">
+
+      <div class="lc-event-info" *ngIf="event">
+        <h1>{{ event.event_name }}</h1>
+      </div>
+
+      <div class="lc-divider"></div>
+
+      <div class="lc-visitor-form-area">
+        <div class="lc-visitor-form-header">
+          <button class="lc-back-btn" (click)="backToSearch()">
+            <i class="ri-arrow-left-line"></i>
+          </button>
+          <div>
+            <h2>Guest Check-In</h2>
+            <p>Enter your details to log your attendance</p>
+          </div>
+        </div>
+
+        <div class="lc-form-group">
+          <label>First Name *</label>
+          <input
+            type="text"
+            [(ngModel)]="visitorFirstName"
+            placeholder="Your first name"
+            class="lc-form-input"
+          />
+        </div>
+
+        <div class="lc-form-group">
+          <label>Last Name *</label>
+          <input
+            type="text"
+            [(ngModel)]="visitorLastName"
+            placeholder="Your last name"
+            class="lc-form-input"
+          />
+        </div>
+
+        <div class="lc-form-group">
+          <label>
+            Phone
+            <span class="lc-optional">(optional)</span>
+          </label>
+          <input
+            type="tel"
+            [(ngModel)]="visitorPhone"
+            placeholder="Your phone number"
+            class="lc-form-input"
+          />
+        </div>
+
+        <div class="lc-form-group">
+          <label>
+            Email
+            <span class="lc-optional">(optional)</span>
+          </label>
+          <input
+            type="email"
+            [(ngModel)]="visitorEmail"
+            placeholder="Your email address"
+            class="lc-form-input"
+          />
+        </div>
+
+        <div *ngIf="visitorFormError" class="lc-form-error">
+          <i class="ri-error-warning-line"></i>
+          {{ visitorFormError }}
+        </div>
+
+        <button class="lc-checkin-btn" (click)="checkInAsVisitor()">
+          <i class="ri-checkbox-circle-line"></i>
+          Check In as Guest
+        </button>
+      </div>
+
     </ng-container>
 
     <!-- CHECKING IN -->
@@ -117,18 +211,33 @@
       </div>
       <h2>Welcome!</h2>
 
-      <div *ngIf="checkedInMember" class="lc-success-member">
+      <!-- Member success -->
+      <div *ngIf="!wasVisitor && checkedInMember" class="lc-success-member">
         <div class="lc-avatar lc-avatar--large">
-          <img *ngIf="checkedInMember.photo_url" [src]="checkedInMember.photo_url"
+          <img *ngIf="checkedInMember.photo_url"
+            [src]="checkedInMember.photo_url"
             [alt]="getMemberFullName(checkedInMember)" />
           <div *ngIf="!checkedInMember.photo_url" class="lc-avatar__placeholder">
             {{ getMemberInitials(checkedInMember) }}
           </div>
         </div>
         <p class="lc-success-name">{{ getMemberFullName(checkedInMember) }}</p>
-        <p class="lc-success-time">Checked in at {{ checkInTime | date:'shortTime' }}</p>
       </div>
 
+      <!-- Visitor success -->
+      <div *ngIf="wasVisitor" class="lc-success-member">
+        <div class="lc-avatar lc-avatar--large">
+          <div class="lc-avatar__placeholder lc-avatar__placeholder--visitor">
+            <i class="ri-user-smile-line"></i>
+          </div>
+        </div>
+        <p class="lc-success-name">{{ checkedInVisitorName }}</p>
+        <span class="lc-guest-tag">Guest</span>
+      </div>
+
+      <p class="lc-success-time">
+        Checked in at {{ checkInTime | date:'shortTime' }}
+      </p>
       <p class="lc-success-event" *ngIf="event">{{ event.event_name }}</p>
 
       <div class="lc-auto-reset">
@@ -141,5 +250,6 @@
     <div class="lc-footer">
       <p>Powered by Churchman</p>
     </div>
+
   </div>
 </div>

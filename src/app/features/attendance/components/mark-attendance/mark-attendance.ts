@@ -87,6 +87,9 @@ export class MarkAttendance implements OnInit, OnDestroy {
 
   canMarkAttendance = false;
 
+  processingMemberIds = new Set<string>(); // tracks per-member loading state
+  processingRecordIds = new Set<string>(); // tracks per-record loading state
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
@@ -213,12 +216,12 @@ export class MarkAttendance implements OnInit, OnDestroy {
     return this.attendanceRecords.filter((r) => r.status === 'absent');
   }
 
-  // ── Check in from search result ───────────────────────────────
   checkInMember(member: EnrichedMember): void {
     if (this.isEventPast && !this.isEventToday) return;
     if (member.alreadyPresent) return;
+    if (this.processingMemberIds.has(member.id)) return;
 
-    this.loading = true;
+    this.processingMemberIds.add(member.id);
     this.errorMessage = '';
 
     this.attendanceService
@@ -226,25 +229,24 @@ export class MarkAttendance implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
+          this.processingMemberIds.delete(member.id);
           this.successMessage = `${member.first_name} checked in!`;
           this.loadAttendanceRecords();
           this.loadEvent();
-          this.loading = false;
           setTimeout(() => (this.successMessage = ''), 3000);
         },
         error: (error) => {
-          this.loading = false;
+          this.processingMemberIds.delete(member.id);
           this.errorMessage = error.message || 'Failed to check in member';
         },
       });
   }
 
-  // ── Mark absent from search result (inline, no modal needed) ──
+  // Replace markAbsentInline()
   markAbsentInline(member: EnrichedMember): void {
     if (this.isEventPast && !this.isEventToday) return;
     if (member.alreadyAbsent) return;
 
-    // Open modal pre-populated with member
     this.absenceTargetMemberId = member.id;
     this.absenceTargetName = `${member.first_name} ${member.last_name}`;
     this.absenceTargetRecord = null;
@@ -272,11 +274,11 @@ export class MarkAttendance implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
+          this.markingAbsent = false;
           this.successMessage = `${this.absenceTargetName} marked absent.`;
           this.loadAttendanceRecords();
           this.loadEvent();
           this.closeAbsenceModal();
-          this.markingAbsent = false;
           setTimeout(() => (this.successMessage = ''), 3000);
         },
         error: (error) => {
@@ -332,24 +334,34 @@ export class MarkAttendance implements OnInit, OnDestroy {
   // ── Flip absent → present ──────────────────────────────────────
   markPresentFromAbsent(record: AttendanceRecord): void {
     if (!record.member_id || (this.isEventPast && !this.isEventToday)) return;
-    this.loading = true;
+    if (this.processingRecordIds.has(record.id)) return;
+
+    this.processingRecordIds.add(record.id);
 
     this.attendanceService
       .checkInMember(this.eventId, record.member_id, 'manual')
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
+          this.processingRecordIds.delete(record.id);
           this.successMessage = 'Marked as present.';
           this.loadAttendanceRecords();
           this.loadEvent();
-          this.loading = false;
           setTimeout(() => (this.successMessage = ''), 3000);
         },
         error: (error) => {
-          this.loading = false;
+          this.processingRecordIds.delete(record.id);
           this.errorMessage = error.message || 'Failed to mark present';
         },
       });
+  }
+
+  isMemberProcessing(memberId: string): boolean {
+    return this.processingMemberIds.has(memberId);
+  }
+
+  isRecordProcessing(recordId: string): boolean {
+    return this.processingRecordIds.has(recordId);
   }
 
   // ── Visitor ───────────────────────────────────────────────────

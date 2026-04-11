@@ -73,7 +73,6 @@ export class EditBranch implements OnInit, OnDestroy {
           Validators.maxLength(100),
         ],
       ],
-      pastor_name: ['', [Validators.maxLength(100)]],
       address: ['', [Validators.maxLength(200)]],
       city: ['', [Validators.maxLength(100)]],
       state: ['', [Validators.maxLength(100)]],
@@ -108,7 +107,6 @@ export class EditBranch implements OnInit, OnDestroy {
   private populateForm(branch: Branch): void {
     this.branchForm.patchValue({
       name: branch.name,
-      pastor_name: branch.pastor_name || '',
       address: branch.address || '',
       city: branch.city || '',
       state: branch.state || '',
@@ -218,10 +216,3 @@ export class EditBranch implements OnInit, OnDestroy {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }
-
-
-
-
-
-
-

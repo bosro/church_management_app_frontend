@@ -4,7 +4,12 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { MemberService } from '../../../members/services/member.service';
-import { Branch, BranchMember, BranchInsights, BranchPastor } from '../../../../models/branch.model';
+import {
+  Branch,
+  BranchMember,
+  BranchInsights,
+  BranchPastor,
+} from '../../../../models/branch.model';
 import { Member } from '../../../../models/member.model';
 import { PermissionService } from '../../../../core/services/permission.service';
 import { BranchesService } from '../../services/branches';
@@ -51,6 +56,8 @@ export class BranchDetail implements OnInit, OnDestroy {
   canManageBranches = false;
   canAssignMembers = false;
   canViewInsights = false;
+
+  loadingPastors = false;
 
   constructor(
     private branchesService: BranchesService,
@@ -163,16 +170,20 @@ export class BranchDetail implements OnInit, OnDestroy {
   }
 
   private loadAvailablePastors(): void {
+    this.loadingPastors = true;
+
     this.branchesService
       .getAvailablePastors()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (pastors) => {
           this.availablePastors = pastors;
+          this.loadingPastors = false;
         },
         error: (error) => {
           console.error('Error loading pastors:', error);
-          this.errorMessage = 'Failed to load available pastors';
+          this.errorMessage = 'Failed to load available leaders';
+          this.loadingPastors = false;
         },
       });
   }
@@ -215,7 +226,9 @@ export class BranchDetail implements OnInit, OnDestroy {
       return;
     }
 
-    if (!confirm('Are you sure you want to remove the pastor from this branch?')) {
+    if (
+      !confirm('Are you sure you want to remove the pastor from this branch?')
+    ) {
       return;
     }
 
@@ -360,7 +373,9 @@ export class BranchDetail implements OnInit, OnDestroy {
       return;
     }
 
-    if (!confirm('Are you sure you want to remove this member from the branch?')) {
+    if (
+      !confirm('Are you sure you want to remove this member from the branch?')
+    ) {
       return;
     }
 
@@ -445,9 +460,3 @@ export class BranchDetail implements OnInit, OnDestroy {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }
-
-
-
-
-
-

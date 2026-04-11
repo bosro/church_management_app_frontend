@@ -88,12 +88,10 @@ const routes: Routes = [
     component: QrCheckin,
     // NO RoleGuard — public
   },
-  {
-    // ✅ MUST be before :id — link-checkin is a specific string segment
-    path: 'link-checkin/:token',
-    component: LinkCheckin,
-    // NO RoleGuard — public
-  },
+  // {
+  //   path: 'link-checkin/:token',
+  //   component: LinkCheckin,
+  // },
   {
     path: ':id',
     component: AttendanceDetail,

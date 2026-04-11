@@ -24,6 +24,7 @@ import { SubscriptionService } from '../../../core/services/subscription.service
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { CellGroupsService } from '../../cells/services/cell-groups.service';
 
 @Injectable({
   providedIn: 'root',
@@ -33,6 +34,7 @@ export class MemberService {
     private supabase: SupabaseService,
     private authService: AuthService,
     private subscriptionService: SubscriptionService,
+    private cellGroupsService: CellGroupsService,
   ) {}
 
   // Always get fresh values — never store in constructor
@@ -56,17 +58,37 @@ export class MemberService {
     pageSize: number,
   ): Promise<MemberListResult> {
     const churchId = this.getChurchId();
+    const role = this.authService.getCurrentUserRole();
+    const userId = this.authService.getUserId();
     const isBranchPastor = this.authService.isBranchPastor();
     const branchId = this.authService.getBranchId();
+    const isCellLeader = role === 'cell_leader';
 
     let query = this.supabase.client
       .from('members')
       .select('*', { count: 'exact' })
       .eq('church_id', churchId);
 
-    // Branch pastor only sees their branch members
+    // Branch pastor scoping
     if (isBranchPastor && branchId) {
       query = query.eq('branch_id', branchId);
+    }
+
+    // Cell leader scoping — only members in their cell group(s)
+    if (isCellLeader && userId) {
+      const { data: ledGroups } = await this.supabase.client
+        .from('cell_groups')
+        .select('id')
+        .eq('leader_id', userId)
+        .eq('is_active', true);
+
+      const ledGroupIds = (ledGroups || []).map((g: any) => g.id);
+
+      if (ledGroupIds.length === 0) {
+        return { data: [], count: 0, page, pageSize, totalPages: 0 };
+      }
+
+      query = query.in('cell_group_id', ledGroupIds);
     }
 
     if (filters.search_term) {
@@ -1151,25 +1173,9 @@ export class MemberService {
     );
   }
 
-
-
   // ── Cell Groups ───────────────────────────────────────────────────────────────
 
-getCellGroups(): Observable<CellGroup[]> {
-  const churchId = this.getChurchId();
-  return from(
-    this.supabase.client
-      .from('cell_groups')
-      .select('id, name, branch_id, leader_id, meeting_day, meeting_time, meeting_location, is_active')
-      .eq('church_id', churchId)
-      .eq('is_active', true)
-      .order('name', { ascending: true }),
-  ).pipe(
-    map(({ data, error }) => {
-      if (error) throw new Error(error.message);
-      return (data || []) as CellGroup[];
-    }),
-    catchError(() => of([])),
-  );
-}
+  getCellGroups(): Observable<CellGroup[]> {
+    return this.cellGroupsService.getActiveCellGroups();
+  }
 }

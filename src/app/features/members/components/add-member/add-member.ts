@@ -57,6 +57,11 @@ export class AddMember implements OnInit, OnDestroy {
   cellGroups: CellGroup[] = [];
   loadingCellGroups = false;
 
+  // Cell leader state
+  isCellLeader = false;
+  cellLeaderGroupId: string | null = null;
+  cellLeaderGroupName: string | null = null;
+
   // Permissions
   canAddMember = false;
   showUpgradeModal = false;
@@ -84,7 +89,10 @@ export class AddMember implements OnInit, OnDestroy {
 
   private checkPermissions(): void {
     this.canAddMember =
-      this.permissionService.isAdmin || this.permissionService.members.create;
+      this.permissionService.isAdmin ||
+      this.permissionService.members.create ||
+      this.authService.getCurrentUserRole() === 'cell_leader';
+
     if (!this.canAddMember) {
       this.router.navigate(['/unauthorized']);
     }
@@ -92,6 +100,9 @@ export class AddMember implements OnInit, OnDestroy {
 
   private loadCellGroups(): void {
     this.loadingCellGroups = true;
+    const role = this.authService.getCurrentUserRole();
+    this.isCellLeader = role === 'cell_leader';
+
     this.memberService
       .getCellGroups()
       .pipe(takeUntil(this.destroy$))
@@ -99,6 +110,18 @@ export class AddMember implements OnInit, OnDestroy {
         next: (groups) => {
           this.cellGroups = groups;
           this.loadingCellGroups = false;
+
+          // Auto-assign cell leader to their own group and lock the field
+          if (this.isCellLeader) {
+            const userId = this.authService.getUserId();
+            const myGroup = groups.find((g) => g.leader_id === userId);
+            if (myGroup) {
+              this.cellLeaderGroupId = myGroup.id;
+              this.cellLeaderGroupName = myGroup.name;
+              this.memberForm.get('cell_group_id')?.setValue(myGroup.id);
+              this.memberForm.get('cell_group_id')?.disable();
+            }
+          }
         },
         error: () => {
           this.loadingCellGroups = false;
@@ -159,7 +182,7 @@ export class AddMember implements OnInit, OnDestroy {
       join_date: [today, [Validators.required]],
       is_new_convert: [false],
       is_visitor: [false],
-      cell_group_id: [''], // ← NEW
+      cell_group_id: [''],
       notes: ['', [Validators.maxLength(500)]],
     });
   }
@@ -226,7 +249,8 @@ export class AddMember implements OnInit, OnDestroy {
   }
 
   private prepareMemberData(): MemberCreateInput {
-    const formValue = this.memberForm.value;
+    // getRawValue() includes disabled controls (cell_group_id when locked)
+    const formValue = this.memberForm.getRawValue();
 
     const memberData: MemberCreateInput = {
       first_name: formValue.first_name,
@@ -266,7 +290,7 @@ export class AddMember implements OnInit, OnDestroy {
       memberData.baptism_location = formValue.baptism_location;
     if (formValue.notes) memberData.notes = formValue.notes;
     if (formValue.cell_group_id)
-      memberData.cell_group_id = formValue.cell_group_id; // ← NEW
+      memberData.cell_group_id = formValue.cell_group_id;
 
     return memberData;
   }
@@ -334,15 +358,12 @@ export class AddMember implements OnInit, OnDestroy {
     if (!control || !control.errors || !control.touched) return '';
     if (control.hasError('required')) return 'This field is required';
     if (control.hasError('email')) return 'Please enter a valid email address';
-    if (control.hasError('minlength')) {
+    if (control.hasError('minlength'))
       return `Minimum ${control.getError('minlength').requiredLength} characters required`;
-    }
-    if (control.hasError('maxlength')) {
+    if (control.hasError('maxlength'))
       return `Maximum ${control.getError('maxlength').requiredLength} characters allowed`;
-    }
-    if (control.hasError('pattern') && fieldName.includes('phone')) {
+    if (control.hasError('pattern') && fieldName.includes('phone'))
       return 'Please enter a valid 10-digit phone number (e.g., 0201234567)';
-    }
     return 'Invalid input';
   }
 

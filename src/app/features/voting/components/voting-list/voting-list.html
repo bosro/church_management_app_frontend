@@ -1,0 +1,128 @@
+<!-- src/app/features/voting/components/voting-list/voting-list.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+  <div class="dashboard-content">
+    <app-header></app-header>
+    <div class="dashboard-body">
+      <div class="voting-container">
+
+        <!-- Page Header -->
+        <div class="page-header">
+          <div class="header-left">
+            <div class="header-icon">
+              <i class="ri-award-line"></i>
+            </div>
+            <div>
+              <h1>Voting & Nominations</h1>
+              <p class="subtitle">Create award categories and let members vote</p>
+            </div>
+          </div>
+          <button *ngIf="canManage" class="btn-primary" (click)="createCategory()">
+            <i class="ri-add-line"></i>
+            New Category
+          </button>
+        </div>
+
+        <!-- Alerts -->
+        <div *ngIf="successMessage" class="success-alert">
+          <i class="ri-checkbox-circle-line"></i>
+          <span>{{ successMessage }}</span>
+        </div>
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i>
+          <span>{{ errorMessage }}</span>
+        </div>
+
+        <!-- Stats Row -->
+        <div class="stats-row" *ngIf="!loading && categories.length > 0">
+          <div class="stat-pill stat-active">
+            <i class="ri-vote-line"></i>
+            <span>{{ getActiveCount() }} Voting Open</span>
+          </div>
+          <div class="stat-pill stat-upcoming">
+            <i class="ri-time-line"></i>
+            <span>{{ getUpcomingCount() }} Upcoming</span>
+          </div>
+          <div class="stat-pill stat-closed">
+            <i class="ri-checkbox-circle-line"></i>
+            <span>{{ getClosedCount() }} Closed</span>
+          </div>
+        </div>
+
+        <!-- Loading -->
+        <div *ngIf="loading" class="loading-container">
+          <app-loading-spinner message="Loading categories..."></app-loading-spinner>
+        </div>
+
+        <!-- Categories Grid -->
+        <div *ngIf="!loading" class="categories-grid">
+
+          <div *ngFor="let cat of categories" class="category-card" (click)="viewCategory(cat.id)">
+            <!-- Card Top Banner -->
+            <div class="card-banner" [class]="'banner-' + (cat.status || 'upcoming')">
+              <div class="banner-pattern"></div>
+              <div class="banner-content">
+                <span class="status-badge" [class]="getStatusClass(cat.status)">
+                  <i class="ri-checkbox-blank-circle-fill"></i>
+                  {{ getStatusLabel(cat.status) }}
+                </span>
+                <div class="banner-icon">
+                  <i class="ri-award-fill"></i>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card Body -->
+            <div class="card-body">
+              <div class="card-header-row">
+                <h3>{{ cat.title }}</h3>
+                <div class="card-actions" *ngIf="canManage" (click)="$event.stopPropagation()">
+                  <button class="btn-icon" (click)="editCategory(cat.id, $event)" title="Edit">
+                    <i class="ri-edit-line"></i>
+                  </button>
+                  <button class="btn-icon btn-danger" (click)="deleteCategory(cat.id, $event)" title="Delete">
+                    <i class="ri-delete-bin-line"></i>
+                  </button>
+                </div>
+              </div>
+
+              <p class="cat-description" *ngIf="cat.description">{{ cat.description }}</p>
+
+              <div class="card-meta">
+                <div class="meta-item">
+                  <i class="ri-calendar-line"></i>
+                  <span>Voting: {{ formatDate(cat.voting_start_at) }} – {{ formatDate(cat.voting_end_at) }}</span>
+                </div>
+                <div class="meta-item">
+                  <i class="ri-checkbox-multiple-line"></i>
+                  <span>{{ cat.max_votes_per_user }} vote{{ cat.max_votes_per_user !== 1 ? 's' : '' }} per person</span>
+                </div>
+              </div>
+
+              <div class="card-footer">
+                <button class="btn-view">
+                  <span>{{ cat.status === 'voting_open' ? 'Vote Now' : 'View Details' }}</span>
+                  <i class="ri-arrow-right-line"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Empty State -->
+          <div *ngIf="categories.length === 0" class="empty-state">
+            <div class="empty-icon">
+              <i class="ri-award-line"></i>
+            </div>
+            <h3>No Voting Categories Yet</h3>
+            <p>Create your first award category to get started with voting and nominations.</p>
+            <button *ngIf="canManage" class="btn-primary" (click)="createCategory()">
+              <i class="ri-add-line"></i>
+              Create Category
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

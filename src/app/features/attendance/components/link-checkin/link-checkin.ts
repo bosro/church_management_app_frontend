@@ -1,18 +1,10 @@
-// src/app/features/attendance/components/link-checkin/link-checkin.component.ts
+// src/app/features/attendance/components/link-checkin/link-checkin.ts
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { FormControl } from '@angular/forms';
 import { Subject } from 'rxjs';
-import {
-  takeUntil,
-  debounceTime,
-  distinctUntilChanged,
-  switchMap,
-} from 'rxjs/operators';
-import {
-  AttendanceLinkService,
-  AttendanceLink,
-} from '../../services/attendance-link.service';
+import { takeUntil, debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
+import { AttendanceLinkService, AttendanceLink } from '../../services/attendance-link.service';
 import { AttendanceService } from '../../services/attendance.service';
 import { MemberService } from '../../../members/services/member.service';
 import { AttendanceEvent } from '../../../../models/attendance.model';
@@ -25,6 +17,7 @@ type PageState =
   | 'deactivated'
   | 'maxed'
   | 'search'
+  | 'visitor-form'
   | 'checking-in'
   | 'success'
   | 'already-checked-in';
@@ -38,20 +31,29 @@ type PageState =
 export class LinkCheckin implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
-  token: string = '';
+  token = '';
   link: AttendanceLink | null = null;
   event: AttendanceEvent | null = null;
   pageState: PageState = 'loading';
   invalidReason = '';
 
-  // Search
+  // Member search
   searchControl = new FormControl('');
   searchResults: Member[] = [];
   searching = false;
 
+  // Visitor form
+  visitorFirstName = '';
+  visitorLastName = '';
+  visitorPhone = '';
+  visitorEmail = '';
+  visitorFormError = '';
+
   // Success
   checkedInMember: Member | null = null;
+  checkedInVisitorName = '';
   checkInTime: Date = new Date();
+  wasVisitor = false;
 
   constructor(
     private route: ActivatedRoute,
@@ -86,22 +88,18 @@ export class LinkCheckin implements OnInit, OnDestroy {
           if (!result.valid) {
             this.link = result.link || null;
             this.invalidReason = result.reason || 'This link is not valid';
-
-            if (result.reason?.includes('expired')) this.pageState = 'expired';
-            else if (result.reason?.includes('deactivated'))
-              this.pageState = 'deactivated';
-            else if (result.reason?.includes('maximum'))
-              this.pageState = 'maxed';
-            else this.pageState = 'invalid';
+            if (result.reason?.includes('expired'))          this.pageState = 'expired';
+            else if (result.reason?.includes('deactivated')) this.pageState = 'deactivated';
+            else if (result.reason?.includes('maximum'))     this.pageState = 'maxed';
+            else                                             this.pageState = 'invalid';
             return;
           }
-
           this.link = result.link!;
           this.loadEvent();
         },
         error: () => {
           this.pageState = 'invalid';
-          this.invalidReason = 'Link not found';
+          this.invalidReason = 'Could not verify this link. Please try again.';
         },
       });
   }
@@ -118,7 +116,7 @@ export class LinkCheckin implements OnInit, OnDestroy {
         },
         error: () => {
           this.pageState = 'invalid';
-          this.invalidReason = 'Event not found';
+          this.invalidReason = 'Event not found or no longer available.';
         },
       });
   }
@@ -154,6 +152,7 @@ export class LinkCheckin implements OnInit, OnDestroy {
       });
   }
 
+  // ── Member check-in ───────────────────────────────────────────
   checkIn(memberId: string): void {
     if (!this.link || !this.event) return;
     this.pageState = 'checking-in';
@@ -163,30 +162,25 @@ export class LinkCheckin implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
-          // Increment link uses
           this.linkService
             .incrementUses(this.link!.id, this.link!.current_uses)
             .pipe(takeUntil(this.destroy$))
             .subscribe();
 
-          // Load member for success screen
           this.memberService
             .getMemberByIdPublic(memberId)
             .pipe(takeUntil(this.destroy$))
             .subscribe({
-              next: (member) => {
-                this.checkedInMember = member;
-              },
+              next: (member) => { this.checkedInMember = member; },
               error: () => {
                 const found = this.searchResults.find((m) => m.id === memberId);
                 if (found) this.checkedInMember = found;
               },
             });
 
+          this.wasVisitor = false;
           this.checkInTime = new Date();
           this.pageState = 'success';
-
-          // Auto-reset after 5 seconds for next person
           setTimeout(() => this.reset(), 5000);
         },
         error: (err) => {
@@ -200,9 +194,69 @@ export class LinkCheckin implements OnInit, OnDestroy {
       });
   }
 
+  // ── Visitor flow ──────────────────────────────────────────────
+  openVisitorForm(): void {
+    this.visitorFirstName = '';
+    this.visitorLastName = '';
+    this.visitorPhone = '';
+    this.visitorEmail = '';
+    this.visitorFormError = '';
+    this.pageState = 'visitor-form';
+  }
+
+  backToSearch(): void {
+    this.pageState = 'search';
+    this.visitorFormError = '';
+  }
+
+  checkInAsVisitor(): void {
+    this.visitorFormError = '';
+
+    if (!this.visitorFirstName.trim()) {
+      this.visitorFormError = 'First name is required';
+      return;
+    }
+    if (!this.visitorLastName.trim()) {
+      this.visitorFormError = 'Last name is required';
+      return;
+    }
+
+    if (!this.link || !this.event) return;
+    this.pageState = 'checking-in';
+
+    this.attendanceService
+      .checkInVisitorPublic(this.event.id, {
+        first_name: this.visitorFirstName.trim(),
+        last_name: this.visitorLastName.trim(),
+        phone: this.visitorPhone.trim() || undefined,
+        email: this.visitorEmail.trim() || undefined,
+      })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.linkService
+            .incrementUses(this.link!.id, this.link!.current_uses)
+            .pipe(takeUntil(this.destroy$))
+            .subscribe();
+
+          this.wasVisitor = true;
+          this.checkedInVisitorName = `${this.visitorFirstName} ${this.visitorLastName}`;
+          this.checkInTime = new Date();
+          this.pageState = 'success';
+          setTimeout(() => this.reset(), 5000);
+        },
+        error: () => {
+          this.pageState = 'visitor-form';
+          this.visitorFormError = 'Check-in failed. Please try again.';
+        },
+      });
+  }
+
   reset(): void {
     this.pageState = 'search';
     this.checkedInMember = null;
+    this.checkedInVisitorName = '';
+    this.wasVisitor = false;
     this.searchControl.setValue('');
     this.searchResults = [];
   }

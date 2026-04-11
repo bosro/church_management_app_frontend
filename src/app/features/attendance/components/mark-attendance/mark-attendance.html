@@ -189,12 +189,21 @@
                       <span *ngIf="member.alreadyPresent" class="already-badge already-badge--present">
                         <i class="ri-checkbox-circle-fill"></i> Present
                       </span>
+
                       <!-- Already absent -->
                       <span *ngIf="member.alreadyAbsent" class="already-badge already-badge--absent">
                         <i class="ri-close-circle-fill"></i> Absent
                       </span>
-                      <!-- Neither — show both action buttons inline -->
-                      <div *ngIf="!member.alreadyPresent && !member.alreadyAbsent" class="inline-actions">
+
+                      <!-- Processing spinner (covers both buttons while request is in flight) -->
+                      <div *ngIf="isMemberProcessing(member.id)" class="inline-processing">
+                        <i class="ri-loader-4-line inline-spin"></i>
+                        <span>Adding...</span>
+                      </div>
+
+                      <!-- Neither marked and not processing — show both action buttons -->
+                      <div *ngIf="!member.alreadyPresent && !member.alreadyAbsent && !isMemberProcessing(member.id)"
+                        class="inline-actions">
                         <button class="btn-inline-checkin" (click)="checkInMember(member)" title="Mark Present">
                           <i class="ri-checkbox-circle-line"></i>
                           Present
@@ -342,11 +351,16 @@
                       (click)="openEditReasonModal(record)" title="Edit Reason">
                       <i class="ri-edit-line"></i>
                     </button>
+                    <!-- Inside the absent tab, replace the btn-mark-present button -->
                     <button class="btn-action btn-mark-present"
-                      *ngIf="permissionService.isAdmin || permissionService.attendance.checkin"
+                      *ngIf="(permissionService.isAdmin || permissionService.attendance.checkin) && !isRecordProcessing(record.id)"
                       (click)="markPresentFromAbsent(record)" title="Mark Present">
                       <i class="ri-checkbox-line"></i>
                     </button>
+                    <!-- Spinner while that specific record is being flipped -->
+                    <div *ngIf="isRecordProcessing(record.id)" class="record-processing-indicator">
+                      <i class="ri-loader-4-line"></i>
+                    </div>
                     <button class="btn-remove" *ngIf="permissionService.isAdmin || permissionService.attendance.manage"
                       (click)="removeAttendance(record.id)" title="Remove">
                       <i class="ri-close-line"></i>

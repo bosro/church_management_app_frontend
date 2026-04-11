@@ -213,18 +213,38 @@
               <div class="form-row">
                 <div class="form-group">
                   <label for="cell_group_id">Cell Group</label>
-                  <select id="cell_group_id" formControlName="cell_group_id">
+
+                  <!-- Cell leader: locked to their own group -->
+                  <div *ngIf="isCellLeader && cellLeaderGroupId" class="locked-field">
+                    <i class="ri-group-2-line"></i>
+                    <span class="locked-group-name">{{ cellLeaderGroupName }}</span>
+                    <span class="locked-badge">
+                      <i class="ri-lock-line"></i>
+                      Auto-assigned
+                    </span>
+                  </div>
+
+                  <!-- Cell leader but no group assigned to them yet -->
+                  <div *ngIf="isCellLeader && !cellLeaderGroupId && !loadingCellGroups"
+                    class="locked-field locked-field--warn">
+                    <i class="ri-error-warning-line"></i>
+                    <span>You are not assigned as leader of any active cell group. Contact your admin.</span>
+                  </div>
+
+                  <!-- Admin / pastor: free to choose -->
+                  <select *ngIf="!isCellLeader" id="cell_group_id" formControlName="cell_group_id">
                     <option value="">
-                      {{ loadingCellGroups ? 'Loading...' : 'Select cell group (optional)' }}
+                      {{ loadingCellGroups ? 'Loading groups...' : 'None (unassigned)' }}
                     </option>
                     <option *ngFor="let group of cellGroups" [value]="group.id">
                       {{ group.name }}
                       <ng-container *ngIf="group.meeting_day"> · {{ group.meeting_day }}</ng-container>
                     </option>
                   </select>
-                  <span class="field-hint" *ngIf="cellGroups.length === 0 && !loadingCellGroups">
+
+                  <span class="field-hint" *ngIf="!isCellLeader && cellGroups.length === 0 && !loadingCellGroups">
                     <i class="ri-information-line"></i>
-                    No cell groups found. Create one from the admin panel.
+                    No active cell groups found. Create one from Cell Groups.
                   </span>
                 </div>
               </div>

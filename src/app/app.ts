@@ -108,3 +108,6 @@ export class App implements OnInit {
     this.updateAvailable = false;
   }
 }
+
+
+

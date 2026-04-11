@@ -64,6 +64,13 @@ export class Sidebar implements OnInit {
           active: false,
           roles: ['super_admin'],
         },
+        {
+          icon: 'ri-price-tag-3-line',
+          label: 'Subscription Plans',
+          route: '/main/admin/plans',
+          active: false,
+          roles: ['super_admin'],
+        },
       ],
     },
     {
@@ -78,7 +85,13 @@ export class Sidebar implements OnInit {
       label: 'Members',
       route: '/main/members',
       active: false,
-      roles: ['church_admin', 'pastor', 'group_leader', 'ministry_leader'],
+      roles: [
+        'church_admin',
+        'pastor',
+        'group_leader',
+        'ministry_leader',
+        'cell_leader',
+      ], // ← add cell_leader
       permission: 'members.view',
       excludeRoles: ['super_admin', 'member'],
     },
@@ -87,7 +100,13 @@ export class Sidebar implements OnInit {
       label: 'Attendance',
       route: '/main/attendance',
       active: false,
-      roles: ['church_admin', 'pastor', 'group_leader', 'ministry_leader'],
+      roles: [
+        'church_admin',
+        'pastor',
+        'group_leader',
+        'ministry_leader',
+        'cell_leader',
+      ], // ← add cell_leader
       permission: 'attendance.view',
       excludeRoles: ['super_admin'],
     },
@@ -119,6 +138,15 @@ export class Sidebar implements OnInit {
       excludeRoles: ['super_admin'],
     },
     {
+      icon: 'ri-group-2-line',
+      label: 'Cell Groups',
+      route: '/main/cells',
+      active: false,
+      roles: ['church_admin', 'pastor', 'group_leader', 'cell_leader'],
+      permission: 'members.view',
+      excludeRoles: ['super_admin', 'member'],
+    },
+    {
       icon: 'ri-calendar-event-line',
       label: 'Events',
       route: '/main/events',
@@ -134,6 +162,48 @@ export class Sidebar implements OnInit {
       active: false,
       roles: ['church_admin', 'pastor'],
       permission: 'communications.view',
+      excludeRoles: ['super_admin'],
+    },
+    {
+      icon: 'ri-award-line',
+      label: 'Voting',
+      route: '/main/voting',
+      active: false,
+      featureFlag: 'voting', // ← ADD
+      roles: [
+        'church_admin',
+        'pastor',
+        'member',
+        'group_leader',
+        'ministry_leader',
+        'senior_pastor',
+        'associate_pastor',
+        'elder',
+        'deacon',
+        'worship_leader',
+        'finance_officer',
+      ],
+      excludeRoles: ['super_admin'],
+    },
+    {
+      icon: 'ri-briefcase-line',
+      label: 'Job Hub',
+      route: '/main/job-hub',
+      active: false,
+      featureFlag: 'job_hub', // ← ADD
+      roles: [
+        'church_admin',
+        'pastor',
+        'member',
+        'group_leader',
+        'ministry_leader',
+        'senior_pastor',
+        'associate_pastor',
+        'elder',
+        'deacon',
+        'worship_leader',
+        'finance_officer',
+      ],
       excludeRoles: ['super_admin'],
     },
     {
@@ -325,11 +395,13 @@ export class Sidebar implements OnInit {
 
       if (item.children) {
         item.children = item.children.filter((child) => {
-          if (child.excludeRoles?.includes(this.currentUser!.role)) return false;
+          if (child.excludeRoles?.includes(this.currentUser!.role))
+            return false;
           if (
             child.featureFlag &&
             !this.authService.hasChurchFeature(child.featureFlag)
-          ) return false;
+          )
+            return false;
           const childHasRole =
             !child.roles || child.roles.length === 0
               ? true

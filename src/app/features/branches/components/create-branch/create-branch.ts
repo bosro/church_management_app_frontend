@@ -51,19 +51,18 @@ export class CreateBranch implements OnInit, OnDestroy {
   }
 }
 
-  private initForm(): void {
-    this.branchForm = this.fb.group({
-      name: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(100)]],
-      pastor_name: ['', [Validators.maxLength(100)]],
-      address: ['', [Validators.maxLength(200)]],
-      city: ['', [Validators.maxLength(100)]],
-      state: ['', [Validators.maxLength(100)]],
-      country: ['', [Validators.maxLength(100)]],
-      phone: ['', [Validators.maxLength(20)]],
-      email: ['', [Validators.email, Validators.maxLength(100)]],
-      established_date: ['']
-    });
-  }
+ private initForm(): void {
+  this.branchForm = this.fb.group({
+    name: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(100)]],
+    address: ['', [Validators.maxLength(200)]],
+    city: ['', [Validators.maxLength(100)]],
+    state: ['', [Validators.maxLength(100)]],
+    country: ['', [Validators.maxLength(100)]],
+    phone: ['', [Validators.maxLength(20)]],
+    email: ['', [Validators.email, Validators.maxLength(100)]],
+    established_date: ['']
+  });
+}
 
   onSubmit(): void {
     if (this.branchForm.invalid) {

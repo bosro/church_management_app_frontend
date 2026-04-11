@@ -1,0 +1,139 @@
+<!-- src/app/features/voting/components/voting-manage/voting-manage.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+  <div class="dashboard-content">
+    <app-header></app-header>
+    <div class="dashboard-body">
+      <div class="manage-container">
+
+        <div *ngIf="loadingData" class="loading-container">
+          <app-loading-spinner message="Loading..."></app-loading-spinner>
+        </div>
+
+        <div *ngIf="!loadingData">
+          <!-- Header -->
+          <div class="page-header">
+            <button class="back-btn" (click)="cancel()">
+              <i class="ri-arrow-left-line"></i>
+            </button>
+            <div>
+              <h1>{{ isEdit ? 'Edit Category' : 'New Voting Category' }}</h1>
+              <p class="subtitle">{{ isEdit ? 'Update category settings' : 'Set up a new award category for voting' }}
+              </p>
+            </div>
+          </div>
+
+          <div *ngIf="successMessage" class="success-alert">
+            <i class="ri-checkbox-circle-line"></i><span>{{ successMessage }}</span>
+          </div>
+          <div *ngIf="errorMessage" class="error-alert">
+            <i class="ri-error-warning-line"></i><span>{{ errorMessage }}</span>
+          </div>
+
+          <form [formGroup]="form" (ngSubmit)="onSubmit()">
+            <div class="form-card">
+              <!-- Basic Info -->
+              <div class="form-section">
+                <h3>Category Details</h3>
+                <div class="form-grid">
+                  <div class="form-group full-width">
+                    <label>Category Title *</label>
+                    <input type="text" formControlName="title"
+                      placeholder="e.g., Most Dedicated Member, Best Youth Leader"
+                      [class.error]="form.get('title')?.invalid && form.get('title')?.touched" />
+                    <span class="error-msg" *ngIf="form.get('title')?.touched">{{ getError('title') }}</span>
+                  </div>
+
+                  <div class="form-group full-width">
+                    <label>Description</label>
+                    <textarea formControlName="description" rows="3"
+                      placeholder="Describe what this award is about..."></textarea>
+                    <span class="error-msg" *ngIf="form.get('description')?.touched">{{ getError('description')
+                      }}</span>
+                  </div>
+
+                  <div class="form-group">
+                    <label>Max Votes Per Member *</label>
+                    <input type="number" formControlName="max_votes_per_user" min="1" max="10"
+                      [class.error]="form.get('max_votes_per_user')?.invalid && form.get('max_votes_per_user')?.touched" />
+                    <span class="field-hint">How many nominees each member can vote for (1–10)</span>
+                    <span class="error-msg" *ngIf="form.get('max_votes_per_user')?.touched">{{
+                      getError('max_votes_per_user') }}</span>
+                  </div>
+
+                  <div class="form-group toggle-group">
+                    <label>Show Live Results</label>
+                    <div class="toggle-row">
+                      <label class="toggle">
+                        <input type="checkbox" formControlName="show_results" />
+                        <span class="toggle-slider"></span>
+                      </label>
+                      <span class="toggle-label">{{ form.get('show_results')?.value ? 'Results visible to all' :
+                        'Results hidden until closed' }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Voting Period -->
+              <div class="form-section">
+                <h3>Voting Period</h3>
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label>Voting Opens *</label>
+                    <input type="datetime-local" formControlName="voting_start_at"
+                      [class.error]="form.get('voting_start_at')?.invalid && form.get('voting_start_at')?.touched" />
+                    <span class="error-msg" *ngIf="form.get('voting_start_at')?.touched">{{ getError('voting_start_at')
+                      }}</span>
+                  </div>
+
+                  <div class="form-group">
+                    <label>Voting Closes *</label>
+                    <input type="datetime-local" formControlName="voting_end_at"
+                      [class.error]="form.get('voting_end_at')?.invalid && form.get('voting_end_at')?.touched" />
+                    <span class="error-msg" *ngIf="form.get('voting_end_at')?.touched">{{ getError('voting_end_at')
+                      }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Nominations Period -->
+              <div class="form-section">
+                <h3>Nominations Period <span class="optional-label">(Optional)</span></h3>
+                <p class="section-hint">If set, members can nominate candidates during this window. Leave blank to add
+                  nominees manually as admin.</p>
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label>Nominations Open</label>
+                    <input type="datetime-local" formControlName="nominations_start_at" />
+                  </div>
+                  <div class="form-group">
+                    <label>Nominations Close</label>
+                    <input type="datetime-local" formControlName="nominations_end_at" />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Actions -->
+              <div class="form-actions">
+                <button type="button" class="btn-secondary" (click)="cancel()" [disabled]="loading">
+                  Cancel
+                </button>
+                <button type="submit" class="btn-primary" [disabled]="loading || form.invalid">
+                  <span *ngIf="!loading">
+                    <i class="ri-save-line"></i>
+                    {{ isEdit ? 'Update Category' : 'Create Category' }}
+                  </span>
+                  <span *ngIf="loading">
+                    <i class="ri-loader-4-line spin"></i>
+                    {{ isEdit ? 'Updating...' : 'Creating...' }}
+                  </span>
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
