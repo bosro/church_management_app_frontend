@@ -13,7 +13,7 @@ export class SupabaseService {
   private noOpLock = async (
     name: string,
     acquireTimeout: number,
-    fn: () => Promise<any>
+    fn: () => Promise<any>,
   ) => {
     // Simply execute the function without acquiring any locks
     return await fn();
@@ -43,8 +43,8 @@ export class SupabaseService {
           flowType: 'pkce',
           // CRITICAL FIX: Use custom lock function that doesn't use Navigator Locks
           lock: this.noOpLock,
-        }
-      }
+        },
+      },
     );
 
     this.currentUserSubject = new BehaviorSubject<User | null>(null);
@@ -57,11 +57,39 @@ export class SupabaseService {
   private async initializeAuthState(): Promise<void> {
     if (this.isInitialized) return;
 
-    // Small delay for good measure
-    await new Promise(resolve => setTimeout(resolve, 50));
+    await new Promise((resolve) => setTimeout(resolve, 50));
 
     try {
-      const { data: { session }, error } = await this.supabase.auth.getSession();
+      // Handle implicit-style hash tokens from Supabase invite/recovery emails
+      // PKCE's detectSessionInUrl ignores hash fragments, so we do it manually
+      if (window.location.hash.includes('access_token')) {
+        const hashParams = new URLSearchParams(
+          window.location.hash.substring(1),
+        );
+        const accessToken = hashParams.get('access_token');
+        const refreshToken = hashParams.get('refresh_token');
+
+        if (accessToken && refreshToken) {
+          const { error } = await this.supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+
+          if (!error) {
+            // Clean the hash from the URL without triggering navigation
+            window.history.replaceState(
+              null,
+              '',
+              window.location.pathname + window.location.search,
+            );
+          }
+        }
+      }
+
+      const {
+        data: { session },
+        error,
+      } = await this.supabase.auth.getSession();
 
       if (error) {
         console.error('Error getting session:', error);
@@ -69,21 +97,15 @@ export class SupabaseService {
 
       this.currentUserSubject.next(session?.user ?? null);
       this.isInitialized = true;
-
-      // ✅ NEW: Mark auth as initialized
       this.authInitializedSubject.next(true);
 
-      // Listen to auth changes
       this.supabase.auth.onAuthStateChange((event, session) => {
-        // console.log('Auth state changed:', event);
         this.currentUserSubject.next(session?.user ?? null);
       });
     } catch (error) {
       console.error('Failed to initialize auth state:', error);
       this.currentUserSubject.next(null);
       this.isInitialized = true;
-
-      // ✅ NEW: Still mark as initialized even on error
       this.authInitializedSubject.next(true);
     }
   }
@@ -189,7 +211,7 @@ export class SupabaseService {
       // Clear storage
       try {
         const keys = Object.keys(localStorage);
-        keys.forEach(key => {
+        keys.forEach((key) => {
           if (key.startsWith('sb-')) {
             localStorage.removeItem(key);
           }
@@ -204,5 +226,3 @@ export class SupabaseService {
     }
   }
 }
-
-

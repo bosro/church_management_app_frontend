@@ -473,3 +473,5 @@ export class Sidebar implements OnInit {
     await this.authService.signOut();
   }
 }
+
+

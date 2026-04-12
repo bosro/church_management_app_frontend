@@ -58,12 +58,10 @@ export class PermissionGuard implements CanActivate, CanMatch {
       map(() => {
         const userRole = this.authService.getCurrentUserRole();
 
-        // ① Super admin bypasses EVERYTHING including feature flags
-        if (userRole === 'super_admin') {
-          return true;
-        }
+        // ① Super admin bypasses everything
+        if (userRole === 'super_admin') return true;
 
-        // ② Check feature flag — church must have this feature enabled
+        // ② Check feature flag
         if (
           requiredFeature &&
           !this.authService.hasChurchFeature(requiredFeature)
@@ -71,24 +69,24 @@ export class PermissionGuard implements CanActivate, CanMatch {
           return this.router.createUrlTree(['/unauthorized']);
         }
 
-        // ③ church_admin always passes role/permission checks
-        if (userRole === 'church_admin') {
-          return true;
-        }
+        // ③ church_admin always passes
+        if (userRole === 'church_admin') return true;
 
-        // ④ Check role
-        if (requiredRoles && requiredRoles.length > 0) {
-          if (this.authService.hasRole(requiredRoles)) {
-            return true;
-          }
-        }
+        // ④ Role check — if user's role is in the allowed roles list, let them in
+        const hasRole =
+          requiredRoles && requiredRoles.length > 0
+            ? requiredRoles.includes(userRole)
+            : false;
 
-        // ⑤ Check permission
-        if (requiredPermission) {
-          if (this.userRolesService.hasPermission(requiredPermission)) {
-            return true;
-          }
-        }
+        if (hasRole) return true;
+
+        // ⑤ Permission check — fallback for users without the role
+        //    but who have been explicitly granted the permission
+        const hasPermission = requiredPermission
+          ? this.userRolesService.hasPermission(requiredPermission)
+          : false;
+
+        if (hasPermission) return true;
 
         return this.router.createUrlTree(['/unauthorized']);
       }),

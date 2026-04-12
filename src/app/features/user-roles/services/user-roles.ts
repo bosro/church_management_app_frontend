@@ -361,13 +361,12 @@ export class UserRolesService {
             }),
         );
       }),
-      map(({ data, error }: any) => {
-        if (error) throw new Error(error.message);
-        if (data?.error) throw new Error(data.error);
-        // Edge function returns { success: true, userId: "..." }
-        // Normalize to { id: "..." } so the component can navigate correctly
-        return { ...data, id: data.userId || data.id };
-      }),
+     map(({ data, error }: any) => {
+  if (error) throw new Error(error.message);
+  if (data?.error) throw new Error(data.error);
+  // Normalize: edge function returns { success, userId } → map to { id }
+  return { ...data, id: data.userId || data.id };
+}),
       catchError((err) => throwError(() => err)),
     );
   }
@@ -680,3 +679,7 @@ export class UserRolesService {
     return this.authService.hasRole(adminRoles);
   }
 }
+
+
+
+

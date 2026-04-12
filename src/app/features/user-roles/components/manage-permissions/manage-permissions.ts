@@ -3,7 +3,11 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { UserPermission, Permission } from '../../../../models/user-role.model';
+import {
+  UserPermission,
+  Permission,
+  DEFAULT_ROLE_PERMISSIONS,
+} from '../../../../models/user-role.model';
 import { UserRolesService } from '../../services/user-roles';
 import { AuthService } from '../../../../core/services/auth';
 import { PermissionService } from '../../../../core/services/permission.service';
@@ -80,14 +84,43 @@ export class ManagePermissions implements OnInit, OnDestroy {
       .getUserById(this.userId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (user) => {
+        next: async (user) => {
           this.user = user;
           this.loadingUser = false;
+
+          // After loading user, check if they have zero permissions
+          // If so and they were just invited, auto-grant role defaults
+          await this.applyDefaultsIfNewUser(user);
         },
         error: (error) => {
           this.errorMessage = error.message || 'Failed to load user details';
           this.loadingUser = false;
-          console.error('Error loading user:', error);
+        },
+      });
+  }
+
+  private async applyDefaultsIfNewUser(user: any): Promise<void> {
+    // Only apply defaults if this looks like a new invite
+    // (navigated here right after creation via query param)
+    const isNewInvite = this.route.snapshot.queryParams['new'] === 'true';
+    if (!isNewInvite) return;
+
+    const defaults = DEFAULT_ROLE_PERMISSIONS[user.role] || [];
+    if (defaults.length === 0) return;
+
+    // Grant the defaults
+    this.userRolesService
+      .bulkGrantPermissions(this.userId, defaults)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.loadUserPermissions(); // Reload to show the pre-granted permissions
+          this.successMessage = `Default permissions for ${user.role.replace(/_/g, ' ')} have been pre-selected. Review and adjust as needed.`;
+          setTimeout(() => (this.successMessage = ''), 5000);
+        },
+        error: () => {
+          // Non-fatal, just load existing permissions
+          this.loadUserPermissions();
         },
       });
   }
@@ -385,12 +418,3 @@ export class ManagePermissions implements OnInit, OnDestroy {
     return Object.keys(this.permissionsByCategory).length > 0;
   }
 }
-
-
-
-
-
-
-
-
-
