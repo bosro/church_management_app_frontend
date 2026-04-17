@@ -1,8 +1,15 @@
 // src/app/features/forms/services/forms.service.ts
+// KEY FIXES:
+// 1. canManageForms() now also checks PermissionService grants — a user granted
+//    forms.manage permission in user-roles will now be recognized
+// 2. getFormSubmissions() branch pastor filter fixed — 'members.branch_id'
+//    PostgREST syntax doesn't work for join-column filtering; replaced with
+//    a two-step approach that actually scopes correctly
+// 3. deleteSubmission() now verifies the submission belongs to the current
+//    church before deleting (previously had no ownership check)
 import { Injectable } from '@angular/core';
 import { Observable, from, throwError } from 'rxjs';
 import { map, catchError, switchMap } from 'rxjs/operators';
-
 import {
   FormTemplate,
   FormSubmission,
@@ -11,6 +18,7 @@ import {
 } from '../../../models/form.model';
 import { SupabaseService } from '../../../core/services/supabase';
 import { AuthService } from '../../../core/services/auth';
+import { PermissionService } from '../../../core/services/permission.service';
 import { SubscriptionService } from '../../../core/services/subscription.service';
 
 @Injectable({
@@ -20,21 +28,33 @@ export class FormsService {
   constructor(
     private supabase: SupabaseService,
     private authService: AuthService,
+    private permissionService: PermissionService,
     private subscriptionService: SubscriptionService,
   ) {}
 
   // ==================== PERMISSIONS ====================
+  // FIX: Now checks BOTH role AND explicitly granted permissions.
+  // Previously only checked roles via hasRole(), which meant a user granted
+  // forms.manage via the user-roles system was still blocked.
 
   canManageForms(): boolean {
     const roles = ['super_admin', 'church_admin', 'pastor', 'ministry_leader'];
-    return this.authService.hasRole(roles);
+    return (
+      this.permissionService.isAdmin ||
+      (this.permissionService.forms as any)?.manage ||
+      (this.permissionService.forms?.view === true &&
+        this.authService.hasRole(roles)) ||
+      this.authService.hasRole(roles)
+    );
   }
 
   canViewForms(): boolean {
+    // All authenticated users can view forms
     return true;
   }
 
   canSubmitForms(): boolean {
+    // All authenticated users can submit forms
     return true;
   }
 
@@ -51,13 +71,9 @@ export class FormsService {
       (async () => {
         const { data, error, count } = await this.supabase.client
           .from('form_templates')
-          .select(
-            `
-            *,
-            submission_count:form_submissions(count)
-          `,
-            { count: 'exact' },
-          )
+          .select(`*, submission_count:form_submissions(count)`, {
+            count: 'exact',
+          })
           .eq('church_id', churchId)
           .eq('is_active', true)
           .order('created_at', { ascending: false })
@@ -72,12 +88,7 @@ export class FormsService {
 
         return { data: templates as FormTemplate[], count: count || 0 };
       })(),
-    ).pipe(
-      catchError((err) => {
-        console.error('Error loading form templates:', err);
-        return throwError(() => err);
-      }),
-    );
+    ).pipe(catchError((err) => throwError(() => err)));
   }
 
   getFormTemplateById(templateId: string): Observable<FormTemplate> {
@@ -95,10 +106,7 @@ export class FormsService {
           throw new Error('Form template not found');
         return data[0];
       }),
-      catchError((err) => {
-        console.error('Error loading form template:', err);
-        return throwError(() => err);
-      }),
+      catchError((err) => throwError(() => err)),
     );
   }
 
@@ -134,10 +142,7 @@ export class FormsService {
           throw new Error('Failed to create form template');
         return data[0];
       }),
-      catchError((err) => {
-        console.error('Error creating form template:', err);
-        return throwError(() => err);
-      }),
+      catchError((err) => throwError(() => err)),
     );
   }
 
@@ -161,9 +166,8 @@ export class FormsService {
           .eq('church_id', churchId)
           .single();
 
-        if (!existing) {
+        if (!existing)
           throw new Error('Form template not found or access denied');
-        }
 
         return this.supabase.update<FormTemplate>(
           'form_templates',
@@ -181,10 +185,7 @@ export class FormsService {
           throw new Error('Failed to update form template');
         return data[0];
       }),
-      catchError((err) => {
-        console.error('Error updating form template:', err);
-        return throwError(() => err);
-      }),
+      catchError((err) => throwError(() => err)),
     );
   }
 
@@ -200,9 +201,8 @@ export class FormsService {
           .eq('church_id', churchId)
           .single();
 
-        if (!existing) {
+        if (!existing)
           throw new Error('Form template not found or access denied');
-        }
 
         return this.supabase.update<FormTemplate>(
           'form_templates',
@@ -217,10 +217,7 @@ export class FormsService {
       map(({ error }) => {
         if (error) throw new Error(error.message);
       }),
-      catchError((err) => {
-        console.error('Error deleting form template:', err);
-        return throwError(() => err);
-      }),
+      catchError((err) => throwError(() => err)),
     );
   }
 
@@ -237,23 +234,39 @@ export class FormsService {
 
     return from(
       (async () => {
+        // FIX: Branch pastor filtering via join column 'members.branch_id'
+        // does NOT work in PostgREST/Supabase — it silently returns all rows.
+        // Fixed: if branch pastor, first get their branch member IDs, then
+        // filter submissions by those member IDs.
+        let memberIdFilter: string[] | null = null;
+
+        if (isBranchPastor && branchId) {
+          const { data: branchMembers } = await this.supabase.client
+            .from('members')
+            .select('id')
+            .eq('branch_id', branchId);
+
+          memberIdFilter = (branchMembers || []).map((m: any) => m.id);
+
+          // If branch has no members, return empty result immediately
+          if (memberIdFilter.length === 0) {
+            return { data: [], count: 0 };
+          }
+        }
+
         let query = this.supabase.client
           .from('form_submissions')
           .select(
-            `
-          *,
-          member:members(id, first_name, last_name, email,
-            phone_primary, member_number, photo_url)
-        `,
+            `*, member:members(id, first_name, last_name, email,
+              phone_primary, member_number, photo_url)`,
             { count: 'exact' },
           )
           .eq('form_id', templateId)
           .order('submitted_at', { ascending: false })
           .range(offset, offset + pageSize - 1);
 
-        // If branch pastor, only see submissions from their branch members
-        if (isBranchPastor && branchId) {
-          query = query.eq('members.branch_id', branchId);
+        if (memberIdFilter) {
+          query = query.in('member_id', memberIdFilter);
         }
 
         const { data, error, count } = await query;
@@ -274,11 +287,14 @@ export class FormsService {
     submissionData: Record<string, any>,
     memberId?: string,
   ): Observable<FormSubmission> {
+    // NOTE: If memberId is not explicitly passed, the current user's userId
+    // is used. When an admin fills out a form on behalf of a member, pass
+    // the member's ID explicitly to avoid assigning the admin's ID.
     const userId = this.authService.getUserId();
 
     return from(
       this.supabase.insert<FormSubmission>('form_submissions', {
-        form_id: templateId, // Changed from form_template_id to form_id
+        form_id: templateId,
         member_id: memberId || userId,
         submission_data: submissionData,
         submitted_at: new Date().toISOString(),
@@ -290,10 +306,7 @@ export class FormsService {
           throw new Error('Failed to submit form');
         return { ...data[0], status: 'submitted' as SubmissionStatus };
       }),
-      catchError((err) => {
-        console.error('Error submitting form:', err);
-        return throwError(() => err);
-      }),
+      catchError((err) => throwError(() => err)),
     );
   }
 
@@ -301,10 +314,7 @@ export class FormsService {
     submissionId: string,
     status: SubmissionStatus,
   ): Observable<FormSubmission> {
-    // Since status is not in the database, we'll store it in local state
-    // or you can add a metadata JSONB column to store extra info
     console.warn('Status updates are not persisted in the database');
-
     return from(
       this.supabase.client
         .from('form_submissions')
@@ -316,22 +326,39 @@ export class FormsService {
         if (error) throw new Error(error.message);
         return { ...data, status } as FormSubmission;
       }),
-      catchError((err) => {
-        console.error('Error updating submission status:', err);
-        return throwError(() => err);
-      }),
+      catchError((err) => throwError(() => err)),
     );
   }
 
   deleteSubmission(submissionId: string): Observable<void> {
-    return from(this.supabase.delete('form_submissions', submissionId)).pipe(
+    const churchId = this.authService.getChurchId();
+
+    // FIX: Added church_id ownership verification before delete.
+    // Previously had no check — any authenticated user could delete any
+    // submission by guessing its UUID.
+    return from(
+      (async () => {
+        // Verify the submission's form belongs to this church
+        const { data: submission } = await this.supabase.client
+          .from('form_submissions')
+          .select(`id, form:form_templates!form_id(church_id)`)
+          .eq('id', submissionId)
+          .single();
+
+        if (!submission) throw new Error('Submission not found');
+
+        const submissionChurchId = (submission as any).form?.church_id;
+        if (submissionChurchId !== churchId) {
+          throw new Error('Access denied');
+        }
+
+        return this.supabase.delete('form_submissions', submissionId);
+      })(),
+    ).pipe(
       map(({ error }) => {
         if (error) throw new Error(error.message);
       }),
-      catchError((err) => {
-        console.error('Error deleting submission:', err);
-        return throwError(() => err);
-      }),
+      catchError((err) => throwError(() => err)),
     );
   }
 
@@ -340,9 +367,7 @@ export class FormsService {
   exportSubmissions(templateId: string): Observable<Blob> {
     return this.getFormSubmissions(templateId, 1, 10000).pipe(
       map(({ data }) => {
-        if (data.length === 0) {
-          throw new Error('No submissions to export');
-        }
+        if (data.length === 0) throw new Error('No submissions to export');
 
         const allKeys = new Set<string>();
         data.forEach((submission) => {
@@ -384,10 +409,7 @@ export class FormsService {
 
         return new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       }),
-      catchError((err) => {
-        console.error('Error exporting submissions:', err);
-        return throwError(() => err);
-      }),
+      catchError((err) => throwError(() => err)),
     );
   }
 
@@ -395,16 +417,13 @@ export class FormsService {
 
   getFormStatistics(templateId: string): Observable<FormStatistics> {
     return this.getFormSubmissions(templateId, 1, 10000).pipe(
-      map(({ data }) => {
-        // Since status is not in DB, all submissions are "submitted"
-        return {
-          total_submissions: data.length,
-          pending_submissions: data.length,
-          reviewed_submissions: 0,
-          approved_submissions: 0,
-          rejected_submissions: 0,
-        };
-      }),
+      map(({ data }) => ({
+        total_submissions: data.length,
+        pending_submissions: data.length,
+        reviewed_submissions: 0,
+        approved_submissions: 0,
+        rejected_submissions: 0,
+      })),
     );
   }
 }

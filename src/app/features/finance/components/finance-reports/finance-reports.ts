@@ -24,6 +24,7 @@ import { Location } from '@angular/common';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { AuthService } from '../../../../core/services/auth';
 
 @Component({
   selector: 'app-finance-reports',
@@ -86,6 +87,7 @@ export class FinanceReports implements OnInit, OnDestroy {
     private router: Router,
     public permissionService: PermissionService,
     private location: Location,
+    private authService: AuthService,
   ) {
     const currentYear = new Date().getFullYear();
     for (let i = 0; i < 10; i++) {
@@ -105,15 +107,22 @@ export class FinanceReports implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-    this.canViewFinance =
-      this.permissionService.isAdmin ||
-      this.permissionService.finance.view ||
-      this.permissionService.finance.reports;
+  const role = this.authService.getCurrentUserRole();
 
-    if (!this.canViewFinance) {
-      this.router.navigate(['/unauthorized']);
-    }
+  const viewRoles = [
+    'pastor', 'senior_pastor', 'associate_pastor', 'finance_officer',
+  ];
+
+  this.canViewFinance =
+    this.permissionService.isAdmin ||
+    this.permissionService.finance.view ||
+    this.permissionService.finance.reports ||
+    viewRoles.includes(role);
+
+  if (!this.canViewFinance) {
+    this.router.navigate(['/unauthorized']);
   }
+}
 
   // ── Overview stats & top givers ────────────────────────────
 
@@ -775,3 +784,5 @@ export class FinanceReports implements OnInit, OnDestroy {
     this.location.back();
   }
 }
+
+

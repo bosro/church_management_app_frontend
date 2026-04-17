@@ -17,6 +17,7 @@ import {
 } from '../../../../models/attendance.model';
 import { Member } from '../../../../models/member.model';
 import { PermissionService } from '../../../../core/services/permission.service';
+import { AuthService } from '../../../../core/services/auth';
 
 interface EnrichedMember extends Member {
   alreadyPresent?: boolean;
@@ -96,6 +97,7 @@ export class MarkAttendance implements OnInit, OnDestroy {
     private attendanceService: AttendanceService,
     private membersService: MemberService,
     public permissionService: PermissionService,
+    private authService: AuthService,
   ) {}
 
   ngOnInit(): void {
@@ -115,10 +117,24 @@ export class MarkAttendance implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-    this.canMarkAttendance =
+    const role = this.authService.getCurrentUserRole();
+    const markRoles = [
+      'pastor',
+      'senior_pastor',
+      'associate_pastor',
+      'ministry_leader',
+      'group_leader',
+      'cell_leader',
+      'usher',
+    ];
+
+    const canMark =
       this.permissionService.isAdmin ||
-      this.permissionService.attendance.checkin;
-    if (!this.canMarkAttendance) this.router.navigate(['/unauthorized']);
+      this.permissionService.attendance.checkin ||
+      markRoles.includes(role);
+    if (!canMark) {
+      this.router.navigate(['/unauthorized']);
+    }
   }
 
   private loadEvent(): void {

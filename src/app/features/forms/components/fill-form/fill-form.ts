@@ -49,12 +49,11 @@ export class FillForm implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-    this.canSubmitForms = this.formsService.canSubmitForms();
-
-    if (!this.canSubmitForms) {
-      this.router.navigate(['/unauthorized']);
-    }
-  }
+  // All authenticated users can fill forms.
+  // The routing guard handles unauthenticated access.
+  this.canSubmitForms = true;
+  // No redirect needed — canSubmitForms is always true for authenticated users.
+}
 
   private loadFormTemplate(): void {
     this.loadingForm = true;
@@ -243,5 +242,7 @@ export class FillForm implements OnInit, OnDestroy {
     }
   }
 }
+
+
 
 

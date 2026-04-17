@@ -7,6 +7,14 @@ import { takeUntil } from 'rxjs/operators';
 import { CmsService } from '../../services/cms'
 import { BLOG_CATEGORIES } from '../../../../models/cms.model';
 import { PermissionService } from '../../../../core/services/permission.service';
+import { AuthService } from '../../../../core/services/auth';
+
+const CMS_VIEW_ROLES = [
+  'pastor', 'senior_pastor', 'associate_pastor', 'ministry_leader', 'secretary',
+];
+const CMS_MANAGE_ROLES = [
+  'pastor', 'senior_pastor', 'associate_pastor', 'ministry_leader',
+];
 
 @Component({
   selector: 'app-create-blog',
@@ -30,7 +38,8 @@ export class CreateBlog implements OnInit, OnDestroy {
     private fb: FormBuilder,
     private cmsService: CmsService,
     private router: Router,
-    public permissionService: PermissionService
+    public permissionService: PermissionService,
+    private authService: AuthService
   ) {}
 
   ngOnInit(): void {
@@ -42,10 +51,13 @@ export class CreateBlog implements OnInit, OnDestroy {
     this.destroy$.next();
     this.destroy$.complete();
   }
+
 private checkPermissions(): void {
+  const role = this.authService.getCurrentUserRole();
+
   this.canManageContent =
     this.permissionService.isAdmin ||
-    this.permissionService.settings.manage;
+    CMS_MANAGE_ROLES.includes(role);
 
   if (!this.canManageContent) {
     this.router.navigate(['/unauthorized']);
@@ -153,6 +165,9 @@ private checkPermissions(): void {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }
+
+
+
 
 
 

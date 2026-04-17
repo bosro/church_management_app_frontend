@@ -1,4 +1,5 @@
 // src/app/features/events/components/events-list/events-list.component.ts
+// KEY FIX: checkPermissions() now includes role-based fallback
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormControl } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -7,6 +8,7 @@ import { takeUntil, debounceTime } from 'rxjs/operators';
 import { EventsService } from '../../services/events';
 import { ChurchEvent, EventCategory } from '../../../../models/event.model';
 import { PermissionService } from '../../../../core/services/permission.service';
+import { AuthService } from '../../../../core/services/auth';
 
 @Component({
   selector: 'app-events-list',
@@ -23,16 +25,13 @@ export class EventsList implements OnInit, OnDestroy {
   errorMessage = '';
   successMessage = '';
 
-  // Pagination
   currentPage = 1;
   pageSize = 20;
   totalEvents = 0;
   totalPages = 0;
 
-  // View mode
   viewMode: 'list' | 'calendar' = 'list';
 
-  // Filters
   startDateControl = new FormControl('');
   endDateControl = new FormControl('');
   categoryControl = new FormControl<EventCategory | 'all'>('all');
@@ -52,13 +51,13 @@ export class EventsList implements OnInit, OnDestroy {
     { value: 'other', label: 'Other' },
   ];
 
-  // Permissions
   canManageEvents = false;
 
   constructor(
     private eventsService: EventsService,
     private router: Router,
     public permissionService: PermissionService,
+    private authService: AuthService,
   ) {}
 
   ngOnInit(): void {
@@ -74,15 +73,40 @@ export class EventsList implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-    // View is open to anyone with events.view permission
+    const role = this.authService.getCurrentUserRole();
+
+    const viewRoles = [
+      'pastor',
+      'senior_pastor',
+      'associate_pastor',
+      'ministry_leader',
+      'group_leader',
+      'cell_leader',
+      'finance_officer',
+      'elder',
+      'deacon',
+      'worship_leader',
+      'secretary',
+    ];
+
+    const manageRoles = [
+      'pastor',
+      'senior_pastor',
+      'associate_pastor',
+      'ministry_leader',
+    ];
+
     const canView =
-      this.permissionService.isAdmin || this.permissionService.events.view;
+      this.permissionService.isAdmin ||
+      this.permissionService.events.view ||
+      viewRoles.includes(role);
 
     this.canManageEvents =
       this.permissionService.isAdmin ||
       this.permissionService.events.create ||
       this.permissionService.events.edit ||
-      this.permissionService.events.delete;
+      this.permissionService.events.delete ||
+      manageRoles.includes(role);
 
     if (!canView) {
       this.router.navigate(['/unauthorized']);
@@ -117,19 +141,11 @@ export class EventsList implements OnInit, OnDestroy {
     this.errorMessage = '';
 
     const filters: any = {};
-
-    if (this.startDateControl.value) {
+    if (this.startDateControl.value)
       filters.startDate = this.startDateControl.value;
-    }
-
-    if (this.endDateControl.value) {
-      filters.endDate = this.endDateControl.value;
-    }
-
+    if (this.endDateControl.value) filters.endDate = this.endDateControl.value;
     const category = this.categoryControl.value;
-    if (category && category !== 'all') {
-      filters.category = category;
-    }
+    if (category && category !== 'all') filters.category = category;
 
     this.eventsService
       .getEvents(this.currentPage, this.pageSize, filters)
@@ -144,7 +160,6 @@ export class EventsList implements OnInit, OnDestroy {
         error: (error) => {
           this.errorMessage = error.message || 'Failed to load events';
           this.loading = false;
-          console.error('Error loading events:', error);
         },
       });
   }
@@ -163,7 +178,6 @@ export class EventsList implements OnInit, OnDestroy {
       });
   }
 
-  // Navigation
   createEvent(): void {
     if (!this.canManageEvents) {
       this.errorMessage = 'You do not have permission to create events';
@@ -177,32 +191,27 @@ export class EventsList implements OnInit, OnDestroy {
   }
 
   editEvent(eventId: string, event: MouseEvent): void {
-    // Changed parameter type
     event.stopPropagation();
-
     if (!this.canManageEvents) {
       this.errorMessage = 'You do not have permission to edit events';
       return;
     }
-
     this.router.navigate(['main/events', eventId, 'edit']);
   }
 
   deleteEvent(eventId: string, event: MouseEvent): void {
-    // Changed parameter type
     event.stopPropagation();
-
     if (!this.canManageEvents) {
       this.errorMessage = 'You do not have permission to delete events';
       return;
     }
 
-    const confirmMessage =
-      'Are you sure you want to delete this event? All registrations will also be deleted.';
-
-    if (!confirm(confirmMessage)) {
+    if (
+      !confirm(
+        'Are you sure you want to delete this event? All registrations will also be deleted.',
+      )
+    )
       return;
-    }
 
     this.eventsService
       .deleteEvent(eventId)
@@ -212,31 +221,24 @@ export class EventsList implements OnInit, OnDestroy {
           this.successMessage = 'Event deleted successfully!';
           this.loadEvents();
           this.loadUpcomingEvents();
-
-          setTimeout(() => {
-            this.successMessage = '';
-          }, 3000);
+          setTimeout(() => (this.successMessage = ''), 3000);
         },
         error: (error) => {
           this.errorMessage = error.message || 'Failed to delete event';
-          console.error('Error deleting event:', error);
         },
       });
   }
 
-  // View switching
   switchView(mode: 'list' | 'calendar'): void {
     this.viewMode = mode;
   }
 
-  // Filters
   clearFilters(): void {
     this.startDateControl.setValue('');
     this.endDateControl.setValue('');
     this.categoryControl.setValue('all');
   }
 
-  // Pagination
   previousPage(): void {
     if (this.currentPage > 1) {
       this.currentPage--;
@@ -253,7 +255,6 @@ export class EventsList implements OnInit, OnDestroy {
     }
   }
 
-  // Helper methods
   getEventCategoryLabel(category: EventCategory): string {
     const categoryMap: Record<EventCategory, string> = {
       service: 'Service',
@@ -290,23 +291,24 @@ export class EventsList implements OnInit, OnDestroy {
 
   isEventToday(event: ChurchEvent): boolean {
     const today = new Date().toISOString().split('T')[0];
-    const eventDate = event.start_date.split('T')[0];
-    return eventDate === today;
+    return event.start_date.split('T')[0] === today;
   }
 
   isEventUpcoming(event: ChurchEvent): boolean {
-    const today = new Date();
-    const eventDate = new Date(event.start_date);
-    return eventDate > today;
+    return new Date(event.start_date) > new Date();
   }
 
   isEventPast(event: ChurchEvent): boolean {
-    const today = new Date();
-    const eventDate = new Date(event.end_date || event.start_date);
-    return eventDate < today;
+    return new Date(event.end_date || event.start_date) < new Date();
   }
 
   private scrollToTop(): void {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// src/app/features/events/components/event-detail/event-detail.component.ts
+// KEY FIX: checkPermissions() now includes role-based fallback
+// ─────────────────────────────────────────────────────────────────────────────
+// (paste below into its own file — split at the comment above)

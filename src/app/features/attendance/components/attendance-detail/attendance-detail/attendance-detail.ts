@@ -9,6 +9,7 @@ import {
   AttendanceRecord,
 } from '../../../../../models/attendance.model';
 import { PermissionService } from '../../../../../core/services/permission.service';
+import { AuthService } from '../../../../../core/services/auth';
 
 @Component({
   selector: 'app-attendance-detail',
@@ -34,6 +35,7 @@ export class AttendanceDetail implements OnInit, OnDestroy {
     private router: Router,
     private attendanceService: AttendanceService,
     public permissionService: PermissionService,
+    private authService: AuthService,
   ) {}
 
   ngOnInit(): void {
@@ -50,19 +52,54 @@ export class AttendanceDetail implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-    if (
-      !this.permissionService.isAdmin &&
-      !this.permissionService.attendance.view
-    ) {
+    const role = this.authService.getCurrentUserRole();
+    const viewRoles = [
+      'pastor',
+      'senior_pastor',
+      'associate_pastor',
+      'ministry_leader',
+      'group_leader',
+      'cell_leader',
+      'finance_officer',
+      'elder',
+      'deacon',
+      'worship_leader',
+      'secretary',
+      'usher',
+    ];
+    const manageRoles = [
+      'pastor',
+      'senior_pastor',
+      'associate_pastor',
+      'ministry_leader',
+    ];
+    const markRoles = [
+      'pastor',
+      'senior_pastor',
+      'associate_pastor',
+      'ministry_leader',
+      'group_leader',
+      'cell_leader',
+      'usher',
+    ];
+
+    const canView =
+      this.permissionService.isAdmin ||
+      this.permissionService.attendance.view ||
+      viewRoles.includes(role);
+    if (!canView) {
       this.router.navigate(['/unauthorized']);
       return;
     }
+
     this.canManageAttendance =
       this.permissionService.isAdmin ||
-      this.permissionService.attendance.manage;
+      this.permissionService.attendance.manage ||
+      manageRoles.includes(role);
     this.canMarkAttendance =
       this.permissionService.isAdmin ||
-      this.permissionService.attendance.checkin;
+      this.permissionService.attendance.checkin ||
+      markRoles.includes(role);
   }
 
   private loadEventDetails(): void {
@@ -225,6 +262,3 @@ export class AttendanceDetail implements OnInit, OnDestroy {
     return 'rate-low';
   }
 }
-
-
-

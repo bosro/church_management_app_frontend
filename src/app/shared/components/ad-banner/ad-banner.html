@@ -1,0 +1,32 @@
+<!-- src/app/shared/components/ad-banner/ad-banner.html -->
+<div *ngIf="showAd && !dismissed" class="ad-banner-wrap" [class]="'ad-' + slot">
+  <button class="ad-dismiss" (click)="dismiss()" title="Hide">
+    <i class="ri-close-line"></i>
+  </button>
+
+  <span class="ad-label">Ad</span>
+
+  <!-- Real AdSense unit (invisible until approved) -->
+  <ins class="adsbygoogle" style="display:block;width:100%;height:70px;" data-ad-client="ca-pub-XXXXXXXXXXXXXXXXX"
+    [attr.data-ad-slot]="adSlotId" data-ad-format="auto" data-full-width-responsive="false"></ins>
+
+  <!-- Fallback placeholder — always visible in dev -->
+  <div class="fallback-ad">
+    <div class="fallback-inner">
+      <div class="fallback-logo">
+        <i class="ri-advertisement-line"></i>
+      </div>
+      <div class="fallback-text">
+        <p class="fallback-headline">Advertisement</p>
+        <p class="fallback-sub">Configure AdSense to show real ads here</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Upgrade nudge -->
+  <div class="ad-upgrade-nudge" *ngIf="slot === 'sidebar'">
+    <a (click)="navigateToUpgrade()" style="cursor:pointer;">
+      Remove ads — Upgrade now <i class="ri-arrow-right-line"></i>
+    </a>
+  </div>
+</div>

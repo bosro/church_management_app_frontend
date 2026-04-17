@@ -10,8 +10,8 @@ import {
   UrlSegment,
   UrlTree,
 } from '@angular/router';
-import { Observable } from 'rxjs';
-import { filter, map, take } from 'rxjs/operators';
+import { Observable, combineLatest } from 'rxjs';
+import { filter, map, take, switchMap, tap } from 'rxjs/operators';
 import { AuthService } from '../services/auth';
 import { UserRolesService } from '../../features/user-roles/services/user-roles';
 
@@ -47,49 +47,43 @@ export class PermissionGuard implements CanActivate, CanMatch {
     );
   }
 
-  private check(
-    requiredPermission?: string,
-    requiredRoles?: string[],
-    requiredFeature?: string,
-  ): Observable<boolean | UrlTree> {
-    return this.authService.authReady$.pipe(
-      filter((ready) => ready === true),
-      take(1),
-      map(() => {
-        const userRole = this.authService.getCurrentUserRole();
+private check(
+  requiredPermission?: string,
+  requiredRoles?: string[],
+  requiredFeature?: string,
+): Observable<boolean | UrlTree> {
+  // console.log('🛡️ GUARD check() called — permission:', requiredPermission, '| roles:', requiredRoles);
 
-        // ① Super admin bypasses everything
-        if (userRole === 'super_admin') return true;
+  return this.authService.authReady$.pipe(
+    tap(ready => console.log('🛡️ authReady$:', ready)),
+    filter((ready) => ready === true),
+    take(1),
+    switchMap(() => {
+      // console.log('🛡️ authReady resolved, checking permissionsLoaded$...');
+      return this.userRolesService.permissionsLoaded$;
+    }),
+    tap(loaded => console.log('🛡️ permissionsLoaded$:', loaded)),
+    filter((loaded) => loaded === true),
+    take(1),
+    map(() => {
+      const userRole = this.authService.getCurrentUserRole();
+      // console.log('🛡️ guard evaluating — userRole:', userRole);
+      // console.log('🛡️ requiredRoles includes userRole:', requiredRoles?.includes(userRole));
+      // console.log('🛡️ hasPermission:', requiredPermission ? this.userRolesService.hasPermission(requiredPermission) : 'N/A');
 
-        // ② Check feature flag
-        if (
-          requiredFeature &&
-          !this.authService.hasChurchFeature(requiredFeature)
-        ) {
-          return this.router.createUrlTree(['/unauthorized']);
-        }
-
-        // ③ church_admin always passes
-        if (userRole === 'church_admin') return true;
-
-        // ④ Role check — if user's role is in the allowed roles list, let them in
-        const hasRole =
-          requiredRoles && requiredRoles.length > 0
-            ? requiredRoles.includes(userRole)
-            : false;
-
-        if (hasRole) return true;
-
-        // ⑤ Permission check — fallback for users without the role
-        //    but who have been explicitly granted the permission
-        const hasPermission = requiredPermission
-          ? this.userRolesService.hasPermission(requiredPermission)
-          : false;
-
-        if (hasPermission) return true;
-
+      if (userRole === 'super_admin') return true;
+      if (requiredFeature && !this.authService.hasChurchFeature(requiredFeature)) {
         return this.router.createUrlTree(['/unauthorized']);
-      }),
-    );
-  }
+      }
+      if (userRole === 'church_admin') return true;
+      if (!requiredRoles?.length && !requiredPermission) return true;
+
+      const hasRole = requiredRoles?.length ? requiredRoles.includes(userRole) : false;
+      const hasPermission = requiredPermission ? this.userRolesService.hasPermission(requiredPermission) : false;
+
+      if (hasRole || hasPermission) return true;
+      return this.router.createUrlTree(['/unauthorized']);
+    }),
+  );
+}
 }

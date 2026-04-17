@@ -20,6 +20,7 @@ import {
   SubscriptionService,
   SubscriptionStatus,
 } from '../../../../core/services/subscription.service';
+import { ActivatedRoute } from '@angular/router';
 
 interface MemberProfile {
   id: string;
@@ -98,6 +99,7 @@ export class Settings implements OnInit, OnDestroy {
     private supabase: SupabaseService,
     public permissionService: PermissionService,
     private subscriptionService: SubscriptionService,
+    private route: ActivatedRoute,
   ) {}
 
   ngOnInit(): void {
@@ -111,6 +113,15 @@ export class Settings implements OnInit, OnDestroy {
     } else {
       this.activeTab = 'general';
     }
+
+    // ← ADD THIS: Read ?tab= query param and override default
+    this.route.queryParams
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((params) => {
+        if (params['tab'] && !this.isMember) {
+          this.activeTab = params['tab'];
+        }
+      });
 
     this.loadProfileData();
     this.loadSubscriptionStatus();

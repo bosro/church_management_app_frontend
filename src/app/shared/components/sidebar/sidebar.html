@@ -26,17 +26,14 @@
               <span class="menu-label">{{ item.label }}</span>
             </span>
             <!-- Toggle arrow -->
-            <i class="ri-arrow-down-s-line submenu-arrow"
-               [class.expanded]="isExpanded(item)"
-               (click)="toggleSubmenu(item)"></i>
+            <i class="ri-arrow-down-s-line submenu-arrow" [class.expanded]="isExpanded(item)"
+              (click)="toggleSubmenu(item)"></i>
           </div>
 
           <!-- Submenu -->
           <ul class="submenu" [class.expanded]="isExpanded(item)">
-            <li *ngFor="let child of item.children"
-                class="submenu-item"
-                [class.active]="child.active"
-                (click)="navigate(child.route!)">
+            <li *ngFor="let child of item.children" class="submenu-item" [class.active]="child.active"
+              (click)="navigate(child.route!)">
               <i [class]="child.icon"></i>
               <span>{{ child.label }}</span>
               <span class="badge" *ngIf="child.badge">{{ child.badge }}</span>
@@ -45,10 +42,8 @@
         </li>
 
         <!-- Regular menu item (no children) -->
-        <li *ngIf="!item.children || item.children.length === 0"
-            class="menu-item"
-            [class.active]="item.active"
-            (click)="navigate(item.route!)">
+        <li *ngIf="!item.children || item.children.length === 0" class="menu-item" [class.active]="item.active"
+          (click)="navigate(item.route!)">
           <i [class]="item.icon"></i>
           <span>{{ item.label }}</span>
         </li>
@@ -56,6 +51,33 @@
       </ng-container>
     </ul>
   </nav>
+
+  <app-ad-banner slot="sidebar"></app-ad-banner>
+
+  <!-- Upgrade Banner (free/starter plans only) -->
+  <div class="upgrade-banner" *ngIf="showUpgradeBanner">
+    <button class="upgrade-dismiss" (click)="dismissBanner()" title="Dismiss">
+      <i class="ri-close-line"></i>
+    </button>
+    <div class="upgrade-banner-icon">
+      <i class="ri-vip-crown-2-line"></i>
+    </div>
+    <p class="upgrade-plan-tag">{{ currentPlanName }} Plan</p>
+    <h4>Unlock more features</h4>
+    <p class="upgrade-desc">
+      Get unlimited members, communication tools, reports and more.
+    </p>
+    <button class="upgrade-btn" (click)="navigateToUpgrade()">
+      <i class="ri-arrow-up-circle-line"></i>
+      Upgrade Now
+    </button>
+    <div class="upgrade-features">
+      <span><i class="ri-check-line"></i> Unlimited members</span>
+      <span><i class="ri-check-line"></i> SMS & Email</span>
+      <span><i class="ri-check-line"></i> Reports</span>
+      <span><i class="ri-check-line"></i> Voting & Job Hub</span>
+    </div>
+  </div>
 
   <!-- User Profile -->
   <div class="sidebar-footer">
@@ -79,6 +101,3 @@
     </button>
   </div>
 </div>
-
-
-

@@ -4,8 +4,13 @@ import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil, finalize } from 'rxjs/operators';
 import { SermonsService } from '../../services/sermons';
-import { Sermon, SermonSeries, SermonStatistics } from '../../../../models/sermon.model';
+import {
+  Sermon,
+  SermonSeries,
+  SermonStatistics,
+} from '../../../../models/sermon.model';
 import { PermissionService } from '../../../../core/services/permission.service';
+import { AuthService } from '../../../../core/services/auth';
 
 @Component({
   selector: 'app-sermons-list',
@@ -38,7 +43,8 @@ export class SermonsList implements OnInit, OnDestroy {
   constructor(
     private sermonsService: SermonsService,
     private router: Router,
-    public permissionService: PermissionService
+    public permissionService: PermissionService,
+    private authService: AuthService,
   ) {}
 
   ngOnInit(): void {
@@ -54,24 +60,49 @@ export class SermonsList implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-  const canView =
-    this.permissionService.isAdmin ||
-    this.permissionService.sermons.view;
+    const role = this.authService.getCurrentUserRole();
 
-  this.canManageSermons =
-    this.permissionService.isAdmin ||
-    this.permissionService.sermons.upload ||
-    this.permissionService.sermons.edit ||
-    this.permissionService.sermons.delete;
+    const viewRoles = [
+      'pastor',
+      'senior_pastor',
+      'associate_pastor',
+      'ministry_leader',
+      'group_leader',
+      'cell_leader',
+      'finance_officer',
+      'elder',
+      'deacon',
+      'worship_leader',
+      'secretary',
+    ];
+    const manageRoles = [
+      'pastor',
+      'senior_pastor',
+      'associate_pastor',
+      'worship_leader',
+    ];
 
-  this.canManageSeries =
-    this.permissionService.isAdmin ||
-    this.permissionService.sermons.edit;
+    const canView =
+      this.permissionService.isAdmin ||
+      this.permissionService.sermons.view ||
+      viewRoles.includes(role);
 
-  if (!canView) {
-    this.router.navigate(['/unauthorized']);
+    this.canManageSermons =
+      this.permissionService.isAdmin ||
+      this.permissionService.sermons.upload ||
+      this.permissionService.sermons.edit ||
+      this.permissionService.sermons.delete ||
+      manageRoles.includes(role);
+
+    this.canManageSeries =
+      this.permissionService.isAdmin ||
+      this.permissionService.sermons.edit ||
+      manageRoles.includes(role);
+
+    if (!canView) {
+      this.router.navigate(['/unauthorized']);
+    }
   }
-}
 
   loadStatistics(): void {
     this.loadingStats = true;
@@ -80,7 +111,7 @@ export class SermonsList implements OnInit, OnDestroy {
       .getSermonStatistics()
       .pipe(
         takeUntil(this.destroy$),
-        finalize(() => this.loadingStats = false)
+        finalize(() => (this.loadingStats = false)),
       )
       .subscribe({
         next: (stats) => {
@@ -89,7 +120,7 @@ export class SermonsList implements OnInit, OnDestroy {
         error: (error) => {
           console.error('Error loading statistics:', error);
           // Don't show error to user for statistics failure
-        }
+        },
       });
   }
 
@@ -104,7 +135,7 @@ export class SermonsList implements OnInit, OnDestroy {
         error: (error) => {
           console.error('Error loading sermon series:', error);
           // Don't show error to user for series failure
-        }
+        },
       });
   }
 
@@ -113,10 +144,14 @@ export class SermonsList implements OnInit, OnDestroy {
     this.errorMessage = '';
 
     this.sermonsService
-      .getSermons(this.currentPage, this.pageSize, this.selectedSeries || undefined)
+      .getSermons(
+        this.currentPage,
+        this.pageSize,
+        this.selectedSeries || undefined,
+      )
       .pipe(
         takeUntil(this.destroy$),
-        finalize(() => this.loading = false)
+        finalize(() => (this.loading = false)),
       )
       .subscribe({
         next: ({ data, count }) => {
@@ -128,7 +163,7 @@ export class SermonsList implements OnInit, OnDestroy {
           this.errorMessage = error.message || 'Failed to load sermons';
           this.scrollToTop();
           console.error('Error loading sermons:', error);
-        }
+        },
       });
   }
 
@@ -139,23 +174,24 @@ export class SermonsList implements OnInit, OnDestroy {
       this.scrollToTop();
       return;
     }
-    this.router.navigate(['main/sermon/create']);
+    // FIX: was 'main/sermon/create' (singular)
+    this.router.navigate(['main/sermons/create']);
   }
 
   viewSermon(sermonId: string): void {
-    this.router.navigate(['main/sermon', sermonId]);
+    // FIX: was 'main/sermon' (singular)
+    this.router.navigate(['main/sermons', sermonId]);
   }
 
   editSermon(sermonId: string, event: Event): void {
     event.stopPropagation();
-
     if (!this.canManageSermons) {
       this.errorMessage = 'You do not have permission to edit sermons';
       this.scrollToTop();
       return;
     }
-
-    this.router.navigate(['main/sermon', sermonId, 'edit']);
+    // FIX: was 'main/sermon' (singular)
+    this.router.navigate(['main/sermons', sermonId, 'edit']);
   }
 
   manageSeries(): void {
@@ -164,7 +200,8 @@ export class SermonsList implements OnInit, OnDestroy {
       this.scrollToTop();
       return;
     }
-    this.router.navigate(['main/sermon/series']);
+    // FIX: was 'main/sermon/series' (singular)
+    this.router.navigate(['main/sermons/series']);
   }
 
   // Filters
@@ -213,7 +250,7 @@ export class SermonsList implements OnInit, OnDestroy {
           this.errorMessage = error.message || `Failed to update sermon`;
           this.scrollToTop();
           console.error('Error toggling featured:', error);
-        }
+        },
       });
   }
 
@@ -226,7 +263,7 @@ export class SermonsList implements OnInit, OnDestroy {
       return;
     }
 
-    const sermon = this.sermons.find(s => s.id === sermonId);
+    const sermon = this.sermons.find((s) => s.id === sermonId);
     if (!sermon) return;
 
     const confirmMessage = `Are you sure you want to delete "${sermon.title}"?\n\nThis action cannot be undone.`;
@@ -252,7 +289,7 @@ export class SermonsList implements OnInit, OnDestroy {
           this.errorMessage = error.message || 'Failed to delete sermon';
           this.scrollToTop();
           console.error('Error deleting sermon:', error);
-        }
+        },
       });
   }
 
@@ -282,8 +319,3 @@ export class SermonsList implements OnInit, OnDestroy {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }
-
-
-
-
-

@@ -19,7 +19,7 @@
             </div>
           </div>
           <button class="btn-primary" (click)="createPage()"
-            *ngIf="permissionService.isAdmin || permissionService.settings.manage">
+            *ngIf="canManageContent">
             <i class="ri-add-line"></i>
             Create Page
           </button>
@@ -57,17 +57,17 @@
 
               <div class="page-actions">
                 <button class="btn-action btn-publish" (click)="togglePublish(page, $event)"
-                  *ngIf="permissionService.isAdmin || permissionService.settings.manage">
+                  *ngIf="canManageContent">
                   <i [class]="page.is_published ? 'ri-eye-off-line' : 'ri-eye-line'"></i>
                   {{ page.is_published ? 'Unpublish' : 'Publish' }}
                 </button>
                 <button class="btn-action btn-edit" (click)="editPage(page.id, $event)"
-                  *ngIf="permissionService.isAdmin || permissionService.settings.manage">
+                  *ngIf="canManageContent">
                   <i class="ri-edit-line"></i>
                   Edit
                 </button>
                 <button class="btn-action btn-delete" (click)="deletePage(page.id, $event)"
-                  *ngIf="permissionService.isAdmin || permissionService.settings.manage">
+                  *ngIf="canManageContent">
                   <i class="ri-delete-bin-line"></i>
                   Delete
                 </button>
@@ -87,7 +87,7 @@
             <h3>No Pages Yet</h3>
             <p>Create your first page to get started</p>
             <button class="btn-primary" (click)="createPage()"
-              *ngIf="permissionService.isAdmin || permissionService.settings.manage">
+              *ngIf="canManageContent">
               <i class="ri-add-line"></i>
               Create Page
             </button>

@@ -3,8 +3,13 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { FinanceService, GivingStatistics, TopGiver } from '../../../services/finance.service';
+import {
+  FinanceService,
+  GivingStatistics,
+  TopGiver,
+} from '../../../services/finance.service';
 import { PermissionService } from '../../../../../core/services/permission.service';
+import { AuthService } from '../../../../../core/services/auth';
 
 @Component({
   selector: 'app-finance-overview',
@@ -38,7 +43,8 @@ export class FinanceOverview implements OnInit, OnDestroy {
   constructor(
     private financeService: FinanceService,
     private router: Router,
-     public permissionService: PermissionService
+    public permissionService: PermissionService,
+    private authService: AuthService,
   ) {
     // Generate year options (current year and 5 years back)
     const currentYear = new Date().getFullYear();
@@ -58,14 +64,23 @@ export class FinanceOverview implements OnInit, OnDestroy {
   }
 
  private checkPermissions(): void {
+  const role = this.authService.getCurrentUserRole();
+
+  const viewRoles = [
+    'pastor', 'senior_pastor', 'associate_pastor', 'finance_officer',
+  ];
+  const manageRoles = ['finance_officer'];
+
   this.canViewFinance =
     this.permissionService.isAdmin ||
-    this.permissionService.finance.view;
+    this.permissionService.finance.view ||
+    viewRoles.includes(role);
 
   this.canManageFinance =
     this.permissionService.isAdmin ||
     this.permissionService.finance.manage ||
-    this.permissionService.finance.record;
+    this.permissionService.finance.record ||
+    manageRoles.includes(role);
 
   if (!this.canViewFinance) {
     this.router.navigate(['/unauthorized']);
@@ -77,7 +92,8 @@ export class FinanceOverview implements OnInit, OnDestroy {
     this.errorMessage = '';
 
     // Load statistics
-    this.financeService.getGivingStatistics(this.selectedYear)
+    this.financeService
+      .getGivingStatistics(this.selectedYear)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (stats) => {
@@ -89,11 +105,12 @@ export class FinanceOverview implements OnInit, OnDestroy {
           this.errorMessage = error.message || 'Failed to load statistics';
           this.loading = false;
           console.error('Error loading statistics:', error);
-        }
+        },
       });
 
     // Load recent transactions
-    this.financeService.getGivingTransactions(1, 10)
+    this.financeService
+      .getGivingTransactions(1, 10)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: ({ data }) => {
@@ -102,11 +119,12 @@ export class FinanceOverview implements OnInit, OnDestroy {
         },
         error: (error) => {
           console.error('Error loading transactions:', error);
-        }
+        },
       });
 
     // Load top givers
-    this.financeService.getTopGivers(5, this.selectedYear)
+    this.financeService
+      .getTopGivers(5, this.selectedYear)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (givers) => {
@@ -115,7 +133,7 @@ export class FinanceOverview implements OnInit, OnDestroy {
         },
         error: (error) => {
           console.error('Error loading top givers:', error);
-        }
+        },
       });
 
     // Load giving trends for chart
@@ -126,7 +144,8 @@ export class FinanceOverview implements OnInit, OnDestroy {
     const currentYear = new Date().getFullYear();
 
     // Load monthly data for current year
-    this.financeService.getMonthlyGivingData(this.selectedYear)
+    this.financeService
+      .getMonthlyGivingData(this.selectedYear)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (data) => {
@@ -137,16 +156,42 @@ export class FinanceOverview implements OnInit, OnDestroy {
           console.error('Error loading chart data:', error);
           // Set empty chart data
           this.chartData = {
-            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+            labels: [
+              'Jan',
+              'Feb',
+              'Mar',
+              'Apr',
+              'May',
+              'Jun',
+              'Jul',
+              'Aug',
+              'Sep',
+              'Oct',
+              'Nov',
+              'Dec',
+            ],
             tithe: Array(12).fill(0),
             offering: Array(12).fill(0),
           };
-        }
+        },
       });
   }
 
   private prepareChartData(monthlyData: any[]): void {
-    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const monthNames = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
     const tithe: number[] = Array(12).fill(0);
     const offering: number[] = Array(12).fill(0);
 
@@ -156,7 +201,10 @@ export class FinanceOverview implements OnInit, OnDestroy {
 
       if (categoryName.includes('tithe')) {
         tithe[monthIndex] += item.total_amount || 0;
-      } else if (categoryName.includes('offering') || categoryName.includes('seed')) {
+      } else if (
+        categoryName.includes('offering') ||
+        categoryName.includes('seed')
+      ) {
         offering[monthIndex] += item.total_amount || 0;
       }
     });
@@ -201,13 +249,11 @@ export class FinanceOverview implements OnInit, OnDestroy {
     this.router.navigate(['main/finance/categories']);
   }
 
-
-
   // Helper methods
   formatCurrency(amount: number, currency: string = 'GHS'): string {
     return new Intl.NumberFormat('en-GH', {
       style: 'currency',
-      currency: currency
+      currency: currency,
     }).format(amount || 0);
   }
 
@@ -225,10 +271,3 @@ export class FinanceOverview implements OnInit, OnDestroy {
     return 'A';
   }
 }
-
-
-
-
-
-
-

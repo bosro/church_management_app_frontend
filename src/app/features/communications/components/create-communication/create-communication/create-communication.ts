@@ -10,6 +10,7 @@ import {
   TargetAudience,
 } from '../../../../../models/communication.model';
 import { PermissionService } from '../../../../../core/services/permission.service';
+import { AuthService } from '../../../../../core/services/auth';
 
 interface MessageTemplate {
   name: string;
@@ -87,6 +88,7 @@ export class CreateCommunication implements OnInit, OnDestroy {
     private communicationsService: CommunicationsService,
     private router: Router,
     public permissionService: PermissionService,
+    private authService: AuthService,
   ) {}
 
   ngOnInit(): void {
@@ -100,10 +102,20 @@ export class CreateCommunication implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
+    const role = this.authService.getCurrentUserRole();
+
+    const sendRoles = [
+      'pastor',
+      'senior_pastor',
+      'associate_pastor',
+      'ministry_leader',
+    ];
+
     this.canManageCommunications =
       this.permissionService.isAdmin ||
       this.permissionService.communications.send ||
-      this.permissionService.communications.bulk;
+      this.permissionService.communications.bulk ||
+      sendRoles.includes(role);
 
     if (!this.canManageCommunications) {
       this.router.navigate(['/unauthorized']);

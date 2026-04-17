@@ -1184,3 +1184,7 @@ checkInVisitorPublic(
     return eDate.getTime() === today.getTime();
   }
 }
+
+
+
+

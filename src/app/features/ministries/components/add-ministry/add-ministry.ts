@@ -6,6 +6,7 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { MinistryService } from '../../services/ministry.service';
 import { PermissionService } from '../../../../core/services/permission.service';
+import { AuthService } from '../../../../core/services/auth';
 
 @Component({
   selector: 'app-add-ministry',
@@ -32,6 +33,7 @@ export class AddMinistry implements OnInit, OnDestroy {
     private ministryService: MinistryService,
     private router: Router,
     public permissionService: PermissionService,
+    private authService: AuthService,
   ) {}
 
   ngOnInit(): void {
@@ -45,9 +47,19 @@ export class AddMinistry implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
+    const role = this.authService.getCurrentUserRole();
+
+    const manageRoles = [
+      'pastor',
+      'senior_pastor',
+      'associate_pastor',
+      'ministry_leader',
+    ];
+
     this.canManageMinistries =
       this.permissionService.isAdmin ||
-      this.permissionService.ministries.manage;
+      this.permissionService.ministries.manage ||
+      manageRoles.includes(role);
 
     if (!this.canManageMinistries) {
       this.router.navigate(['/unauthorized']);

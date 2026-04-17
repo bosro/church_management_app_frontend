@@ -7,6 +7,7 @@ import { takeUntil, finalize } from 'rxjs/operators';
 import { SermonsService } from '../../services/sermons';
 import { Sermon, SermonSeries } from '../../../../models/sermon.model';
 import { PermissionService } from '../../../../core/services/permission.service';
+import { AuthService } from '../../../../core/services/auth';
 
 @Component({
   selector: 'app-edit-sermon',
@@ -35,6 +36,7 @@ export class EditSermon implements OnInit, OnDestroy {
     private router: Router,
     private route: ActivatedRoute,
     public permissionService: PermissionService,
+    private authService: AuthService,
   ) {}
 
   ngOnInit(): void {
@@ -57,8 +59,19 @@ export class EditSermon implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
+    const role = this.authService.getCurrentUserRole();
+
+    const manageRoles = [
+      'pastor',
+      'senior_pastor',
+      'associate_pastor',
+      'worship_leader',
+    ];
+
     this.canManageSermons =
-      this.permissionService.isAdmin || this.permissionService.sermons.edit;
+      this.permissionService.isAdmin ||
+      this.permissionService.sermons.edit ||
+      manageRoles.includes(role);
 
     if (!this.canManageSermons) {
       this.router.navigate(['/unauthorized']);
@@ -181,9 +194,11 @@ export class EditSermon implements OnInit, OnDestroy {
       )
       .subscribe({
         next: () => {
-          this.successMessage = 'Sermon uploaded successfully!';
+          // FIX: was "Sermon uploaded successfully!" (copy-paste from create)
+          this.successMessage = 'Sermon updated successfully!';
           setTimeout(() => {
-            this.router.navigate(['main/sermon']); // was '/sermon'
+            // FIX: was 'main/sermon' (singular)
+            this.router.navigate(['main/sermons', this.sermonId]);
           }, 1500);
         },
         error: (error) => {
@@ -200,10 +215,12 @@ export class EditSermon implements OnInit, OnDestroy {
       if (
         confirm('You have unsaved changes. Are you sure you want to leave?')
       ) {
-        this.router.navigate(['main/sermon', this.sermonId]);
+        // FIX: was 'main/sermon' (singular)
+        this.router.navigate(['main/sermons', this.sermonId]);
       }
     } else {
-      this.router.navigate(['main/sermon', this.sermonId]);
+      // FIX: was 'main/sermon' (singular)
+      this.router.navigate(['main/sermons', this.sermonId]);
     }
   }
 

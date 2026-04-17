@@ -9,6 +9,7 @@ import {
   MinistryStatistics,
 } from '../../../../models/ministry.model';
 import { PermissionService } from '../../../../core/services/permission.service';
+import { AuthService } from '../../../../core/services/auth';
 
 @Component({
   selector: 'app-ministry-list',
@@ -41,6 +42,7 @@ export class MinistryList implements OnInit, OnDestroy {
     private ministryService: MinistryService,
     private router: Router,
     public permissionService: PermissionService,
+    private authService: AuthService,
   ) {}
 
   ngOnInit(): void {
@@ -55,12 +57,36 @@ export class MinistryList implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
+    const role = this.authService.getCurrentUserRole();
+
+    const viewRoles = [
+      'pastor',
+      'senior_pastor',
+      'associate_pastor',
+      'ministry_leader',
+      'group_leader',
+      'cell_leader',
+      'elder',
+      'deacon',
+      'worship_leader',
+      'secretary',
+    ];
+    const manageRoles = [
+      'pastor',
+      'senior_pastor',
+      'associate_pastor',
+      'ministry_leader',
+    ];
+
     this.canViewMinistries =
-      this.permissionService.isAdmin || this.permissionService.ministries.view;
+      this.permissionService.isAdmin ||
+      this.permissionService.ministries.view ||
+      viewRoles.includes(role);
 
     this.canManageMinistries =
       this.permissionService.isAdmin ||
-      this.permissionService.ministries.manage;
+      this.permissionService.ministries.manage ||
+      manageRoles.includes(role);
 
     if (!this.canViewMinistries) {
       this.router.navigate(['/unauthorized']);

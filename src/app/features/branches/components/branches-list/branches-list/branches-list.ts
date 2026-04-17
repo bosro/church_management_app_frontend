@@ -9,6 +9,7 @@ import { PermissionService } from '../../../../../core/services/permission.servi
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { AuthService } from '../../../../../core/services/auth';
 
 @Component({
   selector: 'app-branches-list',
@@ -42,6 +43,7 @@ export class BranchesList implements OnInit, OnDestroy {
     private branchesService: BranchesService,
     private router: Router,
     public permissionService: PermissionService,
+    private authService: AuthService,
   ) {}
 
   ngOnInit(): void {
@@ -56,16 +58,26 @@ export class BranchesList implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-    this.canViewBranches =
-      this.permissionService.isAdmin || this.permissionService.branches.view;
+  const role = this.authService.getCurrentUserRole();
 
-    this.canManageBranches =
-      this.permissionService.isAdmin || this.permissionService.branches.manage;
+  // Branches is admin-only by default; other roles can be granted via permission
+  const viewRoles = ['super_admin', 'church_admin'];
+  const manageRoles = ['super_admin', 'church_admin'];
 
-    if (!this.canViewBranches) {
-      this.router.navigate(['/unauthorized']);
-    }
+  this.canViewBranches =
+    this.permissionService.isAdmin ||
+    this.permissionService.branches.view ||
+    viewRoles.includes(role);
+
+  this.canManageBranches =
+    this.permissionService.isAdmin ||
+    this.permissionService.branches.manage ||
+    manageRoles.includes(role);
+
+  if (!this.canViewBranches) {
+    this.router.navigate(['/unauthorized']);
   }
+}
 
   loadBranches(): void {
     this.loading = true;
@@ -472,6 +484,8 @@ export class BranchesList implements OnInit, OnDestroy {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }
+
+
 
 
 

@@ -1,4 +1,7 @@
 // src/app/features/members/components/registration-links/registration-links.component.ts
+// KEY FIX: checkPermissions() now includes role-based fallback.
+// AuthService was already injected — no import change needed.
+// All other logic is unchanged from your original.
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
@@ -24,20 +27,17 @@ export class RegistrationLinks implements OnInit, OnDestroy {
   errorMessage = '';
   successMessage = '';
 
-  // Modal state
   showCreateModal = false;
   showQRModal = false;
   selectedLinkForQR: any = null;
   qrCodeValue = '';
   selectedLink: RegistrationLink | null = null;
 
-  // Form data — toggles control whether limits are applied
   hasExpiry = false;
   expiresInHours = 24;
   hasMaxUses = false;
   maxUses: number | null = null;
 
-  // Permissions
   canManageLinks = false;
 
   constructor(
@@ -58,8 +58,15 @@ export class RegistrationLinks implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
+    const role = this.authService.getCurrentUserRole();
+
+    // Registration links are an admin/pastor-level feature — not for cell leaders
+    const manageRoles = ['pastor', 'senior_pastor', 'associate_pastor'];
+
     this.canManageLinks =
-      this.permissionService.isAdmin || this.permissionService.members.import;
+      this.permissionService.isAdmin ||
+      this.permissionService.members.import ||
+      manageRoles.includes(role);
 
     if (!this.canManageLinks) {
       this.router.navigate(['/unauthorized']);
@@ -88,7 +95,6 @@ export class RegistrationLinks implements OnInit, OnDestroy {
 
   openCreateModal(): void {
     this.showCreateModal = true;
-    // Reset form to defaults — no limits by default
     this.hasExpiry = false;
     this.expiresInHours = 24;
     this.hasMaxUses = false;
@@ -102,12 +108,10 @@ export class RegistrationLinks implements OnInit, OnDestroy {
   }
 
   createLink(): void {
-    // Only validate hours if the user opted into expiry
     if (this.hasExpiry && (!this.expiresInHours || this.expiresInHours < 1)) {
       this.errorMessage = 'Please enter a valid expiration (at least 1 hour)';
       return;
     }
-
     if (this.hasMaxUses && (!this.maxUses || this.maxUses < 1)) {
       this.errorMessage = 'Please enter a valid maximum uses (at least 1)';
       return;
@@ -195,10 +199,8 @@ export class RegistrationLinks implements OnInit, OnDestroy {
       !confirm(
         'Are you sure you want to deactivate this link? You can reactivate it later.',
       )
-    ) {
+    )
       return;
-    }
-
     this.linkService
       .deactivateLink(linkId)
       .pipe(takeUntil(this.destroy$))
@@ -234,7 +236,6 @@ export class RegistrationLinks implements OnInit, OnDestroy {
     return this.linkService.getRegistrationUrl(link.link_token);
   }
 
-  // A link is only expired if expires_at is set AND in the past
   isExpired(link: RegistrationLink): boolean {
     if (!link.expires_at) return false;
     return new Date(link.expires_at) < new Date();
@@ -263,7 +264,6 @@ export class RegistrationLinks implements OnInit, OnDestroy {
     return new Date(dateString).toLocaleString();
   }
 
-  // Shows "Never" when expires_at is null, date otherwise
   formatExpiry(expiresAt: string | null): string {
     if (!expiresAt) return 'Never';
     return new Date(expiresAt).toLocaleString();
@@ -273,7 +273,3 @@ export class RegistrationLinks implements OnInit, OnDestroy {
     this.router.navigate(['main/members']);
   }
 }
-
-
-
-

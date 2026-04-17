@@ -1,4 +1,5 @@
 // src/app/features/events/components/edit-event/edit-event.component.ts
+// KEY FIX: checkPermissions() now includes role-based fallback
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -7,6 +8,7 @@ import { takeUntil } from 'rxjs/operators';
 import { EventsService } from '../../../services/events';
 import { ChurchEvent, EventCategory } from '../../../../../models/event.model';
 import { PermissionService } from '../../../../../core/services/permission.service';
+import { AuthService } from '../../../../../core/services/auth';
 
 @Component({
   selector: 'app-edit-event',
@@ -39,7 +41,6 @@ export class EditEvent implements OnInit, OnDestroy {
     { value: 'other', label: 'Other' },
   ];
 
-  // Permissions
   canManageEvents = false;
 
   constructor(
@@ -48,16 +49,14 @@ export class EditEvent implements OnInit, OnDestroy {
     private router: Router,
     private route: ActivatedRoute,
     public permissionService: PermissionService,
+    private authService: AuthService,
   ) {}
 
   ngOnInit(): void {
     this.checkPermissions();
     this.eventId = this.route.snapshot.paramMap.get('id') || '';
     this.initForm();
-
-    if (this.eventId) {
-      this.loadEvent();
-    }
+    if (this.eventId) this.loadEvent();
   }
 
   ngOnDestroy(): void {
@@ -66,8 +65,19 @@ export class EditEvent implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
+    const role = this.authService.getCurrentUserRole();
+
+    const editRoles = [
+      'pastor',
+      'senior_pastor',
+      'associate_pastor',
+      'ministry_leader',
+    ];
+
     this.canManageEvents =
-      this.permissionService.isAdmin || this.permissionService.events.edit;
+      this.permissionService.isAdmin ||
+      this.permissionService.events.edit ||
+      editRoles.includes(role);
 
     if (!this.canManageEvents) {
       this.router.navigate(['/unauthorized']);
@@ -85,7 +95,8 @@ export class EditEvent implements OnInit, OnDestroy {
         ],
       ],
       description: ['', [Validators.maxLength(2000)]],
-      category: ['service', [Validators.required]],
+      // Use same field names as create-event for consistency
+      event_type: ['service', [Validators.required]],
       start_date: ['', [Validators.required]],
       end_date: ['', [Validators.required]],
       start_time: [''],
@@ -93,7 +104,7 @@ export class EditEvent implements OnInit, OnDestroy {
       location: ['', [Validators.maxLength(200)]],
       max_attendees: [null, [Validators.min(1)]],
       registration_deadline: [''],
-      registration_required: [false],
+      requires_registration: [false],
       is_public: [true],
     });
   }
@@ -114,13 +125,11 @@ export class EditEvent implements OnInit, OnDestroy {
         error: (error) => {
           this.errorMessage = error.message || 'Failed to load event';
           this.loadingEvent = false;
-          console.error('Error loading event:', error);
         },
       });
   }
 
   private populateForm(event: ChurchEvent): void {
-    // Extract date and time from datetime strings
     const startDate = event.start_date ? event.start_date.split('T')[0] : '';
     const endDate = event.end_date ? event.end_date.split('T')[0] : startDate;
     const startTime = event.start_date
@@ -131,7 +140,8 @@ export class EditEvent implements OnInit, OnDestroy {
     this.eventForm.patchValue({
       title: event.title,
       description: event.description || '',
-      category: event.category || 'service',
+      // Map category → event_type form control
+      event_type: event.category || 'service',
       start_date: startDate,
       end_date: endDate,
       start_time: startTime,
@@ -139,7 +149,7 @@ export class EditEvent implements OnInit, OnDestroy {
       location: event.location || '',
       max_attendees: event.max_attendees || null,
       registration_deadline: event.registration_deadline || '',
-      registration_required: event.registration_required || false,
+      requires_registration: event.registration_required || false,
       is_public: event.is_public !== undefined ? event.is_public : true,
     });
   }
@@ -160,7 +170,6 @@ export class EditEvent implements OnInit, OnDestroy {
       return;
     }
 
-    // Validate dates
     const startDate = new Date(this.eventForm.value.start_date);
     const endDate = new Date(this.eventForm.value.end_date);
 
@@ -170,7 +179,6 @@ export class EditEvent implements OnInit, OnDestroy {
       return;
     }
 
-    // Validate registration deadline
     if (this.eventForm.value.registration_deadline) {
       const deadline = new Date(this.eventForm.value.registration_deadline);
       if (deadline > startDate) {
@@ -185,26 +193,21 @@ export class EditEvent implements OnInit, OnDestroy {
     this.errorMessage = '';
     this.successMessage = '';
 
+    const v = this.eventForm.value;
     const eventData = {
-      title: this.eventForm.value.title.trim(),
-      description: this.eventForm.value.description?.trim() || undefined,
-      category: this.eventForm.value.category,
-      start_date: this.eventForm.value.start_date,
-      end_date: this.eventForm.value.end_date,
-      start_time: this.eventForm.value.start_time || undefined,
-      end_time: this.eventForm.value.end_time || undefined,
-      location: this.eventForm.value.location?.trim() || undefined,
-      max_attendees: this.eventForm.value.max_attendees
-        ? parseInt(this.eventForm.value.max_attendees)
-        : undefined,
-      registration_deadline:
-        this.eventForm.value.registration_deadline || undefined,
-      registration_required:
-        this.eventForm.value.registration_required || false,
-      is_public:
-        this.eventForm.value.is_public !== undefined
-          ? this.eventForm.value.is_public
-          : true,
+      title: v.title.trim(),
+      description: v.description?.trim() || undefined,
+      // Map event_type form control → category field expected by service
+      category: v.event_type as EventCategory,
+      start_date: v.start_date,
+      end_date: v.end_date,
+      start_time: v.start_time || undefined,
+      end_time: v.end_time || undefined,
+      location: v.location?.trim() || undefined,
+      max_attendees: v.max_attendees ? parseInt(v.max_attendees) : undefined,
+      registration_deadline: v.registration_deadline || undefined,
+      registration_required: v.requires_registration || false,
+      is_public: v.is_public !== undefined ? v.is_public : true,
     };
 
     this.eventsService
@@ -214,7 +217,6 @@ export class EditEvent implements OnInit, OnDestroy {
         next: () => {
           this.successMessage = 'Event updated successfully!';
           this.loading = false;
-
           setTimeout(() => {
             this.router.navigate(['main/events', this.eventId]);
           }, 1500);
@@ -224,7 +226,6 @@ export class EditEvent implements OnInit, OnDestroy {
           this.errorMessage =
             error.message || 'Failed to update event. Please try again.';
           this.scrollToTop();
-          console.error('Error updating event:', error);
         },
       });
   }
@@ -245,36 +246,20 @@ export class EditEvent implements OnInit, OnDestroy {
     Object.keys(formGroup.controls).forEach((key) => {
       const control = formGroup.get(key);
       control?.markAsTouched();
-
-      if (control instanceof FormGroup) {
-        this.markFormGroupTouched(control);
-      }
+      if (control instanceof FormGroup) this.markFormGroupTouched(control);
     });
   }
 
   getErrorMessage(fieldName: string): string {
     const control = this.eventForm.get(fieldName);
-
-    if (!control || !control.errors || !control.touched) {
-      return '';
-    }
-
-    if (control.hasError('required')) {
-      return 'This field is required';
-    }
-    if (control.hasError('minlength')) {
-      const minLength = control.getError('minlength').requiredLength;
-      return `Minimum ${minLength} characters required`;
-    }
-    if (control.hasError('maxlength')) {
-      const maxLength = control.getError('maxlength').requiredLength;
-      return `Maximum ${maxLength} characters allowed`;
-    }
-    if (control.hasError('min')) {
-      const min = control.getError('min').min;
-      return `Minimum value is ${min}`;
-    }
-
+    if (!control || !control.errors || !control.touched) return '';
+    if (control.hasError('required')) return 'This field is required';
+    if (control.hasError('minlength'))
+      return `Minimum ${control.getError('minlength').requiredLength} characters required`;
+    if (control.hasError('maxlength'))
+      return `Maximum ${control.getError('maxlength').requiredLength} characters allowed`;
+    if (control.hasError('min'))
+      return `Minimum value is ${control.getError('min').min}`;
     return 'Invalid input';
   }
 

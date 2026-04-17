@@ -9,6 +9,7 @@ import {
   CommunicationStatistics,
 } from '../../../../../models/communication.model';
 import { PermissionService } from '../../../../../core/services/permission.service';
+import { AuthService } from '../../../../../core/services/auth';
 
 @Component({
   selector: 'app-communications-list',
@@ -39,6 +40,7 @@ export class CommunicationsList implements OnInit, OnDestroy {
     private communicationsService: CommunicationsService,
     private router: Router,
     public permissionService: PermissionService,
+    private authService: AuthService,
   ) {}
 
   ngOnInit(): void {
@@ -53,18 +55,37 @@ export class CommunicationsList implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
+    const role = this.authService.getCurrentUserRole();
+
+    const viewRoles = [
+      'pastor',
+      'senior_pastor',
+      'associate_pastor',
+      'ministry_leader',
+      'secretary',
+    ];
+    const sendRoles = [
+      'pastor',
+      'senior_pastor',
+      'associate_pastor',
+      'ministry_leader',
+    ];
+
     const canView =
       this.permissionService.isAdmin ||
-      this.permissionService.communications.view;
+      this.permissionService.communications.view ||
+      viewRoles.includes(role);
 
     this.canManageCommunications =
       this.permissionService.isAdmin ||
-      this.permissionService.communications.templates ||
-      this.permissionService.communications.bulk;
+      (this.permissionService.communications as any).templates ||
+      this.permissionService.communications.bulk ||
+      sendRoles.includes(role);
 
     this.canSendCommunications =
       this.permissionService.isAdmin ||
-      this.permissionService.communications.send;
+      this.permissionService.communications.send ||
+      sendRoles.includes(role);
 
     if (!canView) {
       this.router.navigate(['/unauthorized']);

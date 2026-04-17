@@ -19,6 +19,7 @@ import { Member } from './../../../../../models/member.model';
 import { FinanceService } from '../../../services/finance.service';
 import { MemberService } from '../../../../members/services/member.service';
 import { PermissionService } from '../../../../../core/services/permission.service';
+import { AuthService } from '../../../../../core/services/auth';
 
 @Component({
   selector: 'app-create-pledge',
@@ -59,6 +60,7 @@ export class CreatePledge implements OnInit, OnDestroy {
     private memberService: MemberService,
     private router: Router,
     public permissionService: PermissionService,
+    private authService: AuthService,
   ) {}
 
   ngOnInit(): void {
@@ -74,15 +76,20 @@ export class CreatePledge implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-    this.canManageFinance =
-      this.permissionService.isAdmin ||
-      this.permissionService.finance.record ||
-      this.permissionService.finance.manage;
+  const role = this.authService.getCurrentUserRole();
 
-    if (!this.canManageFinance) {
-      this.router.navigate(['/unauthorized']);
-    }
+  const manageRoles = ['finance_officer'];
+
+  this.canManageFinance =
+    this.permissionService.isAdmin ||
+    this.permissionService.finance.record ||
+    this.permissionService.finance.manage ||
+    manageRoles.includes(role);
+
+  if (!this.canManageFinance) {
+    this.router.navigate(['/unauthorized']);
   }
+}
 
   private initForm(): void {
     const today = new Date().toISOString().split('T')[0];
@@ -344,6 +351,8 @@ export class CreatePledge implements OnInit, OnDestroy {
     }
   }
 }
+
+
 
 
 

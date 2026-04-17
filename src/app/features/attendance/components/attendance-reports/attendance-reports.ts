@@ -10,6 +10,7 @@ import { PermissionService } from '../../../../core/services/permission.service'
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { AuthService } from '../../../../core/services/auth';
 
 interface ReportSummary {
   total_services: number;
@@ -44,12 +45,12 @@ export class AttendanceReports implements OnInit, OnDestroy {
 
   // Service Types
   serviceTypes: { value: string; label: string }[] = [
-  { value: 'sunday_service',   label: 'Sunday Service' },
-  { value: 'midweek_service',  label: 'Midweek Service' },
-  { value: 'prayer_meeting',   label: 'Prayer Meeting' },
-  { value: 'ministry_meeting', label: 'Ministry Meeting' },
-  { value: 'special_event',    label: 'Special Event' },
-];
+    { value: 'sunday_service', label: 'Sunday Service' },
+    { value: 'midweek_service', label: 'Midweek Service' },
+    { value: 'prayer_meeting', label: 'Prayer Meeting' },
+    { value: 'ministry_meeting', label: 'Ministry Meeting' },
+    { value: 'special_event', label: 'Special Event' },
+  ];
 
   // Permissions
   canViewAttendance = false;
@@ -62,6 +63,7 @@ export class AttendanceReports implements OnInit, OnDestroy {
     private attendanceService: AttendanceService,
     private router: Router,
     public permissionService: PermissionService,
+    private authService: AuthService,
   ) {}
 
   ngOnInit(): void {
@@ -76,11 +78,25 @@ export class AttendanceReports implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-    if (
-      !this.permissionService.isAdmin &&
-      !this.permissionService.attendance.reports
-    ) {
+    const role = this.authService.getCurrentUserRole();
+    const viewRoles = [
+      'pastor',
+      'senior_pastor',
+      'associate_pastor',
+      'ministry_leader',
+      'group_leader',
+      'cell_leader',
+      'finance_officer',
+      'secretary',
+    ];
+
+    const canView =
+      this.permissionService.isAdmin ||
+      this.permissionService.attendance.view ||
+      viewRoles.includes(role);
+    if (!canView) {
       this.router.navigate(['/unauthorized']);
+      return;
     }
   }
 
@@ -436,8 +452,3 @@ export class AttendanceReports implements OnInit, OnDestroy {
     });
   }
 }
-
-
-
-
-

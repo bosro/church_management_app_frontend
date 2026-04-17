@@ -6,6 +6,7 @@ import { takeUntil } from 'rxjs/operators';
 import { CommunicationsService } from '../../../services/communications';
 import { SmsLog } from '../../../../../models/communication.model';
 import { PermissionService } from '../../../../../core/services/permission.service';
+import { AuthService } from '../../../../../core/services/auth';
 
 @Component({
   selector: 'app-sms-logs',
@@ -33,6 +34,7 @@ export class SmsLogs implements OnInit, OnDestroy {
     private communicationsService: CommunicationsService,
     private router: Router,
     public permissionService: PermissionService,
+    private authService: AuthService,
   ) {}
 
   ngOnInit(): void {
@@ -46,9 +48,20 @@ export class SmsLogs implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
+    const role = this.authService.getCurrentUserRole();
+
+    const viewRoles = [
+      'pastor',
+      'senior_pastor',
+      'associate_pastor',
+      'ministry_leader',
+      'secretary',
+    ];
+
     this.canViewCommunications =
       this.permissionService.isAdmin ||
-      this.permissionService.communications.view;
+      this.permissionService.communications.view ||
+      viewRoles.includes(role);
 
     if (!this.canViewCommunications) {
       this.router.navigate(['/unauthorized']);

@@ -5,6 +5,8 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { FormTemplate } from '../../../../models/form.model';
 import { FormsService } from '../../services/forms';
+import { PermissionService } from '../../../../core/services/permission.service';
+import { AuthService } from '../../../../core/services/auth';
 
 @Component({
   selector: 'app-forms-list',
@@ -31,7 +33,9 @@ export class FormsList implements OnInit, OnDestroy {
 
   constructor(
     private formsService: FormsService,
-    private router: Router
+    private router: Router,
+    public permissionService: PermissionService,
+    private authService: AuthService,
   ) {}
 
   ngOnInit(): void {
@@ -45,14 +49,32 @@ export class FormsList implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-    this.canManageForms = this.formsService.canManageForms();
+    const role = this.authService.getCurrentUserRole();
+
+    const manageRoles = [
+      'pastor',
+      'senior_pastor',
+      'associate_pastor',
+      'ministry_leader',
+      'group_leader',
+    ];
+
+    this.canManageForms =
+      this.permissionService.isAdmin ||
+      (this.permissionService.forms as any)?.manage ||
+      this.formsService.canManageForms() || // keep for backwards compat
+      manageRoles.includes(role);
+
+    // NOTE: No redirect here — all authenticated users can VIEW the forms list.
+    // The routing guard (PermissionGuard) already blocked unauthenticated access.
   }
 
   loadFormTemplates(): void {
     this.loading = true;
     this.errorMessage = '';
 
-    this.formsService.getFormTemplates(this.currentPage, this.pageSize)
+    this.formsService
+      .getFormTemplates(this.currentPage, this.pageSize)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: ({ data, count }) => {
@@ -65,7 +87,7 @@ export class FormsList implements OnInit, OnDestroy {
           this.errorMessage = error.message || 'Failed to load forms';
           this.loading = false;
           console.error('Error loading forms:', error);
-        }
+        },
       });
   }
 
@@ -106,13 +128,15 @@ export class FormsList implements OnInit, OnDestroy {
       return;
     }
 
-    const confirmMessage = 'Are you sure you want to delete this form template? All submissions will remain but the form will be archived.';
+    const confirmMessage =
+      'Are you sure you want to delete this form template? All submissions will remain but the form will be archived.';
 
     if (!confirm(confirmMessage)) {
       return;
     }
 
-    this.formsService.deleteFormTemplate(formId)
+    this.formsService
+      .deleteFormTemplate(formId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
@@ -126,7 +150,7 @@ export class FormsList implements OnInit, OnDestroy {
         error: (error) => {
           this.errorMessage = error.message || 'Failed to delete form';
           console.error('Error deleting form:', error);
-        }
+        },
       });
   }
 
@@ -151,5 +175,3 @@ export class FormsList implements OnInit, OnDestroy {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }
-
-

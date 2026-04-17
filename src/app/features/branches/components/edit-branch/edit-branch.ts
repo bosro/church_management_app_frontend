@@ -7,6 +7,7 @@ import { takeUntil } from 'rxjs/operators';
 import { BranchesService } from '../../services/branches';
 import { Branch } from '../../../../models/branch.model';
 import { PermissionService } from '../../../../core/services/permission.service';
+import { AuthService } from '../../../../core/services/auth';
 
 @Component({
   selector: 'app-edit-branch',
@@ -34,6 +35,7 @@ export class EditBranch implements OnInit, OnDestroy {
     private router: Router,
     private route: ActivatedRoute,
     public permissionService: PermissionService,
+    private authService: AuthService,
   ) {}
 
   ngOnInit(): void {
@@ -55,8 +57,14 @@ export class EditBranch implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
+    const role = this.authService.getCurrentUserRole();
+
+    const manageRoles = ['super_admin', 'church_admin'];
+
     this.canManageBranches =
-      this.permissionService.isAdmin || this.permissionService.branches.manage;
+      this.permissionService.isAdmin ||
+      this.permissionService.branches.manage ||
+      manageRoles.includes(role);
 
     if (!this.canManageBranches) {
       this.router.navigate(['/unauthorized']);

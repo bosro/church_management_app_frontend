@@ -5,6 +5,8 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { FormTemplate, FormSubmission } from '../../../../models/form.model';
 import { FormsService } from '../../services/forms';
+import { PermissionService } from '../../../../core/services/permission.service';
+import { AuthService } from '../../../../core/services/auth';
 
 @Component({
   selector: 'app-form-submissions',
@@ -39,7 +41,9 @@ export class FormSubmissions implements OnInit, OnDestroy {
   constructor(
     private formsService: FormsService,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    public permissionService: PermissionService,
+    private authService: AuthService,
   ) {}
 
   ngOnInit(): void {
@@ -58,13 +62,31 @@ export class FormSubmissions implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-    this.canManageForms = this.formsService.canManageForms();
+    const role = this.authService.getCurrentUserRole();
+
+    const manageRoles = [
+      'pastor',
+      'senior_pastor',
+      'associate_pastor',
+      'ministry_leader',
+      'group_leader',
+    ];
+
+    this.canManageForms =
+      this.permissionService.isAdmin ||
+      (this.permissionService.forms as any)?.manage ||
+      this.formsService.canManageForms() ||
+      manageRoles.includes(role);
+
+    // NOTE: No redirect — all authenticated staff can VIEW submissions.
+    // canManageForms only gates the delete and export actions.
   }
 
   private loadFormTemplate(): void {
     this.loadingForm = true;
 
-    this.formsService.getFormTemplateById(this.formId)
+    this.formsService
+      .getFormTemplateById(this.formId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (template) => {
@@ -75,7 +97,7 @@ export class FormSubmissions implements OnInit, OnDestroy {
           this.errorMessage = error.message || 'Failed to load form template';
           this.loadingForm = false;
           console.error('Error loading form template:', error);
-        }
+        },
       });
   }
 
@@ -83,7 +105,8 @@ export class FormSubmissions implements OnInit, OnDestroy {
     this.loading = true;
     this.errorMessage = '';
 
-    this.formsService.getFormSubmissions(this.formId, this.currentPage, this.pageSize)
+    this.formsService
+      .getFormSubmissions(this.formId, this.currentPage, this.pageSize)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: ({ data, count }) => {
@@ -96,7 +119,7 @@ export class FormSubmissions implements OnInit, OnDestroy {
           this.errorMessage = error.message || 'Failed to load submissions';
           this.loading = false;
           console.error('Error loading submissions:', error);
-        }
+        },
       });
   }
 
@@ -141,13 +164,15 @@ export class FormSubmissions implements OnInit, OnDestroy {
       return;
     }
 
-    const confirmMessage = 'Are you sure you want to delete this submission? This action cannot be undone.';
+    const confirmMessage =
+      'Are you sure you want to delete this submission? This action cannot be undone.';
 
     if (!confirm(confirmMessage)) {
       return;
     }
 
-    this.formsService.deleteSubmission(submissionId)
+    this.formsService
+      .deleteSubmission(submissionId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
@@ -161,7 +186,7 @@ export class FormSubmissions implements OnInit, OnDestroy {
         error: (error) => {
           this.errorMessage = error.message || 'Failed to delete submission';
           console.error('Error deleting submission:', error);
-        }
+        },
       });
   }
 
@@ -172,7 +197,8 @@ export class FormSubmissions implements OnInit, OnDestroy {
       return;
     }
 
-    this.formsService.exportSubmissions(this.formId)
+    this.formsService
+      .exportSubmissions(this.formId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (blob) => {
@@ -193,7 +219,7 @@ export class FormSubmissions implements OnInit, OnDestroy {
         error: (error) => {
           this.errorMessage = error.message || 'Failed to export submissions';
           console.error('Export error:', error);
-        }
+        },
       });
   }
 
@@ -224,12 +250,15 @@ export class FormSubmissions implements OnInit, OnDestroy {
 
   getSubmissionPreview(submission: FormSubmission): string {
     const values = Object.values(submission.submission_data);
-    const preview = values.slice(0, 2).map(v => {
-      if (Array.isArray(v)) {
-        return v.join(', ');
-      }
-      return String(v);
-    }).join(' • ');
+    const preview = values
+      .slice(0, 2)
+      .map((v) => {
+        if (Array.isArray(v)) {
+          return v.join(', ');
+        }
+        return String(v);
+      })
+      .join(' • ');
 
     return preview + (values.length > 2 ? '...' : '');
   }
@@ -242,6 +271,3 @@ export class FormSubmissions implements OnInit, OnDestroy {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }
-
-
-

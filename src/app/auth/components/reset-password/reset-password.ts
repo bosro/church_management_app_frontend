@@ -70,13 +70,11 @@ export class ResetPassword implements OnInit, OnDestroy {
   private async handleTokenFromUrl(): Promise<void> {
     const hash = window.location.hash;
     const search = window.location.search;
-
-    // Check for error in query params (expired link)
-    const params = new URLSearchParams(search.replace(/^.*\?/, ''));
+    const params = new URLSearchParams(search);
     const hashParams = new URLSearchParams(hash.replace(/^#/, ''));
 
+    // Check for explicit error
     const errorCode = params.get('error_code') || hashParams.get('error_code');
-
     if (errorCode === 'otp_expired') {
       this.tokenChecking = false;
       this.tokenValid = false;
@@ -85,22 +83,48 @@ export class ResetPassword implements OnInit, OnDestroy {
       return;
     }
 
-    // Give SupabaseService time to process the hash token first
-    // (it handles setSession in initializeAuthState before we get here)
+    // PKCE format — code in query params
+    const code = params.get('code');
+    if (code) {
+      try {
+        const { error } =
+          await this.supabase.client.auth.exchangeCodeForSession(code);
+        if (error) {
+          this.tokenChecking = false;
+          this.tokenValid = false;
+          this.tokenError =
+            'Invalid or expired reset link. Please request a new one.';
+        } else {
+          this.tokenChecking = false;
+          this.tokenValid = true;
+          window.history.replaceState(
+            {},
+            document.title,
+            window.location.pathname,
+          );
+        }
+      } catch {
+        this.tokenChecking = false;
+        this.tokenValid = false;
+        this.tokenError =
+          'Failed to verify reset link. Please request a new one.';
+      }
+      return;
+    }
+
+    // Wait for SupabaseService to process hash token
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
-    // Check if session was established (either by service or hash still present)
     const {
       data: { session },
     } = await this.supabase.client.auth.getSession();
-
     if (session) {
       this.tokenChecking = false;
       this.tokenValid = true;
       return;
     }
 
-    // Hash might still be present if service didn't handle it (non-recovery pages)
+    // Implicit format — tokens in hash
     const accessToken = hashParams.get('access_token');
     const refreshToken = hashParams.get('refresh_token');
     const type = hashParams.get('type');
@@ -110,7 +134,6 @@ export class ResetPassword implements OnInit, OnDestroy {
         access_token: accessToken,
         refresh_token: refreshToken,
       });
-
       if (error) {
         this.tokenChecking = false;
         this.tokenValid = false;

@@ -332,6 +332,9 @@ export class SubscriptionService {
       expires_at: data?.subscription_expires_at || null,
     };
   }
+
+  get isFreeTier(): boolean {
+    const tier = this.currentTier;
+    return tier === 'free' || tier === 'starter';
+  }
 }
-
-

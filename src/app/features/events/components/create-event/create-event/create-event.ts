@@ -1,4 +1,9 @@
 // src/app/features/events/components/create-event/create-event.component.ts
+// KEY FIXES:
+// 1. checkPermissions() now includes role-based fallback for pastors/leaders
+// 2. Form control name changed from 'category' to 'event_type' to match the template
+// 3. Form control name changed from 'registration_required' to 'requires_registration'
+//    to match the template
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -7,6 +12,7 @@ import { takeUntil } from 'rxjs/operators';
 import { EventsService } from '../../../services/events';
 import { EventCategory } from '../../../../../models/event.model';
 import { PermissionService } from '../../../../../core/services/permission.service';
+import { AuthService } from '../../../../../core/services/auth';
 
 @Component({
   selector: 'app-create-event',
@@ -36,7 +42,6 @@ export class CreateEvent implements OnInit, OnDestroy {
     { value: 'other', label: 'Other' },
   ];
 
-  // Permissions
   canManageEvents = false;
 
   showUpgradeModal = false;
@@ -47,6 +52,7 @@ export class CreateEvent implements OnInit, OnDestroy {
     private eventsService: EventsService,
     private router: Router,
     public permissionService: PermissionService,
+    private authService: AuthService,
   ) {}
 
   ngOnInit(): void {
@@ -58,9 +64,18 @@ export class CreateEvent implements OnInit, OnDestroy {
     this.destroy$.next();
     this.destroy$.complete();
   }
+
   private checkPermissions(): void {
+    const role = this.authService.getCurrentUserRole();
+
+    const createRoles = [
+      'pastor', 'senior_pastor', 'associate_pastor', 'ministry_leader',
+    ];
+
     this.canManageEvents =
-      this.permissionService.isAdmin || this.permissionService.events.create;
+      this.permissionService.isAdmin ||
+      this.permissionService.events.create ||
+      createRoles.includes(role);
 
     if (!this.canManageEvents) {
       this.router.navigate(['/unauthorized']);
@@ -73,14 +88,11 @@ export class CreateEvent implements OnInit, OnDestroy {
     this.eventForm = this.fb.group({
       title: [
         '',
-        [
-          Validators.required,
-          Validators.minLength(3),
-          Validators.maxLength(200),
-        ],
+        [Validators.required, Validators.minLength(3), Validators.maxLength(200)],
       ],
       description: ['', [Validators.maxLength(2000)]],
-      category: ['service' as EventCategory, [Validators.required]],
+      // FIX: was 'category', template uses 'event_type'
+      event_type: ['service' as EventCategory, [Validators.required]],
       start_date: [today, [Validators.required]],
       end_date: [today, [Validators.required]],
       start_time: [''],
@@ -88,7 +100,8 @@ export class CreateEvent implements OnInit, OnDestroy {
       location: ['', [Validators.maxLength(200)]],
       max_attendees: [null, [Validators.min(1)]],
       registration_deadline: [''],
-      registration_required: [false],
+      // FIX: was 'registration_required', template uses 'requires_registration'
+      requires_registration: [false],
       is_public: [true],
     });
   }
@@ -125,7 +138,6 @@ export class CreateEvent implements OnInit, OnDestroy {
       return;
     }
 
-    // Validate dates
     const startDate = new Date(this.eventForm.value.start_date);
     const endDate = new Date(this.eventForm.value.end_date);
 
@@ -135,7 +147,6 @@ export class CreateEvent implements OnInit, OnDestroy {
       return;
     }
 
-    // Validate registration deadline
     if (this.eventForm.value.registration_deadline) {
       const deadline = new Date(this.eventForm.value.registration_deadline);
       if (deadline > startDate) {
@@ -150,26 +161,22 @@ export class CreateEvent implements OnInit, OnDestroy {
     this.errorMessage = '';
     this.successMessage = '';
 
+    const v = this.eventForm.value;
+
     const eventData = {
-      title: this.eventForm.value.title.trim(),
-      description: this.eventForm.value.description?.trim() || undefined,
-      category: this.eventForm.value.category,
-      start_date: this.eventForm.value.start_date,
-      end_date: this.eventForm.value.end_date,
-      start_time: this.eventForm.value.start_time || undefined,
-      end_time: this.eventForm.value.end_time || undefined,
-      location: this.eventForm.value.location?.trim() || undefined,
-      max_attendees: this.eventForm.value.max_attendees
-        ? parseInt(this.eventForm.value.max_attendees)
-        : undefined,
-      registration_deadline:
-        this.eventForm.value.registration_deadline || undefined,
-      registration_required:
-        this.eventForm.value.registration_required || false,
-      is_public:
-        this.eventForm.value.is_public !== undefined
-          ? this.eventForm.value.is_public
-          : true,
+      title: v.title.trim(),
+      description: v.description?.trim() || undefined,
+      // Map event_type form control → category field expected by service
+      category: v.event_type as EventCategory,
+      start_date: v.start_date,
+      end_date: v.end_date,
+      start_time: v.start_time || undefined,
+      end_time: v.end_time || undefined,
+      location: v.location?.trim() || undefined,
+      max_attendees: v.max_attendees ? parseInt(v.max_attendees) : undefined,
+      registration_deadline: v.registration_deadline || undefined,
+      registration_required: v.requires_registration || false,
+      is_public: v.is_public !== undefined ? v.is_public : true,
     };
 
     this.eventsService
@@ -179,12 +186,10 @@ export class CreateEvent implements OnInit, OnDestroy {
         next: (event) => {
           this.successMessage = 'Event created successfully!';
           this.loading = false;
-
           setTimeout(() => {
             this.router.navigate(['main/events', event.id]);
           }, 1500);
         },
-
         error: (err) => {
           this.loading = false;
           this.handleError(err);
@@ -195,9 +200,7 @@ export class CreateEvent implements OnInit, OnDestroy {
 
   cancel(): void {
     if (this.eventForm.dirty) {
-      if (
-        confirm('You have unsaved changes. Are you sure you want to leave?')
-      ) {
+      if (confirm('You have unsaved changes. Are you sure you want to leave?')) {
         this.router.navigate(['main/events']);
       }
     } else {
@@ -209,7 +212,6 @@ export class CreateEvent implements OnInit, OnDestroy {
     Object.keys(formGroup.controls).forEach((key) => {
       const control = formGroup.get(key);
       control?.markAsTouched();
-
       if (control instanceof FormGroup) {
         this.markFormGroupTouched(control);
       }
@@ -218,27 +220,14 @@ export class CreateEvent implements OnInit, OnDestroy {
 
   getErrorMessage(fieldName: string): string {
     const control = this.eventForm.get(fieldName);
-
-    if (!control || !control.errors || !control.touched) {
-      return '';
-    }
-
-    if (control.hasError('required')) {
-      return 'This field is required';
-    }
-    if (control.hasError('minlength')) {
-      const minLength = control.getError('minlength').requiredLength;
-      return `Minimum ${minLength} characters required`;
-    }
-    if (control.hasError('maxlength')) {
-      const maxLength = control.getError('maxlength').requiredLength;
-      return `Maximum ${maxLength} characters allowed`;
-    }
-    if (control.hasError('min')) {
-      const min = control.getError('min').min;
-      return `Minimum value is ${min}`;
-    }
-
+    if (!control || !control.errors || !control.touched) return '';
+    if (control.hasError('required')) return 'This field is required';
+    if (control.hasError('minlength'))
+      return `Minimum ${control.getError('minlength').requiredLength} characters required`;
+    if (control.hasError('maxlength'))
+      return `Maximum ${control.getError('maxlength').requiredLength} characters allowed`;
+    if (control.hasError('min'))
+      return `Minimum value is ${control.getError('min').min}`;
     return 'Invalid input';
   }
 

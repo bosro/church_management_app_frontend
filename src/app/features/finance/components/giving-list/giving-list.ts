@@ -7,6 +7,7 @@ import { takeUntil, debounceTime } from 'rxjs/operators';
 import { FinanceService } from '../../services/finance.service';
 import { GivingCategory, PaymentMethod } from '../../../../models/giving.model';
 import { PermissionService } from '../../../../core/services/permission.service';
+import { AuthService } from '../../../../core/services/auth';
 
 @Component({
   selector: 'app-giving-list',
@@ -23,36 +24,34 @@ export class GivingList implements OnInit, OnDestroy {
   errorMessage = '';
   successMessage = '';
 
-  // Pagination
   currentPage = 1;
   pageSize = 20;
   totalTransactions = 0;
   totalPages = 0;
 
-  // Filters
   startDateControl = new FormControl('');
   endDateControl = new FormControl('');
   categoryControl = new FormControl('');
   paymentMethodControl = new FormControl('');
 
-  paymentMethods: { value: PaymentMethod | '', label: string }[] = [
-  { value: '', label: 'All Methods' },
-  { value: 'cash', label: 'Cash' },
-  { value: 'mobile_money', label: 'Mobile Money' },
-  { value: 'bank_transfer', label: 'Bank Transfer' },
-  { value: 'card', label: 'Card' },
-  { value: 'check', label: 'Cheque' } // ✅ Changed 'cheque' to 'check'
-];
+  // FIX: standardized to 'cheque' (matches record-giving and DB)
+  paymentMethods: { value: PaymentMethod | ''; label: string }[] = [
+    { value: '', label: 'All Methods' },
+    { value: 'cash', label: 'Cash' },
+    { value: 'mobile_money', label: 'Mobile Money' },
+    { value: 'bank_transfer', label: 'Bank Transfer' },
+    { value: 'card', label: 'Card' },
+    { value: 'cheque', label: 'Cheque' },
+  ];
 
-
-  // Permissions
   canViewFinance = false;
   canManageFinance = false;
 
   constructor(
     private financeService: FinanceService,
     private router: Router,
-      public permissionService: PermissionService
+    public permissionService: PermissionService,
+    private authService: AuthService,
   ) {}
 
   ngOnInit(): void {
@@ -68,56 +67,61 @@ export class GivingList implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-  this.canViewFinance =
-    this.permissionService.isAdmin ||
-    this.permissionService.finance.view;
+    const role = this.authService.getCurrentUserRole();
 
-  this.canManageFinance =
-    this.permissionService.isAdmin ||
-    this.permissionService.finance.manage ||
-    this.permissionService.finance.record;
+    const viewRoles = [
+      'pastor',
+      'senior_pastor',
+      'associate_pastor',
+      'finance_officer',
+    ];
+    const manageRoles = ['finance_officer'];
 
-  if (!this.canViewFinance) {
-    this.router.navigate(['/unauthorized']);
+    this.canViewFinance =
+      this.permissionService.isAdmin ||
+      this.permissionService.finance.view ||
+      viewRoles.includes(role);
+
+    this.canManageFinance =
+      this.permissionService.isAdmin ||
+      this.permissionService.finance.manage ||
+      this.permissionService.finance.record ||
+      manageRoles.includes(role);
+
+    if (!this.canViewFinance) {
+      this.router.navigate(['/unauthorized']);
+    }
   }
-}
 
   private loadCategories(): void {
-    this.financeService.getGivingCategories()
+    this.financeService
+      .getGivingCategories()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (categories) => {
-          this.categories = categories;
-        },
-        error: (error) => {
-          console.error('Error loading categories:', error);
-        }
+        next: (c) => (this.categories = c),
+        error: (e) => console.error(e),
       });
   }
 
   private setupFilterListeners(): void {
-    // Debounce filter changes to avoid excessive API calls
     this.startDateControl.valueChanges
       .pipe(debounceTime(500), takeUntil(this.destroy$))
       .subscribe(() => {
         this.currentPage = 1;
         this.loadTransactions();
       });
-
     this.endDateControl.valueChanges
       .pipe(debounceTime(500), takeUntil(this.destroy$))
       .subscribe(() => {
         this.currentPage = 1;
         this.loadTransactions();
       });
-
     this.categoryControl.valueChanges
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => {
         this.currentPage = 1;
         this.loadTransactions();
       });
-
     this.paymentMethodControl.valueChanges
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => {
@@ -131,21 +135,16 @@ export class GivingList implements OnInit, OnDestroy {
     this.errorMessage = '';
 
     const filters: any = {};
-
-    if (this.startDateControl.value) {
+    if (this.startDateControl.value)
       filters.startDate = this.startDateControl.value;
-    }
-    if (this.endDateControl.value) {
-      filters.endDate = this.endDateControl.value;
-    }
-    if (this.categoryControl.value) {
+    if (this.endDateControl.value) filters.endDate = this.endDateControl.value;
+    if (this.categoryControl.value)
       filters.categoryId = this.categoryControl.value;
-    }
-    if (this.paymentMethodControl.value) {
+    if (this.paymentMethodControl.value)
       filters.paymentMethod = this.paymentMethodControl.value;
-    }
 
-    this.financeService.getGivingTransactions(this.currentPage, this.pageSize, filters)
+    this.financeService
+      .getGivingTransactions(this.currentPage, this.pageSize, filters)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: ({ data, count }) => {
@@ -157,8 +156,7 @@ export class GivingList implements OnInit, OnDestroy {
         error: (error) => {
           this.errorMessage = error.message || 'Failed to load transactions';
           this.loading = false;
-          console.error('Error loading transactions:', error);
-        }
+        },
       });
   }
 
@@ -174,12 +172,12 @@ export class GivingList implements OnInit, OnDestroy {
       this.errorMessage = 'You do not have permission to export reports';
       return;
     }
-
     const startDate = this.startDateControl.value || '';
     const endDate = this.endDateControl.value || '';
     const categoryId = this.categoryControl.value || undefined;
 
-    this.financeService.exportGivingReport(startDate, endDate, categoryId)
+    this.financeService
+      .exportGivingReport(startDate, endDate, categoryId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (blob) => {
@@ -191,16 +189,12 @@ export class GivingList implements OnInit, OnDestroy {
           a.click();
           document.body.removeChild(a);
           window.URL.revokeObjectURL(url);
-
           this.successMessage = 'Report exported successfully!';
-          setTimeout(() => {
-            this.successMessage = '';
-          }, 3000);
+          setTimeout(() => (this.successMessage = ''), 3000);
         },
         error: (error) => {
           this.errorMessage = error.message || 'Failed to export report';
-          console.error('Export error:', error);
-        }
+        },
       });
   }
 
@@ -214,86 +208,61 @@ export class GivingList implements OnInit, OnDestroy {
 
   deleteTransaction(transactionId: string, event: Event): void {
     event.stopPropagation();
-
     if (!this.canManageFinance) {
       this.errorMessage = 'You do not have permission to delete transactions';
       return;
     }
-
-    const confirmMessage = 'Are you sure you want to delete this transaction? This action cannot be undone.';
-
-    if (!confirm(confirmMessage)) {
+    if (
+      !confirm(
+        'Are you sure you want to delete this transaction? This action cannot be undone.',
+      )
+    )
       return;
-    }
 
-    this.financeService.deleteGivingTransaction(transactionId)
+    this.financeService
+      .deleteGivingTransaction(transactionId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
-          this.successMessage = 'Transaction deleted successfully!';
+          this.successMessage = 'Transaction deleted!';
           this.loadTransactions();
-
-          setTimeout(() => {
-            this.successMessage = '';
-          }, 3000);
+          setTimeout(() => (this.successMessage = ''), 3000);
         },
         error: (error) => {
           this.errorMessage = error.message || 'Failed to delete transaction';
-          console.error('Error deleting transaction:', error);
-        }
+        },
       });
   }
 
-  // Pagination
   previousPage(): void {
     if (this.currentPage > 1) {
       this.currentPage--;
       this.loadTransactions();
-      this.scrollToTop();
+      window.scrollTo(0, 0);
     }
   }
-
   nextPage(): void {
     if (this.currentPage < this.totalPages) {
       this.currentPage++;
       this.loadTransactions();
-      this.scrollToTop();
+      window.scrollTo(0, 0);
     }
   }
 
-  // Helper methods
   formatCurrency(amount: number, currency: string = 'GHS'): string {
     return new Intl.NumberFormat('en-GH', {
       style: 'currency',
-      currency: currency
+      currency,
     }).format(amount || 0);
   }
-
-  getMemberName(transaction: any): string {
-    if (transaction.member) {
-      return `${transaction.member.first_name} ${transaction.member.last_name}`;
-    }
-    return 'Anonymous';
+  getMemberName(t: any): string {
+    return t.member
+      ? `${t.member.first_name} ${t.member.last_name}`
+      : 'Anonymous';
   }
-
-  getMemberInitials(transaction: any): string {
-    if (transaction.member) {
-      return `${transaction.member.first_name[0]}${transaction.member.last_name[0]}`.toUpperCase();
-    }
-    return 'A';
-  }
-
-  private scrollToTop(): void {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  getMemberInitials(t: any): string {
+    return t.member
+      ? `${t.member.first_name[0]}${t.member.last_name[0]}`.toUpperCase()
+      : 'A';
   }
 }
-
-
-
-
-
-
-
-
-
-

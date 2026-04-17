@@ -91,8 +91,15 @@ export class EditMember implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
+    const role = this.authService.getCurrentUserRole();
+
+    // Roles that can edit members even without an explicit permission grant
+    const editRoles = ['pastor', 'senior_pastor', 'associate_pastor'];
+
     this.canEditMember =
-      this.permissionService.isAdmin || this.permissionService.members.edit;
+      this.permissionService.isAdmin ||
+      this.permissionService.members.edit ||
+      editRoles.includes(role);
 
     if (!this.canEditMember) {
       this.router.navigate(['/unauthorized']);
@@ -283,8 +290,6 @@ export class EditMember implements OnInit, OnDestroy {
 
     Object.keys(formValue).forEach((key) => {
       const value = formValue[key];
-      // Send null explicitly for cell_group_id when cleared,
-      // skip other empty strings
       if (key === 'cell_group_id') {
         memberData[key] = value || null;
       } else if (value !== '' && value !== null) {
@@ -360,15 +365,12 @@ export class EditMember implements OnInit, OnDestroy {
     if (!control || !control.errors || !control.touched) return '';
     if (control.hasError('required')) return 'This field is required';
     if (control.hasError('email')) return 'Please enter a valid email address';
-    if (control.hasError('minlength')) {
+    if (control.hasError('minlength'))
       return `Minimum ${control.getError('minlength').requiredLength} characters required`;
-    }
-    if (control.hasError('maxlength')) {
+    if (control.hasError('maxlength'))
       return `Maximum ${control.getError('maxlength').requiredLength} characters allowed`;
-    }
-    if (control.hasError('pattern') && fieldName.includes('phone')) {
+    if (control.hasError('pattern') && fieldName.includes('phone'))
       return 'Please enter a valid 10-digit phone number (e.g., 0201234567)';
-    }
     return 'Invalid input';
   }
 

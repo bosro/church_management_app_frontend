@@ -1,6 +1,8 @@
 // src/app/features/user-roles/services/user-roles.service.ts
-import { Injectable } from '@angular/core';
-import { Observable, from, throwError, of } from 'rxjs';
+// KEY CHANGE: Added permissionsLoaded$ BehaviorSubject so guards can wait
+// for permissions to finish loading before evaluating access.
+import { Injectable, Injector } from '@angular/core';
+import { Observable, from, throwError, of, BehaviorSubject } from 'rxjs';
 import { map, catchError, switchMap } from 'rxjs/operators';
 import {
   UserPermission,
@@ -22,15 +24,24 @@ import { SubscriptionService } from '../../../core/services/subscription.service
 export class UserRolesService {
   private currentUserPermissions: Set<string> = new Set();
 
+  // Guards subscribe to this before evaluating permissions.
+  // Starts as false, becomes true once loadCurrentUserPermissions() resolves.
+  private permissionsLoadedSubject = new BehaviorSubject<boolean>(false);
+  public permissionsLoaded$ = this.permissionsLoadedSubject.asObservable();
+
   constructor(
     private supabase: SupabaseService,
     private authService: AuthService,
     private subscriptionService: SubscriptionService,
+    private injector: Injector,
   ) {
     this.authService.setUserRolesService(this);
   }
 
-  // Get churchId dynamically instead of storing it
+  private getAuthService(): AuthService {
+    return this.injector.get(AuthService);
+  }
+
   private getChurchId(): string {
     const churchId = this.authService.getChurchId();
     if (!churchId) {
@@ -39,7 +50,6 @@ export class UserRolesService {
     return churchId;
   }
 
-  // Get current user ID dynamically
   private getCurrentUserId(): string {
     try {
       return this.authService.getUserId();
@@ -49,6 +59,8 @@ export class UserRolesService {
   }
 
   async loadCurrentUserPermissions(): Promise<void> {
+    // Reset to false while loading so guards wait during a refresh
+    this.permissionsLoadedSubject.next(false);
     try {
       const userId = this.getCurrentUserId();
       const { data, error } = await this.supabase.client
@@ -63,11 +75,16 @@ export class UserRolesService {
       }
     } catch {
       this.currentUserPermissions = new Set();
+    } finally {
+      // Always mark as loaded (even on error) so guards don't hang forever
+      this.permissionsLoadedSubject.next(true);
     }
   }
 
   clearCurrentUserPermissions(): void {
     this.currentUserPermissions = new Set();
+    // Reset so a subsequent login triggers a fresh load
+    this.permissionsLoadedSubject.next(false);
   }
 
   hasPermission(permissionName: string): boolean {
@@ -89,7 +106,7 @@ export class UserRolesService {
     page: number,
     pageSize: number,
   ): Promise<UserListResult> {
-    const churchId = this.getChurchId(); // Get fresh churchId
+    const churchId = this.getChurchId();
     const offset = (page - 1) * pageSize;
 
     const { data, error, count } = await this.supabase.client
@@ -116,7 +133,7 @@ export class UserRolesService {
   }
 
   getUserById(userId: string): Observable<any> {
-    const churchId = this.getChurchId(); // Get fresh churchId
+    const churchId = this.getChurchId();
 
     return from(
       this.supabase.client
@@ -135,10 +152,6 @@ export class UserRolesService {
     );
   }
 
-  /**
-   * Permanently delete a sub-user profile and all their permissions.
-   * Only church_admin can do this, and only for users in their church.
-   */
   deleteUser(userId: string): Observable<void> {
     return from(this.deleteUserAndPermissions(userId));
   }
@@ -146,8 +159,6 @@ export class UserRolesService {
   private async deleteUserAndPermissions(userId: string): Promise<void> {
     const requestingUserId = this.getCurrentUserId();
 
-    // Step 1: Call secure DB function — handles users, profiles,
-    // permissions, member links, branch pastor assignments
     const { error: deleteError } = await this.supabase.client.rpc(
       'delete_church_user',
       {
@@ -160,8 +171,6 @@ export class UserRolesService {
       throw new Error(deleteError.message);
     }
 
-    // Step 2: Delete from Supabase Auth via edge function
-    // Best-effort — DB is already clean even if this fails
     try {
       const { error: authDeleteError } =
         await this.supabase.client.functions.invoke('delete-auth-user', {
@@ -200,7 +209,7 @@ export class UserRolesService {
       { value: 'finance_officer', label: 'Finance Officer' },
       { value: 'ministry_leader', label: 'Ministry Leader' },
       { value: 'group_leader', label: 'Group Leader' },
-      { value: 'cell_leader', label: 'Cell Leader' }, // ← NEW
+      { value: 'cell_leader', label: 'Cell Leader' },
       { value: 'elder', label: 'Elder' },
       { value: 'deacon', label: 'Deacon' },
       { value: 'worship_leader', label: 'Worship Leader' },
@@ -209,7 +218,7 @@ export class UserRolesService {
   }
 
   deactivateUser(userId: string): Observable<void> {
-    const churchId = this.getChurchId(); // Get fresh churchId
+    const churchId = this.getChurchId();
 
     return from(
       this.supabase.client
@@ -263,8 +272,6 @@ export class UserRolesService {
   }): Promise<any> {
     const churchId = this.getChurchId();
 
-    // Step 1: Send Supabase invite email
-    // This creates the auth.users record and sends a magic link
     const { data, error } =
       await this.supabase.client.auth.admin.inviteUserByEmail(userData.email, {
         data: {
@@ -290,9 +297,8 @@ export class UserRolesService {
     userId: string,
     permissionName: string,
   ): Promise<UserPermission> {
-    const currentUserId = this.getCurrentUserId(); // Get fresh userId
+    const currentUserId = this.getCurrentUserId();
 
-    // Use maybeSingle() instead of single() — returns null instead of error when no rows found
     const { data: existing } = await this.supabase.client
       .from('user_permissions')
       .select('id')
@@ -337,7 +343,6 @@ export class UserRolesService {
           );
         }
 
-        // Get session first, then invoke
         return from(
           this.supabase.client.auth
             .getSession()
@@ -361,12 +366,11 @@ export class UserRolesService {
             }),
         );
       }),
-     map(({ data, error }: any) => {
-  if (error) throw new Error(error.message);
-  if (data?.error) throw new Error(data.error);
-  // Normalize: edge function returns { success, userId } → map to { id }
-  return { ...data, id: data.userId || data.id };
-}),
+      map(({ data, error }: any) => {
+        if (error) throw new Error(error.message);
+        if (data?.error) throw new Error(data.error);
+        return { ...data, id: data.userId || data.id };
+      }),
       catchError((err) => throwError(() => err)),
     );
   }
@@ -377,9 +381,8 @@ export class UserRolesService {
     phone_number: string | null;
     role: string;
   }): Promise<any> {
-    const churchId = this.getChurchId(); // Get fresh churchId
+    const churchId = this.getChurchId();
 
-    // Step 1: Invite user via Supabase Auth — creates the auth.users record
     const { data: authData, error: authError } =
       await this.supabase.client.auth.admin.inviteUserByEmail(userData.email, {
         data: {
@@ -392,7 +395,6 @@ export class UserRolesService {
 
     const authUserId = authData.user.id;
 
-    // Step 2: Insert the profile row using the auth user's ID
     const { data, error } = await this.supabase.client
       .from('users')
       .insert({
@@ -438,9 +440,8 @@ export class UserRolesService {
     userId: string,
     permissionNames: string[],
   ): Promise<void> {
-    const currentUserId = this.getCurrentUserId(); // Get fresh userId
+    const currentUserId = this.getCurrentUserId();
 
-    // Get existing permissions
     const { data: existing } = await this.supabase.client
       .from('user_permissions')
       .select('permission_name')
@@ -452,7 +453,7 @@ export class UserRolesService {
     );
 
     if (newPermissions.length === 0) {
-      return; // All permissions already granted
+      return;
     }
 
     const inserts = newPermissions.map((permissionName) => ({
@@ -492,7 +493,7 @@ export class UserRolesService {
   // ==================== ROLE TEMPLATES ====================
 
   getRoleTemplates(): Observable<RoleTemplate[]> {
-    const churchId = this.getChurchId(); // Get fresh churchId
+    const churchId = this.getChurchId();
 
     return from(
       this.supabase.client
@@ -509,8 +510,33 @@ export class UserRolesService {
     );
   }
 
+  resendInvite(userId: string, email: string, role: string): Observable<any> {
+    return from(
+      this.supabase.client.auth.getSession().then(({ data: { session } }) => {
+        if (!session?.access_token) throw new Error('No active session');
+        return this.supabase.client.functions.invoke('invite-user', {
+          body: {
+            email,
+            full_name: '',
+            role,
+            church_id: this.authService.getChurchId(),
+            phone_number: null,
+          },
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+      }),
+    ).pipe(
+      map(({ data, error }: any) => {
+        if (error) throw new Error(error.message);
+        if (data?.error) throw new Error(data.error);
+        return { ...data, id: data.userId || data.id };
+      }),
+      catchError((err) => throwError(() => err)),
+    );
+  }
+
   getRoleTemplateById(templateId: string): Observable<RoleTemplate> {
-    const churchId = this.getChurchId(); // Get fresh churchId
+    const churchId = this.getChurchId();
 
     return from(
       this.supabase.client
@@ -532,7 +558,7 @@ export class UserRolesService {
   createRoleTemplate(
     templateData: RoleTemplateCreateInput,
   ): Observable<RoleTemplate> {
-    const churchId = this.getChurchId(); // Get fresh churchId
+    const churchId = this.getChurchId();
 
     return from(
       this.supabase.client
@@ -558,7 +584,7 @@ export class UserRolesService {
     templateId: string,
     templateData: RoleTemplateUpdateInput,
   ): Observable<RoleTemplate> {
-    const churchId = this.getChurchId(); // Get fresh churchId
+    const churchId = this.getChurchId();
 
     return from(
       this.supabase.client
@@ -581,7 +607,7 @@ export class UserRolesService {
   }
 
   deleteRoleTemplate(templateId: string): Observable<void> {
-    const churchId = this.getChurchId(); // Get fresh churchId
+    const churchId = this.getChurchId();
 
     return from(
       this.supabase.client
@@ -605,9 +631,8 @@ export class UserRolesService {
     userId: string,
     templateId: string,
   ): Promise<void> {
-    const churchId = this.getChurchId(); // Get fresh churchId
+    const churchId = this.getChurchId();
 
-    // Get template
     const { data: template, error: templateError } = await this.supabase.client
       .from('role_templates')
       .select('permissions')
@@ -623,7 +648,6 @@ export class UserRolesService {
       throw new Error('Role template not found');
     }
 
-    // Clear existing permissions
     const { error: deleteError } = await this.supabase.client
       .from('user_permissions')
       .delete()
@@ -633,7 +657,6 @@ export class UserRolesService {
       throw new Error(deleteError.message);
     }
 
-    // Apply new permissions
     if (template.permissions && template.permissions.length > 0) {
       await this.insertBulkPermissions(userId, template.permissions);
     }
@@ -667,19 +690,13 @@ export class UserRolesService {
     return permissions.every((p) => validNames.includes(p));
   }
 
-  // Check if current user has permission to manage roles
   canManageRoles(): boolean {
     const adminRoles = ['super_admin', 'church_admin'];
     return this.authService.hasRole(adminRoles);
   }
 
-  // Check if current user has permission to manage permissions
   canManagePermissions(): boolean {
     const adminRoles = ['super_admin', 'church_admin'];
     return this.authService.hasRole(adminRoles);
   }
 }
-
-
-
-

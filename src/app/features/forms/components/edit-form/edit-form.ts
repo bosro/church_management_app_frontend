@@ -4,8 +4,14 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { FormTemplate, FormField, FieldType } from '../../../../models/form.model';
+import {
+  FormTemplate,
+  FormField,
+  FieldType,
+} from '../../../../models/form.model';
 import { FormsService } from '../../services/forms';
+import { AuthService } from '../../../../core/services/auth';
+import { PermissionService } from '../../../../core/services/permission.service';
 
 @Component({
   selector: 'app-edit-form',
@@ -28,7 +34,7 @@ export class EditForm implements OnInit, OnDestroy {
   editingField: FormField | null = null;
   editingIndex: number = -1;
 
-  fieldTypes: { value: FieldType, label: string, icon: string }[] = [
+  fieldTypes: { value: FieldType; label: string; icon: string }[] = [
     { value: 'text', label: 'Text Input', icon: 'ri-text' },
     { value: 'email', label: 'Email', icon: 'ri-mail-line' },
     { value: 'phone', label: 'Phone', icon: 'ri-phone-line' },
@@ -38,7 +44,7 @@ export class EditForm implements OnInit, OnDestroy {
     { value: 'radio', label: 'Radio Buttons', icon: 'ri-radio-button-line' },
     { value: 'checkbox', label: 'Checkboxes', icon: 'ri-checkbox-line' },
     { value: 'date', label: 'Date', icon: 'ri-calendar-line' },
-    { value: 'file', label: 'File Upload', icon: 'ri-file-upload-line' }
+    { value: 'file', label: 'File Upload', icon: 'ri-file-upload-line' },
   ];
 
   newFieldLabel = '';
@@ -54,7 +60,9 @@ export class EditForm implements OnInit, OnDestroy {
     private fb: FormBuilder,
     private formsService: FormsService,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    public permissionService: PermissionService,
+    private authService: AuthService,
   ) {}
 
   ngOnInit(): void {
@@ -73,7 +81,21 @@ export class EditForm implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-    this.canManageForms = this.formsService.canManageForms();
+    const role = this.authService.getCurrentUserRole();
+
+    const manageRoles = [
+      'pastor',
+      'senior_pastor',
+      'associate_pastor',
+      'ministry_leader',
+      'group_leader',
+    ];
+
+    this.canManageForms =
+      this.permissionService.isAdmin ||
+      (this.permissionService.forms as any)?.manage ||
+      this.formsService.canManageForms() ||
+      manageRoles.includes(role);
 
     if (!this.canManageForms) {
       this.router.navigate(['/unauthorized']);
@@ -82,8 +104,15 @@ export class EditForm implements OnInit, OnDestroy {
 
   private initForm(): void {
     this.formDetailsForm = this.fb.group({
-      title: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(100)]],
-      description: ['', [Validators.maxLength(500)]]
+      title: [
+        '',
+        [
+          Validators.required,
+          Validators.minLength(3),
+          Validators.maxLength(100),
+        ],
+      ],
+      description: ['', [Validators.maxLength(500)]],
     });
   }
 
@@ -91,7 +120,8 @@ export class EditForm implements OnInit, OnDestroy {
     this.loadingForm = true;
     this.errorMessage = '';
 
-    this.formsService.getFormTemplateById(this.formId)
+    this.formsService
+      .getFormTemplateById(this.formId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (template) => {
@@ -103,14 +133,14 @@ export class EditForm implements OnInit, OnDestroy {
           this.errorMessage = error.message || 'Failed to load form template';
           this.loadingForm = false;
           console.error('Error loading form:', error);
-        }
+        },
       });
   }
 
   private populateForm(template: FormTemplate): void {
     this.formDetailsForm.patchValue({
       title: template.title,
-      description: template.description || ''
+      description: template.description || '',
     });
 
     // Deep copy to avoid reference issues
@@ -121,19 +151,19 @@ export class EditForm implements OnInit, OnDestroy {
   addField(): void {
     if (!this.newFieldLabel.trim()) {
       this.errorMessage = 'Field label is required';
-      setTimeout(() => this.errorMessage = '', 3000);
+      setTimeout(() => (this.errorMessage = ''), 3000);
       return;
     }
 
     if (this.newFieldLabel.length > 100) {
       this.errorMessage = 'Field label must be 100 characters or less';
-      setTimeout(() => this.errorMessage = '', 3000);
+      setTimeout(() => (this.errorMessage = ''), 3000);
       return;
     }
 
     if (this.needsOptions(this.newFieldType) && !this.newFieldOptions.trim()) {
       this.errorMessage = 'Options are required for this field type';
-      setTimeout(() => this.errorMessage = '', 3000);
+      setTimeout(() => (this.errorMessage = ''), 3000);
       return;
     }
 
@@ -144,9 +174,12 @@ export class EditForm implements OnInit, OnDestroy {
       required: this.newFieldRequired,
       placeholder: this.newFieldPlaceholder?.trim() || undefined,
       options: this.newFieldOptions
-        ? this.newFieldOptions.split('\n').map(o => o.trim()).filter(o => o)
+        ? this.newFieldOptions
+            .split('\n')
+            .map((o) => o.trim())
+            .filter((o) => o)
         : undefined,
-      order: this.formFields.length
+      order: this.formFields.length,
     };
 
     if (this.editingIndex >= 0) {
@@ -175,28 +208,32 @@ export class EditForm implements OnInit, OnDestroy {
   removeField(index: number): void {
     if (confirm('Are you sure you want to remove this field?')) {
       this.formFields.splice(index, 1);
-      this.formFields.forEach((field, i) => field.order = i);
+      this.formFields.forEach((field, i) => (field.order = i));
     }
   }
 
   moveFieldUp(index: number): void {
     if (index > 0) {
-      [this.formFields[index], this.formFields[index - 1]] =
-      [this.formFields[index - 1], this.formFields[index]];
+      [this.formFields[index], this.formFields[index - 1]] = [
+        this.formFields[index - 1],
+        this.formFields[index],
+      ];
       this.updateFieldOrder();
     }
   }
 
   moveFieldDown(index: number): void {
     if (index < this.formFields.length - 1) {
-      [this.formFields[index], this.formFields[index + 1]] =
-      [this.formFields[index + 1], this.formFields[index]];
+      [this.formFields[index], this.formFields[index + 1]] = [
+        this.formFields[index + 1],
+        this.formFields[index],
+      ];
       this.updateFieldOrder();
     }
   }
 
   private updateFieldOrder(): void {
-    this.formFields.forEach((field, i) => field.order = i);
+    this.formFields.forEach((field, i) => (field.order = i));
   }
 
   private resetFieldForm(): void {
@@ -235,10 +272,11 @@ export class EditForm implements OnInit, OnDestroy {
     const formData = {
       title: this.formDetailsForm.value.title.trim(),
       description: this.formDetailsForm.value.description?.trim() || undefined,
-      form_fields: this.formFields
+      form_fields: this.formFields,
     };
 
-    this.formsService.updateFormTemplate(this.formId, formData)
+    this.formsService
+      .updateFormTemplate(this.formId, formData)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
@@ -251,16 +289,23 @@ export class EditForm implements OnInit, OnDestroy {
         },
         error: (error) => {
           this.loading = false;
-          this.errorMessage = error.message || 'Failed to update form. Please try again.';
+          this.errorMessage =
+            error.message || 'Failed to update form. Please try again.';
           this.scrollToTop();
           console.error('Error updating form:', error);
-        }
+        },
       });
   }
 
   cancel(): void {
-    if (this.formDetailsForm.dirty || JSON.stringify(this.formFields) !== JSON.stringify(this.formTemplate?.form_fields)) {
-      if (confirm('You have unsaved changes. Are you sure you want to leave?')) {
+    if (
+      this.formDetailsForm.dirty ||
+      JSON.stringify(this.formFields) !==
+        JSON.stringify(this.formTemplate?.form_fields)
+    ) {
+      if (
+        confirm('You have unsaved changes. Are you sure you want to leave?')
+      ) {
         this.router.navigate(['main/forms']);
       }
     } else {
@@ -273,7 +318,9 @@ export class EditForm implements OnInit, OnDestroy {
   }
 
   getFieldTypeIcon(type: FieldType): string {
-    return this.fieldTypes.find(ft => ft.value === type)?.icon || 'ri-input-field';
+    return (
+      this.fieldTypes.find((ft) => ft.value === type)?.icon || 'ri-input-field'
+    );
   }
 
   needsOptions(type: FieldType): boolean {
@@ -281,7 +328,7 @@ export class EditForm implements OnInit, OnDestroy {
   }
 
   private markFormGroupTouched(formGroup: FormGroup): void {
-    Object.keys(formGroup.controls).forEach(key => {
+    Object.keys(formGroup.controls).forEach((key) => {
       const control = formGroup.get(key);
       control?.markAsTouched();
 
@@ -300,6 +347,3 @@ export class EditForm implements OnInit, OnDestroy {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }
-
-
-

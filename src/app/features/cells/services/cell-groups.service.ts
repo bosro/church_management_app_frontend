@@ -47,7 +47,7 @@ export class CellGroupsService {
     return from(
       this.supabase.client
         .from('cell_groups')
-        .select('id, name, meeting_day, branch_id')
+        .select('id, name, meeting_day, branch_id, leader_id')
         .eq('church_id', churchId)
         .eq('is_active', true)
         .order('name', { ascending: true }),
@@ -138,7 +138,9 @@ export class CellGroupsService {
     );
   }
 
+  // FIX: added church_id scoping to prevent cross-church data leaks
   getCellGroupMembers(cellGroupId: string): Observable<any[]> {
+    const churchId = this.getChurchId();
     return from(
       this.supabase.client
         .from('members')
@@ -146,6 +148,7 @@ export class CellGroupsService {
           'id, first_name, last_name, phone_primary, email, photo_url, membership_status',
         )
         .eq('cell_group_id', cellGroupId)
+        .eq('church_id', churchId)
         .order('first_name', { ascending: true }),
     ).pipe(
       map(({ data, error }) => {

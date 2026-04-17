@@ -23,9 +23,12 @@
         </button>
       </div>
 
-      <!-- Dashboard Content -->
-      <div *ngIf="!loading && !hasError" class="dashboard-grid" [class.admin-layout]="canViewQuickActions"
-        [class.member-layout]="!canViewQuickActions">
+
+<app-ad-banner *ngIf="!loading && !hasError" slot="dashboard"></app-ad-banner>
+
+<div *ngIf="!loading && !hasError" class="dashboard-grid"
+  [class.admin-layout]="canViewQuickActions"
+  [class.member-layout]="!canViewQuickActions">
 
         <!-- Left Section -->
         <div class="dashboard-main">
