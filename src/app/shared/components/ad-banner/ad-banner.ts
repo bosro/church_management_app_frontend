@@ -7,9 +7,9 @@ import {
   ElementRef,
   AfterViewInit,
 } from '@angular/core';
+import { Router } from '@angular/router';
 import { SubscriptionService } from '../../../core/services/subscription.service';
 import { AuthService } from '../../../core/services/auth';
-import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-ad-banner',
@@ -17,68 +17,58 @@ import { Router } from '@angular/router';
   templateUrl: './ad-banner.html',
   styleUrl: './ad-banner.scss',
 })
-export class AdBanner implements OnInit, AfterViewInit, OnDestroy {
+export class AdBanner implements OnInit, AfterViewInit {
   @Input() slot: 'sidebar' | 'dashboard' | 'inline' = 'sidebar';
 
   showAd = false;
   adLoaded = false;
   dismissed = false;
 
-  // Your Google AdSense publisher ID — replace with real one
-  // Format: ca-pub-XXXXXXXXXXXXXXXXX
-  readonly publisherId = 'ca-pub-XXXXXXXXXXXXXXXXX';
+  // ── Your real AdSense credentials ─────────────────────────────
+  readonly publisherId = 'ca-pub-9715986446209067';
 
-  // Ad slot IDs from your AdSense dashboard (one per placement)
   readonly adSlots: Record<string, string> = {
-    sidebar: '1234567890', // replace with real slot IDs from AdSense
-    dashboard: '0987654321',
-    inline: '1122334455',
+    sidebar: '6724400062', // Churchman Sidebar
+    dashboard: '8823737763', // Churchman Dashboard
+    inline: '9521953795', // Churchman Inline
   };
+
+  get adSlotId(): string {
+    return this.adSlots[this.slot] || this.adSlots['sidebar'];
+  }
+
+  get adFormat(): string {
+    // Sidebar = square/auto, Dashboard = horizontal banner
+    return this.slot === 'dashboard' ? 'horizontal' : 'auto';
+  }
 
   constructor(
     private subscriptionService: SubscriptionService,
     private authService: AuthService,
-    private el: ElementRef,
     private router: Router,
   ) {}
 
   ngOnInit(): void {
     const role = this.authService.currentProfile?.role;
+    const tier = this.subscriptionService.currentTier;
 
-    // Only show ads to plain members — all staff roles are excluded
-    const staffRoles = [
-      'super_admin',
-      'senior_pastor',
-      'associate_pastor',
-      'finance_officer',
-      'ministry_leader',
-      'group_leader',
-      'cell_leader',
-      'elder',
-      'deacon',
-      'worship_leader',
-    ];
+    // Only show to plain members
+    if (role !== 'member') return;
 
-    if (!role || staffRoles.includes(role)) return;
-    if (sessionStorage.getItem(`ad-dismissed-${this.slot}`)) return;
+    // Never show on pro or growth plans — only free and starter
+    if (tier === 'pro' || tier === 'growth') return;
+
+    // Respect session dismiss
+    if (sessionStorage.getItem(`ad-dismissed-${this.slot}`)) {
+      this.dismissed = true;
+      return;
+    }
 
     this.showAd = this.subscriptionService.isFreeTier;
   }
 
   ngAfterViewInit(): void {
     if (!this.showAd) return;
-
-    // Load AdSense script once (if not already loaded)
-    if (!document.getElementById('adsense-script')) {
-      const script = document.createElement('script');
-      script.id = 'adsense-script';
-      script.async = true;
-      script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${this.publisherId}`;
-      script.crossOrigin = 'anonymous';
-      document.head.appendChild(script);
-    }
-
-    // Push ad after script loads
     setTimeout(() => {
       try {
         ((window as any).adsbygoogle = (window as any).adsbygoogle || []).push(
@@ -86,30 +76,20 @@ export class AdBanner implements OnInit, AfterViewInit, OnDestroy {
         );
         this.adLoaded = true;
       } catch (e) {
-        console.warn('AdSense not available (ad blocker or test mode):', e);
-        this.adLoaded = true; // still show fallback
+        this.adLoaded = true;
       }
-    }, 500);
+    }, 800);
   }
 
-  ngOnDestroy(): void {}
+  dismiss(): void {
+    this.dismissed = true;
+    this.showAd = false;
+    sessionStorage.setItem(`ad-dismissed-${this.slot}`, 'true');
+  }
 
   navigateToUpgrade(): void {
     this.router.navigate(['/main/settings'], {
       queryParams: { tab: 'subscription' },
     });
-  }
-
-  dismiss(): void {
-    this.dismissed = true;
-    sessionStorage.setItem(`ad-dismissed-${this.slot}`, 'true');
-  }
-
-  get adSlotId(): string {
-    return this.adSlots[this.slot] || this.adSlots['sidebar'];
-  }
-
-  get adFormat(): string {
-    return this.slot === 'sidebar' ? 'auto' : 'horizontal';
   }
 }
