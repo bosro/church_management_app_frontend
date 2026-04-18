@@ -66,14 +66,14 @@ export class CellsList implements OnInit, OnDestroy {
     const role = this.authService.getCurrentUserRole();
     this.currentUserId = this.authService.getUserId();
 
+
     // Full management: admins, pastors, group leaders
     // Cell leaders can only edit their own group (handled by canManageGroup())
     this.canManage =
-      this.permissionService.isAdmin ||
-      this.permissionService.members.edit ||
-      [
-        'pastor', 'senior_pastor', 'associate_pastor', 'group_leader',
-      ].includes(role);
+  this.permissionService.isAdmin ||
+  [
+    'pastor', 'senior_pastor', 'associate_pastor', 'group_leader',
+  ].includes(role);
 
     this.initForm();
     this.loadCellGroups();
@@ -105,6 +105,7 @@ export class CellsList implements OnInit, OnDestroy {
     if (this.canManage) return true;
     return group.leader_id === this.currentUserId;
   }
+
 
   private loadCellGroups(): void {
     this.loading = true;

@@ -326,8 +326,13 @@ export class AttendanceService {
           .from('attendance_records')
           .select(
             `*,
-            member:members(id, first_name, last_name, middle_name, photo_url, member_number),
-            visitor:visitors(id, first_name, last_name)`,
+  member:members(
+    id, first_name, last_name, middle_name, photo_url, member_number,
+    cell_group_id,
+    cell_group:cell_groups(id, name)
+  ),
+  visitor:visitors(id, first_name, last_name),
+  checked_in_by_profile:profiles!checked_in_by(id, full_name)`,
           )
           .eq('attendance_event_id', eventId);
 

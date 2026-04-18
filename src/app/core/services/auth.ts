@@ -307,9 +307,9 @@ export class AuthService {
     return {
       ...data,
       needsEmailConfirmation: !data.user.email_confirmed_at,
-      pendingApproval: true,
+      pendingApproval: false, // ← change to false
       message:
-        'Please check your email to confirm your account. After email confirmation, an administrator will review your signup request.',
+        'Please check your email to confirm your account. Once confirmed, you can sign in immediately!', // ← updated message
     };
   }
 

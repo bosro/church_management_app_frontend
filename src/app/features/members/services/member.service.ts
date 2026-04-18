@@ -105,10 +105,24 @@ export class MemberService {
       query = query.eq('membership_status', filters.status_filter);
     if (filters.branch_filter)
       query = query.eq('branch_id', filters.branch_filter);
+    if (filters.cell_group_filter) {
+      query = query.eq('cell_group_id', filters.cell_group_filter);
+    }
 
     const offset = (page - 1) * pageSize;
+    let orderColumn = 'created_at';
+    let orderAscending = false;
+
+    if (filters.sort_by === 'name_asc') {
+      orderColumn = 'first_name';
+      orderAscending = true;
+    } else if (filters.sort_by === 'name_desc') {
+      orderColumn = 'first_name';
+      orderAscending = false;
+    }
+
     const { data, error, count } = await query
-      .order('created_at', { ascending: false })
+      .order(orderColumn, { ascending: orderAscending })
       .range(offset, offset + pageSize - 1);
 
     if (error) throw new Error(error.message);
@@ -123,28 +137,28 @@ export class MemberService {
   }
 
   getMemberById(id: string): Observable<Member> {
-  const churchId = this.getChurchId();
-  return from(
-    this.supabase.client
-      .from('members')
-      .select('*, created_by_profile:profiles!created_by(id, full_name)')
-      .eq('id', id)
-      .eq('church_id', churchId)
-      .single(),
-  ).pipe(
-    map(({ data, error }) => {
-      if (error) throw new Error(error.message);
-      if (!data) throw new Error('Member not found');
-      return data as Member;
-    }),
-    catchError((err) => throwError(() => err)),
-  );
-}
+    const churchId = this.getChurchId();
+    return from(
+      this.supabase.client
+        .from('members')
+        .select('*, created_by_profile:profiles!created_by(id, full_name)')
+        .eq('id', id)
+        .eq('church_id', churchId)
+        .single(),
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw new Error(error.message);
+        if (!data) throw new Error('Member not found');
+        return data as Member;
+      }),
+      catchError((err) => throwError(() => err)),
+    );
+  }
 
   createMember(memberData: MemberCreateInput): Observable<Member> {
     const churchId = this.getChurchId();
     const branchId = this.authService.getBranchId();
-    const memberId = this.authService.getUserId()
+    const memberId = this.authService.getUserId();
 
     return this.subscriptionService.checkQuota('members').pipe(
       switchMap((quota) => {

@@ -56,6 +56,13 @@ export class MemberList implements OnInit, OnDestroy {
   showExportModal = false;
   exporting = false;
 
+  // Add these properties after the existing ones:
+  isCellLeader = false;
+  currentUserId = '';
+  cellLeaderGroupId: string | null = null;
+
+  sortOrder: 'created_at_desc' | 'name_asc' | 'name_desc' = 'created_at_desc';
+
   constructor(
     private memberService: MemberService,
     private authService: AuthService,
@@ -67,6 +74,23 @@ export class MemberList implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.setPermissions();
+
+    const role = this.authService.getCurrentUserRole();
+    this.isCellLeader = role === 'cell_leader';
+    this.currentUserId = this.authService.getUserId();
+
+    if (this.isCellLeader) {
+      this.memberService
+        .getCellGroups()
+        .pipe(takeUntil(this.destroy$))
+        .subscribe((groups) => {
+          const myGroup = groups.find(
+            (g) => g.leader_id === this.currentUserId,
+          );
+          if (myGroup) this.cellLeaderGroupId = myGroup.id;
+        });
+    }
+
     this.initFilterForm();
 
     this.route.queryParams
@@ -93,33 +117,69 @@ export class MemberList implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  // Returns true if this member is in the cell leader's group
+  isMyCell(member: Member): boolean {
+    if (!this.isCellLeader) return true; // non-cell-leaders can edit anyone
+    return member.cell_group_id === this.cellLeaderGroupId;
+  }
+
+  // Cell leader filter — loads only their cell members
+  filterMyCellMembers(): void {
+    // Don't use filterForm.patchValue here — it triggers the debounced listener
+    // which calls loadMembers() with the OLD filters before we can update them.
+    // Instead: reset form silently, set filters directly, then load.
+    this.filterForm.reset(
+      { search: '', gender: '', status: '', branch: '', ministry: '' },
+      { emitEvent: false }, // ← prevents triggering setupFilterListener
+    );
+    this.filters = {
+      cell_group_filter: this.cellLeaderGroupId || undefined,
+      sort_by: this.sortOrder,
+    };
+    this.currentPage = 1;
+    this.loadMembers();
+  }
+
+  setSortOrder(order: 'created_at_desc' | 'name_asc' | 'name_desc'): void {
+    this.sortOrder = order;
+    this.filters = { ...this.filters, sort_by: order };
+    this.currentPage = 1;
+    this.loadMembers();
+  }
+
   private setPermissions(): void {
     const role = this.authService.getCurrentUserRole();
 
     // Roles that inherently have view access (routing guard already checked,
     // but we keep this consistent for any inline template checks)
     const viewRoles = [
-      'pastor', 'senior_pastor', 'associate_pastor',
-      'group_leader', 'cell_leader', 'ministry_leader',
-      'elder', 'deacon', 'worship_leader', 'finance_officer',
+      'pastor',
+      'senior_pastor',
+      'associate_pastor',
+      'group_leader',
+      'cell_leader',
+      'ministry_leader',
+      'elder',
+      'deacon',
+      'worship_leader',
+      'finance_officer',
     ];
 
     // Add/create: admins, pastors, group/cell leaders (they manage their members)
     const createRoles = [
-      'pastor', 'senior_pastor', 'associate_pastor',
-      'group_leader', 'cell_leader',
+      'pastor',
+      'senior_pastor',
+      'associate_pastor',
+      'group_leader',
+      'cell_leader',
     ];
 
     // Edit: admins, pastors
-    const editRoles = [
-      'pastor', 'senior_pastor', 'associate_pastor',
-    ];
+    const editRoles = ['pastor', 'senior_pastor', 'associate_pastor'];
 
     // Delete: admins only (no role bypass — too destructive)
     // Import/Export: admins + pastors
-    const importExportRoles = [
-      'pastor', 'senior_pastor', 'associate_pastor',
-    ];
+    const importExportRoles = ['pastor', 'senior_pastor', 'associate_pastor'];
 
     this.canAddMember =
       this.permissionService.isAdmin ||
@@ -132,8 +192,7 @@ export class MemberList implements OnInit, OnDestroy {
       editRoles.includes(role);
 
     this.canDeleteMember =
-      this.permissionService.isAdmin ||
-      this.permissionService.members.delete;
+      this.permissionService.isAdmin || this.permissionService.members.delete;
 
     this.canImportExport =
       this.permissionService.isAdmin ||
@@ -161,7 +220,7 @@ export class MemberList implements OnInit, OnDestroy {
           gender_filter: values.gender || undefined,
           status_filter: values.status || undefined,
           branch_filter: values.branch || undefined,
-          ministry_filter: values.ministry || undefined,
+          sort_by: this.sortOrder, // ← persist sort across filter changes
         };
         this.currentPage = 1;
         this.loadMembers();
@@ -330,9 +389,11 @@ export class MemberList implements OnInit, OnDestroy {
     const ext = format === 'excel' ? 'xlsx' : format;
 
     const export$ =
-      format === 'excel' ? this.memberService.exportMembersToExcel(this.filters) :
-      format === 'pdf'   ? this.memberService.exportMembersToPDF(this.filters) :
-                           this.memberService.exportMembersToCSV(this.filters);
+      format === 'excel'
+        ? this.memberService.exportMembersToExcel(this.filters)
+        : format === 'pdf'
+          ? this.memberService.exportMembersToPDF(this.filters)
+          : this.memberService.exportMembersToCSV(this.filters);
 
     export$.pipe(takeUntil(this.destroy$)).subscribe({
       next: (blob) => {
@@ -348,7 +409,8 @@ export class MemberList implements OnInit, OnDestroy {
       },
       error: (err) => {
         this.exporting = false;
-        this.error = 'Failed to export members: ' + (err.message || 'Unknown error');
+        this.error =
+          'Failed to export members: ' + (err.message || 'Unknown error');
       },
     });
   }
@@ -390,6 +452,7 @@ export class MemberList implements OnInit, OnDestroy {
   }
 
   clearFilters(): void {
+    this.sortOrder = 'created_at_desc';
     this.filterForm.reset({
       search: '',
       gender: '',

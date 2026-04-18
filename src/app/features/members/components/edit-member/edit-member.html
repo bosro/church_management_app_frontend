@@ -223,21 +223,27 @@
               <div class="form-card">
                 <h3>Cell Group</h3>
                 <div class="form-row">
+                  <!-- Cell Group — locked for cell leaders, free choice for admins/pastors -->
                   <div class="form-group">
-                    <label for="cell_group_id">Cell Group</label>
-                    <select id="cell_group_id" formControlName="cell_group_id">
-                      <option value="">
-                        {{ loadingCellGroups ? 'Loading groups...' : 'None (unassigned)' }}
-                      </option>
+                    <label>Cell Group</label>
+
+                    <!-- Cell leader sees a locked display showing their own group -->
+                    <div *ngIf="isCellLeader" class="locked-field">
+                      <i class="ri-group-2-line"></i>
+                      <span>{{ cellLeaderGroupName || 'Your Cell Group' }}</span>
+                      <span class="locked-badge">
+                        <i class="ri-lock-line"></i>
+                        Locked
+                      </span>
+                    </div>
+
+                    <!-- Admin/pastor sees the full dropdown -->
+                    <select *ngIf="!isCellLeader" formControlName="cell_group_id">
+                      <option value="">None (unassigned)</option>
                       <option *ngFor="let group of cellGroups" [value]="group.id">
                         {{ group.name }}
-                        <ng-container *ngIf="group.meeting_day"> · {{ group.meeting_day }}</ng-container>
                       </option>
                     </select>
-                    <span class="field-hint" *ngIf="cellGroups.length === 0 && !loadingCellGroups">
-                      <i class="ri-information-line"></i>
-                      No active cell groups found.
-                    </span>
                   </div>
                 </div>
               </div>

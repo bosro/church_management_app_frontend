@@ -266,4 +266,9 @@ export class AttendanceDetail implements OnInit, OnDestroy {
     const profile = (this.event as any)?.created_by_profile;
     return profile?.full_name || null;
   }
+
+  getCellGroupName(record: AttendanceRecord): string {
+    const cellGroup = (record.member as any)?.cell_group;
+    return cellGroup?.name || '—';
+  }
 }
