@@ -71,7 +71,9 @@ export class AttendanceService {
       (async () => {
         let query = this.supabase.client
           .from('attendance_events')
-          .select('*', { count: 'exact' })
+          .select('*, created_by_profile:profiles!created_by(id, full_name)', {
+            count: 'exact',
+          })
           .eq('church_id', churchId);
 
         if (isBranchPastor && branchId) {
@@ -99,7 +101,7 @@ export class AttendanceService {
     return from(
       this.supabase.client
         .from('attendance_events')
-        .select('*')
+        .select('*, created_by_profile:profiles!created_by(id, full_name)')
         .eq('id', eventId)
         .eq('church_id', churchId)
         .single(),
@@ -1040,91 +1042,96 @@ export class AttendanceService {
   }
 
   // Add this method to AttendanceService — public visitor check-in (no auth)
-checkInVisitorPublic(
-  eventId: string,
-  visitorData: { first_name: string; last_name: string; phone?: string; email?: string },
-): Observable<AttendanceRecord> {
-  return from(
-    (async () => {
-      // Get event's church_id without auth
-      const { data: event } = await this.supabase.client
-        .from('attendance_events')
-        .select('id, church_id')
-        .eq('id', eventId)
-        .single();
-
-      if (!event) throw new Error('Event not found');
-
-      // Check for existing visitor by phone or email
-      let visitorId: string | null = null;
-
-      if (visitorData.phone || visitorData.email) {
-        let q = this.supabase.client
-          .from('visitors')
-          .select('id, visit_count')
-          .eq('church_id', event.church_id);
-
-        if (visitorData.phone) q = q.eq('phone', visitorData.phone);
-        else if (visitorData.email) q = q.eq('email', visitorData.email);
-
-        const { data: existing } = await q.maybeSingle();
-
-        if (existing) {
-          // Update last visit
-          await this.supabase.client
-            .from('visitors')
-            .update({
-              last_visit_date: new Date().toISOString().split('T')[0],
-              visit_count: existing.visit_count + 1,
-            })
-            .eq('id', existing.id);
-
-          visitorId = existing.id;
-        }
-      }
-
-      if (!visitorId) {
-        // Create new visitor
-        const { data: newVisitor, error: vErr } = await this.supabase.client
-          .from('visitors')
-          .insert({
-            church_id: event.church_id,
-            first_name: visitorData.first_name,
-            last_name: visitorData.last_name,
-            phone: visitorData.phone || null,
-            email: visitorData.email || null,
-            first_visit_date: new Date().toISOString().split('T')[0],
-            last_visit_date: new Date().toISOString().split('T')[0],
-            visit_count: 1,
-            is_converted_to_member: false,
-          })
-          .select('id')
+  checkInVisitorPublic(
+    eventId: string,
+    visitorData: {
+      first_name: string;
+      last_name: string;
+      phone?: string;
+      email?: string;
+    },
+  ): Observable<AttendanceRecord> {
+    return from(
+      (async () => {
+        // Get event's church_id without auth
+        const { data: event } = await this.supabase.client
+          .from('attendance_events')
+          .select('id, church_id')
+          .eq('id', eventId)
           .single();
 
-        if (vErr) throw new Error(vErr.message);
-        visitorId = newVisitor!.id;
-      }
+        if (!event) throw new Error('Event not found');
 
-      // Insert attendance record
-      const { data, error } = await this.supabase.client
-        .from('attendance_records')
-        .insert({
-          attendance_event_id: eventId,
-          visitor_id: visitorId,
-          checked_in_at: new Date().toISOString(),
-          checked_in_by: null,
-          check_in_method: 'self_service',
-          status: 'present',
-        })
-        .select()
-        .single();
+        // Check for existing visitor by phone or email
+        let visitorId: string | null = null;
 
-      if (error) throw new Error(error.message);
-      await this.updatePublicEventAttendanceCount(eventId);
-      return data as AttendanceRecord;
-    })(),
-  ).pipe(catchError((err) => throwError(() => err)));
-}
+        if (visitorData.phone || visitorData.email) {
+          let q = this.supabase.client
+            .from('visitors')
+            .select('id, visit_count')
+            .eq('church_id', event.church_id);
+
+          if (visitorData.phone) q = q.eq('phone', visitorData.phone);
+          else if (visitorData.email) q = q.eq('email', visitorData.email);
+
+          const { data: existing } = await q.maybeSingle();
+
+          if (existing) {
+            // Update last visit
+            await this.supabase.client
+              .from('visitors')
+              .update({
+                last_visit_date: new Date().toISOString().split('T')[0],
+                visit_count: existing.visit_count + 1,
+              })
+              .eq('id', existing.id);
+
+            visitorId = existing.id;
+          }
+        }
+
+        if (!visitorId) {
+          // Create new visitor
+          const { data: newVisitor, error: vErr } = await this.supabase.client
+            .from('visitors')
+            .insert({
+              church_id: event.church_id,
+              first_name: visitorData.first_name,
+              last_name: visitorData.last_name,
+              phone: visitorData.phone || null,
+              email: visitorData.email || null,
+              first_visit_date: new Date().toISOString().split('T')[0],
+              last_visit_date: new Date().toISOString().split('T')[0],
+              visit_count: 1,
+              is_converted_to_member: false,
+            })
+            .select('id')
+            .single();
+
+          if (vErr) throw new Error(vErr.message);
+          visitorId = newVisitor!.id;
+        }
+
+        // Insert attendance record
+        const { data, error } = await this.supabase.client
+          .from('attendance_records')
+          .insert({
+            attendance_event_id: eventId,
+            visitor_id: visitorId,
+            checked_in_at: new Date().toISOString(),
+            checked_in_by: null,
+            check_in_method: 'self_service',
+            status: 'present',
+          })
+          .select()
+          .single();
+
+        if (error) throw new Error(error.message);
+        await this.updatePublicEventAttendanceCount(eventId);
+        return data as AttendanceRecord;
+      })(),
+    ).pipe(catchError((err) => throwError(() => err)));
+  }
 
   private async updatePublicEventAttendanceCount(
     eventId: string,
@@ -1184,7 +1191,3 @@ checkInVisitorPublic(
     return eDate.getTime() === today.getTime();
   }
 }
-
-
-
-

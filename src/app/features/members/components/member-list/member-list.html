@@ -195,6 +195,7 @@
                       </div>
                       <div class="member-info">
                         <p class="member-name">{{ getMemberFullName(member) }}</p>
+                        <span class="cell-badge" *ngIf="member.cell_group_id">My Cell</span>
                         <p class="member-meta" *ngIf="member.occupation">{{ member.occupation }}</p>
                       </div>
                     </div>
@@ -299,7 +300,7 @@
             <div class="card-body">
               <h4 class="member-name">{{ getMemberFullName(member) }}</h4>
               <p class="member-number">{{ member.member_number }}</p>
-
+              <span class="cell-badge" *ngIf="member.cell_group_id">My Cell</span>
               <div class="member-details">
                 <p *ngIf="member.email" class="detail-item">
                   <i class="ri-mail-line"></i>

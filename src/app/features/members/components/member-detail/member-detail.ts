@@ -1,4 +1,7 @@
 // src/app/features/members/components/member-detail/member-detail.component.ts
+// KEY FIXES:
+// 1. checkPermissions() — added role fallbacks for canEditMember/canDeleteMember
+// 2. Template (see member-detail.html changes) — shows "Added by" in church info card
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject } from 'rxjs';
@@ -83,9 +86,19 @@ export class MemberDetail implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  // FIX: Added role-based fallbacks — pastors/group leaders without explicit
+  // members.edit grant could not edit from the detail page before this fix.
   private checkPermissions(): void {
+    const role = this.authService.getCurrentUserRole();
+
+    const editRoles = ['pastor', 'senior_pastor', 'associate_pastor'];
+
     this.canEditMember =
-      this.permissionService.isAdmin || this.permissionService.members.edit;
+      this.permissionService.isAdmin ||
+      this.permissionService.members.edit ||
+      editRoles.includes(role);
+
+    // Delete stays admin-only — too destructive for role bypass
     this.canDeleteMember =
       this.permissionService.isAdmin || this.permissionService.members.delete;
   }
@@ -106,6 +119,12 @@ export class MemberDetail implements OnInit, OnDestroy {
           this.loading = false;
         },
       });
+  }
+
+  // Helper to get the creator's name from the joined profile
+  getCreatedByName(): string {
+    const profile = (this.member as any)?.created_by_profile;
+    return profile?.full_name || null;
   }
 
   goBack(): void {
@@ -159,8 +178,6 @@ export class MemberDetail implements OnInit, OnDestroy {
     }
   }
 
-  // ── Attendance ──────────────────────────────────────────────────────────────
-
   private loadAttendanceData(page = 1): void {
     if (!this.member) return;
     this.loadingAttendance = true;
@@ -178,7 +195,9 @@ export class MemberDetail implements OnInit, OnDestroy {
         next: ({ data, count }) => {
           this.attendanceRecords = data;
           this.attendanceTotalCount = count;
-          this.attendanceTotalPages = Math.ceil(count / this.attendancePageSize);
+          this.attendanceTotalPages = Math.ceil(
+            count / this.attendancePageSize,
+          );
           this.loadingAttendance = false;
           this.attendanceLoaded = true;
         },
@@ -190,15 +209,14 @@ export class MemberDetail implements OnInit, OnDestroy {
   }
 
   attendancePreviousPage(): void {
-    if (this.attendancePage > 1) this.loadAttendanceData(this.attendancePage - 1);
+    if (this.attendancePage > 1)
+      this.loadAttendanceData(this.attendancePage - 1);
   }
 
   attendanceNextPage(): void {
     if (this.attendancePage < this.attendanceTotalPages)
       this.loadAttendanceData(this.attendancePage + 1);
   }
-
-  // ── Giving ──────────────────────────────────────────────────────────────────
 
   private loadGivingData(page = 1): void {
     if (!this.member) return;
@@ -244,10 +262,11 @@ export class MemberDetail implements OnInit, OnDestroy {
 
   getPledgeProgress(pledge: MemberPledge): number {
     if (!pledge.pledge_amount) return 0;
-    return Math.min(100, Math.round((pledge.amount_paid / pledge.pledge_amount) * 100));
+    return Math.min(
+      100,
+      Math.round((pledge.amount_paid / pledge.pledge_amount) * 100),
+    );
   }
-
-  // ── Ministries ──────────────────────────────────────────────────────────────
 
   private loadMinistriesData(): void {
     if (!this.member || this.ministriesLoaded) return;
@@ -276,8 +295,6 @@ export class MemberDetail implements OnInit, OnDestroy {
     return this.ministryAssignments.filter((m) => !m.is_active);
   }
 
-  // ── Existing helpers (unchanged) ────────────────────────────────────────────
-
   getMemberFullName(): string {
     if (!this.member) return '';
     return `${this.member.first_name} ${this.member.middle_name || ''} ${this.member.last_name}`.trim();
@@ -294,7 +311,11 @@ export class MemberDetail implements OnInit, OnDestroy {
     const birthDate = new Date(this.member.date_of_birth);
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) age--;
+    if (
+      monthDiff < 0 ||
+      (monthDiff === 0 && today.getDate() < birthDate.getDate())
+    )
+      age--;
     return age;
   }
 
@@ -317,7 +338,8 @@ export class MemberDetail implements OnInit, OnDestroy {
     const months = today.getMonth() - joinDate.getMonth();
     const totalMonths = years * 12 + months;
     if (totalMonths < 1) return 'Less than a month';
-    if (totalMonths < 12) return `${totalMonths} month${totalMonths > 1 ? 's' : ''}`;
+    if (totalMonths < 12)
+      return `${totalMonths} month${totalMonths > 1 ? 's' : ''}`;
     const y = Math.floor(totalMonths / 12);
     const m = totalMonths % 12;
     if (m === 0) return `${y} year${y > 1 ? 's' : ''}`;
@@ -341,9 +363,7 @@ export class MemberDetail implements OnInit, OnDestroy {
   }
 
   formatEventType(type: string): string {
-    return type
-      .replace(/_/g, ' ')
-      .replace(/\b\w/g, (c) => c.toUpperCase());
+    return type.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
   }
 
   formatPaymentMethod(method: string): string {
@@ -358,10 +378,3 @@ export class MemberDetail implements OnInit, OnDestroy {
     return map[method] ?? method;
   }
 }
-
-
-
-
-
-
-

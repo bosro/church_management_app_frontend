@@ -89,6 +89,12 @@
             <h4>Notes</h4>
             <p>{{ event.notes }}</p>
           </div>
+
+          <div *ngIf="getCreatedByName()" class="event-created-by">
+            <i class="ri-user-add-line"></i>
+            <span>Created by <strong>{{ getCreatedByName() }}</strong></span>
+          </div>
+
         </div>
 
         <!-- Attendance Records -->
@@ -148,5 +154,3 @@
     </div>
   </div>
 </div>
-
-

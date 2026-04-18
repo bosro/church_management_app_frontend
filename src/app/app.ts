@@ -1,10 +1,12 @@
-// src/app/app.component.ts
-import { Component, OnInit } from '@angular/core';
-import { Router, NavigationEnd, NavigationStart } from '@angular/router';
+import { Component, OnInit, NgZone } from '@angular/core';
+import { Router, NavigationEnd } from '@angular/router';
 import { AuthService } from './core/services/auth';
 import { SupabaseService } from './core/services/supabase';
 import { SubscriptionService } from './core/services/subscription.service';
 import { trigger, style, transition, animate } from '@angular/animations';
+import { SwUpdate, VersionReadyEvent } from '@angular/service-worker';
+import { filter } from 'rxjs/operators';
+
 @Component({
   selector: 'app-root',
   templateUrl: './app.html',
@@ -32,7 +34,6 @@ export class App implements OnInit {
   title = 'Churchman.';
   showLayout = true;
   authInitialized = false;
-
   updateAvailable = false;
   isOffline = false;
 
@@ -41,26 +42,43 @@ export class App implements OnInit {
     private authService: AuthService,
     private supabase: SupabaseService,
     private subscriptionService: SubscriptionService,
+    private updates: SwUpdate,
+    private ngZone: NgZone,
   ) {
-    // Wire SubscriptionService into AuthService to break the circular dependency
     this.authService.setSubscriptionService(this.subscriptionService);
     this.clearStuckLocks();
+    this.initServiceWorkerUpdates();
+  }
 
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.ready.then((reg) => {
-        reg.addEventListener('updatefound', () => {
-          const newWorker = reg.installing;
-          newWorker?.addEventListener('statechange', () => {
-            if (
-              newWorker.state === 'installed' &&
-              navigator.serviceWorker.controller
-            ) {
-              this.updateAvailable = true;
-            }
-          });
+  private initServiceWorkerUpdates(): void {
+    if (!this.updates.isEnabled) return;
+
+    // Only listen for VERSION_READY — this is the only state where
+    // a new version is fully installed and safe to activate.
+    this.updates.versionUpdates
+      .pipe(
+        filter((evt): evt is VersionReadyEvent => evt.type === 'VERSION_READY'),
+      )
+      .subscribe(() => {
+        // Run inside NgZone so Angular's change detection picks up the flag.
+        this.ngZone.run(() => {
+          this.updateAvailable = true;
         });
       });
-    }
+
+    // Proactively check for updates on app load, then every 6 hours.
+    this.updates
+      .checkForUpdate()
+      .catch((err) => console.warn('SW update check failed:', err));
+
+    setInterval(
+      () => {
+        this.updates
+          .checkForUpdate()
+          .catch((err) => console.warn('SW update check failed:', err));
+      },
+      6 * 60 * 60 * 1000,
+    );
   }
 
   ngOnInit(): void {
@@ -75,20 +93,21 @@ export class App implements OnInit {
     });
 
     this.isOffline = !navigator.onLine;
-    window.addEventListener('online', () => (this.isOffline = false));
-    window.addEventListener('offline', () => (this.isOffline = true));
+    window.addEventListener('online', () =>
+      this.ngZone.run(() => (this.isOffline = false)),
+    );
+    window.addEventListener('offline', () =>
+      this.ngZone.run(() => (this.isOffline = true)),
+    );
   }
 
   private clearStuckLocks(): void {
     try {
       const hasCleared = sessionStorage.getItem('locks-cleared');
       if (!hasCleared) {
-        const keys = Object.keys(localStorage);
-        keys.forEach((key) => {
-          if (key.startsWith('sb-')) {
-            localStorage.removeItem(key);
-          }
-        });
+        Object.keys(localStorage)
+          .filter((key) => key.startsWith('sb-'))
+          .forEach((key) => localStorage.removeItem(key));
         sessionStorage.setItem('locks-cleared', 'true');
       }
     } catch (error) {
@@ -97,10 +116,15 @@ export class App implements OnInit {
   }
 
   updateApp(): void {
-    navigator.serviceWorker.ready.then((reg) => {
-      reg.waiting?.postMessage({ type: 'SKIP_WAITING' });
-      window.location.reload();
-    });
+    this.updates
+      .activateUpdate()
+      .then(() => {
+        window.location.reload();
+      })
+      .catch(() => {
+        // Fallback if activateUpdate fails
+        window.location.reload();
+      });
     this.updateAvailable = false;
   }
 
@@ -108,6 +132,3 @@ export class App implements OnInit {
     this.updateAvailable = false;
   }
 }
-
-
-

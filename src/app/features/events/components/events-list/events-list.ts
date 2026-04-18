@@ -10,6 +10,13 @@ import { ChurchEvent, EventCategory } from '../../../../models/event.model';
 import { PermissionService } from '../../../../core/services/permission.service';
 import { AuthService } from '../../../../core/services/auth';
 
+export interface CalendarCell {
+  date: Date;
+  isCurrentMonth: boolean;
+  isToday: boolean;
+  events: ChurchEvent[];
+}
+
 @Component({
   selector: 'app-events-list',
   standalone: false,
@@ -53,6 +60,13 @@ export class EventsList implements OnInit, OnDestroy {
 
   canManageEvents = false;
 
+  calendarYear: number = new Date().getFullYear();
+  calendarMonth: number = new Date().getMonth(); // 0-indexed
+  calendarCells: CalendarCell[] = [];
+  selectedCell: CalendarCell | null = null;
+
+  readonly weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
   constructor(
     private eventsService: EventsService,
     private router: Router,
@@ -65,6 +79,7 @@ export class EventsList implements OnInit, OnDestroy {
     this.loadEvents();
     this.loadUpcomingEvents();
     this.setupFilterListeners();
+    this.buildCalendar();
   }
 
   ngOnDestroy(): void {
@@ -155,6 +170,7 @@ export class EventsList implements OnInit, OnDestroy {
           this.events = data;
           this.totalEvents = count;
           this.totalPages = Math.ceil(count / this.pageSize);
+          this.buildCalendar(); 
           this.loading = false;
         },
         error: (error) => {
@@ -305,10 +321,104 @@ export class EventsList implements OnInit, OnDestroy {
   private scrollToTop(): void {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
-}
 
-// ─────────────────────────────────────────────────────────────────────────────
-// src/app/features/events/components/event-detail/event-detail.component.ts
-// KEY FIX: checkPermissions() now includes role-based fallback
-// ─────────────────────────────────────────────────────────────────────────────
-// (paste below into its own file — split at the comment above)
+  get calendarTitle(): string {
+    return new Date(
+      this.calendarYear,
+      this.calendarMonth,
+      1,
+    ).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  }
+
+  buildCalendar(): void {
+    const year = this.calendarYear;
+    const month = this.calendarMonth;
+
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const startDate = new Date(firstDay);
+    startDate.setDate(startDate.getDate() - firstDay.getDay()); // rewind to Sunday
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const cells: CalendarCell[] = [];
+    const cursor = new Date(startDate);
+
+    // Always render 6 rows × 7 = 42 cells for a stable grid height
+    for (let i = 0; i < 42; i++) {
+      const cellDate = new Date(cursor);
+      cellDate.setHours(0, 0, 0, 0);
+
+      cells.push({
+        date: cellDate,
+        isCurrentMonth: cellDate.getMonth() === month,
+        isToday: cellDate.getTime() === today.getTime(),
+        events: this.getEventsForDate(cellDate),
+      });
+
+      cursor.setDate(cursor.getDate() + 1);
+    }
+
+    this.calendarCells = cells;
+    // Preserve selected cell reference after rebuild
+    if (this.selectedCell) {
+      const ts = this.selectedCell.date.getTime();
+      this.selectedCell = cells.find((c) => c.date.getTime() === ts) || null;
+    }
+  }
+
+  private getEventsForDate(date: Date): ChurchEvent[] {
+    return this.events.filter((event) => {
+      const evDate = new Date(event.start_date);
+      return (
+        evDate.getFullYear() === date.getFullYear() &&
+        evDate.getMonth() === date.getMonth() &&
+        evDate.getDate() === date.getDate()
+      );
+    });
+  }
+
+  prevMonth(): void {
+    if (this.calendarMonth === 0) {
+      this.calendarMonth = 11;
+      this.calendarYear--;
+    } else {
+      this.calendarMonth--;
+    }
+    this.selectedCell = null;
+    this.buildCalendar();
+  }
+
+  nextMonth(): void {
+    if (this.calendarMonth === 11) {
+      this.calendarMonth = 0;
+      this.calendarYear++;
+    } else {
+      this.calendarMonth++;
+    }
+    this.selectedCell = null;
+    this.buildCalendar();
+  }
+
+  goToToday(): void {
+    const now = new Date();
+    this.calendarYear = now.getFullYear();
+    this.calendarMonth = now.getMonth();
+    this.selectedCell = null;
+    this.buildCalendar();
+  }
+
+  onCellClick(cell: CalendarCell): void {
+    if (cell.events.length === 0) {
+      this.selectedCell = null;
+      return;
+    }
+    // Toggle off if clicking the same cell again
+    if (this.selectedCell?.date.getTime() === cell.date.getTime()) {
+      this.selectedCell = null;
+    } else {
+      this.selectedCell = cell;
+    }
+  }
+}

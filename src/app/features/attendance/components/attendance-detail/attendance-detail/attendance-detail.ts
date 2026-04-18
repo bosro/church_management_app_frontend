@@ -261,4 +261,9 @@ export class AttendanceDetail implements OnInit, OnDestroy {
     if (rate >= 50) return 'rate-medium';
     return 'rate-low';
   }
+
+  getCreatedByName(): string | null {
+    const profile = (this.event as any)?.created_by_profile;
+    return profile?.full_name || null;
+  }
 }

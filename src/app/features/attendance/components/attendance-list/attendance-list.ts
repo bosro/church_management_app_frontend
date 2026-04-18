@@ -67,12 +67,12 @@ export class AttendanceList implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-private checkPermissions(): void {
-  const role = this.authService.getCurrentUserRole();
-  console.log('🔍 ATTENDANCE-LIST role:', role, '| viewRoles.includes:', ['pastor','senior_pastor','associate_pastor','ministry_leader','group_leader','cell_leader','finance_officer','elder','deacon','worship_leader','secretary','usher'].includes(role));
-  console.log('🔍 ATTENDANCE checkPermissions — role:', role);
-  console.log('🔍 isAdmin:', this.permissionService.isAdmin);
-  console.log('🔍 attendance.view:', this.permissionService.attendance.view);
+  private checkPermissions(): void {
+    const role = this.authService.getCurrentUserRole();
+    // console.log('🔍 ATTENDANCE-LIST role:', role, '| viewRoles.includes:', ['pastor','senior_pastor','associate_pastor','ministry_leader','group_leader','cell_leader','finance_officer','elder','deacon','worship_leader','secretary','usher'].includes(role));
+    // console.log('🔍 ATTENDANCE checkPermissions — role:', role);
+    // console.log('🔍 isAdmin:', this.permissionService.isAdmin);
+    // console.log('🔍 attendance.view:', this.permissionService.attendance.view);
 
     const viewRoles = [
       'pastor',
@@ -125,7 +125,7 @@ private checkPermissions(): void {
   }
 
   loadEvents(): void {
-    console.log('kjnjnk')
+    console.log('kjnjnk');
     this.loading = true;
     this.errorMessage = '';
 

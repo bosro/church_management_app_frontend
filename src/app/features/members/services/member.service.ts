@@ -65,7 +65,7 @@ export class MemberService {
     const userId = this.authService.getUserId();
     const isBranchPastor = this.authService.isBranchPastor();
     const branchId = this.authService.getBranchId();
-    const isCellLeader = role === 'cell_leader';
+    // const isCellLeader = role === 'cell_leader';
 
     let query = this.supabase.client
       .from('members')
@@ -78,21 +78,21 @@ export class MemberService {
     }
 
     // Cell leader: scope to members in their cell group(s)
-    if (isCellLeader && userId) {
-      const { data: ledGroups } = await this.supabase.client
-        .from('cell_groups')
-        .select('id')
-        .eq('leader_id', userId)
-        .eq('is_active', true);
+    // if (isCellLeader && userId) {
+    //   const { data: ledGroups } = await this.supabase.client
+    //     .from('cell_groups')
+    //     .select('id')
+    //     .eq('leader_id', userId)
+    //     .eq('is_active', true);
 
-      const ledGroupIds = (ledGroups || []).map((g: any) => g.id);
+    //   const ledGroupIds = (ledGroups || []).map((g: any) => g.id);
 
-      if (ledGroupIds.length === 0) {
-        return { data: [], count: 0, page, pageSize, totalPages: 0 };
-      }
+    //   if (ledGroupIds.length === 0) {
+    //     return { data: [], count: 0, page, pageSize, totalPages: 0 };
+    //   }
 
-      query = query.in('cell_group_id', ledGroupIds);
-    }
+    //   query = query.in('cell_group_id', ledGroupIds);
+    // }
 
     if (filters.search_term) {
       query = query.or(
@@ -123,27 +123,28 @@ export class MemberService {
   }
 
   getMemberById(id: string): Observable<Member> {
-    const churchId = this.getChurchId();
-    return from(
-      this.supabase.client
-        .from('members')
-        .select('*')
-        .eq('id', id)
-        .eq('church_id', churchId)
-        .single(),
-    ).pipe(
-      map(({ data, error }) => {
-        if (error) throw new Error(error.message);
-        if (!data) throw new Error('Member not found');
-        return data as Member;
-      }),
-      catchError((err) => throwError(() => err)),
-    );
-  }
+  const churchId = this.getChurchId();
+  return from(
+    this.supabase.client
+      .from('members')
+      .select('*, created_by_profile:profiles!created_by(id, full_name)')
+      .eq('id', id)
+      .eq('church_id', churchId)
+      .single(),
+  ).pipe(
+    map(({ data, error }) => {
+      if (error) throw new Error(error.message);
+      if (!data) throw new Error('Member not found');
+      return data as Member;
+    }),
+    catchError((err) => throwError(() => err)),
+  );
+}
 
   createMember(memberData: MemberCreateInput): Observable<Member> {
     const churchId = this.getChurchId();
     const branchId = this.authService.getBranchId();
+    const memberId = this.authService.getUserId()
 
     return this.subscriptionService.checkQuota('members').pipe(
       switchMap((quota) => {
@@ -162,6 +163,7 @@ export class MemberService {
               membership_status: 'active' as const,
               is_new_convert: memberData.is_new_convert || false,
               is_visitor: memberData.is_visitor || false,
+              created_by: memberId,
             })
             .select()
             .single(),
@@ -851,18 +853,18 @@ export class MemberService {
     }
 
     // Cell leader: scope to their cell group members
-    if (isCellLeader && userId) {
-      const { data: ledGroups } = await this.supabase.client
-        .from('cell_groups')
-        .select('id')
-        .eq('leader_id', userId)
-        .eq('is_active', true);
+    // if (isCellLeader && userId) {
+    //   const { data: ledGroups } = await this.supabase.client
+    //     .from('cell_groups')
+    //     .select('id')
+    //     .eq('leader_id', userId)
+    //     .eq('is_active', true);
 
-      const ledGroupIds = (ledGroups || []).map((g: any) => g.id);
+    //   const ledGroupIds = (ledGroups || []).map((g: any) => g.id);
 
-      if (ledGroupIds.length === 0) return [];
-      q = q.in('cell_group_id', ledGroupIds);
-    }
+    //   if (ledGroupIds.length === 0) return [];
+    //   q = q.in('cell_group_id', ledGroupIds);
+    // }
 
     const { data, error } = await q.limit(limit);
     if (error) throw new Error(error.message);
