@@ -25,9 +25,15 @@ export class CreateUser implements OnInit, OnDestroy {
   readonly roles = [
     { value: 'church_admin', label: 'Church Admin' },
     { value: 'pastor', label: 'Pastor' },
+    { value: 'senior_pastor', label: 'Senior Pastor' },
+    { value: 'associate_pastor', label: 'Associate Pastor' },
     { value: 'finance_officer', label: 'Finance Officer' },
-    { value: 'ministry_leader', label: 'Ministry Leader' }, // ADD THIS
+    { value: 'ministry_leader', label: 'Ministry Leader' },
     { value: 'group_leader', label: 'Group Leader' },
+    { value: 'cell_leader', label: 'Cell Leader' }, // ← ADD
+    { value: 'elder', label: 'Elder' },
+    { value: 'deacon', label: 'Deacon' },
+    { value: 'worship_leader', label: 'Worship Leader' },
     { value: 'member', label: 'Member' },
   ];
 
@@ -123,12 +129,27 @@ export class CreateUser implements OnInit, OnDestroy {
       .subscribe({
         next: (newUser) => {
           this.submitting = false;
-          // Navigate directly to manage permissions for the new user
-          this.router.navigate([
-            'main/user-roles/manage-permission',
-            newUser.id,
-            'permissions',
-          ]);
+          this.errorMessage = '';
+
+          // Temporarily show success before redirect
+          // Replace with your ToastService if available
+          const successMsg = document.createElement('div');
+          successMsg.style.cssText = `
+    position: fixed; top: 1rem; right: 1rem; z-index: 9999;
+    background: #D1FAE5; border: 1px solid #6EE7B7; color: #065F46;
+    padding: 1rem 1.5rem; border-radius: 8px; font-weight: 600;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  `;
+          successMsg.innerHTML = `✅ User invited successfully! An email has been sent to ${this.userForm.value.email}. Redirecting to permissions...`;
+          document.body.appendChild(successMsg);
+
+          setTimeout(() => {
+            document.body.removeChild(successMsg);
+            this.router.navigate(
+              ['main/user-roles/manage-permission', newUser.id, 'permissions'],
+              { queryParams: { new: 'true' } }, // ← signals to pre-grant defaults
+            );
+          }, 2500);
         },
         error: (error) => {
           this.handleError(error);
@@ -175,11 +196,20 @@ export class CreateUser implements OnInit, OnDestroy {
     const icons: Record<string, string> = {
       church_admin: 'ri-shield-star-line',
       pastor: 'ri-book-open-line',
+      senior_pastor: 'ri-book-open-line',
+      associate_pastor: 'ri-book-open-line',
       finance_officer: 'ri-money-dollar-circle-line',
-      ministry_leader: 'ri-service-line', // ADD THIS
+      ministry_leader: 'ri-service-line',
       group_leader: 'ri-group-line',
+      cell_leader: 'ri-group-2-line', // ← ADD
+      elder: 'ri-award-line', // ← ADD
+      deacon: 'ri-user-star-line', // ← ADD
+      worship_leader: 'ri-music-line', // ← ADD
       member: 'ri-user-line',
     };
     return icons[role] || 'ri-user-line';
   }
 }
+
+
+

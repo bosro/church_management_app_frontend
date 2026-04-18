@@ -1,4 +1,11 @@
 // src/app/features/members/components/edit-member/edit-member.component.ts
+// KEY FIXES:
+// 1. Added isCellLeader, cellLeaderGroupId, cellLeaderGroupName properties
+// 2. loadCellGroups() now filters to only show cell leader's own group(s)
+//    and locks the cell_group_id field after member data loads
+// 3. prepareMemberData() uses getRawValue() instead of .value so disabled
+//    cell_group_id control is still included in the payload
+// 4. Cell leader safety net: always preserves their group on save
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -25,13 +32,11 @@ export class EditMember implements OnInit, OnDestroy {
   errorMessage = '';
   successMessage = '';
 
-  // Photo upload
   selectedPhoto: File | null = null;
   photoPreview: string | null = null;
   uploadingPhoto = false;
   originalPhotoUrl: string | null = null;
 
-  // Options
   genderOptions = [
     { value: 'male', label: 'Male' },
     { value: 'female', label: 'Female' },
@@ -55,11 +60,14 @@ export class EditMember implements OnInit, OnDestroy {
     'Other',
   ];
 
-  // Cell groups
   cellGroups: CellGroup[] = [];
   loadingCellGroups = false;
 
-  // Permissions
+  // FIX 1: Added cell leader state (was completely missing)
+  isCellLeader = false;
+  cellLeaderGroupId: string | null = null;
+  cellLeaderGroupName: string | null = null;
+
   canEditMember = false;
 
   constructor(
@@ -74,15 +82,45 @@ export class EditMember implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.checkPermissions();
     this.memberId = this.route.snapshot.paramMap.get('id') || '';
-
     if (!this.memberId) {
       this.router.navigate(['main/members']);
       return;
     }
-
     this.initForm();
-    this.loadCellGroups();
-    this.loadMember();
+    this.loadCellGroupsThenMember();
+  }
+
+  // Add this method:
+  private loadCellGroupsThenMember(): void {
+    this.loadingCellGroups = true;
+    const role = this.authService.getCurrentUserRole();
+    this.isCellLeader = role === 'cell_leader';
+
+    this.memberService
+      .getCellGroups()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (groups) => {
+          if (this.isCellLeader) {
+            const userId = this.authService.getUserId();
+            this.cellGroups = groups.filter((g) => g.leader_id === userId);
+            const myGroup = this.cellGroups[0] || null;
+            if (myGroup) {
+              this.cellLeaderGroupId = myGroup.id;
+              this.cellLeaderGroupName = myGroup.name;
+            }
+          } else {
+            this.cellGroups = groups;
+          }
+          this.loadingCellGroups = false;
+          // Only load member AFTER groups are known
+          this.loadMember();
+        },
+        error: () => {
+          this.loadingCellGroups = false;
+          this.loadMember(); // still load member even if groups fail
+        },
+      });
   }
 
   ngOnDestroy(): void {
@@ -91,22 +129,40 @@ export class EditMember implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
+    const role = this.authService.getCurrentUserRole();
+    const editRoles = ['pastor', 'senior_pastor', 'associate_pastor'];
     this.canEditMember =
-      this.permissionService.isAdmin || this.permissionService.members.edit;
-
+      this.permissionService.isAdmin ||
+      this.permissionService.members.edit ||
+      editRoles.includes(role);
     if (!this.canEditMember) {
       this.router.navigate(['/unauthorized']);
     }
   }
 
+  // FIX 2: loadCellGroups now filters for cell leader
   private loadCellGroups(): void {
     this.loadingCellGroups = true;
+    const role = this.authService.getCurrentUserRole();
+    this.isCellLeader = role === 'cell_leader';
+
     this.memberService
       .getCellGroups()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (groups) => {
-          this.cellGroups = groups;
+          if (this.isCellLeader) {
+            const userId = this.authService.getUserId();
+            // Cell leader only sees their own group in the dropdown
+            this.cellGroups = groups.filter((g) => g.leader_id === userId);
+            const myGroup = this.cellGroups[0] || null;
+            if (myGroup) {
+              this.cellLeaderGroupId = myGroup.id;
+              this.cellLeaderGroupName = myGroup.name;
+            }
+          } else {
+            this.cellGroups = groups;
+          }
           this.loadingCellGroups = false;
         },
         error: () => {
@@ -160,7 +216,6 @@ export class EditMember implements OnInit, OnDestroy {
 
   private loadMember(): void {
     this.loadingMember = true;
-
     this.memberService
       .getMemberById(this.memberId)
       .pipe(takeUntil(this.destroy$))
@@ -172,6 +227,23 @@ export class EditMember implements OnInit, OnDestroy {
             this.originalPhotoUrl = member.photo_url;
           }
           this.loadingMember = false;
+
+          // ADD THIS BLOCK — prevent cell leader from editing members outside their cell
+          if (this.isCellLeader && this.cellLeaderGroupId) {
+            if (member.cell_group_id !== this.cellLeaderGroupId) {
+              this.errorMessage =
+                'You can only edit members in your own cell group.';
+              setTimeout(() => {
+                this.router.navigate(['main/members']);
+              }, 2000);
+              return;
+            }
+          }
+
+          // Lock the cell_group_id field for cell leaders (existing line)
+          if (this.isCellLeader) {
+            this.memberForm.get('cell_group_id')?.disable();
+          }
         },
         error: (error) => {
           this.errorMessage = error.message || 'Failed to load member details';
@@ -214,22 +286,18 @@ export class EditMember implements OnInit, OnDestroy {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files[0]) {
       const file = input.files[0];
-
       if (!file.type.startsWith('image/')) {
         this.errorMessage = 'Please select a valid image file (JPEG, PNG, GIF)';
         setTimeout(() => (this.errorMessage = ''), 3000);
         return;
       }
-
       if (file.size > 5 * 1024 * 1024) {
         this.errorMessage = 'Image size must be less than 5MB';
         setTimeout(() => (this.errorMessage = ''), 3000);
         return;
       }
-
       this.selectedPhoto = file;
       this.errorMessage = '';
-
       const reader = new FileReader();
       reader.onload = (e) => {
         this.photoPreview = e.target?.result as string;
@@ -250,13 +318,11 @@ export class EditMember implements OnInit, OnDestroy {
       this.scrollToFirstError();
       return;
     }
-
     this.loading = true;
     this.errorMessage = '';
     this.successMessage = '';
 
     const memberData = this.prepareMemberData();
-
     this.memberService
       .updateMember(this.memberId, memberData)
       .pipe(takeUntil(this.destroy$))
@@ -277,16 +343,20 @@ export class EditMember implements OnInit, OnDestroy {
       });
   }
 
+  // FIX 4: Uses getRawValue() (includes disabled controls) + cell leader safety net
   private prepareMemberData(): Partial<Member> {
-    const formValue = this.memberForm.value;
+    const formValue = this.memberForm.getRawValue();
     const memberData: any = {};
 
     Object.keys(formValue).forEach((key) => {
       const value = formValue[key];
-      // Send null explicitly for cell_group_id when cleared,
-      // skip other empty strings
       if (key === 'cell_group_id') {
-        memberData[key] = value || null;
+        if (this.isCellLeader) {
+          // Safety net: always preserve cell leader's group ID even if form bypassed
+          memberData[key] = this.cellLeaderGroupId || value || null;
+        } else {
+          memberData[key] = value || null;
+        }
       } else if (value !== '' && value !== null) {
         memberData[key] = value;
       }
@@ -297,9 +367,7 @@ export class EditMember implements OnInit, OnDestroy {
 
   private uploadPhoto(memberId: string): void {
     if (!this.selectedPhoto) return;
-
     this.uploadingPhoto = true;
-
     this.memberService
       .uploadMemberPhoto(memberId, this.selectedPhoto)
       .pipe(takeUntil(this.destroy$))
@@ -360,15 +428,12 @@ export class EditMember implements OnInit, OnDestroy {
     if (!control || !control.errors || !control.touched) return '';
     if (control.hasError('required')) return 'This field is required';
     if (control.hasError('email')) return 'Please enter a valid email address';
-    if (control.hasError('minlength')) {
+    if (control.hasError('minlength'))
       return `Minimum ${control.getError('minlength').requiredLength} characters required`;
-    }
-    if (control.hasError('maxlength')) {
+    if (control.hasError('maxlength'))
       return `Maximum ${control.getError('maxlength').requiredLength} characters allowed`;
-    }
-    if (control.hasError('pattern') && fieldName.includes('phone')) {
+    if (control.hasError('pattern') && fieldName.includes('phone'))
       return 'Please enter a valid 10-digit phone number (e.g., 0201234567)';
-    }
     return 'Invalid input';
   }
 

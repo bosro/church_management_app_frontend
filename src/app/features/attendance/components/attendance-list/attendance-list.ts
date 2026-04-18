@@ -4,8 +4,13 @@ import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { AttendanceService } from '../../services/attendance.service';
-import { AttendanceEvent, AttendanceEventType, AttendanceStatistics } from '../../../../models/attendance.model';
+import {
+  AttendanceEvent,
+  AttendanceEventType,
+  AttendanceStatistics,
+} from '../../../../models/attendance.model';
 import { PermissionService } from '../../../../core/services/permission.service';
+import { AuthService } from '../../../../core/services/auth';
 
 @Component({
   selector: 'app-attendance-list',
@@ -28,13 +33,13 @@ export class AttendanceList implements OnInit, OnDestroy {
 
   // Filters
   selectedEventType: AttendanceEventType | '' = '';
-  eventTypes: { value: AttendanceEventType | '', label: string }[] = [
+  eventTypes: { value: AttendanceEventType | ''; label: string }[] = [
     { value: '', label: 'All Events' },
     { value: 'sunday_service', label: 'Sunday Service' },
     { value: 'midweek_service', label: 'Midweek Service' },
     { value: 'ministry_meeting', label: 'Ministry Meeting' },
     { value: 'special_event', label: 'Special Event' },
-    { value: 'prayer_meeting', label: 'Prayer Meeting' }
+    { value: 'prayer_meeting', label: 'Prayer Meeting' },
   ];
 
   // Statistics
@@ -47,7 +52,8 @@ export class AttendanceList implements OnInit, OnDestroy {
   constructor(
     private attendanceService: AttendanceService,
     private router: Router,
-    public permissionService: PermissionService
+    public permissionService: PermissionService,
+    private authService: AuthService,
   ) {}
 
   ngOnInit(): void {
@@ -62,22 +68,64 @@ export class AttendanceList implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-  if (
-    !this.permissionService.isAdmin &&
-    !this.permissionService.attendance.view
-  ) {
-    this.router.navigate(['/unauthorized']);
-    return;
+    const role = this.authService.getCurrentUserRole();
+    // console.log('🔍 ATTENDANCE-LIST role:', role, '| viewRoles.includes:', ['pastor','senior_pastor','associate_pastor','ministry_leader','group_leader','cell_leader','finance_officer','elder','deacon','worship_leader','secretary','usher'].includes(role));
+    // console.log('🔍 ATTENDANCE checkPermissions — role:', role);
+    // console.log('🔍 isAdmin:', this.permissionService.isAdmin);
+    // console.log('🔍 attendance.view:', this.permissionService.attendance.view);
+
+    const viewRoles = [
+      'pastor',
+      'senior_pastor',
+      'associate_pastor',
+      'ministry_leader',
+      'group_leader',
+      'cell_leader',
+      'finance_officer',
+      'elder',
+      'deacon',
+      'worship_leader',
+      'secretary',
+      'usher',
+    ];
+    const manageRoles = [
+      'pastor',
+      'senior_pastor',
+      'associate_pastor',
+      'ministry_leader',
+    ];
+    const markRoles = [
+      'pastor',
+      'senior_pastor',
+      'associate_pastor',
+      'ministry_leader',
+      'group_leader',
+      'cell_leader',
+      'usher',
+    ];
+
+    const canView =
+      this.permissionService.isAdmin ||
+      this.permissionService.attendance.view ||
+      viewRoles.includes(role);
+
+    if (!canView) {
+      this.router.navigate(['/unauthorized']);
+      return;
+    }
+
+    this.canManageAttendance =
+      this.permissionService.isAdmin ||
+      this.permissionService.attendance.manage ||
+      manageRoles.includes(role);
+    this.canMarkAttendance =
+      this.permissionService.isAdmin ||
+      this.permissionService.attendance.checkin ||
+      markRoles.includes(role);
   }
-  this.canManageAttendance =
-    this.permissionService.isAdmin ||
-    this.permissionService.attendance.manage;
-  this.canMarkAttendance =
-    this.permissionService.isAdmin ||
-    this.permissionService.attendance.checkin;
-}
 
   loadEvents(): void {
+    console.log('kjnjnk');
     this.loading = true;
     this.errorMessage = '';
 
@@ -99,7 +147,7 @@ export class AttendanceList implements OnInit, OnDestroy {
           this.errorMessage = error.message || 'Failed to load events';
           this.loading = false;
           console.error('Error loading events:', error);
-        }
+        },
       });
   }
 
@@ -113,7 +161,7 @@ export class AttendanceList implements OnInit, OnDestroy {
         },
         error: (error) => {
           console.error('Error loading statistics:', error);
-        }
+        },
       });
   }
 
@@ -161,12 +209,13 @@ export class AttendanceList implements OnInit, OnDestroy {
       return;
     }
 
-    const attendanceEvent = this.events.find(e => e.id === eventId);
+    const attendanceEvent = this.events.find((e) => e.id === eventId);
     if (!attendanceEvent) return;
 
-    const confirmMessage = attendanceEvent.total_attendance > 0
-      ? `This event has ${attendanceEvent.total_attendance} attendance records. Are you sure you want to delete it?`
-      : 'Are you sure you want to delete this event?';
+    const confirmMessage =
+      attendanceEvent.total_attendance > 0
+        ? `This event has ${attendanceEvent.total_attendance} attendance records. Are you sure you want to delete it?`
+        : 'Are you sure you want to delete this event?';
 
     if (!confirm(confirmMessage)) {
       return;
@@ -183,7 +232,7 @@ export class AttendanceList implements OnInit, OnDestroy {
         error: (error) => {
           this.errorMessage = error.message || 'Failed to delete event';
           console.error('Delete error:', error);
-        }
+        },
       });
   }
 
@@ -206,17 +255,17 @@ export class AttendanceList implements OnInit, OnDestroy {
 
   // Helper methods
   getEventTypeLabel(type: string): string {
-    const eventType = this.eventTypes.find(et => et.value === type);
+    const eventType = this.eventTypes.find((et) => et.value === type);
     return eventType?.label || type;
   }
 
   getEventTypeClass(type: string): string {
     const typeMap: Record<string, string> = {
-      'sunday_service': 'type-sunday',
-      'midweek_service': 'type-midweek',
-      'ministry_meeting': 'type-ministry',
-      'special_event': 'type-special',
-      'prayer_meeting': 'type-prayer'
+      sunday_service: 'type-sunday',
+      midweek_service: 'type-midweek',
+      ministry_meeting: 'type-ministry',
+      special_event: 'type-special',
+      prayer_meeting: 'type-prayer',
     };
     return typeMap[type] || '';
   }
@@ -225,7 +274,9 @@ export class AttendanceList implements OnInit, OnDestroy {
     if (!event.expected_attendance || event.expected_attendance === 0) {
       return 0;
     }
-    return Math.round((event.total_attendance / event.expected_attendance) * 100);
+    return Math.round(
+      (event.total_attendance / event.expected_attendance) * 100,
+    );
   }
 
   getAttendanceRateClass(rate: number): string {
@@ -238,11 +289,5 @@ export class AttendanceList implements OnInit, OnDestroy {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }
-
-
-
-
-
-
 
 

@@ -6,6 +6,7 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { BranchesService } from '../../services/branches';
 import { PermissionService } from '../../../../core/services/permission.service';
+import { AuthService } from '../../../../core/services/auth';
 
 @Component({
   selector: 'app-create-branch',
@@ -28,7 +29,9 @@ export class CreateBranch implements OnInit, OnDestroy {
     private fb: FormBuilder,
     private branchesService: BranchesService,
     private router: Router,
-      public permissionService: PermissionService
+    public permissionService: PermissionService,
+        private authService: AuthService,
+    
   ) {}
 
   ngOnInit(): void {
@@ -41,28 +44,40 @@ export class CreateBranch implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
- private checkPermissions(): void {
+  private checkPermissions(): void {
+  const role = this.authService.getCurrentUserRole();
+
+  const manageRoles = ['super_admin', 'church_admin'];
+
   this.canManageBranches =
     this.permissionService.isAdmin ||
-    this.permissionService.branches.manage;
+    this.permissionService.branches.manage ||
+    manageRoles.includes(role);
 
   if (!this.canManageBranches) {
     this.router.navigate(['/unauthorized']);
   }
 }
 
- private initForm(): void {
-  this.branchForm = this.fb.group({
-    name: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(100)]],
-    address: ['', [Validators.maxLength(200)]],
-    city: ['', [Validators.maxLength(100)]],
-    state: ['', [Validators.maxLength(100)]],
-    country: ['', [Validators.maxLength(100)]],
-    phone: ['', [Validators.maxLength(20)]],
-    email: ['', [Validators.email, Validators.maxLength(100)]],
-    established_date: ['']
-  });
-}
+  private initForm(): void {
+    this.branchForm = this.fb.group({
+      name: [
+        '',
+        [
+          Validators.required,
+          Validators.minLength(3),
+          Validators.maxLength(100),
+        ],
+      ],
+      address: ['', [Validators.maxLength(200)]],
+      city: ['', [Validators.maxLength(100)]],
+      state: ['', [Validators.maxLength(100)]],
+      country: ['', [Validators.maxLength(100)]],
+      phone: ['', [Validators.maxLength(20)]],
+      email: ['', [Validators.email, Validators.maxLength(100)]],
+      established_date: [''],
+    });
+  }
 
   onSubmit(): void {
     if (this.branchForm.invalid) {
@@ -103,16 +118,19 @@ export class CreateBranch implements OnInit, OnDestroy {
         },
         error: (error) => {
           this.loading = false;
-          this.errorMessage = error.message || 'Failed to create branch. Please try again.';
+          this.errorMessage =
+            error.message || 'Failed to create branch. Please try again.';
           this.scrollToTop();
           console.error('Create branch error:', error);
-        }
+        },
       });
   }
 
   cancel(): void {
     if (this.branchForm.dirty) {
-      if (confirm('You have unsaved changes. Are you sure you want to leave?')) {
+      if (
+        confirm('You have unsaved changes. Are you sure you want to leave?')
+      ) {
         this.router.navigate(['main/branches']);
       }
     } else {
@@ -121,7 +139,7 @@ export class CreateBranch implements OnInit, OnDestroy {
   }
 
   private markFormGroupTouched(formGroup: FormGroup): void {
-    Object.keys(formGroup.controls).forEach(key => {
+    Object.keys(formGroup.controls).forEach((key) => {
       const control = formGroup.get(key);
       control?.markAsTouched();
 
@@ -160,12 +178,3 @@ export class CreateBranch implements OnInit, OnDestroy {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }
-
-
-
-
-
-
-
-
-

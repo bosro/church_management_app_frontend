@@ -14,6 +14,7 @@ import { Unauthorized } from './components/unauthorized/unauthorized';
 import { UpcomingEvents } from './components/upcoming-events/upcoming-events';
 import { QuotaGuard } from './components/quota-guard/quota-guard';
 import { UpgradeModal } from './components/upgrade-modal/upgrade-modal';
+import { AdBanner } from './components/ad-banner/ad-banner';
 
 @NgModule({
   declarations: [
@@ -30,6 +31,7 @@ import { UpgradeModal } from './components/upgrade-modal/upgrade-modal';
     UpcomingEvents,
     QuotaGuard,
     UpgradeModal,
+    AdBanner,
   ],
   imports: [CommonModule, ReactiveFormsModule, FormsModule],
   exports: [
@@ -45,7 +47,8 @@ import { UpgradeModal } from './components/upgrade-modal/upgrade-modal';
     ReactiveFormsModule,
     FormsModule,
     UpcomingEvents,
-    UpgradeModal
+    UpgradeModal,
+    AdBanner,
   ],
 })
 export class SharedModule {}

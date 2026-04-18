@@ -7,6 +7,7 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { SermonsService } from '../../services/sermons';
 import { Sermon } from '../../../../models/sermon.model';
 import { PermissionService } from '../../../../core/services/permission.service';
+import { AuthService } from '../../../../core/services/auth';
 
 @Component({
   selector: 'app-sermon-detail',
@@ -32,7 +33,8 @@ export class SermonDetail implements OnInit, OnDestroy {
     private router: Router,
     private sermonsService: SermonsService,
     private sanitizer: DomSanitizer,
-    public permissionService: PermissionService
+    public permissionService: PermissionService,
+    private authService: AuthService,
   ) {}
 
   ngOnInit(): void {
@@ -53,19 +55,46 @@ export class SermonDetail implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-private checkPermissions(): void {
-  const canView =
-    this.permissionService.isAdmin ||
-    this.permissionService.sermons.view;
+  private checkPermissions(): void {
+    const role = this.authService.getCurrentUserRole();
 
-  this.canManageSermons =
-    this.permissionService.isAdmin ||
-    this.permissionService.sermons.edit;
+    const viewRoles = [
+      'pastor',
+      'senior_pastor',
+      'associate_pastor',
+      'ministry_leader',
+      'group_leader',
+      'cell_leader',
+      'finance_officer',
+      'elder',
+      'deacon',
+      'worship_leader',
+      'secretary',
+    ];
+    const manageRoles = [
+      'pastor',
+      'senior_pastor',
+      'associate_pastor',
+      'worship_leader',
+    ];
 
-  if (!canView) {
-    this.router.navigate(['/unauthorized']);
+    const canView =
+      this.permissionService.isAdmin ||
+      this.permissionService.sermons.view ||
+      viewRoles.includes(role);
+
+    // FIX: was only checking sermons.edit — now includes upload and delete
+    this.canManageSermons =
+      this.permissionService.isAdmin ||
+      this.permissionService.sermons.upload ||
+      this.permissionService.sermons.edit ||
+      this.permissionService.sermons.delete ||
+      manageRoles.includes(role);
+
+    if (!canView) {
+      this.router.navigate(['/unauthorized']);
+    }
   }
-}
 
   private loadSermon(): void {
     this.loading = true;
@@ -75,7 +104,7 @@ private checkPermissions(): void {
       .getSermonById(this.sermonId)
       .pipe(
         takeUntil(this.destroy$),
-        finalize(() => this.loading = false)
+        finalize(() => (this.loading = false)),
       )
       .subscribe({
         next: (sermon) => {
@@ -85,7 +114,7 @@ private checkPermissions(): void {
         error: (error) => {
           this.errorMessage = error.message || 'Failed to load sermon';
           console.error('Error loading sermon:', error);
-        }
+        },
       });
   }
 
@@ -98,7 +127,7 @@ private checkPermissions(): void {
         error: (error) => {
           console.error('Error incrementing view count:', error);
           // Silently fail - this is non-critical
-        }
+        },
       });
   }
 
@@ -113,7 +142,8 @@ private checkPermissions(): void {
   }
 
   goBack(): void {
-    this.router.navigate(['main/sermon']);
+    // FIX: was 'main/sermon' (singular)
+    this.router.navigate(['main/sermons']);
   }
 
   editSermon(): void {
@@ -121,7 +151,8 @@ private checkPermissions(): void {
       alert('You do not have permission to edit sermons');
       return;
     }
-    this.router.navigate(['main/sermon', this.sermonId, 'edit']);
+    // FIX: was 'main/sermon' (singular)
+    this.router.navigate(['main/sermons', this.sermonId, 'edit']);
   }
 
   downloadAudio(): void {
@@ -135,7 +166,7 @@ private checkPermissions(): void {
         error: (error) => {
           console.error('Error incrementing download count:', error);
           // Silently fail - this is non-critical
-        }
+        },
       });
 
     // Open audio URL in new tab
@@ -153,7 +184,3 @@ private checkPermissions(): void {
     return this.sermonsService.formatDuration(minutes);
   }
 }
-
-
-
-

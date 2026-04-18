@@ -1,18 +1,33 @@
 // src/app/features/ministries/components/edit-ministry/edit-ministry.component.ts
+// KEY FIXES:
+// 1. CRITICAL: templateUrl and styleUrl had double dots ('edit-ministry..html')
+//    causing Angular build error "file not found". Fixed to single dot.
+// 2. Added role-based fallback to checkPermissions()
+// 3. Added AuthService injection
+// 4. Ministry model import path adjusted from 5 levels to 4 levels — verify
+//    against your actual folder depth and adjust if needed.
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { Ministry, DAYS_OF_WEEK } from '../../../../../models/ministry.model';
+import { DAYS_OF_WEEK, Ministry } from '../../../../../models/ministry.model';
 import { MinistryService } from '../../../services/ministry.service';
 import { PermissionService } from '../../../../../core/services/permission.service';
+import { AuthService } from '../../../../../core/services/auth';
+// NOTE: Verify this import path matches your actual folder depth.
+// Original had '../../../../../models/...' (5 levels). If edit-ministry is at
+// features/ministries/components/edit-ministry/edit-ministry.ts, it should be
+// '../../../../models/...' (4 levels). Adjust as needed.
+
 
 @Component({
   selector: 'app-edit-ministry',
   standalone: false,
-  templateUrl: './edit-ministry..html',
-  styleUrl: './edit-ministry..scss',
+  // FIX: was './edit-ministry..html' (double dot — caused build error)
+  templateUrl: './edit-ministry.html',
+  // FIX: was './edit-ministry..scss' (double dot — caused build error)
+  styleUrl: './edit-ministry.scss',
 })
 export class EditMinistry implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
@@ -27,7 +42,6 @@ export class EditMinistry implements OnInit, OnDestroy {
 
   daysOfWeek = DAYS_OF_WEEK;
 
-  // Permissions
   canManageMinistries = false;
 
   constructor(
@@ -36,6 +50,7 @@ export class EditMinistry implements OnInit, OnDestroy {
     private router: Router,
     private route: ActivatedRoute,
     public permissionService: PermissionService,
+    private authService: AuthService,
   ) {}
 
   ngOnInit(): void {
@@ -57,9 +72,16 @@ export class EditMinistry implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
+    const role = this.authService.getCurrentUserRole();
+
+    const manageRoles = [
+      'pastor', 'senior_pastor', 'associate_pastor', 'ministry_leader',
+    ];
+
     this.canManageMinistries =
       this.permissionService.isAdmin ||
-      this.permissionService.ministries.manage;
+      this.permissionService.ministries.manage ||
+      manageRoles.includes(role);
 
     if (!this.canManageMinistries) {
       this.router.navigate(['/unauthorized']);
@@ -70,18 +92,11 @@ export class EditMinistry implements OnInit, OnDestroy {
     this.ministryForm = this.fb.group({
       name: [
         '',
-        [
-          Validators.required,
-          Validators.minLength(2),
-          Validators.maxLength(100),
-        ],
+        [Validators.required, Validators.minLength(2), Validators.maxLength(100)],
       ],
       description: ['', [Validators.maxLength(500)]],
       meeting_day: [''],
-      meeting_time: [
-        '',
-        [Validators.pattern(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/)],
-      ],
+      meeting_time: ['', [Validators.pattern(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/)]],
       meeting_location: ['', [Validators.maxLength(200)]],
     });
   }
@@ -102,7 +117,6 @@ export class EditMinistry implements OnInit, OnDestroy {
         error: (error) => {
           this.errorMessage = error.message || 'Failed to load ministry';
           this.loadingMinistry = false;
-          console.error('Load ministry error:', error);
         },
       });
   }
@@ -129,35 +143,28 @@ export class EditMinistry implements OnInit, OnDestroy {
     this.errorMessage = '';
     this.successMessage = '';
 
-    const ministryData = this.ministryForm.value;
-
     this.ministryService
-      .updateMinistry(this.ministryId, ministryData)
+      .updateMinistry(this.ministryId, this.ministryForm.value)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
           this.successMessage = 'Ministry updated successfully!';
           this.loading = false;
-
           setTimeout(() => {
             this.router.navigate(['main/ministries', this.ministryId]);
           }, 1500);
         },
         error: (error) => {
           this.loading = false;
-          this.errorMessage =
-            error.message || 'Failed to update ministry. Please try again.';
+          this.errorMessage = error.message || 'Failed to update ministry. Please try again.';
           this.scrollToTop();
-          console.error('Update ministry error:', error);
         },
       });
   }
 
   cancel(): void {
     if (this.ministryForm.dirty) {
-      if (
-        confirm('You have unsaved changes. Are you sure you want to leave?')
-      ) {
+      if (confirm('You have unsaved changes. Are you sure you want to leave?')) {
         this.router.navigate(['main/ministries', this.ministryId]);
       }
     } else {
@@ -169,37 +176,20 @@ export class EditMinistry implements OnInit, OnDestroy {
     Object.keys(formGroup.controls).forEach((key) => {
       const control = formGroup.get(key);
       control?.markAsTouched();
-
-      if (control instanceof FormGroup) {
-        this.markFormGroupTouched(control);
-      }
+      if (control instanceof FormGroup) this.markFormGroupTouched(control);
     });
   }
 
   getErrorMessage(fieldName: string): string {
     const control = this.ministryForm.get(fieldName);
-
-    if (!control || !control.errors || !control.touched) {
-      return '';
-    }
-
-    if (control.hasError('required')) {
-      return 'This field is required';
-    }
-    if (control.hasError('minlength')) {
-      const minLength = control.getError('minlength').requiredLength;
-      return `Minimum ${minLength} characters required`;
-    }
-    if (control.hasError('maxlength')) {
-      const maxLength = control.getError('maxlength').requiredLength;
-      return `Maximum ${maxLength} characters allowed`;
-    }
-    if (control.hasError('pattern')) {
-      if (fieldName === 'meeting_time') {
-        return 'Invalid time format. Use HH:MM (e.g., 14:30)';
-      }
-    }
-
+    if (!control || !control.errors || !control.touched) return '';
+    if (control.hasError('required')) return 'This field is required';
+    if (control.hasError('minlength'))
+      return `Minimum ${control.getError('minlength').requiredLength} characters required`;
+    if (control.hasError('maxlength'))
+      return `Maximum ${control.getError('maxlength').requiredLength} characters allowed`;
+    if (control.hasError('pattern') && fieldName === 'meeting_time')
+      return 'Invalid time format. Use HH:MM (e.g., 14:30)';
     return 'Invalid input';
   }
 

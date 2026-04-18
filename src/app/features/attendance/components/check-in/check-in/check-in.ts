@@ -6,6 +6,7 @@ import { takeUntil } from 'rxjs/operators';
 import { AttendanceEvent } from '../../../../../models/attendance.model';
 import { AttendanceService } from '../../../services/attendance.service';
 import { PermissionService } from '../../../../../core/services/permission.service';
+import { AuthService } from '../../../../../core/services/auth';
 
 @Component({
   selector: 'app-check-in',
@@ -31,6 +32,7 @@ export class CheckIn implements OnInit, OnDestroy {
     private attendanceService: AttendanceService,
     private router: Router,
     public permissionService: PermissionService,
+    private authService: AuthService,
   ) {}
 
   ngOnInit(): void {
@@ -44,17 +46,24 @@ export class CheckIn implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-    if (
-      !this.permissionService.isAdmin &&
-      !this.permissionService.attendance.view &&
-      !this.permissionService.attendance.checkin
-    ) {
-      this.router.navigate(['/unauthorized']);
-      return;
-    }
-    this.canCreateEvent =
+    const role = this.authService.getCurrentUserRole();
+    const checkInRoles = [
+      'pastor',
+      'senior_pastor',
+      'associate_pastor',
+      'ministry_leader',
+      'group_leader',
+      'cell_leader',
+      'usher',
+    ];
+
+    const canCheckIn =
       this.permissionService.isAdmin ||
-      this.permissionService.attendance.manage;
+      this.permissionService.attendance.checkin ||
+      checkInRoles.includes(role);
+    if (!canCheckIn) {
+      this.router.navigate(['/unauthorized']);
+    }
   }
 
   private loadEvents(): void {
@@ -214,7 +223,3 @@ export class CheckIn implements OnInit, OnDestroy {
     return classes[eventType] || '';
   }
 }
-
-
-
-

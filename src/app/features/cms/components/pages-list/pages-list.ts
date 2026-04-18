@@ -6,6 +6,14 @@ import { takeUntil } from 'rxjs/operators';
 import { CmsService } from '../../services/cms';
 import { CmsPage } from '../../../../models/cms.model';
 import { PermissionService } from '../../../../core/services/permission.service';
+import { AuthService } from '../../../../core/services/auth';
+
+const CMS_VIEW_ROLES = [
+  'pastor', 'senior_pastor', 'associate_pastor', 'ministry_leader', 'secretary',
+];
+const CMS_MANAGE_ROLES = [
+  'pastor', 'senior_pastor', 'associate_pastor', 'ministry_leader',
+];
 
 @Component({
   selector: 'app-pages-list',
@@ -35,6 +43,7 @@ export class PagesList implements OnInit, OnDestroy {
     private cmsService: CmsService,
     private router: Router,
     public permissionService: PermissionService,
+    private authService: AuthService
   ) {}
 
   ngOnInit(): void {
@@ -47,20 +56,23 @@ export class PagesList implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  private checkPermissions(): void {
-    const canView =
-      this.permissionService.isAdmin || this.permissionService.settings.view;
+private checkPermissions(): void {
+  const role = this.authService.getCurrentUserRole();
 
-    this.canManageContent =
-      this.permissionService.isAdmin || this.permissionService.settings.manage;
+  const canView =
+    this.permissionService.isAdmin ||
+    CMS_VIEW_ROLES.includes(role);
 
-    this.canPublishContent =
-      this.permissionService.isAdmin || this.permissionService.settings.manage;
+  this.canManageContent =
+    this.permissionService.isAdmin ||
+    CMS_MANAGE_ROLES.includes(role);
 
-    if (!canView) {
-      this.router.navigate(['/unauthorized']);
-    }
+  this.canPublishContent = this.canManageContent;
+
+  if (!canView) {
+    this.router.navigate(['/unauthorized']);
   }
+}
 
   loadPages(): void {
     this.loading = true;
@@ -203,3 +215,6 @@ export class PagesList implements OnInit, OnDestroy {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }
+
+
+

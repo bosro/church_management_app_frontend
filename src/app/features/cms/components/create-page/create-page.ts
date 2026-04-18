@@ -6,6 +6,14 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { CmsService } from '../../services/cms';
 import { PermissionService } from '../../../../core/services/permission.service';
+import { AuthService } from '../../../../core/services/auth';
+
+const CMS_VIEW_ROLES = [
+  'pastor', 'senior_pastor', 'associate_pastor', 'ministry_leader', 'secretary',
+];
+const CMS_MANAGE_ROLES = [
+  'pastor', 'senior_pastor', 'associate_pastor', 'ministry_leader',
+];
 
 @Component({
   selector: 'app-create-page',
@@ -29,6 +37,7 @@ export class CreatePage implements OnInit, OnDestroy {
     private cmsService: CmsService,
     private router: Router,
     public permissionService: PermissionService,
+    private authService: AuthService
   ) {}
 
   ngOnInit(): void {
@@ -41,14 +50,17 @@ export class CreatePage implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  private checkPermissions(): void {
-    this.canManageContent =
-      this.permissionService.isAdmin || this.permissionService.settings.manage;
+private checkPermissions(): void {
+  const role = this.authService.getCurrentUserRole();
 
-    if (!this.canManageContent) {
-      this.router.navigate(['/unauthorized']);
-    }
+  this.canManageContent =
+    this.permissionService.isAdmin ||
+    CMS_MANAGE_ROLES.includes(role);
+
+  if (!this.canManageContent) {
+    this.router.navigate(['/unauthorized']);
   }
+}
 
   private initForm(): void {
     this.pageForm = this.fb.group({
@@ -149,3 +161,5 @@ export class CreatePage implements OnInit, OnDestroy {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }
+
+

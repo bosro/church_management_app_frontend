@@ -600,59 +600,7 @@
   }
 }
 
-// Calendar View Placeholder
-.calendar-view {
-  .calendar-placeholder {
-    background: white;
-    border-radius: 12px;
-    padding: 4rem 2rem;
-    //box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
 
-    i {
-      font-size: 4rem;
-      color: #D1D5DB;
-      margin-bottom: 1.5rem;
-    }
-
-    h3 {
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: #111827;
-      margin: 0 0 0.5rem 0;
-    }
-
-    p {
-      font-size: 1rem;
-      color: #6B7280;
-      margin: 0 0 1.5rem 0;
-    }
-
-    .btn-secondary {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.875rem 1.5rem;
-      background: white;
-      color: #374151;
-      border: 1px solid #E5E7EB;
-      border-radius: 8px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s;
-      font-family: 'Nunito Sans', sans-serif;
-
-      &:hover {
-        background: #F9FAFB;
-        border-color: #5B21B6;
-        color: #5B21B6;
-      }
-    }
-  }
-}
 
 // Pagination
 .pagination {
@@ -765,3 +713,517 @@
 
 
 
+
+
+
+// ── Calendar View ────────────────────────────────────────────
+.calendar-view {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+// ── Calendar Header ──────────────────────────────────────────
+.calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  background: white;
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+
+  .calendar-nav {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+
+    .calendar-title {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: #111827;
+      margin: 0;
+      min-width: 180px;
+      text-align: center;
+    }
+
+    .nav-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      border: 1px solid #E5E7EB;
+      background: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: 'Nunito Sans', sans-serif;
+
+      i {
+        font-size: 1.25rem;
+        color: #374151;
+      }
+
+      &:hover {
+        background: #F5F3FF;
+        border-color: #5B21B6;
+        i { color: #5B21B6; }
+      }
+    }
+  }
+
+  .today-btn {
+    padding: 0.5rem 1.25rem;
+    border-radius: 8px;
+    border: 1px solid #5B21B6;
+    background: white;
+    color: #5B21B6;
+    font-size: 0.875rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'Nunito Sans', sans-serif;
+
+    &:hover {
+      background: #5B21B6;
+      color: white;
+    }
+  }
+
+  .calendar-legend {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+      font-size: 0.8125rem;
+      color: #6B7280;
+      font-weight: 600;
+    }
+
+    .legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+
+      &.today-dot    { background: #5B21B6; }
+      &.upcoming-dot { background: #059669; }
+      &.past-dot     { background: #9CA3AF; }
+    }
+  }
+}
+
+// ── Calendar Grid ─────────────────────────────────────────────
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+  background: #E5E7EB;
+  border-radius: 12px;
+  overflow: hidden;
+
+  .day-header {
+    background: #F5F3FF;
+    padding: 0.625rem 0;
+    text-align: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #5B21B6;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .calendar-cell {
+    background: white;
+    min-height: 120px;
+    padding: 0.5rem;
+    cursor: pointer;
+    transition: background 0.15s;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    &:hover {
+      background: #FAFAF9;
+    }
+
+    &.other-month {
+      background: #FAFAFA;
+
+      .cell-date { color: #D1D5DB; }
+      .event-pill { opacity: 0.5; }
+    }
+
+    &.is-today {
+      background: #F5F3FF;
+    }
+
+    .cell-date {
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: #374151;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      align-self: flex-start;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      flex-shrink: 0;
+
+      &.today-badge {
+        background: #5B21B6;
+        color: white;
+      }
+    }
+
+    .cell-events {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      flex: 1;
+      min-width: 0;
+    }
+  }
+}
+
+// ── Event Pills ───────────────────────────────────────────────
+.event-pill {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  overflow: hidden;
+  white-space: nowrap;
+
+  &:hover { opacity: 0.8; }
+
+  &.pill-past { opacity: 0.55; }
+
+  .pill-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+  }
+
+  .pill-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  // Reuse existing type classes already defined on .event-type-badge
+  &.type-service    { background: #DBEAFE; color: #1E40AF; }
+  &.type-meeting    { background: #FEF3C7; color: #92400E; }
+  &.type-conference { background: #DDD6FE; color: #6B21A8; }
+  &.type-seminar    { background: #EDE9FE; color: #5B21B6; }
+  &.type-retreat    { background: #D1FAE5; color: #065F46; }
+  &.type-workshop   { background: #FECACA; color: #991B1B; }
+  &.type-outreach   { background: #FEF9C3; color: #854D0E; }
+  &.type-social     { background: #FCE7F3; color: #831843; }
+  &.type-youth      { background: #E0F2FE; color: #0369A1; }
+  &.type-children   { background: #DCFCE7; color: #166534; }
+  &.type-other      { background: #F3F4F6; color: #374151; }
+}
+
+.overflow-count {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #5B21B6;
+  padding: 1px 6px;
+}
+
+// ── Day Detail Panel ──────────────────────────────────────────
+.day-detail {
+  background: white;
+  border-radius: 12px;
+  border: 2px solid #5B21B6;
+  overflow: hidden;
+
+  .detail-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.5rem;
+    background: linear-gradient(135deg, #5B21B6 0%, #7C3AED 100%);
+    color: white;
+
+    h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin: 0;
+    }
+
+    .close-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      border: none;
+      background: rgba(255,255,255,0.15);
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s;
+      font-family: 'Nunito Sans', sans-serif;
+
+      i { font-size: 1.125rem; }
+
+      &:hover { background: rgba(255,255,255,0.25); }
+    }
+  }
+
+  .detail-events {
+    display: flex;
+    flex-direction: column;
+    padding: 1rem 1.5rem;
+    gap: 0.75rem;
+  }
+
+  .detail-event-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1rem;
+    border-radius: 10px;
+    border: 1px solid #F3F4F6;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: #FAFAFA;
+
+    &:hover {
+      background: #F5F3FF;
+      border-color: #5B21B6;
+    }
+
+    &.past-event { opacity: 0.7; }
+
+    .detail-event-left {
+      .detail-date-badge {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 48px;
+        height: 48px;
+        background: linear-gradient(135deg, #F5F3FF, #EDE9FE);
+        color: #5B21B6;
+        border-radius: 8px;
+        justify-content: center;
+
+        .date-day   { font-size: 1.25rem; font-weight: 800; line-height: 1; }
+        .date-month { font-size: 0.625rem; font-weight: 700; text-transform: uppercase; }
+      }
+    }
+
+    .detail-event-body {
+      flex: 1;
+      min-width: 0;
+
+      .event-type-badge {
+        display: inline-flex;
+        padding: 0.2rem 0.625rem;
+        border-radius: 10px;
+        font-size: 0.6875rem;
+        font-weight: 600;
+        margin-bottom: 0.375rem;
+
+        &.type-service    { background: #DBEAFE; color: #1E40AF; }
+        &.type-meeting    { background: #FEF3C7; color: #92400E; }
+        &.type-conference { background: #DDD6FE; color: #6B21A8; }
+        &.type-seminar    { background: #EDE9FE; color: #5B21B6; }
+        &.type-retreat    { background: #D1FAE5; color: #065F46; }
+        &.type-workshop   { background: #FECACA; color: #991B1B; }
+        &.type-outreach   { background: #FEF9C3; color: #854D0E; }
+        &.type-social     { background: #FCE7F3; color: #831843; }
+        &.type-youth      { background: #E0F2FE; color: #0369A1; }
+        &.type-children   { background: #DCFCE7; color: #166534; }
+        &.type-other      { background: #F3F4F6; color: #374151; }
+      }
+
+      h4 {
+        font-size: 0.9375rem;
+        font-weight: 700;
+        color: #111827;
+        margin: 0 0 0.375rem 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .detail-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.625rem;
+        margin-bottom: 0.5rem;
+
+        .meta-item {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          font-size: 0.8125rem;
+          color: #6B7280;
+
+          i { font-size: 0.875rem; color: #9CA3AF; }
+        }
+      }
+
+      .detail-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.375rem;
+
+        .badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.25rem;
+          padding: 0.2rem 0.625rem;
+          border-radius: 10px;
+          font-size: 0.6875rem;
+          font-weight: 600;
+
+          i { font-size: 0.75rem; }
+
+          &.badge-today    { background: #FEF3C7; color: #92400E; }
+          &.badge-upcoming { background: #D1FAE5; color: #065F46; }
+          &.badge-past     { background: #F3F4F6; color: #6B7280; }
+          &.badge-public   { background: #DBEAFE; color: #1E40AF; }
+        }
+      }
+    }
+
+    .detail-event-actions {
+      display: flex;
+      gap: 0.375rem;
+      flex-shrink: 0;
+
+      .btn-icon-small {
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: white;
+        border: 1px solid #E5E7EB;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s;
+
+        i { font-size: 0.875rem; color: #6B7280; }
+
+        &:hover {
+          background: #F9FAFB;
+          border-color: #5B21B6;
+          i { color: #5B21B6; }
+        }
+
+        &.btn-danger:hover {
+          background: #FEE2E2;
+          border-color: #FCA5A5;
+          i { color: #DC2626; }
+        }
+      }
+    }
+  }
+}
+
+// ── Responsive ────────────────────────────────────────────────
+@media (max-width: 900px) {
+  .calendar-grid {
+    .calendar-cell {
+      min-height: 80px;
+      padding: 0.375rem;
+    }
+  }
+
+  .event-pill .pill-label {
+    display: none;  // on small screens show dot only
+  }
+
+  .event-pill {
+    padding: 3px;
+    border-radius: 50%;
+    width: 10px;
+    height: 10px;
+    min-width: 10px;
+
+    .pill-dot {
+      width: 6px;
+      height: 6px;
+    }
+  }
+
+  .overflow-count {
+    font-size: 0.625rem;
+    padding: 1px 2px;
+  }
+}
+
+@media (max-width: 600px) {
+  .calendar-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+
+    .calendar-nav .calendar-title {
+      font-size: 1rem;
+      min-width: 140px;
+    }
+
+    .calendar-legend {
+      gap: 0.75rem;
+    }
+  }
+
+  .calendar-grid {
+    .day-header {
+      font-size: 0.625rem;
+      padding: 0.5rem 0;
+    }
+
+    .calendar-cell {
+      min-height: 60px;
+      padding: 0.25rem;
+
+      .cell-date {
+        width: 22px;
+        height: 22px;
+        font-size: 0.75rem;
+      }
+    }
+  }
+
+  .day-detail {
+    .detail-header h3 {
+      font-size: 0.875rem;
+    }
+
+    .detail-events {
+      padding: 0.75rem 1rem;
+    }
+
+    .detail-event-card {
+      flex-direction: column;
+      gap: 0.625rem;
+
+      .detail-event-actions {
+        align-self: flex-end;
+      }
+    }
+  }
+}

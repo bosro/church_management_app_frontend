@@ -1,5 +1,11 @@
 // src/app/features/finance/components/finance-reports/finance-reports.component.ts
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  OnDestroy,
+  ElementRef,
+  ViewChild,
+} from '@angular/core';
 import { FormControl } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
@@ -18,6 +24,7 @@ import { Location } from '@angular/common';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { AuthService } from '../../../../core/services/auth';
 
 @Component({
   selector: 'app-finance-reports',
@@ -27,6 +34,8 @@ import autoTable from 'jspdf-autotable';
 })
 export class FinanceReports implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
+
+  @ViewChild('giversSection') giversSection!: ElementRef;
 
   loading = true;
   statistics: GivingStatistics | null = null;
@@ -78,6 +87,7 @@ export class FinanceReports implements OnInit, OnDestroy {
     private router: Router,
     public permissionService: PermissionService,
     private location: Location,
+    private authService: AuthService,
   ) {
     const currentYear = new Date().getFullYear();
     for (let i = 0; i < 10; i++) {
@@ -97,15 +107,22 @@ export class FinanceReports implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-    this.canViewFinance =
-      this.permissionService.isAdmin ||
-      this.permissionService.finance.view ||
-      this.permissionService.finance.reports;
+  const role = this.authService.getCurrentUserRole();
 
-    if (!this.canViewFinance) {
-      this.router.navigate(['/unauthorized']);
-    }
+  const viewRoles = [
+    'pastor', 'senior_pastor', 'associate_pastor', 'finance_officer',
+  ];
+
+  this.canViewFinance =
+    this.permissionService.isAdmin ||
+    this.permissionService.finance.view ||
+    this.permissionService.finance.reports ||
+    viewRoles.includes(role);
+
+  if (!this.canViewFinance) {
+    this.router.navigate(['/unauthorized']);
   }
+}
 
   // ── Overview stats & top givers ────────────────────────────
 
@@ -195,13 +212,21 @@ export class FinanceReports implements OnInit, OnDestroy {
 
   selectCategory(stat: CategoryGivingStat): void {
     if (this.selectedCategory?.category_id === stat.category_id) {
-      // Toggle off
       this.selectedCategory = null;
       this.categoryGivers = [];
       return;
     }
     this.selectedCategory = stat;
     this.loadCategoryGivers(stat.category_id);
+
+    // Scroll to the drill-down table after a short delay
+    // (delay allows Angular to render the section first)
+    setTimeout(() => {
+      this.giversSection?.nativeElement?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    }, 150);
   }
 
   private loadCategoryGivers(categoryId: string): void {
@@ -759,3 +784,5 @@ export class FinanceReports implements OnInit, OnDestroy {
     this.location.back();
   }
 }
+
+

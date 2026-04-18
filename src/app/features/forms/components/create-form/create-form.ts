@@ -6,6 +6,8 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { FormField, FieldType } from '../../../../models/form.model';
 import { FormsService } from '../../services/forms';
+import { PermissionService } from '../../../../core/services/permission.service';
+import { AuthService } from '../../../../core/services/auth';
 
 @Component({
   selector: 'app-create-form',
@@ -57,6 +59,8 @@ export class CreateForm implements OnInit, OnDestroy {
     private fb: FormBuilder,
     private formsService: FormsService,
     private router: Router,
+    public permissionService: PermissionService,
+    private authService: AuthService,
   ) {}
 
   ngOnInit(): void {
@@ -70,7 +74,21 @@ export class CreateForm implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-    this.canManageForms = this.formsService.canManageForms();
+    const role = this.authService.getCurrentUserRole();
+
+    const manageRoles = [
+      'pastor',
+      'senior_pastor',
+      'associate_pastor',
+      'ministry_leader',
+      'group_leader',
+    ];
+
+    this.canManageForms =
+      this.permissionService.isAdmin ||
+      (this.permissionService.forms as any)?.manage ||
+      this.formsService.canManageForms() ||
+      manageRoles.includes(role);
 
     if (!this.canManageForms) {
       this.router.navigate(['/unauthorized']);

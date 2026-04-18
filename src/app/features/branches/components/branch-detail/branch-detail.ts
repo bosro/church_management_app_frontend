@@ -13,6 +13,7 @@ import {
 import { Member } from '../../../../models/member.model';
 import { PermissionService } from '../../../../core/services/permission.service';
 import { BranchesService } from '../../services/branches';
+import { AuthService } from '../../../../core/services/auth';
 
 @Component({
   selector: 'app-branch-detail',
@@ -65,6 +66,7 @@ export class BranchDetail implements OnInit, OnDestroy {
     private router: Router,
     private route: ActivatedRoute,
     public permissionService: PermissionService,
+    private authService: AuthService,
   ) {}
 
   ngOnInit(): void {
@@ -90,18 +92,35 @@ export class BranchDetail implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
+    const role = this.authService.getCurrentUserRole();
+
+    const viewRoles = ['super_admin', 'church_admin'];
+    const manageRoles = ['super_admin', 'church_admin'];
+
+    // FIX: canViewInsights previously only checked church_admin role,
+    // which meant pastors could never see the insights tab for their own branch.
+    // Insights are now shown to any user who can manage branches.
+    const insightRoles = ['super_admin', 'church_admin'];
+
     this.canManageBranches =
-      this.permissionService.isAdmin || this.permissionService.branches.manage;
+      this.permissionService.isAdmin ||
+      this.permissionService.branches.manage ||
+      manageRoles.includes(role);
 
     this.canAssignMembers =
-      this.permissionService.isAdmin || this.permissionService.branches.assign;
+      this.permissionService.isAdmin ||
+      this.permissionService.branches.assign ||
+      manageRoles.includes(role);
 
     this.canViewInsights =
       this.permissionService.isAdmin ||
-      this.permissionService.hasRole(['church_admin']);
+      this.permissionService.branches.manage ||
+      insightRoles.includes(role);
 
     const canView =
-      this.permissionService.isAdmin || this.permissionService.branches.view;
+      this.permissionService.isAdmin ||
+      this.permissionService.branches.view ||
+      viewRoles.includes(role);
 
     if (!canView) {
       this.router.navigate(['/unauthorized']);

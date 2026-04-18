@@ -54,8 +54,14 @@ export class MemberList implements OnInit, OnDestroy {
   filteredMemberCount = 0;
 
   showExportModal = false;
-exporting = false;
+  exporting = false;
 
+  // Add these properties after the existing ones:
+  isCellLeader = false;
+  currentUserId = '';
+  cellLeaderGroupId: string | null = null;
+
+  sortOrder: 'created_at_desc' | 'name_asc' | 'name_desc' = 'created_at_desc';
 
   constructor(
     private memberService: MemberService,
@@ -68,9 +74,25 @@ exporting = false;
 
   ngOnInit(): void {
     this.setPermissions();
+
+    const role = this.authService.getCurrentUserRole();
+    this.isCellLeader = role === 'cell_leader';
+    this.currentUserId = this.authService.getUserId();
+
+    if (this.isCellLeader) {
+      this.memberService
+        .getCellGroups()
+        .pipe(takeUntil(this.destroy$))
+        .subscribe((groups) => {
+          const myGroup = groups.find(
+            (g) => g.leader_id === this.currentUserId,
+          );
+          if (myGroup) this.cellLeaderGroupId = myGroup.id;
+        });
+    }
+
     this.initFilterForm();
 
-    // Check for birthday filter from query params
     this.route.queryParams
       .pipe(takeUntil(this.destroy$))
       .subscribe((params) => {
@@ -84,7 +106,6 @@ exporting = false;
     this.loadStatistics();
     this.setupFilterListener();
 
-    // Load view mode from localStorage
     const savedViewMode = localStorage.getItem('members-view-mode');
     if (savedViewMode === 'grid' || savedViewMode === 'list') {
       this.viewMode = savedViewMode;
@@ -96,12 +117,79 @@ exporting = false;
     this.destroy$.complete();
   }
 
+  // Returns true if this member is in the cell leader's group
+  isMyCell(member: Member): boolean {
+    if (!this.isCellLeader) return true; // non-cell-leaders can edit anyone
+    return member.cell_group_id === this.cellLeaderGroupId;
+  }
+
+  // Cell leader filter — loads only their cell members
+  filterMyCellMembers(): void {
+    // Don't use filterForm.patchValue here — it triggers the debounced listener
+    // which calls loadMembers() with the OLD filters before we can update them.
+    // Instead: reset form silently, set filters directly, then load.
+    this.filterForm.reset(
+      { search: '', gender: '', status: '', branch: '', ministry: '' },
+      { emitEvent: false }, // ← prevents triggering setupFilterListener
+    );
+    this.filters = {
+      cell_group_filter: this.cellLeaderGroupId || undefined,
+      sort_by: this.sortOrder,
+    };
+    this.currentPage = 1;
+    this.loadMembers();
+  }
+
+  setSortOrder(order: 'created_at_desc' | 'name_asc' | 'name_desc'): void {
+    this.sortOrder = order;
+    this.filters = { ...this.filters, sort_by: order };
+    this.currentPage = 1;
+    this.loadMembers();
+  }
+
   private setPermissions(): void {
+    const role = this.authService.getCurrentUserRole();
+
+    // Roles that inherently have view access (routing guard already checked,
+    // but we keep this consistent for any inline template checks)
+    const viewRoles = [
+      'pastor',
+      'senior_pastor',
+      'associate_pastor',
+      'group_leader',
+      'cell_leader',
+      'ministry_leader',
+      'elder',
+      'deacon',
+      'worship_leader',
+      'finance_officer',
+    ];
+
+    // Add/create: admins, pastors, group/cell leaders (they manage their members)
+    const createRoles = [
+      'pastor',
+      'senior_pastor',
+      'associate_pastor',
+      'group_leader',
+      'cell_leader',
+    ];
+
+    // Edit: admins, pastors
+    const editRoles = ['pastor', 'senior_pastor', 'associate_pastor'];
+
+    // Delete: admins only (no role bypass — too destructive)
+    // Import/Export: admins + pastors
+    const importExportRoles = ['pastor', 'senior_pastor', 'associate_pastor'];
+
     this.canAddMember =
-      this.permissionService.isAdmin || this.permissionService.members.create;
+      this.permissionService.isAdmin ||
+      this.permissionService.members.create ||
+      createRoles.includes(role);
 
     this.canEditMember =
-      this.permissionService.isAdmin || this.permissionService.members.edit;
+      this.permissionService.isAdmin ||
+      this.permissionService.members.edit ||
+      editRoles.includes(role);
 
     this.canDeleteMember =
       this.permissionService.isAdmin || this.permissionService.members.delete;
@@ -109,7 +197,8 @@ exporting = false;
     this.canImportExport =
       this.permissionService.isAdmin ||
       this.permissionService.members.export ||
-      this.permissionService.members.import;
+      this.permissionService.members.import ||
+      importExportRoles.includes(role);
   }
 
   private initFilterForm(): void {
@@ -131,7 +220,7 @@ exporting = false;
           gender_filter: values.gender || undefined,
           status_filter: values.status || undefined,
           branch_filter: values.branch || undefined,
-          ministry_filter: values.ministry || undefined,
+          sort_by: this.sortOrder, // ← persist sort across filter changes
         };
         this.currentPage = 1;
         this.loadMembers();
@@ -158,11 +247,8 @@ exporting = false;
           this.totalMembers = members.length;
           this.totalPages = 1;
           this.loading = false;
-
-          // ✅ FIXED: Update birthday notice count and show it
           this.filteredMemberCount = members.length;
           this.showBirthdayNotice = true;
-          // ✅ REMOVED: The error message that was creating the unstyled notice
         },
         error: (error) => {
           this.error =
@@ -176,7 +262,7 @@ exporting = false;
   loadMembers(): void {
     this.loading = true;
     this.error = '';
-    this.showBirthdayNotice = false; // ✅ Hide birthday notice when loading regular members
+    this.showBirthdayNotice = false;
 
     this.memberService
       .getMembers(this.filters, this.currentPage, this.pageSize)
@@ -206,7 +292,6 @@ exporting = false;
         next: (stats) => {
           this.statistics = stats;
           this.loadingStats = false;
-          // console.log('Statistics loaded:', stats);
         },
         error: (error) => {
           console.error('Error loading statistics:', error);
@@ -286,49 +371,50 @@ exporting = false;
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  // Export
   exportMembers(): void {
-  if (!this.canImportExport) {
-    this.error = 'You do not have permission to export members';
-    setTimeout(() => (this.error = ''), 3000);
-    return;
+    if (!this.canImportExport) {
+      this.error = 'You do not have permission to export members';
+      setTimeout(() => (this.error = ''), 3000);
+      return;
+    }
+    this.showExportModal = true;
   }
-  this.showExportModal = true;
-}
 
-exportAs(format: 'csv' | 'excel' | 'pdf'): void {
-  this.exporting = true;
-  this.showExportModal = false;
+  exportAs(format: 'csv' | 'excel' | 'pdf'): void {
+    this.exporting = true;
+    this.showExportModal = false;
 
-  const today = new Date().toISOString().split('T')[0];
-  const fileName = `members_export_${today}`;
-  const ext = format === 'excel' ? 'xlsx' : format;
+    const today = new Date().toISOString().split('T')[0];
+    const fileName = `members_export_${today}`;
+    const ext = format === 'excel' ? 'xlsx' : format;
 
-  const export$ =
-    format === 'excel' ? this.memberService.exportMembersToExcel(this.filters) :
-    format === 'pdf'   ? this.memberService.exportMembersToPDF(this.filters) :
-                         this.memberService.exportMembersToCSV(this.filters);
+    const export$ =
+      format === 'excel'
+        ? this.memberService.exportMembersToExcel(this.filters)
+        : format === 'pdf'
+          ? this.memberService.exportMembersToPDF(this.filters)
+          : this.memberService.exportMembersToCSV(this.filters);
 
-  export$.pipe(takeUntil(this.destroy$)).subscribe({
-    next: (blob) => {
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${fileName}.${ext}`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      this.exporting = false;
-    },
-    error: (err) => {
-      this.exporting = false;
-      this.error = 'Failed to export members: ' + (err.message || 'Unknown error');
-    },
-  });
-}
+    export$.pipe(takeUntil(this.destroy$)).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${fileName}.${ext}`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        this.exporting = false;
+      },
+      error: (err) => {
+        this.exporting = false;
+        this.error =
+          'Failed to export members: ' + (err.message || 'Unknown error');
+      },
+    });
+  }
 
-  // Delete member
   deleteMember(memberId: string, event: Event): void {
     event.stopPropagation();
 
@@ -360,14 +446,13 @@ exportAs(format: 'csv' | 'excel' | 'pdf'): void {
     }
   }
 
-  // View toggle
   toggleViewMode(): void {
     this.viewMode = this.viewMode === 'list' ? 'grid' : 'list';
     localStorage.setItem('members-view-mode', this.viewMode);
   }
 
-  // Clear filters
   clearFilters(): void {
+    this.sortOrder = 'created_at_desc';
     this.filterForm.reset({
       search: '',
       gender: '',
@@ -379,7 +464,6 @@ exportAs(format: 'csv' | 'excel' | 'pdf'): void {
     this.currentPage = 1;
   }
 
-  // Helper methods
   getMemberFullName(member: Member): string {
     return `${member.first_name} ${member.middle_name || ''} ${member.last_name}`.trim();
   }
@@ -422,19 +506,8 @@ exportAs(format: 'csv' | 'excel' | 'pdf'): void {
     this.router.navigate(['main/members/registration-links']);
   }
 
-  // ✅ FIXED: Close birthday notice
   closeBirthdayNotice(): void {
     this.showBirthdayNotice = false;
-    // Optionally navigate back to all members
     this.router.navigate(['main/members']);
   }
 }
-
-
-
-
-
-
-
-
-

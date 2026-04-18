@@ -6,6 +6,7 @@ import { User } from '../../../models/user.model';
 import { AuthService } from '../../../core/services/auth';
 import { SidebarService } from '../../../core/services/sidebar.service';
 import { UserRolesService } from '../../../features/user-roles/services/user-roles';
+import { SubscriptionService } from '../../../core/services/subscription.service';
 
 interface MenuItem {
   icon: string;
@@ -321,15 +322,27 @@ export class Sidebar implements OnInit {
   isMobileMenuOpen = false;
   isMobile = false;
 
+  bannerDismissed = false;
+
+  subscriptionLoaded = false;
+
   constructor(
     private router: Router,
     public authService: AuthService,
     private sidebarService: SidebarService,
     private userRolesService: UserRolesService,
+    public subscriptionService: SubscriptionService,
   ) {}
 
   ngOnInit(): void {
     this.checkScreenSize();
+    this.bannerDismissed =
+      sessionStorage.getItem('upgrade-banner-dismissed') === 'true';
+
+    // Wait for subscription status to load before showing banner
+    this.subscriptionService.status$.subscribe((status) => {
+      this.subscriptionLoaded = status !== null;
+    });
 
     this.authService.currentProfile$.subscribe((profile) => {
       this.currentUser = profile;
@@ -358,6 +371,32 @@ export class Sidebar implements OnInit {
     this.checkScreenSize();
   }
 
+  get currentPlanName(): string {
+    return this.subscriptionService.currentTier === 'starter'
+      ? 'Starter'
+      : 'Free';
+  }
+
+  get showUpgradeBanner(): boolean {
+    if (!this.subscriptionLoaded) return false; // ← don't flash before data loads
+    if (this.bannerDismissed) return false;
+    const role = this.currentUser?.role;
+    if (!role || role === 'super_admin') return false;
+    return this.subscriptionService.isFreeTier;
+  }
+
+  dismissBanner(): void {
+    this.bannerDismissed = true;
+    // Remember for this session
+    sessionStorage.setItem('upgrade-banner-dismissed', 'true');
+  }
+
+  navigateToUpgrade(): void {
+    this.router.navigate(['/main/settings'], {
+      queryParams: { tab: 'subscription' },
+    });
+  }
+
   private checkScreenSize(): void {
     this.isMobile = window.innerWidth <= 768;
     if (!this.isMobile) {
@@ -371,30 +410,30 @@ export class Sidebar implements OnInit {
       return;
     }
 
-    this.filteredMenuItems = this.menuItems.filter((item) => {
-      if (item.excludeRoles?.includes(this.currentUser!.role)) return false;
+    this.filteredMenuItems = this.menuItems
+      .filter((item) => {
+        if (item.excludeRoles?.includes(this.currentUser!.role)) return false;
+        if (
+          item.featureFlag &&
+          !this.authService.hasChurchFeature(item.featureFlag)
+        )
+          return false;
 
-      if (
-        item.featureFlag &&
-        !this.authService.hasChurchFeature(item.featureFlag)
-      ) {
-        return false;
-      }
+        const hasRole =
+          !item.roles || item.roles.length === 0
+            ? true
+            : item.roles.includes(this.currentUser!.role);
+        const hasPermission = item.permission
+          ? this.userRolesService.hasPermission(item.permission)
+          : false;
 
-      const hasRole =
-        !item.roles || item.roles.length === 0
-          ? true
-          : item.roles.includes(this.currentUser!.role);
+        return hasRole || hasPermission;
+      })
+      .map((item) => {
+        // ← CRITICAL: spread to avoid mutating the original object
+        if (!item.children) return { ...item };
 
-      const hasPermission = item.permission
-        ? this.userRolesService.hasPermission(item.permission)
-        : false;
-
-      const canAccess = hasRole || hasPermission;
-      if (!canAccess) return false;
-
-      if (item.children) {
-        item.children = item.children.filter((child) => {
+        const filteredChildren = item.children.filter((child) => {
           if (child.excludeRoles?.includes(this.currentUser!.role))
             return false;
           if (
@@ -411,10 +450,9 @@ export class Sidebar implements OnInit {
             : false;
           return childHasRole || childHasPermission;
         });
-      }
 
-      return true;
-    });
+        return { ...item, children: filteredChildren };
+      });
   }
 
   private updateActiveMenuItem(url: string): void {

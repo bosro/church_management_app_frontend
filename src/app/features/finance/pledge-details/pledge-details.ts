@@ -1,4 +1,3 @@
-
 // src/app/features/finance/components/pledge-details/pledge-details.component.ts
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -8,6 +7,7 @@ import { takeUntil } from 'rxjs/operators';
 import { FinanceService } from '../services/finance.service';
 import { PaymentMethod } from '../../../models/giving.model';
 import { PermissionService } from '../../../core/services/permission.service';
+import { AuthService } from '../../../core/services/auth';
 
 @Component({
   selector: 'app-pledge-details',
@@ -31,7 +31,14 @@ export class PledgeDetails implements OnInit, OnDestroy {
   recordingPayment = false;
 
   // Payment methods
-  paymentMethods: PaymentMethod[] = ['cash', 'mobile_money', 'bank_transfer', 'check', 'card', 'online'];
+  paymentMethods: PaymentMethod[] = [
+    'cash',
+    'mobile_money',
+    'bank_transfer',
+    'cheque',
+    'card',
+    'online',
+  ];
 
   // Permissions
   canManageFinance = false;
@@ -41,7 +48,8 @@ export class PledgeDetails implements OnInit, OnDestroy {
     private router: Router,
     private fb: FormBuilder,
     private financeService: FinanceService,
-      public permissionService: PermissionService
+    public permissionService: PermissionService,
+    private authService: AuthService,
   ) {}
 
   ngOnInit(): void {
@@ -60,17 +68,24 @@ export class PledgeDetails implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
- private checkPermissions(): void {
+private checkPermissions(): void {
+  const role = this.authService.getCurrentUserRole();
+
+  const viewRoles = [
+    'pastor', 'senior_pastor', 'associate_pastor', 'finance_officer',
+  ];
+  const manageRoles = ['finance_officer'];
+
   this.canManageFinance =
     this.permissionService.isAdmin ||
     this.permissionService.finance.manage ||
-    this.permissionService.finance.record;
+    this.permissionService.finance.record ||
+    manageRoles.includes(role);
 
-  // View-only users can still see pledge details
-  // but cannot record or delete payments
   const canView =
     this.permissionService.isAdmin ||
-    this.permissionService.finance.view;
+    this.permissionService.finance.view ||
+    viewRoles.includes(role);
 
   if (!canView) {
     this.router.navigate(['/unauthorized']);
@@ -81,10 +96,13 @@ export class PledgeDetails implements OnInit, OnDestroy {
     this.paymentForm = this.fb.group({
       amount: ['', [Validators.required, Validators.min(0.01)]],
       currency: ['GHS', Validators.required],
-      payment_date: [new Date().toISOString().split('T')[0], Validators.required],
+      payment_date: [
+        new Date().toISOString().split('T')[0],
+        Validators.required,
+      ],
       payment_method: ['cash', Validators.required],
       transaction_reference: [''],
-      notes: ['']
+      notes: [''],
     });
   }
 
@@ -92,7 +110,8 @@ export class PledgeDetails implements OnInit, OnDestroy {
     this.loading = true;
     this.errorMessage = '';
 
-    this.financeService.getPledgeById(this.pledgeId)
+    this.financeService
+      .getPledgeById(this.pledgeId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (pledge) => {
@@ -100,7 +119,7 @@ export class PledgeDetails implements OnInit, OnDestroy {
 
           // Set currency in payment form
           this.paymentForm.patchValue({
-            currency: pledge.currency
+            currency: pledge.currency,
           });
 
           this.loading = false;
@@ -109,12 +128,13 @@ export class PledgeDetails implements OnInit, OnDestroy {
           this.errorMessage = error.message || 'Failed to load pledge details';
           this.loading = false;
           console.error('Error loading pledge:', error);
-        }
+        },
       });
   }
 
   private loadPaymentHistory(): void {
-    this.financeService.getPledgePayments(this.pledgeId)
+    this.financeService
+      .getPledgePayments(this.pledgeId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (payments) => {
@@ -122,7 +142,7 @@ export class PledgeDetails implements OnInit, OnDestroy {
         },
         error: (error) => {
           console.error('Error loading payments:', error);
-        }
+        },
       });
   }
 
@@ -140,15 +160,17 @@ export class PledgeDetails implements OnInit, OnDestroy {
     const remainingBalance = this.getBalance();
     this.paymentForm.patchValue({
       amount: remainingBalance,
-      currency: this.pledge.currency
+      currency: this.pledge.currency,
     });
 
     // Set max validator
-    this.paymentForm.get('amount')?.setValidators([
-      Validators.required,
-      Validators.min(0.01),
-      Validators.max(remainingBalance)
-    ]);
+    this.paymentForm
+      .get('amount')
+      ?.setValidators([
+        Validators.required,
+        Validators.min(0.01),
+        Validators.max(remainingBalance),
+      ]);
     this.paymentForm.get('amount')?.updateValueAndValidity();
 
     this.showPaymentModal = true;
@@ -162,13 +184,13 @@ export class PledgeDetails implements OnInit, OnDestroy {
       payment_date: new Date().toISOString().split('T')[0],
       payment_method: 'cash',
       transaction_reference: '',
-      notes: ''
+      notes: '',
     });
   }
 
   recordPayment(): void {
     if (this.paymentForm.invalid) {
-      Object.keys(this.paymentForm.controls).forEach(key => {
+      Object.keys(this.paymentForm.controls).forEach((key) => {
         this.paymentForm.get(key)?.markAsTouched();
       });
       return;
@@ -179,7 +201,8 @@ export class PledgeDetails implements OnInit, OnDestroy {
 
     const paymentData = this.paymentForm.value;
 
-    this.financeService.recordPledgePayment(this.pledgeId, paymentData)
+    this.financeService
+      .recordPledgePayment(this.pledgeId, paymentData)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
@@ -197,7 +220,7 @@ export class PledgeDetails implements OnInit, OnDestroy {
           this.errorMessage = error.message || 'Failed to record payment';
           this.recordingPayment = false;
           console.error('Error recording payment:', error);
-        }
+        },
       });
   }
 
@@ -209,11 +232,16 @@ export class PledgeDetails implements OnInit, OnDestroy {
       return;
     }
 
-    if (!confirm('Are you sure you want to delete this payment? This will adjust the pledge balance.')) {
+    if (
+      !confirm(
+        'Are you sure you want to delete this payment? This will adjust the pledge balance.',
+      )
+    ) {
       return;
     }
 
-    this.financeService.deletePledgePayment(paymentId, this.pledgeId)
+    this.financeService
+      .deletePledgePayment(paymentId, this.pledgeId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
@@ -228,7 +256,7 @@ export class PledgeDetails implements OnInit, OnDestroy {
         error: (error) => {
           this.errorMessage = error.message || 'Failed to delete payment';
           console.error('Error deleting payment:', error);
-        }
+        },
       });
   }
 
@@ -267,7 +295,8 @@ export class PledgeDetails implements OnInit, OnDestroy {
 
   getProgressPercentage(): number {
     if (this.pledge.pledge_amount === 0) return 0;
-    const percentage = (this.pledge.amount_paid / this.pledge.pledge_amount) * 100;
+    const percentage =
+      (this.pledge.amount_paid / this.pledge.pledge_amount) * 100;
     return Math.min(Math.round(percentage), 100);
   }
 
@@ -281,23 +310,14 @@ export class PledgeDetails implements OnInit, OnDestroy {
   formatCurrency(amount: number, currency: string = 'GHS'): string {
     return new Intl.NumberFormat('en-GH', {
       style: 'currency',
-      currency: currency
+      currency: currency,
     }).format(amount || 0);
   }
 
   formatPaymentMethod(method: string): string {
-    return method.split('_').map(word =>
-      word.charAt(0).toUpperCase() + word.slice(1)
-    ).join(' ');
+    return method
+      .split('_')
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
   }
 }
-
-
-
-
-
-
-
-
-
-

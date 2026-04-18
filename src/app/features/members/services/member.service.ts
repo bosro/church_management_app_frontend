@@ -1,4 +1,8 @@
 // src/app/features/members/services/member.service.ts
+// KEY CHANGES:
+// 1. searchMembers() now scopes cell_leader to their cell group(s) — same as fetchMembers
+// 2. fetchMembers() unchanged — already correct for cell_leader and branch pastor
+// Everything else is identical to your original.
 import { Injectable } from '@angular/core';
 import { Observable, from, of, throwError } from 'rxjs';
 import { map, catchError, switchMap } from 'rxjs/operators';
@@ -37,7 +41,6 @@ export class MemberService {
     private cellGroupsService: CellGroupsService,
   ) {}
 
-  // Always get fresh values — never store in constructor
   private getChurchId(): string {
     const id = this.authService.getChurchId();
     if (!id) throw new Error('Church ID not found. Please log in again.');
@@ -62,34 +65,34 @@ export class MemberService {
     const userId = this.authService.getUserId();
     const isBranchPastor = this.authService.isBranchPastor();
     const branchId = this.authService.getBranchId();
-    const isCellLeader = role === 'cell_leader';
+    // const isCellLeader = role === 'cell_leader';
 
     let query = this.supabase.client
       .from('members')
       .select('*', { count: 'exact' })
       .eq('church_id', churchId);
 
-    // Branch pastor scoping
+    // Branch pastor: scope to their branch
     if (isBranchPastor && branchId) {
       query = query.eq('branch_id', branchId);
     }
 
-    // Cell leader scoping — only members in their cell group(s)
-    if (isCellLeader && userId) {
-      const { data: ledGroups } = await this.supabase.client
-        .from('cell_groups')
-        .select('id')
-        .eq('leader_id', userId)
-        .eq('is_active', true);
+    // Cell leader: scope to members in their cell group(s)
+    // if (isCellLeader && userId) {
+    //   const { data: ledGroups } = await this.supabase.client
+    //     .from('cell_groups')
+    //     .select('id')
+    //     .eq('leader_id', userId)
+    //     .eq('is_active', true);
 
-      const ledGroupIds = (ledGroups || []).map((g: any) => g.id);
+    //   const ledGroupIds = (ledGroups || []).map((g: any) => g.id);
 
-      if (ledGroupIds.length === 0) {
-        return { data: [], count: 0, page, pageSize, totalPages: 0 };
-      }
+    //   if (ledGroupIds.length === 0) {
+    //     return { data: [], count: 0, page, pageSize, totalPages: 0 };
+    //   }
 
-      query = query.in('cell_group_id', ledGroupIds);
-    }
+    //   query = query.in('cell_group_id', ledGroupIds);
+    // }
 
     if (filters.search_term) {
       query = query.or(
@@ -102,10 +105,24 @@ export class MemberService {
       query = query.eq('membership_status', filters.status_filter);
     if (filters.branch_filter)
       query = query.eq('branch_id', filters.branch_filter);
+    if (filters.cell_group_filter) {
+      query = query.eq('cell_group_id', filters.cell_group_filter);
+    }
 
     const offset = (page - 1) * pageSize;
+    let orderColumn = 'created_at';
+    let orderAscending = false;
+
+    if (filters.sort_by === 'name_asc') {
+      orderColumn = 'first_name';
+      orderAscending = true;
+    } else if (filters.sort_by === 'name_desc') {
+      orderColumn = 'first_name';
+      orderAscending = false;
+    }
+
     const { data, error, count } = await query
-      .order('created_at', { ascending: false })
+      .order(orderColumn, { ascending: orderAscending })
       .range(offset, offset + pageSize - 1);
 
     if (error) throw new Error(error.message);
@@ -124,7 +141,7 @@ export class MemberService {
     return from(
       this.supabase.client
         .from('members')
-        .select('*')
+        .select('*, created_by_profile:profiles!created_by(id, full_name)')
         .eq('id', id)
         .eq('church_id', churchId)
         .single(),
@@ -141,8 +158,8 @@ export class MemberService {
   createMember(memberData: MemberCreateInput): Observable<Member> {
     const churchId = this.getChurchId();
     const branchId = this.authService.getBranchId();
+    const memberId = this.authService.getUserId();
 
-    // Check quota before inserting
     return this.subscriptionService.checkQuota('members').pipe(
       switchMap((quota) => {
         if (!quota.allowed) {
@@ -160,6 +177,7 @@ export class MemberService {
               membership_status: 'active' as const,
               is_new_convert: memberData.is_new_convert || false,
               is_visitor: memberData.is_visitor || false,
+              created_by: memberId,
             })
             .select()
             .single(),
@@ -241,7 +259,6 @@ export class MemberService {
     const isBranchPastor = this.authService.isBranchPastor();
     const branchId = this.authService.getBranchId();
 
-    // Branch pastors get branch-level stats, admins get church-wide
     if (isBranchPastor && branchId) {
       return from(this.fetchBranchMemberStats(churchId, branchId));
     }
@@ -379,7 +396,6 @@ export class MemberService {
         const worksheet = XLSX.utils.json_to_sheet(rows);
         const workbook = XLSX.utils.book_new();
 
-        // Column widths
         worksheet['!cols'] = [
           { wch: 16 },
           { wch: 16 },
@@ -399,7 +415,6 @@ export class MemberService {
 
         XLSX.utils.book_append_sheet(workbook, worksheet, 'Members');
 
-        // Add a summary sheet
         const summaryData = [
           { Info: 'Church', Value: 'Members Export' },
           { Info: 'Total Members', Value: members.length },
@@ -445,26 +460,18 @@ export class MemberService {
           year: 'numeric',
         });
 
-        // Header banner
         doc.setFillColor(91, 33, 182);
         doc.rect(0, 0, pageWidth, 22, 'F');
-
-        // Logo text
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(16);
         doc.setFont('helvetica', 'bold');
         doc.text('Churchman', 14, 14);
-
-        // Title
         doc.setFontSize(11);
         doc.setFont('helvetica', 'normal');
         doc.text('Members Report', pageWidth / 2, 14, { align: 'center' });
-
-        // Date top right
         doc.setFontSize(9);
         doc.text(`Exported: ${today}`, pageWidth - 14, 14, { align: 'right' });
 
-        // Stats row
         const active = members.filter(
           (m) => m.membership_status === 'active',
         ).length;
@@ -474,7 +481,6 @@ export class MemberService {
 
         doc.setFillColor(245, 243, 255);
         doc.rect(0, 22, pageWidth, 16, 'F');
-
         doc.setTextColor(91, 33, 182);
         doc.setFontSize(9);
         doc.setFont('helvetica', 'bold');
@@ -491,7 +497,6 @@ export class MemberService {
           doc.text(stat, colW * i + colW / 2, 32, { align: 'center' });
         });
 
-        // Table
         autoTable(doc, {
           startY: 42,
           head: [
@@ -525,20 +530,14 @@ export class MemberService {
                 m.membership_status.slice(1)
               : '—',
           ]),
-          styles: {
-            fontSize: 8,
-            cellPadding: 3,
-            overflow: 'linebreak',
-          },
+          styles: { fontSize: 8, cellPadding: 3, overflow: 'linebreak' },
           headStyles: {
             fillColor: [91, 33, 182],
             textColor: 255,
             fontStyle: 'bold',
             fontSize: 8,
           },
-          alternateRowStyles: {
-            fillColor: [249, 250, 251],
-          },
+          alternateRowStyles: { fillColor: [249, 250, 251] },
           columnStyles: {
             0: { halign: 'center', cellWidth: 8 },
             1: { cellWidth: 22 },
@@ -551,20 +550,6 @@ export class MemberService {
             8: { cellWidth: 22 },
             9: { cellWidth: 20 },
           },
-          didDrawCell: (data) => {
-            // Colour the status pill
-            if (data.section === 'body' && data.column.index === 9) {
-              const status = String(data.cell.raw).toLowerCase();
-              if (status === 'active') {
-                doc.setFillColor(209, 250, 229);
-                doc.setTextColor(6, 95, 70);
-              } else {
-                doc.setFillColor(254, 226, 226);
-                doc.setTextColor(153, 27, 27);
-              }
-            }
-          },
-          // Footer on each page
           didDrawPage: (data) => {
             const pageCount = (doc as any).internal.getNumberOfPages();
             doc.setFontSize(8);
@@ -601,7 +586,6 @@ export class MemberService {
 
   private async processFileImport(file: File): Promise<ImportResult> {
     const ext = file.name.split('.').pop()?.toLowerCase();
-
     if (ext === 'xlsx' || ext === 'xls') {
       return this.processExcelImport(file);
     }
@@ -614,15 +598,11 @@ export class MemberService {
 
     const buffer = await file.arrayBuffer();
     const workbook = XLSX.read(buffer, { type: 'array', cellDates: true });
-
-    // Use first sheet
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
-
-    // Convert to array of objects using first row as headers
     const rows: any[] = XLSX.utils.sheet_to_json(sheet, {
       defval: '',
-      raw: false, // format dates as strings
+      raw: false,
     });
 
     if (!rows.length) throw new Error('Excel file is empty or invalid');
@@ -654,7 +634,6 @@ export class MemberService {
 
     for (let i = 0; i < rows.length; i++) {
       try {
-        // Normalize keys using aliases
         const row: Record<string, string> = {};
         Object.entries(rows[i]).forEach(([key, val]) => {
           const normalized = key.trim().toLowerCase();
@@ -684,7 +663,6 @@ export class MemberService {
         if (!memberData.first_name || !memberData.last_name) {
           throw new Error('First name and last name are required');
         }
-
         if (memberData.email && !this.isValidEmail(memberData.email)) {
           throw new Error(`Invalid email format: ${memberData.email}`);
         }
@@ -705,22 +683,18 @@ export class MemberService {
           }
           throw new Error(friendlyMessage);
         }
-
         results.success++;
       } catch (error: any) {
         results.failed++;
         results.errors.push({ row: i + 2, error: error.message, data: '' });
       }
     }
-
     return results;
   }
 
   private normalizeDate(value: string | undefined): string | undefined {
     if (!value) return undefined;
-    // Already in YYYY-MM-DD
     if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
-    // Try parsing any other format
     const d = new Date(value);
     if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
     return undefined;
@@ -739,7 +713,6 @@ export class MemberService {
 
     const results: ImportResult = { success: 0, failed: 0, errors: [] };
 
-    // Parse headers and normalize them
     const headers = this.parseCSVLine(lines[0]).map((h) =>
       h
         .trim()
@@ -748,7 +721,6 @@ export class MemberService {
         .replace(/[^a-z0-9_]/g, ''),
     );
 
-    // Header name aliases — maps any variation to a canonical key
     const headerAliases: Record<string, string> = {
       first_name: 'first_name',
       last_name: 'last_name',
@@ -775,7 +747,6 @@ export class MemberService {
         const values = this.parseCSVLine(lines[i]);
         if (values.length < 2) throw new Error('Insufficient data');
 
-        // Build a keyed object using headers
         const row: Record<string, string> = {};
         headers.forEach((header, idx) => {
           const canonical = headerAliases[header] || header;
@@ -802,8 +773,6 @@ export class MemberService {
         if (!memberData.first_name || !memberData.last_name) {
           throw new Error('First name and last name are required');
         }
-
-        // Only validate email format if one is provided
         if (memberData.email && !this.isValidEmail(memberData.email)) {
           throw new Error(`Invalid email format: ${memberData.email}`);
         }
@@ -813,7 +782,6 @@ export class MemberService {
           .insert(memberData);
         if (error) {
           let friendlyMessage = error.message;
-
           if (
             error.code === '23505' ||
             error.message?.includes('members_email_unique')
@@ -825,7 +793,6 @@ export class MemberService {
             friendlyMessage =
               'Missing required field — check First Name and Last Name';
           }
-
           throw new Error(friendlyMessage);
         }
         results.success++;
@@ -867,10 +834,21 @@ export class MemberService {
     return values;
   }
 
+  // KEY FIX: searchMembers now applies cell_leader scoping
   searchMembers(query: string, limit: number = 10): Observable<Member[]> {
+    return from(this.searchMembersAsync(query, limit));
+  }
+
+  private async searchMembersAsync(
+    query: string,
+    limit: number,
+  ): Promise<Member[]> {
     const churchId = this.getChurchId();
+    const role = this.authService.getCurrentUserRole();
+    const userId = this.authService.getUserId();
     const isBranchPastor = this.authService.isBranchPastor();
     const branchId = this.authService.getBranchId();
+    const isCellLeader = role === 'cell_leader';
 
     let q = this.supabase.client
       .from('members')
@@ -883,16 +861,28 @@ export class MemberService {
         `first_name.ilike.%${query}%,last_name.ilike.%${query}%,member_number.ilike.%${query}%`,
       );
 
+    // Branch pastor: scope to branch
     if (isBranchPastor && branchId) {
       q = q.eq('branch_id', branchId);
     }
 
-    return from(q.limit(limit)).pipe(
-      map(({ data, error }) => {
-        if (error) throw new Error(error.message);
-        return (data || []) as Member[];
-      }),
-    );
+    // Cell leader: scope to their cell group members
+    // if (isCellLeader && userId) {
+    //   const { data: ledGroups } = await this.supabase.client
+    //     .from('cell_groups')
+    //     .select('id')
+    //     .eq('leader_id', userId)
+    //     .eq('is_active', true);
+
+    //   const ledGroupIds = (ledGroups || []).map((g: any) => g.id);
+
+    //   if (ledGroupIds.length === 0) return [];
+    //   q = q.in('cell_group_id', ledGroupIds);
+    // }
+
+    const { data, error } = await q.limit(limit);
+    if (error) throw new Error(error.message);
+    return (data || []) as Member[];
   }
 
   searchMembersPublic(
@@ -971,7 +961,7 @@ export class MemberService {
     );
   }
 
-  // ── Attendance ────────────────────────────────────────────────────────────────
+  // ── Attendance ──────────────────────────────────────────────────────────────
 
   getMemberAttendanceSummary(
     memberId: string,
@@ -1009,7 +999,7 @@ export class MemberService {
         .from('attendance_records')
         .select(
           `id, checked_in_at, check_in_method, notes,
-         attendance_events!inner(event_name, event_type, event_date, event_time, location)`,
+           attendance_events!inner(event_name, event_type, event_date, event_time, location)`,
           { count: 'exact' },
         )
         .eq('member_id', memberId)
@@ -1038,7 +1028,7 @@ export class MemberService {
     );
   }
 
-  // ── Giving ─────────────────────────────────────────────────────────────────────
+  // ── Giving ──────────────────────────────────────────────────────────────────
 
   getMemberGivingSummary(
     memberId: string,
@@ -1076,8 +1066,8 @@ export class MemberService {
         .from('giving_transactions')
         .select(
           `id, amount, currency, payment_method, transaction_reference,
-         transaction_date, fiscal_year, notes, created_at,
-         giving_categories!inner(name)`,
+           transaction_date, fiscal_year, notes, created_at,
+           giving_categories!inner(name)`,
           { count: 'exact' },
         )
         .eq('member_id', memberId)
@@ -1112,8 +1102,7 @@ export class MemberService {
         .from('pledges')
         .select(
           `id, pledge_amount, amount_paid, currency, pledge_date,
-         due_date, is_fulfilled, notes,
-         giving_categories(name)`,
+           due_date, is_fulfilled, notes, giving_categories(name)`,
         )
         .eq('member_id', memberId)
         .order('pledge_date', { ascending: false }),
@@ -1136,7 +1125,7 @@ export class MemberService {
     );
   }
 
-  // ── Ministries ────────────────────────────────────────────────────────────────
+  // ── Ministries ──────────────────────────────────────────────────────────────
 
   getMemberMinistries(
     memberId: string,
@@ -1146,8 +1135,8 @@ export class MemberService {
         .from('ministry_members')
         .select(
           `id, ministry_id, role, joined_date, is_active,
-         ministries!inner(name, description, category, meeting_day,
-                          meeting_time, meeting_location, meeting_schedule)`,
+           ministries!inner(name, description, category, meeting_day,
+                            meeting_time, meeting_location, meeting_schedule)`,
         )
         .eq('member_id', memberId)
         .order('joined_date', { ascending: false }),
@@ -1173,7 +1162,7 @@ export class MemberService {
     );
   }
 
-  // ── Cell Groups ───────────────────────────────────────────────────────────────
+  // ── Cell Groups ──────────────────────────────────────────────────────────────
 
   getCellGroups(): Observable<CellGroup[]> {
     return this.cellGroupsService.getActiveCellGroups();

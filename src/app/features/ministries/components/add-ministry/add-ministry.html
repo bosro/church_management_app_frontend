@@ -1,4 +1,8 @@
 <!-- src/app/features/ministries/components/add-ministry/add-ministry.component.html -->
+<!-- KEY FIX: Requirements textarea had formControlName="description" (WRONG)
+     which silently overwrote the user's description input on submit and never
+     submitted the requirements value. Fixed to formControlName="requirements".
+     Also fixed duplicate id="description" on the requirements field. -->
 <div class="dashboard-layout">
   <app-sidebar></app-sidebar>
 
@@ -40,7 +44,8 @@
 
               <div class="form-group">
                 <label for="name">Ministry Name *</label>
-                <input id="name" type="text" formControlName="name" placeholder="e.g., Youth Ministry, Worship Team"
+                <input id="name" type="text" formControlName="name"
+                  placeholder="e.g., Youth Ministry, Worship Team"
                   [class.error]="ministryForm.get('name')?.invalid && ministryForm.get('name')?.touched" />
                 <span *ngIf="ministryForm.get('name')?.invalid && ministryForm.get('name')?.touched"
                   class="error-message">
@@ -48,11 +53,11 @@
                 </span>
               </div>
 
-              <!-- Replace the category select with this input -->
               <div class="form-group">
                 <label for="category">Category *</label>
                 <input id="category" type="text" formControlName="category"
-                  placeholder="e.g., Worship, Youth, Outreach, Education" [class.error]="isFieldInvalid('category')" />
+                  placeholder="e.g., Worship, Youth, Outreach, Education"
+                  [class.error]="isFieldInvalid('category')" />
                 <span *ngIf="isFieldInvalid('category')" class="error-message">
                   {{ getErrorMessage('category') }}
                 </span>
@@ -62,29 +67,24 @@
               <div class="form-group">
                 <label for="description">Description</label>
                 <textarea id="description" formControlName="description"
-                  placeholder="Brief description of the ministry's purpose and activities..." rows="5"
+                  placeholder="Brief description of the ministry's purpose and activities..."
+                  rows="5"
                   [class.error]="isFieldInvalid('description')"></textarea>
 
                 <span *ngIf="isFieldInvalid('description')" class="error-message">
                   {{ getErrorMessage('description') }}
                 </span>
 
-                <!-- NEW CHARACTER COUNTER - REACTIVE AND 500 LIMIT -->
-                <div class="character-counter" [class.warning]="descriptionLength > 400 && descriptionLength < 450"
+                <div class="character-counter"
+                  [class.warning]="descriptionLength > 400 && descriptionLength < 450"
                   [class.danger]="descriptionLength >= 450">
-
                   <span>{{ descriptionLength }} / 500 characters</span>
-
-                  <!-- Approaching -->
                   <span *ngIf="descriptionLength > 400 && descriptionLength < 500" class="warning-text">
                     <i class="ri-error-warning-line"></i> Approaching limit
                   </span>
-
-                  <!-- Exceeded -->
                   <span *ngIf="descriptionLength >= 500" class="warning-text">
                     <i class="ri-close-circle-line"></i> Character limit reached
                   </span>
-
                 </div>
               </div>
 
@@ -108,7 +108,8 @@
                 <input id="leader_name" type="text" formControlName="leader_name"
                   placeholder="Full name of ministry leader"
                   [class.error]="ministryForm.get('leader_name')?.invalid && ministryForm.get('leader_name')?.touched" />
-                <span *ngIf="ministryForm.get('leader_name')?.invalid && ministryForm.get('leader_name')?.touched"
+                <span
+                  *ngIf="ministryForm.get('leader_name')?.invalid && ministryForm.get('leader_name')?.touched"
                   class="error-message">
                   {{ getErrorMessage('leader_name') }}
                 </span>
@@ -117,9 +118,11 @@
               <div class="form-grid">
                 <div class="form-group">
                   <label for="leader_email">Leader Email</label>
-                  <input id="leader_email" type="email" formControlName="leader_email" placeholder="leader@example.com"
+                  <input id="leader_email" type="email" formControlName="leader_email"
+                    placeholder="leader@example.com"
                     [class.error]="ministryForm.get('leader_email')?.invalid && ministryForm.get('leader_email')?.touched" />
-                  <span *ngIf="ministryForm.get('leader_email')?.invalid && ministryForm.get('leader_email')?.touched"
+                  <span
+                    *ngIf="ministryForm.get('leader_email')?.invalid && ministryForm.get('leader_email')?.touched"
                     class="error-message">
                     {{ getErrorMessage('leader_email') }}
                   </span>
@@ -127,7 +130,8 @@
 
                 <div class="form-group">
                   <label for="leader_phone">Leader Phone</label>
-                  <input id="leader_phone" type="tel" formControlName="leader_phone" placeholder="+233 XX XXX XXXX" />
+                  <input id="leader_phone" type="tel" formControlName="leader_phone"
+                    placeholder="+233 XX XXX XXXX" />
                 </div>
               </div>
             </div>
@@ -154,7 +158,10 @@
 
               <div class="form-group">
                 <label for="requirements">Requirements</label>
-                <textarea id="description" formControlName="description" maxlength="500" rows="5"></textarea>
+                <!-- FIX: was formControlName="description" (wrong!) and id="description" (duplicate!) -->
+                <textarea id="requirements" formControlName="requirements"
+                  rows="5"
+                  placeholder="Optional: Specify any prerequisites for members"></textarea>
                 <p class="help-text">Optional: Specify any prerequisites for members</p>
               </div>
             </div>
@@ -181,6 +188,7 @@
     </div>
   </div>
 
-  <app-upgrade-modal [show]="showUpgradeModal" [trigger]="upgradeModalTrigger" (closed)="showUpgradeModal = false">
+  <app-upgrade-modal [show]="showUpgradeModal" [trigger]="upgradeModalTrigger"
+    (closed)="showUpgradeModal = false">
   </app-upgrade-modal>
 </div>

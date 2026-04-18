@@ -603,3 +603,5 @@ export class EventsService {
     return date.toTimeString().slice(0, 5); // HH:MM format
   }
 }
+
+

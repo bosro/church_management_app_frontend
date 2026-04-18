@@ -8,8 +8,6 @@
       "resources": {
         "files": [
           "/favicon.ico",
-          "/index.csr.html",
-          "/index.html",
           "/manifest.webmanifest",
           "/*.css",
           "/*.js"
@@ -27,7 +25,7 @@
       }
     }
   ],
-   "dataGroups": [
+  "dataGroups": [
     {
       "name": "api-freshness",
       "urls": [

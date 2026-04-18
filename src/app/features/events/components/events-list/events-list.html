@@ -177,18 +177,149 @@
         </div>
       </div>
 
-      <!-- Calendar View (Placeholder) -->
-      <div *ngIf="!loading && viewMode === 'calendar'" class="calendar-view">
-        <div class="calendar-placeholder">
-          <i class="ri-calendar-2-line"></i>
-          <h3>Calendar View</h3>
-          <p>Calendar view coming soon. Use list view to manage events.</p>
-          <button class="btn-secondary" (click)="switchView('list')">
-            <i class="ri-list-check"></i>
-            Switch to List View
+      <!-- Calendar View -->
+<div *ngIf="!loading && viewMode === 'calendar'" class="calendar-view">
+
+  <!-- Calendar Header: month nav + legend -->
+  <div class="calendar-header">
+    <div class="calendar-nav">
+      <button class="nav-btn" (click)="prevMonth()">
+        <i class="ri-arrow-left-s-line"></i>
+      </button>
+      <h2 class="calendar-title">{{ calendarTitle }}</h2>
+      <button class="nav-btn" (click)="nextMonth()">
+        <i class="ri-arrow-right-s-line"></i>
+      </button>
+    </div>
+
+    <button class="today-btn" (click)="goToToday()">Today</button>
+
+    <div class="calendar-legend">
+      <span class="legend-item"><span class="legend-dot today-dot"></span>Today</span>
+      <span class="legend-item"><span class="legend-dot upcoming-dot"></span>Upcoming</span>
+      <span class="legend-item"><span class="legend-dot past-dot"></span>Past</span>
+    </div>
+  </div>
+
+  <!-- Day-of-week headers -->
+  <div class="calendar-grid">
+    <div class="day-header" *ngFor="let day of weekDays">{{ day }}</div>
+
+    <!-- Calendar Cells -->
+    <div
+      *ngFor="let cell of calendarCells"
+      class="calendar-cell"
+      [class.other-month]="!cell.isCurrentMonth"
+      [class.is-today]="cell.isToday"
+      [class.has-events]="cell.events.length > 0"
+      (click)="onCellClick(cell)"
+    >
+      <span class="cell-date" [class.today-badge]="cell.isToday">
+        {{ cell.date | date:'d' }}
+      </span>
+
+      <!-- Up to 3 event pills; overflow count shown -->
+      <div class="cell-events">
+        <div
+          *ngFor="let event of cell.events | slice:0:3"
+          class="event-pill"
+          [ngClass]="getEventCategoryClass(event.category || 'other')"
+          [class.pill-past]="isEventPast(event)"
+          (click)="viewEvent(event.id); $event.stopPropagation()"
+          [title]="event.title"
+        >
+          <span class="pill-dot"></span>
+          <span class="pill-label">{{ event.title }}</span>
+        </div>
+
+        <div *ngIf="cell.events.length > 3" class="overflow-count">
+          +{{ cell.events.length - 3 }} more
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Day Detail Panel — shown when a cell with events is clicked -->
+  <div class="day-detail" *ngIf="selectedCell && selectedCell.events.length > 0">
+    <div class="detail-header">
+      <h3>{{ selectedCell.date | date:'EEEE, MMMM d, yyyy' }}</h3>
+      <button class="close-btn" (click)="selectedCell = null">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+
+    <div class="detail-events">
+      <div
+        *ngFor="let event of selectedCell.events"
+        class="detail-event-card"
+        [class.past-event]="isEventPast(event)"
+        (click)="viewEvent(event.id)"
+      >
+        <div class="detail-event-left">
+          <div class="detail-date-badge">
+            <span class="date-day">{{ event.start_date | date:'d' }}</span>
+            <span class="date-month">{{ event.start_date | date:'MMM' }}</span>
+          </div>
+        </div>
+
+        <div class="detail-event-body">
+          <div class="event-type-badge" [ngClass]="getEventCategoryClass(event.category || 'other')">
+            {{ getEventCategoryLabel(event.category || 'other') }}
+          </div>
+          <h4>{{ event.title }}</h4>
+
+          <div class="detail-meta">
+            <span class="meta-item" *ngIf="event.start_date">
+              <i class="ri-time-line"></i>
+              {{ event.start_date | date:'shortTime' }}
+            </span>
+            <span class="meta-item" *ngIf="event.location">
+              <i class="ri-map-pin-line"></i>
+              {{ event.location }}
+            </span>
+            <span class="meta-item" *ngIf="event.max_attendees">
+              <i class="ri-group-line"></i>
+              Max {{ event.max_attendees }}
+            </span>
+          </div>
+
+          <div class="detail-badges">
+            <span class="badge badge-today" *ngIf="isEventToday(event)">
+              <i class="ri-flashlight-line"></i> Today
+            </span>
+            <span class="badge badge-upcoming" *ngIf="isEventUpcoming(event) && !isEventToday(event)">
+              <i class="ri-calendar-check-line"></i> Upcoming
+            </span>
+            <span class="badge badge-past" *ngIf="isEventPast(event)">
+              <i class="ri-history-line"></i> Past
+            </span>
+            <span class="badge badge-public" *ngIf="event.is_public">
+              <i class="ri-earth-line"></i> Public
+            </span>
+          </div>
+        </div>
+
+        <div class="detail-event-actions">
+          <button
+            class="btn-icon-small"
+            (click)="editEvent(event.id, $event)"
+            *ngIf="permissionService.isAdmin || permissionService.events.edit"
+          >
+            <i class="ri-edit-line"></i>
+          </button>
+          <button
+            class="btn-icon-small btn-danger"
+            (click)="deleteEvent(event.id, $event)"
+            *ngIf="permissionService.isAdmin || permissionService.events.delete"
+          >
+            <i class="ri-delete-bin-line"></i>
           </button>
         </div>
       </div>
+    </div>
+  </div>
+
+</div>
 
       <!-- Pagination -->
       <div class="pagination" *ngIf="totalPages > 1 && !loading && viewMode === 'list'">

@@ -1151,5 +1151,80 @@
 
 
 
+.cell-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: #DDD6FE;
+  color: #7C3AED;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 10px;
+  margin-top: 2px;
+
+  i { font-size: 10px; }
+}
+
+.btn-my-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #F5F3FF;
+  border: 1px solid #C4B5FD;
+  color: #7C3AED;
+  font-size: 13px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover { background: #EDE9FE; }
+
+  i { font-size: 15px; }
+}
 
 
+.sort-group {
+  display: flex;
+  gap: 4px;
+}
+
+.btn-sort {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 12px;
+  background: white;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #6B7280;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'Nunito Sans', sans-serif;
+
+  i { font-size: 15px; }
+
+  &:hover {
+    background: #F9FAFB;
+    border-color: #5B21B6;
+    color: #5B21B6;
+  }
+
+  &.active {
+    background: #F5F3FF;
+    border-color: #7C3AED;
+    color: #7C3AED;
+  }
+}
+
+.btn-my-cell {
+  // ADD active state:
+  &.active {
+    background: #EDE9FE;
+    border-color: #7C3AED;
+    font-weight: 700;
+  }
+}

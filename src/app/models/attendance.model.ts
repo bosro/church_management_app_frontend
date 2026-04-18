@@ -46,6 +46,10 @@ export interface AttendanceRecord {
   status: AttendanceStatus;
   absence_reason?: string;
   notes?: string;
+  cell_group_id?: string;
+  checked_in_by_profile?: {
+    full_name?: string
+  };
   member?: {
     id: string;
     first_name: string;
@@ -53,6 +57,7 @@ export interface AttendanceRecord {
     middle_name?: string;
     photo_url?: string;
     member_number: string;
+    cell_group_id?: string;
   };
   visitor?: {
     id: string;

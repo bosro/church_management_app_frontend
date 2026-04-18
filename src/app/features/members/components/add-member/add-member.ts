@@ -88,10 +88,18 @@ export class AddMember implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
+    const role = this.authService.getCurrentUserRole();
+
+    // Roles that can add members even without an explicit permission grant
+    const allowedRoles = [
+      'pastor', 'senior_pastor', 'associate_pastor',
+      'group_leader', 'cell_leader',
+    ];
+
     this.canAddMember =
       this.permissionService.isAdmin ||
       this.permissionService.members.create ||
-      this.authService.getCurrentUserRole() === 'cell_leader';
+      allowedRoles.includes(role);
 
     if (!this.canAddMember) {
       this.router.navigate(['/unauthorized']);
@@ -261,36 +269,24 @@ export class AddMember implements OnInit, OnDestroy {
     };
 
     if (formValue.middle_name) memberData.middle_name = formValue.middle_name;
-    if (formValue.date_of_birth)
-      memberData.date_of_birth = formValue.date_of_birth;
+    if (formValue.date_of_birth) memberData.date_of_birth = formValue.date_of_birth;
     if (formValue.gender) memberData.gender = formValue.gender;
-    if (formValue.marital_status)
-      memberData.marital_status = formValue.marital_status;
-    if (formValue.phone_primary)
-      memberData.phone_primary = formValue.phone_primary;
-    if (formValue.phone_secondary)
-      memberData.phone_secondary = formValue.phone_secondary;
+    if (formValue.marital_status) memberData.marital_status = formValue.marital_status;
+    if (formValue.phone_primary) memberData.phone_primary = formValue.phone_primary;
+    if (formValue.phone_secondary) memberData.phone_secondary = formValue.phone_secondary;
     if (formValue.email) memberData.email = formValue.email;
     if (formValue.address) memberData.address = formValue.address;
     if (formValue.city) memberData.city = formValue.city;
     if (formValue.occupation) memberData.occupation = formValue.occupation;
     if (formValue.employer) memberData.employer = formValue.employer;
-    if (formValue.education_level)
-      memberData.education_level = formValue.education_level;
-    if (formValue.emergency_contact_name)
-      memberData.emergency_contact_name = formValue.emergency_contact_name;
-    if (formValue.emergency_contact_phone)
-      memberData.emergency_contact_phone = formValue.emergency_contact_phone;
-    if (formValue.emergency_contact_relationship)
-      memberData.emergency_contact_relationship =
-        formValue.emergency_contact_relationship;
-    if (formValue.baptism_date)
-      memberData.baptism_date = formValue.baptism_date;
-    if (formValue.baptism_location)
-      memberData.baptism_location = formValue.baptism_location;
+    if (formValue.education_level) memberData.education_level = formValue.education_level;
+    if (formValue.emergency_contact_name) memberData.emergency_contact_name = formValue.emergency_contact_name;
+    if (formValue.emergency_contact_phone) memberData.emergency_contact_phone = formValue.emergency_contact_phone;
+    if (formValue.emergency_contact_relationship) memberData.emergency_contact_relationship = formValue.emergency_contact_relationship;
+    if (formValue.baptism_date) memberData.baptism_date = formValue.baptism_date;
+    if (formValue.baptism_location) memberData.baptism_location = formValue.baptism_location;
     if (formValue.notes) memberData.notes = formValue.notes;
-    if (formValue.cell_group_id)
-      memberData.cell_group_id = formValue.cell_group_id;
+    if (formValue.cell_group_id) memberData.cell_group_id = formValue.cell_group_id;
 
     return memberData;
   }
@@ -335,9 +331,7 @@ export class AddMember implements OnInit, OnDestroy {
 
   cancel(): void {
     if (this.memberForm.dirty) {
-      if (
-        confirm('You have unsaved changes. Are you sure you want to leave?')
-      ) {
+      if (confirm('You have unsaved changes. Are you sure you want to leave?')) {
         this.router.navigate(['main/members']);
       }
     } else {
@@ -370,6 +364,7 @@ export class AddMember implements OnInit, OnDestroy {
   private scrollToTop(): void {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
+
   private scrollToFirstError(): void {
     const firstError = document.querySelector('.error-message');
     if (firstError)
@@ -386,3 +381,6 @@ export class AddMember implements OnInit, OnDestroy {
     else return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
   }
 }
+
+
+

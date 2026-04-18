@@ -8,6 +8,7 @@ import { FinanceService } from '../../../services/finance.service';
 import { PermissionService } from '../../../../../core/services/permission.service';
 import { Router } from '@angular/router';
 import { Location } from '@angular/common';
+import { AuthService } from '../../../../../core/services/auth';
 
 @Component({
   selector: 'app-categories-management',
@@ -36,6 +37,7 @@ export class CategoriesManagement implements OnInit, OnDestroy {
     private fb: FormBuilder,
     private financeService: FinanceService,
      public permissionService: PermissionService,
+     private authService: AuthService,
      private router: Router,
        private location: Location
   ) {}
@@ -52,15 +54,21 @@ export class CategoriesManagement implements OnInit, OnDestroy {
   }
 
 private checkPermissions(): void {
+  const role = this.authService.getCurrentUserRole();
+
+  const manageRoles = ['finance_officer'];
+
   this.canManageCategories =
     this.permissionService.isAdmin ||
-    this.permissionService.finance.manage;
+    this.permissionService.finance.manage ||
+    manageRoles.includes(role);
 
-  // View-only users can see categories but not edit them
-  if (
-    !this.permissionService.isAdmin &&
-    !this.permissionService.finance.view
-  ) {
+  const canView =
+    this.permissionService.isAdmin ||
+    this.permissionService.finance.view ||
+    ['pastor', 'senior_pastor', 'associate_pastor', 'finance_officer'].includes(role);
+
+  if (!canView) {
     this.router.navigate(['/unauthorized']);
   }
 }
@@ -235,6 +243,8 @@ private checkPermissions(): void {
   this.location.back();
 }
 }
+
+
 
 
 

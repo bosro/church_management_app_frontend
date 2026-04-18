@@ -16,6 +16,7 @@ import {
   MinistryLeader,
 } from '../../../../models/ministry.model';
 import { PermissionService } from '../../../../core/services/permission.service';
+import { AuthService } from '../../../../core/services/auth';
 
 @Component({
   selector: 'app-ministry-detail',
@@ -61,6 +62,7 @@ export class MinistryDetail implements OnInit, OnDestroy {
     private router: Router,
     private ministryService: MinistryService,
     public permissionService: PermissionService,
+    private authService: AuthService,
   ) {}
 
   ngOnInit(): void {
@@ -82,16 +84,42 @@ export class MinistryDetail implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
+    const role = this.authService.getCurrentUserRole();
+
+    const viewRoles = [
+      'pastor',
+      'senior_pastor',
+      'associate_pastor',
+      'ministry_leader',
+      'group_leader',
+      'cell_leader',
+      'elder',
+      'deacon',
+      'worship_leader',
+      'secretary',
+    ];
+    const manageRoles = [
+      'pastor',
+      'senior_pastor',
+      'associate_pastor',
+      'ministry_leader',
+    ];
+
     const canView =
-      this.permissionService.isAdmin || this.permissionService.ministries.view;
+      this.permissionService.isAdmin ||
+      this.permissionService.ministries.view ||
+      viewRoles.includes(role);
 
     this.canManageMinistries =
       this.permissionService.isAdmin ||
-      this.permissionService.ministries.manage;
+      this.permissionService.ministries.manage ||
+      manageRoles.includes(role);
 
+    // FIX: canManageMembers previously only checked ministries.assign with no fallback
     this.canManageMembers =
       this.permissionService.isAdmin ||
-      this.permissionService.ministries.assign;
+      this.permissionService.ministries.assign ||
+      manageRoles.includes(role);
 
     if (!canView) {
       this.router.navigate(['/unauthorized']);

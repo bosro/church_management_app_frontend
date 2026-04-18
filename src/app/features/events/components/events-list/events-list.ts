@@ -1,4 +1,5 @@
 // src/app/features/events/components/events-list/events-list.component.ts
+// KEY FIX: checkPermissions() now includes role-based fallback
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormControl } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -7,6 +8,14 @@ import { takeUntil, debounceTime } from 'rxjs/operators';
 import { EventsService } from '../../services/events';
 import { ChurchEvent, EventCategory } from '../../../../models/event.model';
 import { PermissionService } from '../../../../core/services/permission.service';
+import { AuthService } from '../../../../core/services/auth';
+
+export interface CalendarCell {
+  date: Date;
+  isCurrentMonth: boolean;
+  isToday: boolean;
+  events: ChurchEvent[];
+}
 
 @Component({
   selector: 'app-events-list',
@@ -23,16 +32,13 @@ export class EventsList implements OnInit, OnDestroy {
   errorMessage = '';
   successMessage = '';
 
-  // Pagination
   currentPage = 1;
   pageSize = 20;
   totalEvents = 0;
   totalPages = 0;
 
-  // View mode
   viewMode: 'list' | 'calendar' = 'list';
 
-  // Filters
   startDateControl = new FormControl('');
   endDateControl = new FormControl('');
   categoryControl = new FormControl<EventCategory | 'all'>('all');
@@ -52,13 +58,20 @@ export class EventsList implements OnInit, OnDestroy {
     { value: 'other', label: 'Other' },
   ];
 
-  // Permissions
   canManageEvents = false;
+
+  calendarYear: number = new Date().getFullYear();
+  calendarMonth: number = new Date().getMonth(); // 0-indexed
+  calendarCells: CalendarCell[] = [];
+  selectedCell: CalendarCell | null = null;
+
+  readonly weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   constructor(
     private eventsService: EventsService,
     private router: Router,
     public permissionService: PermissionService,
+    private authService: AuthService,
   ) {}
 
   ngOnInit(): void {
@@ -66,6 +79,7 @@ export class EventsList implements OnInit, OnDestroy {
     this.loadEvents();
     this.loadUpcomingEvents();
     this.setupFilterListeners();
+    this.buildCalendar();
   }
 
   ngOnDestroy(): void {
@@ -74,15 +88,40 @@ export class EventsList implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-    // View is open to anyone with events.view permission
+    const role = this.authService.getCurrentUserRole();
+
+    const viewRoles = [
+      'pastor',
+      'senior_pastor',
+      'associate_pastor',
+      'ministry_leader',
+      'group_leader',
+      'cell_leader',
+      'finance_officer',
+      'elder',
+      'deacon',
+      'worship_leader',
+      'secretary',
+    ];
+
+    const manageRoles = [
+      'pastor',
+      'senior_pastor',
+      'associate_pastor',
+      'ministry_leader',
+    ];
+
     const canView =
-      this.permissionService.isAdmin || this.permissionService.events.view;
+      this.permissionService.isAdmin ||
+      this.permissionService.events.view ||
+      viewRoles.includes(role);
 
     this.canManageEvents =
       this.permissionService.isAdmin ||
       this.permissionService.events.create ||
       this.permissionService.events.edit ||
-      this.permissionService.events.delete;
+      this.permissionService.events.delete ||
+      manageRoles.includes(role);
 
     if (!canView) {
       this.router.navigate(['/unauthorized']);
@@ -117,19 +156,11 @@ export class EventsList implements OnInit, OnDestroy {
     this.errorMessage = '';
 
     const filters: any = {};
-
-    if (this.startDateControl.value) {
+    if (this.startDateControl.value)
       filters.startDate = this.startDateControl.value;
-    }
-
-    if (this.endDateControl.value) {
-      filters.endDate = this.endDateControl.value;
-    }
-
+    if (this.endDateControl.value) filters.endDate = this.endDateControl.value;
     const category = this.categoryControl.value;
-    if (category && category !== 'all') {
-      filters.category = category;
-    }
+    if (category && category !== 'all') filters.category = category;
 
     this.eventsService
       .getEvents(this.currentPage, this.pageSize, filters)
@@ -139,12 +170,12 @@ export class EventsList implements OnInit, OnDestroy {
           this.events = data;
           this.totalEvents = count;
           this.totalPages = Math.ceil(count / this.pageSize);
+          this.buildCalendar(); 
           this.loading = false;
         },
         error: (error) => {
           this.errorMessage = error.message || 'Failed to load events';
           this.loading = false;
-          console.error('Error loading events:', error);
         },
       });
   }
@@ -163,7 +194,6 @@ export class EventsList implements OnInit, OnDestroy {
       });
   }
 
-  // Navigation
   createEvent(): void {
     if (!this.canManageEvents) {
       this.errorMessage = 'You do not have permission to create events';
@@ -177,32 +207,27 @@ export class EventsList implements OnInit, OnDestroy {
   }
 
   editEvent(eventId: string, event: MouseEvent): void {
-    // Changed parameter type
     event.stopPropagation();
-
     if (!this.canManageEvents) {
       this.errorMessage = 'You do not have permission to edit events';
       return;
     }
-
     this.router.navigate(['main/events', eventId, 'edit']);
   }
 
   deleteEvent(eventId: string, event: MouseEvent): void {
-    // Changed parameter type
     event.stopPropagation();
-
     if (!this.canManageEvents) {
       this.errorMessage = 'You do not have permission to delete events';
       return;
     }
 
-    const confirmMessage =
-      'Are you sure you want to delete this event? All registrations will also be deleted.';
-
-    if (!confirm(confirmMessage)) {
+    if (
+      !confirm(
+        'Are you sure you want to delete this event? All registrations will also be deleted.',
+      )
+    )
       return;
-    }
 
     this.eventsService
       .deleteEvent(eventId)
@@ -212,31 +237,24 @@ export class EventsList implements OnInit, OnDestroy {
           this.successMessage = 'Event deleted successfully!';
           this.loadEvents();
           this.loadUpcomingEvents();
-
-          setTimeout(() => {
-            this.successMessage = '';
-          }, 3000);
+          setTimeout(() => (this.successMessage = ''), 3000);
         },
         error: (error) => {
           this.errorMessage = error.message || 'Failed to delete event';
-          console.error('Error deleting event:', error);
         },
       });
   }
 
-  // View switching
   switchView(mode: 'list' | 'calendar'): void {
     this.viewMode = mode;
   }
 
-  // Filters
   clearFilters(): void {
     this.startDateControl.setValue('');
     this.endDateControl.setValue('');
     this.categoryControl.setValue('all');
   }
 
-  // Pagination
   previousPage(): void {
     if (this.currentPage > 1) {
       this.currentPage--;
@@ -253,7 +271,6 @@ export class EventsList implements OnInit, OnDestroy {
     }
   }
 
-  // Helper methods
   getEventCategoryLabel(category: EventCategory): string {
     const categoryMap: Record<EventCategory, string> = {
       service: 'Service',
@@ -290,23 +307,118 @@ export class EventsList implements OnInit, OnDestroy {
 
   isEventToday(event: ChurchEvent): boolean {
     const today = new Date().toISOString().split('T')[0];
-    const eventDate = event.start_date.split('T')[0];
-    return eventDate === today;
+    return event.start_date.split('T')[0] === today;
   }
 
   isEventUpcoming(event: ChurchEvent): boolean {
-    const today = new Date();
-    const eventDate = new Date(event.start_date);
-    return eventDate > today;
+    return new Date(event.start_date) > new Date();
   }
 
   isEventPast(event: ChurchEvent): boolean {
-    const today = new Date();
-    const eventDate = new Date(event.end_date || event.start_date);
-    return eventDate < today;
+    return new Date(event.end_date || event.start_date) < new Date();
   }
 
   private scrollToTop(): void {
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  get calendarTitle(): string {
+    return new Date(
+      this.calendarYear,
+      this.calendarMonth,
+      1,
+    ).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  }
+
+  buildCalendar(): void {
+    const year = this.calendarYear;
+    const month = this.calendarMonth;
+
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const startDate = new Date(firstDay);
+    startDate.setDate(startDate.getDate() - firstDay.getDay()); // rewind to Sunday
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const cells: CalendarCell[] = [];
+    const cursor = new Date(startDate);
+
+    // Always render 6 rows × 7 = 42 cells for a stable grid height
+    for (let i = 0; i < 42; i++) {
+      const cellDate = new Date(cursor);
+      cellDate.setHours(0, 0, 0, 0);
+
+      cells.push({
+        date: cellDate,
+        isCurrentMonth: cellDate.getMonth() === month,
+        isToday: cellDate.getTime() === today.getTime(),
+        events: this.getEventsForDate(cellDate),
+      });
+
+      cursor.setDate(cursor.getDate() + 1);
+    }
+
+    this.calendarCells = cells;
+    // Preserve selected cell reference after rebuild
+    if (this.selectedCell) {
+      const ts = this.selectedCell.date.getTime();
+      this.selectedCell = cells.find((c) => c.date.getTime() === ts) || null;
+    }
+  }
+
+  private getEventsForDate(date: Date): ChurchEvent[] {
+    return this.events.filter((event) => {
+      const evDate = new Date(event.start_date);
+      return (
+        evDate.getFullYear() === date.getFullYear() &&
+        evDate.getMonth() === date.getMonth() &&
+        evDate.getDate() === date.getDate()
+      );
+    });
+  }
+
+  prevMonth(): void {
+    if (this.calendarMonth === 0) {
+      this.calendarMonth = 11;
+      this.calendarYear--;
+    } else {
+      this.calendarMonth--;
+    }
+    this.selectedCell = null;
+    this.buildCalendar();
+  }
+
+  nextMonth(): void {
+    if (this.calendarMonth === 11) {
+      this.calendarMonth = 0;
+      this.calendarYear++;
+    } else {
+      this.calendarMonth++;
+    }
+    this.selectedCell = null;
+    this.buildCalendar();
+  }
+
+  goToToday(): void {
+    const now = new Date();
+    this.calendarYear = now.getFullYear();
+    this.calendarMonth = now.getMonth();
+    this.selectedCell = null;
+    this.buildCalendar();
+  }
+
+  onCellClick(cell: CalendarCell): void {
+    if (cell.events.length === 0) {
+      this.selectedCell = null;
+      return;
+    }
+    // Toggle off if clicking the same cell again
+    if (this.selectedCell?.date.getTime() === cell.date.getTime()) {
+      this.selectedCell = null;
+    } else {
+      this.selectedCell = cell;
+    }
   }
 }

@@ -177,8 +177,20 @@
 
       <div class="fg">
         <label>Cell Leader</label>
-        <select formControlName="leader_id">
-          <option value="">Select a leader (optional)</option>
+
+        <!-- Cell leader can VIEW but not reassign the leader -->
+        <div *ngIf="!canManage" class="locked-field">
+          <i class="ri-user-star-line"></i>
+          <span>{{ selectedGroup?.leader_name || 'No leader assigned' }}</span>
+          <span class="locked-badge">
+            <i class="ri-lock-line"></i>
+            Locked
+          </span>
+        </div>
+
+        <!-- Admins/pastors can freely reassign -->
+        <select *ngIf="canManage" formControlName="leader_id">
+          <option value="">None</option>
           <option *ngFor="let l of leaders" [value]="l.id">
             {{ l.full_name }} — {{ getRoleLabel(l.role) }}
           </option>

@@ -145,6 +145,13 @@
               </select>
             </div>
 
+            <!-- My Cell filter — only visible to cell leaders -->
+            <button type="button" class="btn-secondary btn-my-cell" *ngIf="isCellLeader && cellLeaderGroupId"
+              (click)="filterMyCellMembers()" title="Show only my cell members">
+              <i class="ri-group-2-line"></i>
+              <span>My Cell</span>
+            </button>
+
             <!-- Clear Filters -->
             <button type="button" class="btn-clear" (click)="clearFilters()" *ngIf="filterForm.dirty"
               title="Clear all filters">
@@ -157,6 +164,19 @@
               [title]="viewMode === 'list' ? 'Switch to grid view' : 'Switch to list view'">
               <i [class]="viewMode === 'list' ? 'ri-grid-line' : 'ri-list-check'"></i>
             </button>
+
+            <div class="sort-group">
+              <button type="button" class="btn-sort" [class.active]="sortOrder === 'name_asc'"
+                (click)="setSortOrder('name_asc')" title="Sort A-Z">
+                <i class="ri-sort-asc"></i>
+                <span class="desktop-only">A-Z</span>
+              </button>
+              <button type="button" class="btn-sort" [class.active]="sortOrder === 'name_desc'"
+                (click)="setSortOrder('name_desc')" title="Sort Z-A">
+                <i class="ri-sort-desc"></i>
+                <span class="desktop-only">Z-A</span>
+              </button>
+            </div>
           </form>
         </div>
 
@@ -195,6 +215,10 @@
                       </div>
                       <div class="member-info">
                         <p class="member-name">{{ getMemberFullName(member) }}</p>
+                        <!-- My Cell badge -->
+                        <span class="cell-badge" *ngIf="isCellLeader && isMyCell(member)">
+                          <i class="ri-group-2-line"></i> My Cell
+                        </span>
                         <p class="member-meta" *ngIf="member.occupation">{{ member.occupation }}</p>
                       </div>
                     </div>
@@ -232,11 +256,11 @@
                   <td>
                     <div class="action-buttons">
                       <button class="btn-icon-small" (click)="editMember(member.id, $event)" title="Edit"
-                        [disabled]="!canEditMember" *ngIf="canEditMember">
+                        *ngIf="canEditMember && isMyCell(member)">
                         <i class="ri-edit-line"></i>
                       </button>
                       <button class="btn-icon-small btn-danger" (click)="deleteMember(member.id, $event)" title="Delete"
-                        [disabled]="!canDeleteMember" *ngIf="canDeleteMember">
+                        *ngIf="canDeleteMember && isMyCell(member)">
                         <i class="ri-delete-bin-line"></i>
                       </button>
                     </div>
@@ -299,7 +323,7 @@
             <div class="card-body">
               <h4 class="member-name">{{ getMemberFullName(member) }}</h4>
               <p class="member-number">{{ member.member_number }}</p>
-
+              <span class="cell-badge" *ngIf="member.cell_group_id">My Cell</span>
               <div class="member-details">
                 <p *ngIf="member.email" class="detail-item">
                   <i class="ri-mail-line"></i>
@@ -317,13 +341,13 @@
             </div>
 
             <div class="card-footer">
-              <button class="btn-card" (click)="editMember(member.id, $event)" [disabled]="!canEditMember"
-                *ngIf="canEditMember">
+              <button class="btn-card" (click)="editMember(member.id, $event)"
+                *ngIf="canEditMember && isMyCell(member)">
                 <i class="ri-edit-line"></i>
                 Edit
               </button>
               <button class="btn-card btn-danger" (click)="deleteMember(member.id, $event)"
-                [disabled]="!canDeleteMember" *ngIf="canDeleteMember">
+                *ngIf="canDeleteMember && isMyCell(member)">
                 <i class="ri-delete-bin-line"></i>
                 Delete
               </button>

@@ -211,41 +211,27 @@
             <div class="form-card">
               <h3>Cell Group</h3>
               <div class="form-row">
+                <!-- Cell Group — locked for cell leaders, free choice for admins/pastors -->
                 <div class="form-group">
-                  <label for="cell_group_id">Cell Group</label>
+                  <label>Cell Group</label>
 
-                  <!-- Cell leader: locked to their own group -->
-                  <div *ngIf="isCellLeader && cellLeaderGroupId" class="locked-field">
+                  <!-- Cell leader sees a locked display showing their own group -->
+                  <div *ngIf="isCellLeader" class="locked-field">
                     <i class="ri-group-2-line"></i>
-                    <span class="locked-group-name">{{ cellLeaderGroupName }}</span>
+                    <span>{{ cellLeaderGroupName || 'Your Cell Group' }}</span>
                     <span class="locked-badge">
                       <i class="ri-lock-line"></i>
-                      Auto-assigned
+                      Locked
                     </span>
                   </div>
 
-                  <!-- Cell leader but no group assigned to them yet -->
-                  <div *ngIf="isCellLeader && !cellLeaderGroupId && !loadingCellGroups"
-                    class="locked-field locked-field--warn">
-                    <i class="ri-error-warning-line"></i>
-                    <span>You are not assigned as leader of any active cell group. Contact your admin.</span>
-                  </div>
-
-                  <!-- Admin / pastor: free to choose -->
-                  <select *ngIf="!isCellLeader" id="cell_group_id" formControlName="cell_group_id">
-                    <option value="">
-                      {{ loadingCellGroups ? 'Loading groups...' : 'None (unassigned)' }}
-                    </option>
+                  <!-- Admin/pastor sees the full dropdown -->
+                  <select *ngIf="!isCellLeader" formControlName="cell_group_id">
+                    <option value="">None (unassigned)</option>
                     <option *ngFor="let group of cellGroups" [value]="group.id">
                       {{ group.name }}
-                      <ng-container *ngIf="group.meeting_day"> · {{ group.meeting_day }}</ng-container>
                     </option>
                   </select>
-
-                  <span class="field-hint" *ngIf="!isCellLeader && cellGroups.length === 0 && !loadingCellGroups">
-                    <i class="ri-information-line"></i>
-                    No active cell groups found. Create one from Cell Groups.
-                  </span>
                 </div>
               </div>
             </div>

@@ -1,13 +1,28 @@
-// src/app/features/features-routing.module.ts  (replace your current routes array)
+// src/app/features/features-routing.module.ts
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Routes } from '@angular/router';
 import { AuthGuard } from '../core/guards/auth-guard';
 import { PermissionGuard } from '../core/guards/permission.guard';
 import { Features } from './features/features';
-import { MemberRegistration } from './public/member-registration/member-registration';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { LinkCheckin } from './public/link-checkin/link-checkin';
+
+// Comprehensive role lists used across multiple routes
+const ALL_STAFF_ROLES = [
+  'super_admin',
+  'church_admin',
+  'pastor',
+  'senior_pastor',
+  'associate_pastor',
+  'ministry_leader',
+  'group_leader',
+  'cell_leader',
+  'finance_officer',
+  'elder',
+  'deacon',
+  'worship_leader',
+  'secretary',
+];
 
 const routes: Routes = [
   {
@@ -36,25 +51,25 @@ const routes: Routes = [
           import('./admin/admin-module').then((m) => m.AdminModule),
       },
 
-      // Members — role OR permission
+      // Members — any staff role OR members.view permission
       {
         path: 'members',
         canActivate: [PermissionGuard],
         data: {
-          roles: ['super_admin', 'church_admin', 'pastor', 'group_leader'],
           permission: 'members.view',
+          roles: [...ALL_STAFF_ROLES, 'member'],
         },
         loadChildren: () =>
           import('./members/members-module').then((m) => m.MembersModule),
       },
 
-      // Attendance — role OR permission
+      // Attendance — any staff role OR attendance.view permission
       {
         path: 'attendance',
         canActivate: [PermissionGuard],
         data: {
-          roles: ['super_admin', 'church_admin', 'pastor', 'group_leader'],
           permission: 'attendance.view',
+          roles: ALL_STAFF_ROLES,
         },
         loadChildren: () =>
           import('./attendance/attendance-module').then(
@@ -67,32 +82,59 @@ const routes: Routes = [
         path: 'finance',
         canActivate: [PermissionGuard],
         data: {
-          roles: ['super_admin', 'church_admin', 'finance_officer'],
           permission: 'finance.view',
+          roles: [
+            'super_admin',
+            'church_admin',
+            'pastor',
+            'senior_pastor',
+            'associate_pastor',
+            'finance_officer',
+          ],
         },
         loadChildren: () =>
           import('./finance/finance-module').then((m) => m.FinanceModule),
       },
 
-      // Forms — open to all for now, guard per component
+      // Forms — role OR permission
       {
         path: 'forms',
         canActivate: [PermissionGuard],
         data: {
-          roles: ['super_admin', 'church_admin', 'pastor'],
           permission: 'forms.view',
+          roles: [
+            'super_admin',
+            'church_admin',
+            'pastor',
+            'senior_pastor',
+            'associate_pastor',
+            'ministry_leader',
+            'group_leader',
+          ],
         },
         loadChildren: () =>
           import('./forms/forms-module').then((m) => m.FormsModule),
       },
 
-      // Ministries — role OR permission
+      // Ministries / Departments — role OR permission
       {
         path: 'ministries',
         canActivate: [PermissionGuard],
         data: {
-          roles: ['super_admin', 'church_admin', 'pastor'],
           permission: 'ministries.view',
+          roles: [
+            'super_admin',
+            'church_admin',
+            'pastor',
+            'senior_pastor',
+            'associate_pastor',
+            'ministry_leader',
+            'group_leader',
+            'cell_leader',
+            'elder',
+            'deacon',
+            'worship_leader',
+          ],
         },
         loadChildren: () =>
           import('./ministries/ministries-module').then(
@@ -100,41 +142,37 @@ const routes: Routes = [
           ),
       },
 
-      // Branches — role OR permission
+      // Branches — admin only
       {
         path: 'branches',
         canActivate: [PermissionGuard],
         data: {
-          roles: ['super_admin', 'church_admin'],
           permission: 'branches.view',
+          roles: ['super_admin', 'church_admin'],
         },
         loadChildren: () =>
           import('./branches/branches-module').then((m) => m.BranchesModule),
       },
+
+      // Cell Groups — any staff role OR members.view permission
       {
         path: 'cells',
         canActivate: [PermissionGuard],
         data: {
-          roles: [
-            'super_admin',
-            'church_admin',
-            'pastor',
-            'group_leader',
-            'cell_leader',
-          ],
           permission: 'members.view',
+          roles: ALL_STAFF_ROLES,
         },
         loadChildren: () =>
           import('./cells/cells-module').then((m) => m.CellsModule),
       },
 
-      // Events — role OR permission
+      // Events — any staff role OR events.view permission
       {
         path: 'events',
         canActivate: [PermissionGuard],
         data: {
-          roles: ['super_admin', 'church_admin', 'pastor'],
           permission: 'events.view',
+          roles: ALL_STAFF_ROLES,
         },
         loadChildren: () =>
           import('./events/events-module').then((m) => m.EventsModule),
@@ -145,8 +183,14 @@ const routes: Routes = [
         path: 'communications',
         canActivate: [PermissionGuard],
         data: {
-          roles: ['super_admin', 'church_admin', 'pastor'],
           permission: 'communications.view',
+          roles: [
+            'super_admin',
+            'church_admin',
+            'pastor',
+            'senior_pastor',
+            'associate_pastor',
+          ],
         },
         loadChildren: () =>
           import('./communications/communications-module').then(
@@ -154,7 +198,7 @@ const routes: Routes = [
           ),
       },
 
-      // User Roles — admin only (no permission fallback — this IS the permission manager)
+      // User Roles — admin only (this IS the permission manager)
       {
         path: 'user-roles',
         canActivate: [PermissionGuard],
@@ -165,7 +209,7 @@ const routes: Routes = [
           ),
       },
 
-      // CMS
+      // CMS — no guard (open)
       {
         path: 'cms',
         loadChildren: () => import('./cms/cms-module').then((m) => m.CmsModule),
@@ -176,8 +220,15 @@ const routes: Routes = [
         path: 'sermons',
         canActivate: [PermissionGuard],
         data: {
-          roles: ['super_admin', 'church_admin'],
           permission: 'sermons.view',
+          roles: [
+            'super_admin',
+            'church_admin',
+            'pastor',
+            'senior_pastor',
+            'associate_pastor',
+            'worship_leader',
+          ],
         },
         loadChildren: () =>
           import('./sermons/sermons-module').then((m) => m.SermonsModule),
@@ -197,88 +248,64 @@ const routes: Routes = [
         path: 'settings',
         canActivate: [PermissionGuard],
         data: {
+          permission: 'settings.view',
           roles: [
             'super_admin',
             'church_admin',
             'pastor',
+            'senior_pastor',
+            'associate_pastor',
             'finance_officer',
             'member',
           ],
-          permission: 'settings.view',
         },
         loadChildren: () =>
           import('./settings/settings-module').then((m) => m.SettingsModule),
       },
 
+      // Voting — feature-flagged, all staff + member roles
       {
         path: 'voting',
         canActivate: [PermissionGuard],
         data: {
-          roles: [
-            'super_admin',
-            'church_admin',
-            'pastor',
-            'member',
-            'group_leader',
-            'ministry_leader',
-            'finance_officer',
-            'senior_pastor',
-            'associate_pastor',
-            'elder',
-            'deacon',
-            'worship_leader',
-          ],
-          requiresFeature: 'voting', // ← ADD
+          requiresFeature: 'voting',
+          roles: [...ALL_STAFF_ROLES, 'member'],
         },
         loadChildren: () =>
           import('./voting/voting-module').then((m) => m.VotingModule),
       },
+
+      // Job Hub — feature-flagged, all staff + member roles
+      // FIXED: was duplicated — merged into single route with requiresFeature only
       {
         path: 'job-hub',
         canActivate: [PermissionGuard],
         data: {
-          roles: [
-            'super_admin',
-            'church_admin',
-            'pastor',
-            'member',
-            'group_leader',
-            'ministry_leader',
-            'finance_officer',
-            'senior_pastor',
-            'associate_pastor',
-            'elder',
-            'deacon',
-            'worship_leader',
-          ],
-          requiresFeature: 'job_hub', // ← ADD
+          requiresFeature: 'job_hub',
+          roles: [...ALL_STAFF_ROLES, 'member'],
         },
         loadChildren: () =>
           import('./job-hub/job-hub-module').then((m) => m.JobHubModule),
       },
 
+      // Reports (school management)
       {
-        path: 'job-hub',
+        path: 'reports',
         canActivate: [PermissionGuard],
         data: {
+          requiresFeature: 'reports',
+          permission: 'reports.view',
           roles: [
             'super_admin',
             'church_admin',
             'pastor',
-            'member',
-            'group_leader',
-            'ministry_leader',
-            'finance_officer',
             'senior_pastor',
             'associate_pastor',
-            'elder',
-            'deacon',
-            'worship_leader',
+            'finance_officer',
           ],
-          permission: 'job-hub.view',
         },
         loadChildren: () =>
-          import('./job-hub/job-hub-module').then((m) => m.JobHubModule),
+          import('./reports/reports-module').then((m) => m.ReportsModule),
       },
     ],
   },

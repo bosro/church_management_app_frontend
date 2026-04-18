@@ -314,7 +314,7 @@ export class Signup implements OnInit {
 
     this.authService.signUp(signupData).subscribe({
       next: (response) => {
-        console.log('Signup successful:', response);
+        // console.log('Signup successful:', response);
         this.loading = false;
         this.currentStep = 3;
         this.successMessage =
@@ -355,3 +355,7 @@ export class Signup implements OnInit {
     return '';
   }
 }
+
+
+
+

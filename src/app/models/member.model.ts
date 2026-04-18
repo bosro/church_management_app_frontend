@@ -1,7 +1,11 @@
 // src/app/models/member.model.ts
 export type Gender = 'male' | 'female' | 'other';
 export type MaritalStatus = 'single' | 'married' | 'divorced' | 'widowed';
-export type MembershipStatus = 'active' | 'inactive' | 'transferred' | 'deceased';
+export type MembershipStatus =
+  | 'active'
+  | 'inactive'
+  | 'transferred'
+  | 'deceased';
 
 export interface Member {
   id: string;
@@ -46,6 +50,8 @@ export interface MemberSearchFilters {
   ministry_filter?: string;
   min_age?: number;
   max_age?: number;
+  cell_group_filter?: string; // ADD THIS
+  sort_by?: 'name_asc' | 'name_desc' | 'created_at_desc'; // ADD THIS
 }
 
 export interface MemberStatistics {
@@ -217,12 +223,8 @@ export interface MemberMinistryAssignment {
   meeting_schedule: string | null;
 }
 
-
-
-
 // src/app/models/member.model.ts
 // ADD these interfaces and update MemberCreateInput / Member
-
 
 export interface CellGroup {
   id: string;
@@ -250,7 +252,7 @@ export interface Member {
   church_id: string;
   branch_id?: string;
   user_id?: string;
-  cell_group_id?: string;          // ← ADD
+  cell_group_id?: string; // ← ADD
   member_number: string;
   first_name: string;
   middle_name?: string;
@@ -307,10 +309,8 @@ export interface MemberCreateInput {
   is_visitor?: boolean;
   notes?: string;
   branch_id?: string;
-  cell_group_id?: string;          // ← ADD
+  cell_group_id?: string; // ← ADD
 }
-
-
 
 export interface MemberSearchFilters {
   search_term?: string;
@@ -318,11 +318,7 @@ export interface MemberSearchFilters {
   status_filter?: MembershipStatus;
   branch_filter?: string;
   ministry_filter?: string;
-  cell_group_filter?: string;      // ← ADD
+  cell_group_filter?: string; // ← ADD
   min_age?: number;
   max_age?: number;
 }
-
-
-
-

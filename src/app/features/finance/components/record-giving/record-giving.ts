@@ -1,14 +1,25 @@
 // src/app/features/finance/components/record-giving/record-giving.component.ts
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { FormBuilder, FormGroup, Validators, FormControl } from '@angular/forms';
+import {
+  FormBuilder,
+  FormGroup,
+  Validators,
+  FormControl,
+} from '@angular/forms';
 import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
-import { takeUntil, debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
+import {
+  takeUntil,
+  debounceTime,
+  distinctUntilChanged,
+  switchMap,
+} from 'rxjs/operators';
 import { FinanceService } from '../../services/finance.service';
 import { MemberService } from '../../../members/services/member.service';
 import { GivingCategory, PaymentMethod } from '../../../../models/giving.model';
 import { Member } from '../../../../models/member.model';
 import { PermissionService } from '../../../../core/services/permission.service';
+import { AuthService } from '../../../../core/services/auth';
 
 @Component({
   selector: 'app-record-giving',
@@ -35,12 +46,12 @@ export class RecordGiving implements OnInit, OnDestroy {
   selectedMember: Member | null = null;
 
   // Payment methods
-  paymentMethods: { value: PaymentMethod, label: string }[] = [
+  paymentMethods: { value: PaymentMethod; label: string }[] = [
     { value: 'cash', label: 'Cash' },
     { value: 'mobile_money', label: 'Mobile Money' },
     { value: 'bank_transfer', label: 'Bank Transfer' },
     { value: 'card', label: 'Card' },
-    { value: 'cheque', label: 'Cheque' }
+    { value: 'cheque', label: 'Cheque' },
   ];
 
   // Currencies
@@ -54,7 +65,8 @@ export class RecordGiving implements OnInit, OnDestroy {
     private financeService: FinanceService,
     private memberService: MemberService,
     private router: Router,
-     public permissionService: PermissionService
+    public permissionService: PermissionService,
+    private authService: AuthService,
   ) {}
 
   ngOnInit(): void {
@@ -69,11 +81,16 @@ export class RecordGiving implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  private checkPermissions(): void {
+ private checkPermissions(): void {
+  const role = this.authService.getCurrentUserRole();
+
+  const manageRoles = ['finance_officer'];
+
   this.canManageFinance =
     this.permissionService.isAdmin ||
     this.permissionService.finance.record ||
-    this.permissionService.finance.manage;
+    this.permissionService.finance.manage ||
+    manageRoles.includes(role);
 
   if (!this.canManageFinance) {
     this.router.navigate(['/unauthorized']);
@@ -90,14 +107,15 @@ export class RecordGiving implements OnInit, OnDestroy {
       category_id: ['', [Validators.required]],
       payment_method: ['cash', [Validators.required]],
       transaction_reference: ['', [Validators.maxLength(100)]],
-      notes: ['', [Validators.maxLength(500)]]
+      notes: ['', [Validators.maxLength(500)]],
     });
   }
 
   private loadCategories(): void {
     this.loadingCategories = true;
 
-    this.financeService.getGivingCategories()
+    this.financeService
+      .getGivingCategories()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (categories) => {
@@ -107,7 +125,7 @@ export class RecordGiving implements OnInit, OnDestroy {
         error: (error) => {
           console.error('Error loading categories:', error);
           this.loadingCategories = false;
-        }
+        },
       });
   }
 
@@ -116,7 +134,7 @@ export class RecordGiving implements OnInit, OnDestroy {
       .pipe(
         debounceTime(300),
         distinctUntilChanged(),
-        switchMap(query => {
+        switchMap((query) => {
           if (!query || query.length < 2) {
             this.searchResults = [];
             return [];
@@ -124,7 +142,7 @@ export class RecordGiving implements OnInit, OnDestroy {
           this.searching = true;
           return this.memberService.searchMembers(query);
         }),
-        takeUntil(this.destroy$)
+        takeUntil(this.destroy$),
       )
       .subscribe({
         next: (members) => {
@@ -135,7 +153,7 @@ export class RecordGiving implements OnInit, OnDestroy {
           console.error('Search error:', error);
           this.searching = false;
           this.searchResults = [];
-        }
+        },
       });
   }
 
@@ -164,10 +182,11 @@ export class RecordGiving implements OnInit, OnDestroy {
     const transactionData = {
       ...this.givingForm.value,
       member_id: this.selectedMember?.id || null,
-      amount: parseFloat(this.givingForm.value.amount)
+      amount: parseFloat(this.givingForm.value.amount),
     };
 
-    this.financeService.createGivingTransaction(transactionData)
+    this.financeService
+      .createGivingTransaction(transactionData)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
@@ -180,10 +199,11 @@ export class RecordGiving implements OnInit, OnDestroy {
         },
         error: (error) => {
           this.loading = false;
-          this.errorMessage = error.message || 'Failed to record giving. Please try again.';
+          this.errorMessage =
+            error.message || 'Failed to record giving. Please try again.';
           this.scrollToTop();
           console.error('Error recording giving:', error);
-        }
+        },
       });
   }
 
@@ -192,7 +212,7 @@ export class RecordGiving implements OnInit, OnDestroy {
   }
 
   private markFormGroupTouched(formGroup: FormGroup): void {
-    Object.keys(formGroup.controls).forEach(key => {
+    Object.keys(formGroup.controls).forEach((key) => {
       const control = formGroup.get(key);
       control?.markAsTouched();
 
@@ -244,13 +264,3 @@ export class RecordGiving implements OnInit, OnDestroy {
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

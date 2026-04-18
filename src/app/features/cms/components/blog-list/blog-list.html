@@ -19,7 +19,7 @@
             </div>
           </div>
           <button class="btn-primary" (click)="createBlogPost()"
-            *ngIf="permissionService.isAdmin || permissionService.settings.manage">
+            *ngIf="canManageContent">
             <i class="ri-add-line"></i>
             Create Post
           </button>
@@ -88,16 +88,16 @@
 
                 <div class="card-actions">
                   <button class="btn-icon" [class.published]="post.is_published" (click)="togglePublish(post, $event)"
-                    *ngIf="permissionService.isAdmin || permissionService.settings.manage"
+                    *ngIf="canManageContent"
                     [title]="post.is_published ? 'Unpublish' : 'Publish'">
                     <i [class]="post.is_published ? 'ri-eye-off-line' : 'ri-eye-line'"></i>
                   </button>
                   <button class="btn-icon" (click)="editBlogPost(post.id, $event)"
-                    *ngIf="permissionService.isAdmin || permissionService.settings.manage" title="Edit">
+                    *ngIf="canManageContent" title="Edit">
                     <i class="ri-edit-line"></i>
                   </button>
                   <button class="btn-icon btn-danger" (click)="deleteBlogPost(post.id, $event)"
-                    *ngIf="permissionService.isAdmin || permissionService.settings.manage" title="Delete">
+                    *ngIf="canManageContent" title="Delete">
                     <i class="ri-delete-bin-line"></i>
                   </button>
                 </div>

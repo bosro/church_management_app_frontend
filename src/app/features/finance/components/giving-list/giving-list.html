@@ -7,6 +7,7 @@
 
     <div class="dashboard-body">
       <div class="giving-list-container">
+
         <!-- Page Header -->
         <div class="page-header">
           <div class="header-left">
@@ -19,40 +20,39 @@
               <i class="ri-download-line"></i>
               <span>Export</span>
             </button>
-            <button class="btn-primary" (click)="recordGiving()" *ngIf="permissionService.isAdmin ||
-               permissionService.finance.record ||
-               permissionService.finance.manage">
-              <i class="ri-add-line"></i>
+            <button
+              class="btn-primary"
+              (click)="recordGiving()"
+              *ngIf="permissionService.isAdmin ||
+                     permissionService.finance.record ||
+                     permissionService.finance.manage">
+              <i class="ri-add-circle-fill"></i>
               <span>Record Giving</span>
             </button>
           </div>
         </div>
 
-        <!-- Success Message -->
+        <!-- Alerts -->
         <div *ngIf="successMessage" class="success-alert">
           <i class="ri-checkbox-circle-line"></i>
           <span>{{ successMessage }}</span>
         </div>
-
-        <!-- Error Message -->
         <div *ngIf="errorMessage" class="error-alert">
           <i class="ri-error-warning-line"></i>
           <span>{{ errorMessage }}</span>
         </div>
 
-        <!-- Filters -->
+        <!-- Filters Card -->
         <div class="filters-card">
-          <div class="filters-grid">
+          <div class="filters-row">
             <div class="filter-group">
               <label>Start Date</label>
               <input type="date" [formControl]="startDateControl" class="filter-input" />
             </div>
-
             <div class="filter-group">
               <label>End Date</label>
               <input type="date" [formControl]="endDateControl" class="filter-input" />
             </div>
-
             <div class="filter-group">
               <label>Category</label>
               <select [formControl]="categoryControl" class="filter-select">
@@ -62,7 +62,6 @@
                 </option>
               </select>
             </div>
-
             <div class="filter-group">
               <label>Payment Method</label>
               <select [formControl]="paymentMethodControl" class="filter-select">
@@ -71,15 +70,29 @@
                 </option>
               </select>
             </div>
+            <div class="filter-actions">
+              <button class="btn-clear-filters" (click)="clearFilters()">
+                <i class="ri-close-circle-line"></i>
+                Clear
+              </button>
+            </div>
           </div>
-
-          <button class="btn-clear-filters" (click)="clearFilters()">
-            <i class="ri-close-circle-line"></i>
-            Clear Filters
-          </button>
         </div>
 
-        <!-- Loading State -->
+        <!-- Summary Strip (shows when filters active or always) -->
+        <div class="summary-strip" *ngIf="!loading && transactions.length > 0">
+          <div class="summary-item">
+            <span class="summary-label">Showing</span>
+            <span class="summary-value">{{ totalTransactions }} transaction{{ totalTransactions !== 1 ? 's' : '' }}</span>
+          </div>
+          <div class="summary-divider"></div>
+          <div class="summary-item">
+            <span class="summary-label">Page</span>
+            <span class="summary-value">{{ currentPage }} of {{ totalPages || 1 }}</span>
+          </div>
+        </div>
+
+        <!-- Loading -->
         <div *ngIf="loading" class="loading-container">
           <app-loading-spinner message="Loading transactions..."></app-loading-spinner>
         </div>
@@ -103,11 +116,12 @@
               </thead>
               <tbody>
                 <tr *ngFor="let transaction of transactions">
-                  <td>{{ transaction.transaction_date | date:'MMM d, y' }}</td>
+                  <td class="date-cell">{{ transaction.transaction_date | date:'MMM d, y' }}</td>
                   <td>
                     <div class="member-cell">
                       <div class="member-avatar-small">
-                        <img *ngIf="transaction.member?.photo_url" [src]="transaction.member.photo_url"
+                        <img *ngIf="transaction.member?.photo_url"
+                          [src]="transaction.member.photo_url"
                           [alt]="getMemberName(transaction)" />
                         <div *ngIf="!transaction.member?.photo_url" class="avatar-placeholder-small">
                           {{ getMemberInitials(transaction) }}
@@ -132,27 +146,40 @@
                     </span>
                   </td>
                   <td>
-                    <span class="payment-method">
-                      {{ transaction.payment_method }}
+                    <span class="payment-method-badge" [attr.data-method]="transaction.payment_method">
+                      {{ transaction.payment_method | titlecase }}
                     </span>
                   </td>
                   <td>
                     <span class="reference">
-                      {{ transaction.transaction_reference || '-' }}
+                      {{ transaction.transaction_reference || '—' }}
                     </span>
                   </td>
-                  <td>
-                    <button class="btn-delete" (click)="deleteTransaction(transaction.id, $event)" title="Delete"
-                      *ngIf="permissionService.isAdmin || permissionService.finance.manage">
+                  <td *ngIf="permissionService.isAdmin || permissionService.finance.manage">
+                    <button class="btn-delete"
+                      (click)="deleteTransaction(transaction.id, $event)"
+                      title="Delete transaction">
                       <i class="ri-delete-bin-line"></i>
                     </button>
                   </td>
                 </tr>
 
+                <!-- Empty state -->
                 <tr *ngIf="transactions.length === 0">
-                  <td colspan="7" class="empty-state">
-                    <i class="ri-money-dollar-circle-line"></i>
-                    <p>No transactions found</p>
+                  <td [attr.colspan]="(permissionService.isAdmin || permissionService.finance.manage) ? 7 : 6">
+                    <div class="empty-state-table">
+                      <i class="ri-money-dollar-circle-line"></i>
+                      <p>No transactions found</p>
+                      <button
+                        class="btn-primary-sm"
+                        (click)="recordGiving()"
+                        *ngIf="permissionService.isAdmin ||
+                               permissionService.finance.record ||
+                               permissionService.finance.manage">
+                        <i class="ri-add-line"></i>
+                        Record First Giving
+                      </button>
+                    </div>
                   </td>
                 </tr>
               </tbody>
@@ -166,19 +193,30 @@
             <i class="ri-arrow-left-s-line"></i>
             Previous
           </button>
-
           <div class="pagination-pages">
             <span class="page-info">
-              Page {{ currentPage }} of {{ totalPages }} ({{ totalTransactions }} transactions)
+              Page {{ currentPage }} of {{ totalPages }}
+              <span class="total-count">({{ totalTransactions }} total)</span>
             </span>
           </div>
-
           <button class="pagination-btn" [disabled]="currentPage === totalPages" (click)="nextPage()">
             Next
             <i class="ri-arrow-right-s-line"></i>
           </button>
         </div>
+
       </div>
     </div>
   </div>
 </div>
+
+<!-- Floating Action Button (mobile) -->
+<button
+  class="fab"
+  (click)="recordGiving()"
+  *ngIf="permissionService.isAdmin ||
+         permissionService.finance.record ||
+         permissionService.finance.manage"
+  title="Record Giving">
+  <i class="ri-add-line"></i>
+</button>

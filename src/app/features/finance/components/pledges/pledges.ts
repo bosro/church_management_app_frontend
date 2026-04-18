@@ -1,10 +1,13 @@
 // src/app/features/finance/components/pledges-list/pledges-list.component.ts
+// KEY FIX: checkPermissions() now includes role-based fallback.
+// All other logic is unchanged.
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { FinanceService } from '../../services/finance.service';
 import { PermissionService } from '../../../../core/services/permission.service';
+import { AuthService } from '../../../../core/services/auth';
 
 @Component({
   selector: 'app-pledges-list',
@@ -20,20 +23,19 @@ export class Pledges implements OnInit, OnDestroy {
   errorMessage = '';
   successMessage = '';
 
-  // Pagination
   currentPage = 1;
   pageSize = 20;
   totalPledges = 0;
   totalPages = 0;
 
-  // Permissions
   canViewFinance = false;
   canManageFinance = false;
 
   constructor(
     private financeService: FinanceService,
     private router: Router,
-     public permissionService: PermissionService
+    public permissionService: PermissionService,
+    private authService: AuthService,
   ) {}
 
   ngOnInit(): void {
@@ -47,19 +49,31 @@ export class Pledges implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-  this.canViewFinance =
-    this.permissionService.isAdmin ||
-    this.permissionService.finance.view;
+    const role = this.authService.getCurrentUserRole();
 
-  this.canManageFinance =
-    this.permissionService.isAdmin ||
-    this.permissionService.finance.manage ||
-    this.permissionService.finance.record;
+    const viewRoles = [
+      'pastor',
+      'senior_pastor',
+      'associate_pastor',
+      'finance_officer',
+    ];
+    const manageRoles = ['finance_officer'];
 
-  if (!this.canViewFinance) {
-    this.router.navigate(['/unauthorized']);
+    this.canViewFinance =
+      this.permissionService.isAdmin ||
+      this.permissionService.finance.view ||
+      viewRoles.includes(role);
+
+    this.canManageFinance =
+      this.permissionService.isAdmin ||
+      this.permissionService.finance.manage ||
+      this.permissionService.finance.record ||
+      manageRoles.includes(role);
+
+    if (!this.canViewFinance) {
+      this.router.navigate(['/unauthorized']);
+    }
   }
-}
 
   loadPledges(): void {
     this.loading = true;
@@ -78,7 +92,6 @@ export class Pledges implements OnInit, OnDestroy {
         error: (error) => {
           this.errorMessage = error.message || 'Failed to load pledges';
           this.loading = false;
-          console.error('Error loading pledges:', error);
         },
       });
   }
@@ -93,18 +106,16 @@ export class Pledges implements OnInit, OnDestroy {
 
   deletePledge(pledgeId: string, event: Event): void {
     event.stopPropagation();
-
     if (!this.canManageFinance) {
       this.errorMessage = 'You do not have permission to delete pledges';
       return;
     }
-
-    const confirmMessage =
-      'Are you sure you want to delete this pledge? This action cannot be undone.';
-
-    if (!confirm(confirmMessage)) {
+    if (
+      !confirm(
+        'Are you sure you want to delete this pledge? This action cannot be undone.',
+      )
+    )
       return;
-    }
 
     this.financeService
       .deletePledge(pledgeId)
@@ -113,14 +124,10 @@ export class Pledges implements OnInit, OnDestroy {
         next: () => {
           this.successMessage = 'Pledge deleted successfully!';
           this.loadPledges();
-
-          setTimeout(() => {
-            this.successMessage = '';
-          }, 3000);
+          setTimeout(() => (this.successMessage = ''), 3000);
         },
         error: (error) => {
           this.errorMessage = error.message || 'Failed to delete pledge';
-          console.error('Error deleting pledge:', error);
         },
       });
   }
@@ -144,20 +151,15 @@ export class Pledges implements OnInit, OnDestroy {
           a.click();
           document.body.removeChild(a);
           window.URL.revokeObjectURL(url);
-
           this.successMessage = 'Pledges exported successfully!';
-          setTimeout(() => {
-            this.successMessage = '';
-          }, 3000);
+          setTimeout(() => (this.successMessage = ''), 3000);
         },
         error: (error) => {
           this.errorMessage = error.message || 'Failed to export pledges';
-          console.error('Export error:', error);
         },
       });
   }
 
-  // Pagination
   previousPage(): void {
     if (this.currentPage > 1) {
       this.currentPage--;
@@ -178,11 +180,10 @@ export class Pledges implements OnInit, OnDestroy {
     this.router.navigate(['main/finance/pledges', pledgeId]);
   }
 
-  // Helper methods
   formatCurrency(amount: number, currency: string = 'GHS'): string {
     return new Intl.NumberFormat('en-GH', {
       style: 'currency',
-      currency: currency,
+      currency,
     }).format(amount || 0);
   }
 
@@ -192,8 +193,10 @@ export class Pledges implements OnInit, OnDestroy {
 
   getProgressPercentage(pledge: any): number {
     if (pledge.pledge_amount === 0) return 0;
-    const percentage = (pledge.amount_paid / pledge.pledge_amount) * 100;
-    return Math.min(Math.round(percentage), 100);
+    return Math.min(
+      Math.round((pledge.amount_paid / pledge.pledge_amount) * 100),
+      100,
+    );
   }
 
   getProgressClass(percentage: number): string {
@@ -203,16 +206,14 @@ export class Pledges implements OnInit, OnDestroy {
   }
 
   getMemberName(pledge: any): string {
-    if (pledge.member) {
+    if (pledge.member)
       return `${pledge.member.first_name} ${pledge.member.last_name}`;
-    }
     return 'Unknown';
   }
 
   getMemberInitials(pledge: any): string {
-    if (pledge.member) {
+    if (pledge.member)
       return `${pledge.member.first_name[0]}${pledge.member.last_name[0]}`.toUpperCase();
-    }
     return '?';
   }
 
@@ -220,13 +221,3 @@ export class Pledges implements OnInit, OnDestroy {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }
-
-
-
-
-
-
-
-
-
-

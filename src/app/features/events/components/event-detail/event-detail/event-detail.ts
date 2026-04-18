@@ -1,3 +1,5 @@
+// src/app/features/events/components/event-detail/event-detail.component.ts
+// KEY FIX: checkPermissions() now includes role-based fallback
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormControl } from '@angular/forms';
@@ -11,6 +13,7 @@ import {
 import { EventsService } from '../../../services/events';
 import { ChurchEvent, EventCategory } from '../../../../../models/event.model';
 import { PermissionService } from '../../../../../core/services/permission.service';
+import { AuthService } from '../../../../../core/services/auth';
 
 @Component({
   selector: 'app-event-detail',
@@ -29,7 +32,6 @@ export class EventDetail implements OnInit, OnDestroy {
   errorMessage = '';
   successMessage = '';
 
-  // Registration Form
   showRegistrationForm = false;
   searchControl = new FormControl('');
   searchResults: any[] = [];
@@ -41,7 +43,6 @@ export class EventDetail implements OnInit, OnDestroy {
   registrationNotes = '';
   registering = false;
 
-  // Permissions
   canManageEvents = false;
 
   constructor(
@@ -49,12 +50,12 @@ export class EventDetail implements OnInit, OnDestroy {
     private router: Router,
     private eventsService: EventsService,
     public permissionService: PermissionService,
+    private authService: AuthService,
   ) {}
 
   ngOnInit(): void {
     this.checkPermissions();
     this.eventId = this.route.snapshot.paramMap.get('id') || '';
-
     if (this.eventId) {
       this.loadEventDetails();
       this.setupMemberSearch();
@@ -67,13 +68,39 @@ export class EventDetail implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
+    const role = this.authService.getCurrentUserRole();
+
+    const viewRoles = [
+      'pastor',
+      'senior_pastor',
+      'associate_pastor',
+      'ministry_leader',
+      'group_leader',
+      'cell_leader',
+      'finance_officer',
+      'elder',
+      'deacon',
+      'worship_leader',
+      'secretary',
+    ];
+
+    const manageRoles = [
+      'pastor',
+      'senior_pastor',
+      'associate_pastor',
+      'ministry_leader',
+    ];
+
     const canView =
-      this.permissionService.isAdmin || this.permissionService.events.view;
+      this.permissionService.isAdmin ||
+      this.permissionService.events.view ||
+      viewRoles.includes(role);
 
     this.canManageEvents =
       this.permissionService.isAdmin ||
       this.permissionService.events.edit ||
-      this.permissionService.events.delete;
+      this.permissionService.events.delete ||
+      manageRoles.includes(role);
 
     if (!canView) {
       this.router.navigate(['/unauthorized']);
@@ -84,7 +111,6 @@ export class EventDetail implements OnInit, OnDestroy {
     this.loading = true;
     this.errorMessage = '';
 
-    // Load event
     this.eventsService
       .getEventById(this.eventId)
       .pipe(takeUntil(this.destroy$))
@@ -96,14 +122,10 @@ export class EventDetail implements OnInit, OnDestroy {
         error: (error) => {
           this.errorMessage = error.message || 'Failed to load event';
           this.loading = false;
-          console.error('Error loading event:', error);
         },
       });
 
-    // Load registrations
     this.loadRegistrations();
-
-    // Load statistics
     this.loadStatistics();
   }
 
@@ -163,12 +185,9 @@ export class EventDetail implements OnInit, OnDestroy {
       });
   }
 
-  // Registration Management
   toggleRegistrationForm(): void {
     this.showRegistrationForm = !this.showRegistrationForm;
-    if (!this.showRegistrationForm) {
-      this.resetRegistrationForm();
-    }
+    if (!this.showRegistrationForm) this.resetRegistrationForm();
   }
 
   selectMember(member: any): void {
@@ -182,7 +201,6 @@ export class EventDetail implements OnInit, OnDestroy {
   }
 
   registerAttendee(): void {
-    // Validate
     if (!this.selectedMember && (!this.guestName || !this.guestEmail)) {
       this.errorMessage =
         'Please select a member or provide guest details (name and email required)';
@@ -190,7 +208,6 @@ export class EventDetail implements OnInit, OnDestroy {
       return;
     }
 
-    // Validate email format for guests
     if (!this.selectedMember && this.guestEmail) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(this.guestEmail)) {
@@ -228,15 +245,11 @@ export class EventDetail implements OnInit, OnDestroy {
           this.loadStatistics();
           this.toggleRegistrationForm();
           this.registering = false;
-
-          setTimeout(() => {
-            this.successMessage = '';
-          }, 3000);
+          setTimeout(() => (this.successMessage = ''), 3000);
         },
         error: (error) => {
           this.errorMessage = error.message || 'Failed to register';
           this.registering = false;
-          console.error('Registration error:', error);
         },
       });
   }
@@ -246,7 +259,6 @@ export class EventDetail implements OnInit, OnDestroy {
       this.errorMessage = 'You do not have permission to check in attendees';
       return;
     }
-
     this.eventsService
       .checkInRegistration(registrationId)
       .pipe(takeUntil(this.destroy$))
@@ -255,14 +267,10 @@ export class EventDetail implements OnInit, OnDestroy {
           this.successMessage = 'Attendee checked in successfully!';
           this.loadRegistrations();
           this.loadStatistics();
-
-          setTimeout(() => {
-            this.successMessage = '';
-          }, 3000);
+          setTimeout(() => (this.successMessage = ''), 3000);
         },
         error: (error) => {
           this.errorMessage = error.message || 'Failed to check in';
-          console.error('Check-in error:', error);
         },
       });
   }
@@ -272,10 +280,7 @@ export class EventDetail implements OnInit, OnDestroy {
       this.errorMessage = 'You do not have permission to cancel registrations';
       return;
     }
-
-    if (!confirm('Are you sure you want to cancel this registration?')) {
-      return;
-    }
+    if (!confirm('Are you sure you want to cancel this registration?')) return;
 
     this.eventsService
       .cancelRegistration(registrationId)
@@ -285,14 +290,10 @@ export class EventDetail implements OnInit, OnDestroy {
           this.successMessage = 'Registration cancelled successfully!';
           this.loadRegistrations();
           this.loadStatistics();
-
-          setTimeout(() => {
-            this.successMessage = '';
-          }, 3000);
+          setTimeout(() => (this.successMessage = ''), 3000);
         },
         error: (error) => {
           this.errorMessage = error.message || 'Failed to cancel registration';
-          console.error('Cancel registration error:', error);
         },
       });
   }
@@ -307,13 +308,11 @@ export class EventDetail implements OnInit, OnDestroy {
     this.searchResults = [];
   }
 
-  // Export
   exportRegistrations(): void {
     if (!this.canManageEvents) {
       this.errorMessage = 'You do not have permission to export registrations';
       return;
     }
-
     this.eventsService
       .exportEventRegistrations(this.eventId)
       .pipe(takeUntil(this.destroy$))
@@ -327,20 +326,15 @@ export class EventDetail implements OnInit, OnDestroy {
           a.click();
           document.body.removeChild(a);
           window.URL.revokeObjectURL(url);
-
           this.successMessage = 'Registrations exported successfully!';
-          setTimeout(() => {
-            this.successMessage = '';
-          }, 3000);
+          setTimeout(() => (this.successMessage = ''), 3000);
         },
         error: (error) => {
           this.errorMessage = error.message || 'Failed to export registrations';
-          console.error('Export error:', error);
         },
       });
   }
 
-  // Navigation
   goBack(): void {
     this.router.navigate(['main/events']);
   }
@@ -350,7 +344,6 @@ export class EventDetail implements OnInit, OnDestroy {
       this.errorMessage = 'You do not have permission to edit events';
       return;
     }
-
     this.router.navigate(['main/events', this.eventId, 'edit']);
   }
 
@@ -359,13 +352,12 @@ export class EventDetail implements OnInit, OnDestroy {
       this.errorMessage = 'You do not have permission to delete events';
       return;
     }
-
-    const confirmMessage =
-      'Are you sure you want to delete this event? This action cannot be undone. All registrations will also be deleted.';
-
-    if (!confirm(confirmMessage)) {
+    if (
+      !confirm(
+        'Are you sure you want to delete this event? This action cannot be undone. All registrations will also be deleted.',
+      )
+    )
       return;
-    }
 
     this.eventsService
       .deleteEvent(this.eventId)
@@ -376,15 +368,12 @@ export class EventDetail implements OnInit, OnDestroy {
         },
         error: (error) => {
           this.errorMessage = error.message || 'Failed to delete event';
-          console.error('Delete event error:', error);
         },
       });
   }
 
-  // Helper methods
   getEventCategoryLabel(category?: EventCategory): string {
     if (!category) return 'Other';
-
     const categoryMap: Record<EventCategory, string> = {
       service: 'Service',
       meeting: 'Meeting',
@@ -403,7 +392,6 @@ export class EventDetail implements OnInit, OnDestroy {
 
   getEventCategoryClass(category?: EventCategory): string {
     if (!category) return 'type-other';
-
     const classMap: Record<EventCategory, string> = {
       service: 'type-service',
       meeting: 'type-meeting',
@@ -419,10 +407,10 @@ export class EventDetail implements OnInit, OnDestroy {
     };
     return classMap[category] || 'type-other';
   }
+
   formatDateRange(event: ChurchEvent): string {
     const start = new Date(event.start_date);
     const end = new Date(event.end_date || event.start_date);
-
     const startDateStr = event.start_date.split('T')[0];
     const endDateStr = (event.end_date || event.start_date).split('T')[0];
 
@@ -433,21 +421,18 @@ export class EventDetail implements OnInit, OnDestroy {
         year: 'numeric',
       });
     }
-
     return `${start.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })} - ${end.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`;
   }
 
   getAttendeeName(registration: any): string {
-    if (registration.member) {
+    if (registration.member)
       return `${registration.member.first_name} ${registration.member.last_name}`;
-    }
     return registration.name || 'Guest';
   }
 
   getAttendeeInitials(registration: any): string {
-    if (registration.member) {
+    if (registration.member)
       return `${registration.member.first_name[0]}${registration.member.last_name[0]}`.toUpperCase();
-    }
     if (registration.name) {
       const names = registration.name.split(' ');
       return names.length > 1
@@ -460,7 +445,6 @@ export class EventDetail implements OnInit, OnDestroy {
   getMemberName(member: any): string {
     return `${member.first_name} ${member.last_name}`;
   }
-
   getMemberInitials(member: any): string {
     return `${member.first_name[0]}${member.last_name[0]}`.toUpperCase();
   }

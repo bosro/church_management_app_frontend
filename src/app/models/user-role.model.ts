@@ -152,3 +152,100 @@ export function getAllCategories(): PermissionCategory[] {
 
 
 
+
+
+
+// Add this to user-role.model.ts or manage-permissions.component.ts
+export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
+  cell_leader: [
+    'members.view',
+    'attendance.view',
+    'attendance.checkin',
+  ],
+  group_leader: [
+    'members.view',
+    'members.create',
+    'attendance.view',
+    'attendance.manage',
+    'attendance.checkin',
+    'events.view',
+  ],
+  ministry_leader: [
+    'members.view',
+    'members.create',
+    'attendance.view',
+    'attendance.manage',
+    'ministries.view',
+    'ministries.manage',
+    'events.view',
+    'events.create',
+    'communications.view',
+  ],
+  pastor: [
+    'members.view',
+    'members.create',
+    'members.edit',
+    'members.export',
+    'attendance.view',
+    'attendance.manage',
+    'attendance.checkin',
+    'attendance.reports',
+    'ministries.view',
+    'events.view',
+    'events.create',
+    'communications.view',
+    'communications.send',
+    'reports.view',
+  ],
+  senior_pastor: [
+    'members.view',
+    'members.create',
+    'members.edit',
+    'members.export',
+    'attendance.view',
+    'attendance.manage',
+    'attendance.checkin',
+    'attendance.reports',
+    'ministries.view',
+    'events.view',
+    'events.create',
+    'communications.view',
+    'communications.send',
+    'reports.view',
+    'branches.view',
+  ],
+  associate_pastor: [
+    'members.view',
+    'members.create',
+    'attendance.view',
+    'attendance.manage',
+    'attendance.checkin',
+    'events.view',
+    'communications.view',
+  ],
+  finance_officer: [
+    'members.view',
+    'finance.view',
+    'finance.record',
+    'finance.manage',
+    'finance.reports',
+    'reports.view',
+  ],
+  elder: [
+    'members.view',
+    'attendance.view',
+    'events.view',
+  ],
+  deacon: [
+    'members.view',
+    'attendance.view',
+    'attendance.checkin',
+  ],
+  worship_leader: [
+    'members.view',
+    'attendance.view',
+    'events.view',
+    'events.create',
+  ],
+  member: [],
+};

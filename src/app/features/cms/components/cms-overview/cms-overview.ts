@@ -6,6 +6,14 @@ import { takeUntil } from 'rxjs/operators';
 import { CmsService } from '../../services/cms';
 import { CmsStatistics } from '../../../../models/cms.model';
 import { PermissionService } from '../../../../core/services/permission.service';
+import { AuthService } from '../../../../core/services/auth';
+
+const CMS_VIEW_ROLES = [
+  'pastor', 'senior_pastor', 'associate_pastor', 'ministry_leader', 'secretary',
+];
+const CMS_MANAGE_ROLES = [
+  'pastor', 'senior_pastor', 'associate_pastor', 'ministry_leader',
+];
 
 @Component({
   selector: 'app-cms-overview',
@@ -28,6 +36,7 @@ export class CmsOverview implements OnInit, OnDestroy {
     private cmsService: CmsService,
     private router: Router,
     public permissionService: PermissionService,
+    private authService: AuthService
   ) {}
 
   ngOnInit(): void {
@@ -40,17 +49,21 @@ export class CmsOverview implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  private checkPermissions(): void {
-    this.canViewContent =
-      this.permissionService.isAdmin || this.permissionService.settings.view;
+ private checkPermissions(): void {
+  const role = this.authService.getCurrentUserRole();
 
-    this.canManageContent =
-      this.permissionService.isAdmin || this.permissionService.settings.manage;
+  this.canViewContent =
+    this.permissionService.isAdmin ||
+    CMS_VIEW_ROLES.includes(role);
 
-    if (!this.canViewContent) {
-      this.router.navigate(['/unauthorized']);
-    }
+  this.canManageContent =
+    this.permissionService.isAdmin ||
+    CMS_MANAGE_ROLES.includes(role);
+
+  if (!this.canViewContent) {
+    this.router.navigate(['/unauthorized']);
   }
+}
 
   loadStatistics(): void {
     this.loading = true;
@@ -97,3 +110,7 @@ export class CmsOverview implements OnInit, OnDestroy {
     this.router.navigate(['main/cms/blog/create']);
   }
 }
+
+
+
+

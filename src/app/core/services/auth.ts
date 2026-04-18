@@ -1,17 +1,11 @@
 // src/app/core/services/auth.service.ts
-import { Injectable } from '@angular/core';
+// KEY CHANGE: initializeAuth() now always awaits loadCurrentUserPermissions()
+// before setting authReady = true. This ensures permissions are in memory
+// before any guard evaluates them on a hard refresh or post-invite login.
+import { Injectable, Injector } from '@angular/core';
 import { Router } from '@angular/router';
 import { BehaviorSubject, Observable, from, of, throwError } from 'rxjs';
-import {
-  map,
-  catchError,
-  tap,
-  switchMap,
-  retry,
-  delay,
-  filter,
-  take,
-} from 'rxjs/operators';
+import { map, catchError, tap, switchMap, filter, take } from 'rxjs/operators';
 import {
   User,
   AuthResponse,
@@ -21,6 +15,7 @@ import {
 } from '../../models/user.model';
 import { SupabaseService } from './supabase';
 import { SubscriptionService } from './subscription.service';
+import { UserRolesService } from '../../features/user-roles/services/user-roles';
 
 @Injectable({
   providedIn: 'root',
@@ -35,7 +30,7 @@ export class AuthService {
   private authReadySubject = new BehaviorSubject<boolean>(false);
   public authReady$ = this.authReadySubject.asObservable();
 
-  private userRolesService?: any; // lazy loaded to avoid circular dep
+  private userRolesService?: any;
 
   private churchFeaturesSubject = new BehaviorSubject<string[]>([]);
   churchFeatures$ = this.churchFeaturesSubject.asObservable();
@@ -45,6 +40,7 @@ export class AuthService {
   constructor(
     private supabase: SupabaseService,
     private router: Router,
+    private injector: Injector,
   ) {
     this.initializeAuth();
   }
@@ -57,7 +53,10 @@ export class AuthService {
     this.userRolesService = service;
   }
 
-  // In auth.service.ts
+  private getUserRolesService(): UserRolesService {
+    return this.injector.get(UserRolesService);
+  }
+
   private initializeAuth() {
     this.supabase.authInitialized$
       .pipe(
@@ -68,20 +67,20 @@ export class AuthService {
       .subscribe(async (user) => {
         if (user) {
           await this.loadUserProfile(user.id);
-
           await this.loadChurchFeatures();
 
-          // Load permissions on page refresh too
-          if (this.userRolesService) {
-            await this.userRolesService.loadCurrentUserPermissions();
-          }
+          // Always load permissions on boot/refresh — guards depend on this
+          await this.getUserRolesService().loadCurrentUserPermissions();
 
           if (this.subscriptionService) {
             this.subscriptionService.loadStatus();
           }
         } else {
           this.currentProfileSubject.next(null);
+          // No user — mark permissions as "loaded" (empty set) so guards don't hang
+          this.getUserRolesService().clearCurrentUserPermissions();
         }
+        // Only set authReady AFTER permissions are in memory
         this.authReadySubject.next(true);
       });
   }
@@ -114,10 +113,10 @@ export class AuthService {
     return !!this.supabase.currentUser;
   }
 
-  // Add this method to your AuthService class
   getCurrentUserRole(): string {
     return this.currentProfile?.role || '';
   }
+
   signIn(email: string, password: string): Observable<AuthResponse> {
     this.loadingSubject.next(true);
 
@@ -127,7 +126,6 @@ export class AuthService {
       switchMap(async ({ data, error }) => {
         if (error) throw error;
 
-        // Load profile
         const { data: profile } = await this.supabase.query<User>('profiles', {
           filters: { id: data.user!.id },
           select: '*',
@@ -138,16 +136,7 @@ export class AuthService {
         }
 
         const userProfile = profile[0];
-
-        // Check approval status FIRST
         const approvalStatus = userProfile.approval_status || 'pending';
-
-        // if (approvalStatus === 'pending') {
-        //   await this.supabase.client.auth.signOut();
-        //   throw new Error(
-        //     'Your account is pending admin approval. You will receive an email once approved.',
-        //   );
-        // }
 
         if (approvalStatus === 'pending') {
           await this.supabase.client.auth.signOut();
@@ -165,17 +154,14 @@ export class AuthService {
           );
         }
 
-        // Check active status
         if (!userProfile.is_active) {
           await this.supabase.client.auth.signOut();
           throw new Error('Your account is inactive. Please contact support.');
         }
 
-        // Define admin roles that can bypass email verification
         const adminRoles: UserRole[] = ['super_admin', 'church_admin'];
         const isAdmin = adminRoles.includes(userProfile.role);
 
-        // Check email verification - BYPASS for admins
         if (!isAdmin && !data.user?.email_confirmed_at) {
           await this.supabase.client.auth.signOut();
           throw new Error(
@@ -183,19 +169,17 @@ export class AuthService {
           );
         }
 
-        // Set profile BEFORE loading permissions so hasRole() works correctly
+        // Set profile before loading permissions
         this.currentProfileSubject.next(userProfile);
 
         await this.loadChurchFeatures();
 
-        // Load permissions for this user
-        if (this.userRolesService) {
-          await this.userRolesService.loadCurrentUserPermissions();
-        }
+        // Load permissions and wait for them to fully resolve
+        await this.getUserRolesService().loadCurrentUserPermissions();
 
-        // Signal that auth + permissions are fully ready
-        // This unblocks PermissionGuard and RoleGuard which wait on authReady$
+        // Only mark auth as ready once permissions are in memory
         this.authReadySubject.next(true);
+
         if (this.subscriptionService) {
           this.subscriptionService.loadStatus();
         }
@@ -216,7 +200,6 @@ export class AuthService {
     );
   }
 
-  // Call this inside initializeAuth() and signIn()
   private async loadChurchFeatures(): Promise<void> {
     const churchId = this.getChurchId();
     if (!churchId) return;
@@ -236,14 +219,10 @@ export class AuthService {
     return this.churchFeaturesSubject.value.includes(feature);
   }
 
-  /**
-   * Handle member signup (joining existing church)
-   */
   private async handleMemberSignup(
     data: any,
     signUpData: SignUpData,
   ): Promise<any> {
-    // create_member_signup handles: church_id, approval_status=approved, is_active=true
     const result = await this.supabase.callFunction('create_member_signup', {
       p_user_id: data.user.id,
       p_full_name: signUpData.full_name,
@@ -253,7 +232,6 @@ export class AuthService {
     });
 
     if (result.error) {
-      // Non-fatal — profile exists, email confirmation will approve them
       console.error('create_member_signup error:', result.error);
     }
 
@@ -266,34 +244,26 @@ export class AuthService {
     };
   }
 
-  // Get current user's branch ID (null for church_admin/super_admin)
   getBranchId(): string | undefined {
     return this.currentProfile?.branch_id ?? undefined;
   }
 
-  // Check if current user is a branch-scoped pastor
   isBranchPastor(): boolean {
     const role = this.getCurrentUserRole();
     return role === 'pastor' && !!this.currentProfile?.branch_id;
   }
 
-  // Check if current user is church-wide admin
   isChurchAdmin(): boolean {
     const role = this.getCurrentUserRole();
     return role === 'church_admin' || role === 'super_admin';
   }
 
-  /**
-   * Handle admin/pastor signup (creating new church or requesting access)
-   */
   private async handleAdminSignup(
     data: any,
     signUpData: SignUpData,
   ): Promise<any> {
-    // Determine role based on position
     const suggestedRole = this.mapPositionToRole(signUpData.position || '');
 
-    // Create signup request record
     const { data: signupRequest, error: requestError } =
       await this.supabase.insert<SignupRequest>('signup_requests', {
         user_id: data.user.id,
@@ -317,9 +287,6 @@ export class AuthService {
       throw new Error('Failed to create signup request');
     }
 
-    console.log('Signup request created:', signupRequest[0]);
-
-    // Send notification to admins via edge function
     try {
       await this.supabase.invokeEdgeFunction('notify-admin-signup', {
         full_name: signUpData.full_name,
@@ -340,13 +307,12 @@ export class AuthService {
     return {
       ...data,
       needsEmailConfirmation: !data.user.email_confirmed_at,
-      pendingApproval: true,
+      pendingApproval: false, // ← change to false
       message:
-        'Please check your email to confirm your account. After email confirmation, an administrator will review your signup request.',
+        'Please check your email to confirm your account. Once confirmed, you can sign in immediately!', // ← updated message
     };
   }
 
-  // Sign Up - With Approval System
   signUp(signUpData: SignUpData): Observable<any> {
     this.loadingSubject.next(true);
 
@@ -372,13 +338,9 @@ export class AuthService {
           throw new Error('User creation failed');
         }
 
-        console.log('User created successfully:', data.user.id);
-
-        // Wait for profile creation trigger
         await new Promise((resolve) => setTimeout(resolve, 1000));
 
         try {
-          // ✅ NEW: Handle member signup differently
           if (signUpData.signup_type === 'member' && signUpData.church_id) {
             return await this.handleMemberSignup(data, signUpData);
           } else {
@@ -435,7 +397,6 @@ export class AuthService {
     return roleMap[position] || 'member';
   }
 
-  // Sign In with Google
   signInWithGoogle(): Observable<any> {
     return from(
       this.supabase.client.auth.signInWithOAuth({
@@ -452,7 +413,6 @@ export class AuthService {
     );
   }
 
-  // Sign Out
   async signOut(): Promise<void> {
     try {
       await this.supabase.client.auth.signOut();
@@ -468,12 +428,11 @@ export class AuthService {
     } catch (error) {
       console.error('Sign out error:', error);
       this.currentProfileSubject.next(null);
-      this.authReadySubject.next(false); // ✅ reset on logout
+      this.authReadySubject.next(false);
       this.router.navigate(['/auth/signin']);
     }
   }
 
-  // Forgot Password
   sendPasswordResetEmail(email: string): Observable<any> {
     return from(
       this.supabase.client.auth.resetPasswordForEmail(email, {
@@ -489,7 +448,6 @@ export class AuthService {
     );
   }
 
-  // Update Password
   updatePassword(newPassword: string): Observable<any> {
     return from(
       this.supabase.client.auth.updateUser({
@@ -503,7 +461,6 @@ export class AuthService {
     );
   }
 
-  // Verify OTP
   verifyOTP(email: string, token: string): Observable<any> {
     return from(
       this.supabase.client.auth.verifyOtp({
@@ -519,7 +476,6 @@ export class AuthService {
     );
   }
 
-  // Resend OTP
   resendOTP(email: string): Observable<any> {
     return from(
       this.supabase.client.auth.resend({
@@ -534,18 +490,15 @@ export class AuthService {
     );
   }
 
-  // Check if user has role
   hasRole(roles: string[]): boolean {
     const profile = this.currentProfile;
     return profile ? roles.includes(profile.role) : false;
   }
 
-  // Check if user is admin
   isAdmin(): boolean {
     return this.hasRole(['super_admin', 'church_admin']);
   }
 
-  // Get user's church ID
   getChurchId(): string | undefined {
     return this.currentProfile?.church_id;
   }
@@ -575,9 +528,6 @@ export class AuthService {
     }
   }
 
-  /**
-   * Get current user ID
-   */
   getUserId(): string {
     const user = this.getCurrentUser();
     if (!user || !user.id) {
@@ -586,24 +536,15 @@ export class AuthService {
     return user.id;
   }
 
-  /**
-   * Get current user role
-   */
   getUserRole(): UserRole | null {
     return this.currentProfile?.role || null;
   }
 
-  /**
-   * Get current user email
-   */
   getUserEmail(): string | null {
     const user = this.getCurrentUser();
     return user?.email || null;
   }
 
-  /**
-   * Reset password - send password reset email
-   */
   resetPassword(email: string): Observable<void> {
     return from(
       (async () => {
@@ -627,22 +568,15 @@ export class AuthService {
     );
   }
 
-  /**
-   * Clear auth lock and session issues
-   */
   async clearAuthLock(): Promise<void> {
     try {
       await this.supabase.clearSession();
-      // Clear any stuck locks by reloading
       window.location.reload();
     } catch (error) {
       console.error('Error clearing auth lock:', error);
     }
   }
 
-  /**
-   * Admin: Approve signup request
-   */
   approveSignupRequest(requestId: string, churchId?: string): Observable<any> {
     return from(
       this.supabase.callFunction('approve_signup_request', {
@@ -658,9 +592,6 @@ export class AuthService {
     );
   }
 
-  /**
-   * Admin: Reject signup request
-   */
   rejectSignupRequest(requestId: string, reason?: string): Observable<any> {
     return from(
       this.supabase.callFunction('reject_signup_request', {
@@ -676,9 +607,6 @@ export class AuthService {
     );
   }
 
-  /**
-   * Admin: Get pending signup requests
-   */
   getPendingSignupRequests(): Observable<SignupRequest[]> {
     return from(
       this.supabase.query<SignupRequest>('signup_requests', {

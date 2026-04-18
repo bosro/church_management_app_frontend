@@ -6,6 +6,7 @@ import { takeUntil } from 'rxjs/operators';
 import { CommunicationsService } from '../../../services/communications';
 import { EmailLog } from '../../../../../models/communication.model';
 import { PermissionService } from '../../../../../core/services/permission.service';
+import { AuthService } from '../../../../../core/services/auth';
 
 @Component({
   selector: 'app-email-logs',
@@ -33,6 +34,7 @@ export class EmailLogs implements OnInit, OnDestroy {
     private communicationsService: CommunicationsService,
     private router: Router,
     public permissionService: PermissionService,
+    private authService: AuthService,
   ) {}
 
   ngOnInit(): void {
@@ -46,14 +48,22 @@ export class EmailLogs implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-    this.canViewCommunications =
-      this.permissionService.isAdmin ||
-      this.permissionService.communications.view;
+  const role = this.authService.getCurrentUserRole();
 
-    if (!this.canViewCommunications) {
-      this.router.navigate(['/unauthorized']);
-    }
+  const viewRoles = [
+    'pastor', 'senior_pastor', 'associate_pastor',
+    'ministry_leader', 'secretary',
+  ];
+
+  this.canViewCommunications =
+    this.permissionService.isAdmin ||
+    this.permissionService.communications.view ||
+    viewRoles.includes(role);
+
+  if (!this.canViewCommunications) {
+    this.router.navigate(['/unauthorized']);
   }
+}
 
   loadEmailLogs(): void {
     this.loading = true;
@@ -120,3 +130,5 @@ export class EmailLogs implements OnInit, OnDestroy {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }
+
+
