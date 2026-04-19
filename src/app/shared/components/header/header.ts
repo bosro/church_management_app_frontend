@@ -1,6 +1,14 @@
 // src/app/shared/components/header/header.component.ts
-import { Component, OnInit, HostListener, ElementRef } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  OnDestroy,
+  HostListener,
+  ElementRef,
+} from '@angular/core';
 import { Router } from '@angular/router';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { User } from '../../../models/user.model';
 import { Church } from '../../../models/setting.model';
 import { AuthService } from '../../../core/services/auth';
@@ -13,7 +21,10 @@ import { SidebarService } from '../../../core/services/sidebar.service';
   templateUrl: './header.html',
   styleUrl: './header.scss',
 })
-export class Header implements OnInit {
+export class Header implements OnInit, OnDestroy {
+  private destroy$ = new Subject<void>();
+  private profileLoaded = false;
+
   currentUser: User | null = null;
   churchProfile: Church | null = null;
   searchQuery = '';
@@ -30,45 +41,83 @@ export class Header implements OnInit {
   ) {}
 
   ngOnInit(): void {
-  this.checkScreenSize();
-  this.loadCurrentUser();
-  this.loadChurchProfile();
-
-  // ✅ NEW: Refresh church profile every 30 seconds
-  setInterval(() => {
+    this.checkScreenSize();
+    this.loadCurrentUser();
     this.loadChurchProfile();
-  }, 30000); // 30 seconds
-}
+  }
 
-// ✅ NEW: Add public refresh method
-refreshChurchProfile(): void {
-  this.loadChurchProfile();
-}
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
 
   private loadCurrentUser(): void {
-    this.authService.currentProfile$.subscribe((profile) => {
-      // console.log('----', profile)
-      this.currentUser = profile;
-    });
+    this.authService.currentProfile$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((profile) => {
+        this.currentUser = profile;
+      });
   }
 
   private loadChurchProfile(): void {
-  // ✅ CHANGED: Subscribe to the observable stream instead of calling once
-  this.settingsService.churchProfile$.subscribe({
-    next: (profile) => {
+  // Step 1: Read synchronously from BehaviorSubject cache if available
+  try {
+    const cached = (this.settingsService.churchProfile$ as any).getValue?.();
+    if (cached) {
+      this.churchProfile = cached;
+      this.profileLoaded = true;
+    }
+  } catch (_) {}
+
+  // Step 2: Subscribe for future updates — but NEVER overwrite with null
+  this.settingsService.churchProfile$
+    .pipe(takeUntil(this.destroy$))
+    .subscribe((profile) => {
       if (profile) {
         this.churchProfile = profile;
-      } else {
-        // If null, load it for the first time
-        this.settingsService.getChurchProfile().subscribe({
-          error: (error) => {
-            console.error('Error loading church profile:', error);
-          }
-        });
+        this.profileLoaded = true;
       }
-    }
-  });
+    });
+
+  // Step 3: If nothing in cache, fetch from DB — with slight delay
+  // to allow auth/churchId to settle on hard refresh of dashboard
+  if (!this.profileLoaded) {
+    setTimeout(() => {
+      if (!this.profileLoaded && !this.destroy$.isStopped) {
+        this.fetchProfileDirectly();
+      }
+    }, 100); // small delay lets auth profile emit first
+  }
 }
+
+  private fetchProfileDirectly(): void {
+    this.settingsService
+      .getChurchProfile()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (profile) => {
+          if (profile && !this.churchProfile) {
+            this.churchProfile = profile;
+            this.profileLoaded = true;
+          }
+        },
+        error: (err) => {
+          console.error('Header: failed to load church profile', err);
+          // Retry once after 2s for transient load errors on hard refresh
+          if (!this.profileLoaded) {
+            setTimeout(() => {
+              if (!this.profileLoaded && !this.destroy$.isStopped) {
+                this.fetchProfileDirectly();
+              }
+            }, 2000);
+          }
+        },
+      });
+  }
+
+  refreshChurchProfile(): void {
+    this.fetchProfileDirectly();
+  }
 
   @HostListener('window:resize')
   onResize() {

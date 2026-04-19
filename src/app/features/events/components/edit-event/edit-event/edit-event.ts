@@ -3,8 +3,8 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
-import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { of, Subject } from 'rxjs';
+import { catchError, map, switchMap, takeUntil } from 'rxjs/operators';
 import { EventsService } from '../../../services/events';
 import { ChurchEvent, EventCategory } from '../../../../../models/event.model';
 import { PermissionService } from '../../../../../core/services/permission.service';
@@ -42,6 +42,12 @@ export class EditEvent implements OnInit, OnDestroy {
   ];
 
   canManageEvents = false;
+
+  selectedFlyer: File | null = null;
+  flyerPreview: string | null = null;
+  existingFlyerUrl: string | null = null; // ← holds the DB value
+  uploadingFlyer = false;
+  flyerError = '';
 
   constructor(
     private fb: FormBuilder,
@@ -129,6 +135,43 @@ export class EditEvent implements OnInit, OnDestroy {
       });
   }
 
+  onFlyerSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || !input.files[0]) return;
+
+    const file = input.files[0];
+
+    // Validate type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      this.flyerError = 'Please select a valid image (JPEG, PNG, GIF, or WebP)';
+      return;
+    }
+
+    // Validate size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      this.flyerError = 'Image must be less than 5MB';
+      return;
+    }
+
+    this.selectedFlyer = file;
+    this.flyerError = '';
+
+    // Show preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      this.flyerPreview = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  removeFlyer(): void {
+    this.selectedFlyer = null;
+    this.flyerPreview = null;
+    this.flyerError = '';
+    this.existingFlyerUrl = null; // Mark as removed
+  }
+
   private populateForm(event: ChurchEvent): void {
     const startDate = event.start_date ? event.start_date.split('T')[0] : '';
     const endDate = event.end_date ? event.end_date.split('T')[0] : startDate;
@@ -136,6 +179,11 @@ export class EditEvent implements OnInit, OnDestroy {
       ? this.extractTime(event.start_date)
       : '';
     const endTime = event.end_date ? this.extractTime(event.end_date) : '';
+
+    if (event.flyer_url) {
+      this.flyerPreview = event.flyer_url;
+      this.existingFlyerUrl = event.flyer_url;
+    }
 
     this.eventForm.patchValue({
       title: event.title,
@@ -194,10 +242,9 @@ export class EditEvent implements OnInit, OnDestroy {
     this.successMessage = '';
 
     const v = this.eventForm.value;
-    const eventData = {
+    const eventData: any = {
       title: v.title.trim(),
       description: v.description?.trim() || undefined,
-      // Map event_type form control → category field expected by service
       category: v.event_type as EventCategory,
       start_date: v.start_date,
       end_date: v.end_date,
@@ -208,24 +255,51 @@ export class EditEvent implements OnInit, OnDestroy {
       registration_deadline: v.registration_deadline || undefined,
       registration_required: v.requires_registration || false,
       is_public: v.is_public !== undefined ? v.is_public : true,
+      // Move flyer_url INSIDE the object instead of assigning after:
+      flyer_url:
+        !this.existingFlyerUrl && !this.selectedFlyer ? null : undefined,
     };
+
+    if (!this.existingFlyerUrl && !this.selectedFlyer) {
+      eventData.flyer_url = null;
+    }
 
     this.eventsService
       .updateEvent(this.eventId, eventData)
-      .pipe(takeUntil(this.destroy$))
+      .pipe(
+        takeUntil(this.destroy$),
+        switchMap((event) => {
+          if (this.selectedFlyer) {
+            // New flyer selected — upload it
+            this.uploadingFlyer = true;
+            return this.eventsService
+              .uploadEventFlyer(event.id, this.selectedFlyer)
+              .pipe(
+                switchMap((flyerUrl) =>
+                  this.eventsService
+                    .updateEvent(event.id, { flyer_url: flyerUrl })
+                    .pipe(map(() => event.id)),
+                ),
+                catchError(() => of(event.id)),
+              );
+          }
+          return of(event.id);
+        }),
+      )
       .subscribe({
-        next: () => {
-          this.successMessage = 'Event updated successfully!';
+        next: (eventId) => {
           this.loading = false;
-          setTimeout(() => {
-            this.router.navigate(['main/events', this.eventId]);
-          }, 1500);
+          this.uploadingFlyer = false;
+          this.successMessage = 'Event updated successfully!';
+          setTimeout(
+            () => this.router.navigate(['main/events', eventId]),
+            1500,
+          );
         },
         error: (error) => {
           this.loading = false;
-          this.errorMessage =
-            error.message || 'Failed to update event. Please try again.';
-          this.scrollToTop();
+          this.uploadingFlyer = false;
+          this.errorMessage = error.message || 'Failed to update event';
         },
       });
   }

@@ -207,6 +207,59 @@
                 </div>
               </div>
 
+               <div class="form-section">
+              <div class="section-header">
+                <h2 class="section-title">
+                  <i class="ri-image-line"></i>
+                  Event Flyer
+                </h2>
+                <p class="section-subtitle">Upload a flyer or banner image for this event (optional)</p>
+              </div>
+
+              <div class="flyer-upload-area">
+                <!-- Preview -->
+                <div class="flyer-preview" *ngIf="flyerPreview">
+                  <img [src]="flyerPreview" alt="Event flyer preview" />
+                  <button type="button" class="flyer-remove-btn" (click)="removeFlyer()" title="Remove flyer">
+                    <i class="ri-close-line"></i>
+                  </button>
+                </div>
+
+                <!-- Upload zone (shown when no flyer selected) -->
+                <div class="flyer-dropzone" *ngIf="!flyerPreview">
+                  <label class="flyer-label">
+                    <input type="file" accept="image/jpeg,image/png,image/gif,image/webp"
+                      (change)="onFlyerSelected($event)" hidden />
+                    <div class="flyer-dropzone-content">
+                      <i class="ri-image-add-line"></i>
+                      <p class="flyer-drop-title">Click to upload event flyer</p>
+                      <p class="flyer-drop-hint">JPEG, PNG, GIF or WebP — max 5MB</p>
+                      <p class="flyer-drop-hint">Recommended: 1200 × 630px (landscape) or 1080 × 1080px (square)</p>
+                    </div>
+                  </label>
+                </div>
+
+                <!-- Change button (shown when flyer is selected) -->
+                <label class="btn-change-flyer" *ngIf="flyerPreview">
+                  <input type="file" accept="image/jpeg,image/png,image/gif,image/webp"
+                    (change)="onFlyerSelected($event)" hidden />
+                  <i class="ri-refresh-line"></i>
+                  Change Flyer
+                </label>
+
+                <!-- Error -->
+                <p class="flyer-error" *ngIf="flyerError">
+                  <i class="ri-error-warning-line"></i>
+                  {{ flyerError }}
+                </p>
+              </div>
+            </div>
+
+
+            <p class="current-flyer-label" *ngIf="existingFlyerUrl && !selectedFlyer">
+  <i class="ri-checkbox-circle-line"></i>
+  Current flyer — upload a new one to replace it
+</p>
               <!-- Form Actions -->
               <div class="form-actions">
                 <button

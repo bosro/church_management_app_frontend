@@ -170,7 +170,7 @@ export class EventsList implements OnInit, OnDestroy {
           this.events = data;
           this.totalEvents = count;
           this.totalPages = Math.ceil(count / this.pageSize);
-          this.buildCalendar(); 
+          this.buildCalendar();
           this.loading = false;
         },
         error: (error) => {
@@ -422,3 +422,5 @@ export class EventsList implements OnInit, OnDestroy {
     }
   }
 }
+
+
