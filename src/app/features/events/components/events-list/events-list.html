@@ -28,10 +28,15 @@
           </div>
           <div class="upcoming-events-list">
             <div *ngFor="let event of upcomingEvents" class="upcoming-event-item" (click)="viewEvent(event.id)">
-              <div class="event-date-badge">
+              <div class="event-date-badge" *ngIf="!event.flyer_url">
                 <span class="date-day">{{ event.start_date | date:'d' }}</span>
                 <span class="date-month">{{ event.start_date | date:'MMM' }}</span>
               </div>
+              <div class="event-flyer-thumb" *ngIf="event.flyer_url">
+                <img [src]="event.flyer_url" [alt]="event.title" />
+              </div>
+
+
               <div class="event-info">
                 <h4>{{ event.title }}</h4>
                 <p>{{ event.location || 'No location' }}</p>
@@ -39,6 +44,7 @@
               <div class="event-type-badge" [ngClass]="getEventCategoryClass(event.category || 'other')">
                 {{ getEventCategoryLabel(event.category || 'other') }}
               </div>
+
 
             </div>
           </div>
@@ -95,6 +101,9 @@
         <div class="events-grid">
           <div *ngFor="let event of events" class="event-card" [class.past-event]="isEventPast(event)"
             (click)="viewEvent(event.id)">
+            <div class="event-card-flyer" *ngIf="event.flyer_url">
+              <img [src]="event.flyer_url" [alt]="event.title + ' flyer'" (error)="event.flyer_url = undefined" />
+            </div>
             <div class="event-header">
               <div class="event-date-large">
                 <span class="date-day">{{ event.start_date | date:'d' }}</span>

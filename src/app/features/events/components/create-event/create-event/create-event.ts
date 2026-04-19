@@ -7,10 +7,10 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { of, Subject } from 'rxjs';
+import { catchError, map, switchMap, takeUntil } from 'rxjs/operators';
 import { EventsService } from '../../../services/events';
-import { EventCategory } from '../../../../../models/event.model';
+import { ChurchEvent, EventCategory } from '../../../../../models/event.model';
 import { PermissionService } from '../../../../../core/services/permission.service';
 import { AuthService } from '../../../../../core/services/auth';
 
@@ -47,6 +47,11 @@ export class CreateEvent implements OnInit, OnDestroy {
   showUpgradeModal = false;
   upgradeModalTrigger = '';
 
+  selectedFlyer: File | null = null;
+  flyerPreview: string | null = null;
+  uploadingFlyer = false;
+  flyerError = '';
+
   constructor(
     private fb: FormBuilder,
     private eventsService: EventsService,
@@ -69,7 +74,10 @@ export class CreateEvent implements OnInit, OnDestroy {
     const role = this.authService.getCurrentUserRole();
 
     const createRoles = [
-      'pastor', 'senior_pastor', 'associate_pastor', 'ministry_leader',
+      'pastor',
+      'senior_pastor',
+      'associate_pastor',
+      'ministry_leader',
     ];
 
     this.canManageEvents =
@@ -88,7 +96,11 @@ export class CreateEvent implements OnInit, OnDestroy {
     this.eventForm = this.fb.group({
       title: [
         '',
-        [Validators.required, Validators.minLength(3), Validators.maxLength(200)],
+        [
+          Validators.required,
+          Validators.minLength(3),
+          Validators.maxLength(200),
+        ],
       ],
       description: ['', [Validators.maxLength(2000)]],
       // FIX: was 'category', template uses 'event_type'
@@ -133,79 +145,117 @@ export class CreateEvent implements OnInit, OnDestroy {
   onSubmit(): void {
     if (this.eventForm.invalid) {
       this.markFormGroupTouched(this.eventForm);
-      this.errorMessage = 'Please fill in all required fields correctly';
-      this.scrollToTop();
       return;
-    }
-
-    const startDate = new Date(this.eventForm.value.start_date);
-    const endDate = new Date(this.eventForm.value.end_date);
-
-    if (endDate < startDate) {
-      this.errorMessage = 'End date cannot be before start date';
-      this.scrollToTop();
-      return;
-    }
-
-    if (this.eventForm.value.registration_deadline) {
-      const deadline = new Date(this.eventForm.value.registration_deadline);
-      if (deadline > startDate) {
-        this.errorMessage =
-          'Registration deadline must be before the event start date';
-        this.scrollToTop();
-        return;
-      }
     }
 
     this.loading = true;
     this.errorMessage = '';
-    this.successMessage = '';
 
-    const v = this.eventForm.value;
+    const formValue = this.eventForm.value;
 
+    // FIX 1: Partial<ChurchEvent> not Partial<Event> (Event = DOM type)
+    // FIX 2: formValue.event_type not formValue.category
+    // FIX 3: formValue.requires_registration not formValue.registration_required
     const eventData = {
-      title: v.title.trim(),
-      description: v.description?.trim() || undefined,
-      // Map event_type form control → category field expected by service
-      category: v.event_type as EventCategory,
-      start_date: v.start_date,
-      end_date: v.end_date,
-      start_time: v.start_time || undefined,
-      end_time: v.end_time || undefined,
-      location: v.location?.trim() || undefined,
-      max_attendees: v.max_attendees ? parseInt(v.max_attendees) : undefined,
-      registration_deadline: v.registration_deadline || undefined,
-      registration_required: v.requires_registration || false,
-      is_public: v.is_public !== undefined ? v.is_public : true,
+      title: formValue.title,
+      description: formValue.description || undefined,
+      category: formValue.event_type as EventCategory,
+      start_date: formValue.start_date,
+      end_date: formValue.end_date || undefined,
+      location: formValue.location || undefined,
+      max_attendees: formValue.max_attendees || undefined,
+      registration_required: formValue.requires_registration || false,
+      registration_deadline: formValue.registration_deadline || undefined,
+      is_public: formValue.is_public !== undefined ? formValue.is_public : true,
     };
 
     this.eventsService
-      .createEvent(eventData)
-      .pipe(takeUntil(this.destroy$))
+      .createEvent(eventData as any)
+      .pipe(
+        takeUntil(this.destroy$),
+        switchMap((event) => {
+          if (this.selectedFlyer) {
+            this.uploadingFlyer = true;
+            return this.eventsService
+              .uploadEventFlyer(event.id, this.selectedFlyer)
+              .pipe(
+                switchMap((flyerUrl) =>
+                  this.eventsService
+                    .updateEvent(event.id, {
+                      flyer_url: flyerUrl,
+                    } as Partial<ChurchEvent>)
+                    .pipe(map(() => event.id)),
+                ),
+                catchError(() => of(event.id)),
+              );
+          }
+          return of(event.id);
+        }),
+      )
       .subscribe({
-        next: (event) => {
+        next: (eventId) => {
+          this.loading = false;
+          this.uploadingFlyer = false;
           this.successMessage = 'Event created successfully!';
-          this.loading = false;
-          setTimeout(() => {
-            this.router.navigate(['main/events', event.id]);
-          }, 1500);
+          setTimeout(
+            () => this.router.navigate(['main/events', eventId]),
+            1500,
+          );
         },
-        error: (err) => {
+        error: (error) => {
           this.loading = false;
-          this.handleError(err);
-          this.scrollToTop();
+          this.uploadingFlyer = false;
+          this.handleError(error);
         },
       });
   }
 
   cancel(): void {
     if (this.eventForm.dirty) {
-      if (confirm('You have unsaved changes. Are you sure you want to leave?')) {
+      if (
+        confirm('You have unsaved changes. Are you sure you want to leave?')
+      ) {
         this.router.navigate(['main/events']);
       }
     } else {
       this.router.navigate(['main/events']);
     }
+  }
+
+  onFlyerSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || !input.files[0]) return;
+
+    const file = input.files[0];
+
+    // Validate type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      this.flyerError = 'Please select a valid image (JPEG, PNG, GIF, or WebP)';
+      return;
+    }
+
+    // Validate size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      this.flyerError = 'Image must be less than 5MB';
+      return;
+    }
+
+    this.selectedFlyer = file;
+    this.flyerError = '';
+
+    // Show preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      this.flyerPreview = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  removeFlyer(): void {
+    this.selectedFlyer = null;
+    this.flyerPreview = null;
+    this.flyerError = '';
   }
 
   private markFormGroupTouched(formGroup: FormGroup): void {

@@ -30,6 +30,7 @@ export interface ChurchEvent {  // Changed from Event to ChurchEvent
   created_by?: string;
   created_at: string;
   updated_at: string;
+  flyer_url?: string
 }
 
 export interface EventRegistration {
@@ -44,6 +45,7 @@ export interface EventRegistration {
   checked_in: boolean;
   checked_in_at?: string;
   registered_at: string;
+  flyer_url?: string;
 
   // Relations
   member?: {
@@ -64,3 +66,5 @@ export interface EventStatistics {
   pending: number;
   cancelled: number;
 }
+
+

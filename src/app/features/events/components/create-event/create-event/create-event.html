@@ -43,17 +43,11 @@
                 <!-- Event Title -->
                 <div class="form-group full-width">
                   <label for="title">Event Title *</label>
-                  <input
-                    id="title"
-                    type="text"
-                    formControlName="title"
+                  <input id="title" type="text" formControlName="title"
                     placeholder="e.g., Sunday Worship Service, Youth Conference"
-                    [class.error]="eventForm.get('title')?.invalid && eventForm.get('title')?.touched"
-                  />
-                  <span
-                    *ngIf="eventForm.get('title')?.invalid && eventForm.get('title')?.touched"
-                    class="error-message"
-                  >
+                    [class.error]="eventForm.get('title')?.invalid && eventForm.get('title')?.touched" />
+                  <span *ngIf="eventForm.get('title')?.invalid && eventForm.get('title')?.touched"
+                    class="error-message">
                     {{ getErrorMessage('title') }}
                   </span>
                 </div>
@@ -61,11 +55,8 @@
                 <!-- Event Type -->
                 <div class="form-group">
                   <label for="event_type">Event Type *</label>
-                  <select
-                    id="event_type"
-                    formControlName="event_type"
-                    [class.error]="eventForm.get('event_type')?.invalid && eventForm.get('event_type')?.touched"
-                  >
+                  <select id="event_type" formControlName="event_type"
+                    [class.error]="eventForm.get('event_type')?.invalid && eventForm.get('event_type')?.touched">
                     <option *ngFor="let type of eventTypes" [value]="type.value">
                       {{ type.label }}
                     </option>
@@ -75,23 +66,15 @@
                 <!-- Location -->
                 <div class="form-group">
                   <label for="location">Location</label>
-                  <input
-                    id="location"
-                    type="text"
-                    formControlName="location"
-                    placeholder="e.g., Main Sanctuary, Fellowship Hall"
-                  />
+                  <input id="location" type="text" formControlName="location"
+                    placeholder="e.g., Main Sanctuary, Fellowship Hall" />
                 </div>
 
                 <!-- Description -->
                 <div class="form-group full-width">
                   <label for="description">Description</label>
-                  <textarea
-                    id="description"
-                    formControlName="description"
-                    placeholder="Describe the event details, agenda, or special instructions..."
-                    rows="4"
-                  ></textarea>
+                  <textarea id="description" formControlName="description"
+                    placeholder="Describe the event details, agenda, or special instructions..." rows="4"></textarea>
                 </div>
               </div>
             </div>
@@ -104,16 +87,10 @@
                 <!-- Start Date -->
                 <div class="form-group">
                   <label for="start_date">Start Date *</label>
-                  <input
-                    id="start_date"
-                    type="date"
-                    formControlName="start_date"
-                    [class.error]="eventForm.get('start_date')?.invalid && eventForm.get('start_date')?.touched"
-                  />
-                  <span
-                    *ngIf="eventForm.get('start_date')?.invalid && eventForm.get('start_date')?.touched"
-                    class="error-message"
-                  >
+                  <input id="start_date" type="date" formControlName="start_date"
+                    [class.error]="eventForm.get('start_date')?.invalid && eventForm.get('start_date')?.touched" />
+                  <span *ngIf="eventForm.get('start_date')?.invalid && eventForm.get('start_date')?.touched"
+                    class="error-message">
                     {{ getErrorMessage('start_date') }}
                   </span>
                 </div>
@@ -121,16 +98,10 @@
                 <!-- End Date -->
                 <div class="form-group">
                   <label for="end_date">End Date *</label>
-                  <input
-                    id="end_date"
-                    type="date"
-                    formControlName="end_date"
-                    [class.error]="eventForm.get('end_date')?.invalid && eventForm.get('end_date')?.touched"
-                  />
-                  <span
-                    *ngIf="eventForm.get('end_date')?.invalid && eventForm.get('end_date')?.touched"
-                    class="error-message"
-                  >
+                  <input id="end_date" type="date" formControlName="end_date"
+                    [class.error]="eventForm.get('end_date')?.invalid && eventForm.get('end_date')?.touched" />
+                  <span *ngIf="eventForm.get('end_date')?.invalid && eventForm.get('end_date')?.touched"
+                    class="error-message">
                     {{ getErrorMessage('end_date') }}
                   </span>
                 </div>
@@ -138,21 +109,13 @@
                 <!-- Start Time -->
                 <div class="form-group">
                   <label for="start_time">Start Time</label>
-                  <input
-                    id="start_time"
-                    type="time"
-                    formControlName="start_time"
-                  />
+                  <input id="start_time" type="time" formControlName="start_time" />
                 </div>
 
                 <!-- End Time -->
                 <div class="form-group">
                   <label for="end_time">End Time</label>
-                  <input
-                    id="end_time"
-                    type="time"
-                    formControlName="end_time"
-                  />
+                  <input id="end_time" type="time" formControlName="end_time" />
                 </div>
               </div>
             </div>
@@ -165,33 +128,20 @@
                 <!-- Max Attendees -->
                 <div class="form-group">
                   <label for="max_attendees">Max Attendees</label>
-                  <input
-                    id="max_attendees"
-                    type="number"
-                    formControlName="max_attendees"
-                    placeholder="Leave empty for unlimited"
-                    min="1"
-                  />
+                  <input id="max_attendees" type="number" formControlName="max_attendees"
+                    placeholder="Leave empty for unlimited" min="1" />
                 </div>
 
                 <!-- Registration Deadline -->
                 <div class="form-group">
                   <label for="registration_deadline">Registration Deadline</label>
-                  <input
-                    id="registration_deadline"
-                    type="date"
-                    formControlName="registration_deadline"
-                  />
+                  <input id="registration_deadline" type="date" formControlName="registration_deadline" />
                 </div>
 
                 <!-- Requires Registration -->
                 <div class="form-group checkbox-group">
                   <label class="checkbox-label">
-                    <input
-                      type="checkbox"
-                      formControlName="requires_registration"
-                      class="checkbox-input"
-                    />
+                    <input type="checkbox" formControlName="requires_registration" class="checkbox-input" />
                     <span class="checkbox-text">Requires Registration</span>
                   </label>
                   <p class="help-text">Members must register to attend this event</p>
@@ -200,11 +150,7 @@
                 <!-- Is Public -->
                 <div class="form-group checkbox-group">
                   <label class="checkbox-label">
-                    <input
-                      type="checkbox"
-                      formControlName="is_public"
-                      class="checkbox-input"
-                    />
+                    <input type="checkbox" formControlName="is_public" class="checkbox-input" />
                     <span class="checkbox-text">Public Event</span>
                   </label>
                   <p class="help-text">Event is visible to non-members</p>
@@ -212,25 +158,72 @@
               </div>
             </div>
 
+
+            <div class="form-section">
+              <div class="section-header">
+                <h2 class="section-title">
+                  <i class="ri-image-line"></i>
+                  Event Flyer
+                </h2>
+                <p class="section-subtitle">Upload a flyer or banner image for this event (optional)</p>
+              </div>
+
+              <div class="flyer-upload-area">
+                <!-- Preview -->
+                <div class="flyer-preview" *ngIf="flyerPreview">
+                  <img [src]="flyerPreview" alt="Event flyer preview" />
+                  <button type="button" class="flyer-remove-btn" (click)="removeFlyer()" title="Remove flyer">
+                    <i class="ri-close-line"></i>
+                  </button>
+                </div>
+
+                <!-- Upload zone (shown when no flyer selected) -->
+                <div class="flyer-dropzone" *ngIf="!flyerPreview">
+                  <label class="flyer-label">
+                    <input type="file" accept="image/jpeg,image/png,image/gif,image/webp"
+                      (change)="onFlyerSelected($event)" hidden />
+                    <div class="flyer-dropzone-content">
+                      <i class="ri-image-add-line"></i>
+                      <p class="flyer-drop-title">Click to upload event flyer</p>
+                      <p class="flyer-drop-hint">JPEG, PNG, GIF or WebP — max 5MB</p>
+                      <p class="flyer-drop-hint">Recommended: 1200 × 630px (landscape) or 1080 × 1080px (square)</p>
+                    </div>
+                  </label>
+                </div>
+
+                <!-- Change button (shown when flyer is selected) -->
+                <label class="btn-change-flyer" *ngIf="flyerPreview">
+                  <input type="file" accept="image/jpeg,image/png,image/gif,image/webp"
+                    (change)="onFlyerSelected($event)" hidden />
+                  <i class="ri-refresh-line"></i>
+                  Change Flyer
+                </label>
+
+                <!-- Error -->
+                <p class="flyer-error" *ngIf="flyerError">
+                  <i class="ri-error-warning-line"></i>
+                  {{ flyerError }}
+                </p>
+              </div>
+            </div>
+
             <!-- Form Actions -->
             <div class="form-actions">
-              <button
-                type="button"
-                class="btn-secondary"
-                (click)="cancel()"
-                [disabled]="loading"
-              >
+              <button type="button" class="btn-secondary" (click)="cancel()" [disabled]="loading">
                 Cancel
               </button>
-              <button
-                type="submit"
-                class="btn-primary"
-                [disabled]="loading"
-              >
-                <span *ngIf="!loading">Create Event</span>
-                <span *ngIf="loading">
+              <button type="submit" class="btn-primary" [disabled]="loading || uploadingFlyer">
+                <span *ngIf="!loading && !uploadingFlyer">
+                  <i class="ri-save-line"></i>
+                  Create Event
+                </span>
+                <span *ngIf="loading && !uploadingFlyer">
                   <i class="ri-loader-4-line spin"></i>
                   Creating...
+                </span>
+                <span *ngIf="uploadingFlyer">
+                  <i class="ri-loader-4-line spin"></i>
+                  Uploading flyer...
                 </span>
               </button>
             </div>
@@ -240,9 +233,3 @@
     </div>
   </div>
 </div>
-
-
-
-
-
-

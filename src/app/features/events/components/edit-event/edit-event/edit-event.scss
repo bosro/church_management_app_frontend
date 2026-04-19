@@ -371,3 +371,137 @@
   justify-content: center;
   padding: 4rem 0;
 }
+
+
+
+.flyer-upload-area {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.flyer-dropzone {
+  border: 2px dashed #C4B5FD;
+  border-radius: 12px;
+  background: #FAFAF9;
+  transition: all 0.2s;
+  cursor: pointer;
+
+  &:hover {
+    border-color: #7C3AED;
+    background: #F5F3FF;
+  }
+
+  label {
+    display: block;
+    cursor: pointer;
+  }
+
+  .flyer-dropzone-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 24px;
+    gap: 8px;
+    text-align: center;
+
+    i {
+      font-size: 2.5rem;
+      color: #7C3AED;
+    }
+
+    .flyer-drop-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: #374151;
+      margin: 0;
+    }
+
+    .flyer-drop-hint {
+      font-size: 12px;
+      color: #9CA3AF;
+      margin: 0;
+    }
+  }
+}
+
+.flyer-preview {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #E5E7EB;
+
+  img {
+    width: 100%;
+    max-height: 400px;
+    object-fit: contain;
+    background: #F9FAFB;
+    display: block;
+  }
+
+  .flyer-remove-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.6);
+    border: none;
+    border-radius: 50%;
+    color: white;
+    cursor: pointer;
+    font-size: 18px;
+    transition: background 0.2s;
+
+    &:hover { background: rgba(220, 38, 38, 0.8); }
+  }
+}
+
+.btn-change-flyer {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: white;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s;
+  align-self: flex-start;
+
+  &:hover {
+    background: #F5F3FF;
+    border-color: #7C3AED;
+    color: #7C3AED;
+  }
+
+  i { font-size: 15px; }
+}
+
+.current-flyer-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #059669;
+  font-weight: 600;
+
+  i { font-size: 14px; }
+}
+
+.flyer-error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #DC2626;
+
+  i { font-size: 15px; }
+}

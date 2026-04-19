@@ -605,54 +605,147 @@ export class MemberService {
       raw: false,
     });
 
-    if (!rows.length) throw new Error('Excel file is empty or invalid');
+    // Filter out completely empty rows (common in exported Excel files)
+    const dataRows = rows.filter((row) =>
+      Object.values(row).some((v) => v !== '' && v !== null && v !== undefined),
+    );
+
+    if (!dataRows.length)
+      throw new Error('Excel file is empty or has no data rows');
 
     const results: ImportResult = { success: 0, failed: 0, errors: [] };
 
+    // ── Pre-load all existing phones + emails for this church
+    // so we can check duplicates in-memory (fast, avoids N DB round trips)
+    const { data: existingMembers } = await this.supabase.client
+      .from('members')
+      .select('email, phone_primary')
+      .eq('church_id', churchId);
+
+    const existingEmails = new Set(
+      (existingMembers || [])
+        .map((m: any) => m.email?.toLowerCase().trim())
+        .filter(Boolean),
+    );
+    const existingPhones = new Set(
+      (existingMembers || [])
+        .map((m: any) => m.phone_primary?.trim())
+        .filter(Boolean),
+    );
+
+    // ── Track phones/emails seen within THIS import batch
+    // so we catch duplicates inside the file itself
+    const seenPhonesThisBatch = new Set<string>();
+    const seenEmailsThisBatch = new Set<string>();
+
+    // ── Column header aliases (handles any capitalisation / spacing)
     const headerAliases: Record<string, string> = {
       'first name': 'first_name',
       first_name: 'first_name',
+      firstname: 'first_name',
       'last name': 'last_name',
       last_name: 'last_name',
+      lastname: 'last_name',
+      surname: 'last_name',
       email: 'email',
+      'email address': 'email',
       phone: 'phone',
       'phone number': 'phone',
       phone_number: 'phone',
+      phonenumber: 'phone',
+      mobile: 'phone',
+      'mobile number': 'phone',
       gender: 'gender',
       'date of birth': 'date_of_birth',
       date_of_birth: 'date_of_birth',
       dob: 'date_of_birth',
+      dateofbirth: 'date_of_birth',
+      birthday: 'date_of_birth',
       'join date': 'join_date',
       join_date: 'join_date',
+      joindate: 'join_date',
+      'membership date': 'join_date',
       address: 'address',
       city: 'city',
       title: 'title',
       'cell group': 'cell_group',
       cell_group: 'cell_group',
+      cellgroup: 'cell_group',
       notes: 'notes',
     };
 
-    for (let i = 0; i < rows.length; i++) {
+    for (let i = 0; i < dataRows.length; i++) {
       try {
+        // Normalise keys
         const row: Record<string, string> = {};
-        Object.entries(rows[i]).forEach(([key, val]) => {
+        Object.entries(dataRows[i]).forEach(([key, val]) => {
           const normalized = key.trim().toLowerCase();
           const canonical = headerAliases[normalized] || normalized;
           row[canonical] = String(val ?? '').trim();
         });
 
+        // ── Required fields
+        const firstName = row['first_name'];
+        const lastName = row['last_name'];
+
+        if (!firstName || !lastName) {
+          throw new Error('First name and last name are required');
+        }
+
+        // ── Normalise optional fields
+        const email = row['email']?.toLowerCase() || undefined;
+        const phone = row['phone'] || undefined;
+        const dob = this.normalizeDate(row['date_of_birth']);
+        const joinDate =
+          this.normalizeDate(row['join_date']) ||
+          new Date().toISOString().split('T')[0];
+        const gender = row['gender']?.toLowerCase() || undefined;
+
+        // ── Validate email format
+        if (email && !this.isValidEmail(email)) {
+          throw new Error(`Invalid email format: ${email}`);
+        }
+
+        // ── Duplicate check: email against DB
+        if (email && existingEmails.has(email)) {
+          throw new Error(
+            `Member with email "${email}" already exists in your church — skipped`,
+          );
+        }
+
+        // ── Duplicate check: email within this batch
+        if (email && seenEmailsThisBatch.has(email)) {
+          throw new Error(
+            `Email "${email}" appears more than once in this file — skipped`,
+          );
+        }
+
+        // ── Duplicate check: phone against DB
+        if (phone && existingPhones.has(phone)) {
+          throw new Error(
+            `Member with phone "${phone}" already exists in your church — skipped`,
+          );
+        }
+
+        // ── Duplicate check: phone within this batch
+        if (phone && seenPhonesThisBatch.has(phone)) {
+          throw new Error(
+            `Phone "${phone}" appears more than once in this file — skipped`,
+          );
+        }
+
+        // ── Build member record
         const memberData: any = {
-          first_name: row['first_name'],
-          last_name: row['last_name'],
-          email: row['email'] || undefined,
-          phone_primary: row['phone'] || undefined,
-          gender: row['gender']?.toLowerCase() || undefined,
-          date_of_birth: this.normalizeDate(row['date_of_birth']),
-          address: row['address'] || undefined,
-          city: row['city'] || undefined,
-          join_date:
-            this.normalizeDate(row['join_date']) ||
-            new Date().toISOString().split('T')[0],
+          first_name: firstName,
+          last_name: lastName,
+          email: email || null,
+          phone_primary: phone || null,
+          gender: gender || null,
+          date_of_birth: dob || null,
+          address: row['address'] || null,
+          city: row['city'] || null,
+          notes: row['notes'] || null,
+          join_date: joinDate,
           church_id: churchId,
           branch_id: branchId || null,
           membership_status: 'active',
@@ -660,44 +753,80 @@ export class MemberService {
           is_visitor: false,
         };
 
-        if (!memberData.first_name || !memberData.last_name) {
-          throw new Error('First name and last name are required');
-        }
-        if (memberData.email && !this.isValidEmail(memberData.email)) {
-          throw new Error(`Invalid email format: ${memberData.email}`);
-        }
-
         const { error } = await this.supabase.client
           .from('members')
           .insert(memberData);
 
         if (error) {
-          let friendlyMessage = error.message;
+          // Catch any DB-level unique constraint as a final safety net
           if (
             error.code === '23505' ||
             error.message?.includes('members_email_unique')
           ) {
-            friendlyMessage = `Member with email "${memberData.email}" already exists — skipped`;
-          } else if (error.message?.includes('members_phone')) {
-            friendlyMessage = `Member with phone "${memberData.phone_primary}" already exists — skipped`;
+            throw new Error(
+              `Member with email "${email}" already exists — skipped`,
+            );
           }
-          throw new Error(friendlyMessage);
+          if (error.message?.includes('members_phone')) {
+            throw new Error(
+              `Member with phone "${phone}" already exists — skipped`,
+            );
+          }
+          throw new Error(error.message);
         }
+
+        // ── Only track in sets AFTER successful insert
+        if (email) existingEmails.add(email);
+        if (phone) existingPhones.add(phone);
+        if (email) seenEmailsThisBatch.add(email);
+        if (phone) seenPhonesThisBatch.add(phone);
+
         results.success++;
       } catch (error: any) {
         results.failed++;
-        results.errors.push({ row: i + 2, error: error.message, data: '' });
+        results.errors.push({
+          row: i + 2, // +2 = header row + 1-indexed
+          error: error.message,
+          data: '',
+        });
       }
     }
+
     return results;
   }
 
-  private normalizeDate(value: string | undefined): string | undefined {
+  private normalizeDate(value: string | undefined | null): string | undefined {
     if (!value) return undefined;
-    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
-    const d = new Date(value);
-    if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
-    return undefined;
+    const s = String(value).trim();
+    if (!s) return undefined;
+
+    // Already ISO YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+
+    // Excel serial number (5-digit integer, e.g. 36906)
+    if (/^\d{5}$/.test(s)) {
+      // Excel epoch is Dec 30 1899 (accounts for Lotus 1-2-3 leap year bug)
+      const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+      excelEpoch.setUTCDate(excelEpoch.getUTCDate() + parseInt(s, 10));
+      return excelEpoch.toISOString().split('T')[0];
+    }
+
+    // DD/MM/YYYY or DD-MM-YYYY or DD.MM.YYYY  (most common outside US)
+    const dmyMatch = s.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/);
+    if (dmyMatch) {
+      const [, d, m, y] = dmyMatch;
+      const candidate = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+      const dt = new Date(candidate);
+      if (!isNaN(dt.getTime())) return candidate;
+    }
+
+    // Fallback: let JS try (handles "Jan 16, 2001", "2001/01/16", etc.)
+    const dt = new Date(s);
+    if (!isNaN(dt.getTime())) {
+      return dt.toISOString().split('T')[0];
+    }
+
+    return undefined; // unparseable — will be stored as null
   }
 
   private async processCSVImport(file: File): Promise<ImportResult> {
@@ -713,13 +842,25 @@ export class MemberService {
 
     const results: ImportResult = { success: 0, failed: 0, errors: [] };
 
-    const headers = this.parseCSVLine(lines[0]).map((h) =>
-      h
-        .trim()
-        .toLowerCase()
-        .replace(/\s+/g, '_')
-        .replace(/[^a-z0-9_]/g, ''),
+    // ── Pre-load existing members for duplicate detection
+    const { data: existingMembers } = await this.supabase.client
+      .from('members')
+      .select('email, phone_primary')
+      .eq('church_id', churchId);
+
+    const existingEmails = new Set(
+      (existingMembers || [])
+        .map((m: any) => m.email?.toLowerCase().trim())
+        .filter(Boolean),
     );
+    const existingPhones = new Set(
+      (existingMembers || [])
+        .map((m: any) => m.phone_primary?.trim())
+        .filter(Boolean),
+    );
+
+    const seenPhonesThisBatch = new Set<string>();
+    const seenEmailsThisBatch = new Set<string>();
 
     const headerAliases: Record<string, string> = {
       first_name: 'first_name',
@@ -728,6 +869,7 @@ export class MemberService {
       phone: 'phone',
       phone_number: 'phone',
       phonenumber: 'phone',
+      mobile: 'phone',
       gender: 'gender',
       date_of_birth: 'date_of_birth',
       dob: 'date_of_birth',
@@ -742,6 +884,14 @@ export class MemberService {
       notes: 'notes',
     };
 
+    const headers = this.parseCSVLine(lines[0]).map((h) =>
+      h
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, '_')
+        .replace(/[^a-z0-9_]/g, ''),
+    );
+
     for (let i = 1; i < lines.length; i++) {
       try {
         const values = this.parseCSVLine(lines[i]);
@@ -753,16 +903,57 @@ export class MemberService {
           row[canonical] = values[idx]?.trim() || '';
         });
 
+        const firstName = row['first_name'];
+        const lastName = row['last_name'];
+
+        if (!firstName || !lastName) {
+          throw new Error('First name and last name are required');
+        }
+
+        const email = row['email']?.toLowerCase() || undefined;
+        const phone = row['phone'] || undefined;
+        const dob = this.normalizeDate(row['date_of_birth']);
+        const joinDate =
+          this.normalizeDate(row['join_date']) ||
+          new Date().toISOString().split('T')[0];
+        const gender = row['gender']?.toLowerCase() || undefined;
+
+        if (email && !this.isValidEmail(email)) {
+          throw new Error(`Invalid email format: ${email}`);
+        }
+
+        if (email && existingEmails.has(email)) {
+          throw new Error(
+            `Member with email "${email}" already exists in your church — skipped`,
+          );
+        }
+        if (email && seenEmailsThisBatch.has(email)) {
+          throw new Error(
+            `Email "${email}" appears more than once in this file — skipped`,
+          );
+        }
+        if (phone && existingPhones.has(phone)) {
+          throw new Error(
+            `Member with phone "${phone}" already exists in your church — skipped`,
+          );
+        }
+        if (phone && seenPhonesThisBatch.has(phone)) {
+          throw new Error(
+            `Phone "${phone}" appears more than once in this file — skipped`,
+          );
+        }
+
         const memberData: any = {
-          first_name: row['first_name'],
-          last_name: row['last_name'],
-          email: row['email'] || undefined,
-          phone_primary: row['phone'] || undefined,
-          gender: row['gender']?.toLowerCase() || undefined,
-          date_of_birth: row['date_of_birth'] || undefined,
-          address: row['address'] || undefined,
-          city: row['city'] || undefined,
-          join_date: row['join_date'] || new Date().toISOString().split('T')[0],
+          first_name: firstName,
+          last_name: lastName,
+          email: email || null,
+          phone_primary: phone || null,
+          gender: gender || null,
+          date_of_birth: dob || null,
+          address: row['address'] || null,
+          city: row['city'] || null,
+          notes: row['notes'] || null,
+          join_date: joinDate,
           church_id: churchId,
           branch_id: branchId || null,
           membership_status: 'active',
@@ -770,31 +961,37 @@ export class MemberService {
           is_visitor: false,
         };
 
-        if (!memberData.first_name || !memberData.last_name) {
-          throw new Error('First name and last name are required');
-        }
-        if (memberData.email && !this.isValidEmail(memberData.email)) {
-          throw new Error(`Invalid email format: ${memberData.email}`);
-        }
-
         const { error } = await this.supabase.client
           .from('members')
           .insert(memberData);
+
         if (error) {
-          let friendlyMessage = error.message;
           if (
             error.code === '23505' ||
             error.message?.includes('members_email_unique')
           ) {
-            friendlyMessage = `Member with email "${memberData.email}" already exists — skipped`;
-          } else if (error.message?.includes('members_phone')) {
-            friendlyMessage = `Member with phone "${memberData.phone_primary}" already exists — skipped`;
-          } else if (error.message?.includes('not-null')) {
-            friendlyMessage =
-              'Missing required field — check First Name and Last Name';
+            throw new Error(
+              `Member with email "${email}" already exists — skipped`,
+            );
           }
-          throw new Error(friendlyMessage);
+          if (error.message?.includes('members_phone')) {
+            throw new Error(
+              `Member with phone "${phone}" already exists — skipped`,
+            );
+          }
+          if (error.message?.includes('not-null')) {
+            throw new Error(
+              'Missing required field — check First Name and Last Name',
+            );
+          }
+          throw new Error(error.message);
         }
+
+        if (email) existingEmails.add(email);
+        if (phone) existingPhones.add(phone);
+        if (email) seenEmailsThisBatch.add(email);
+        if (phone) seenPhonesThisBatch.add(phone);
+
         results.success++;
       } catch (error: any) {
         results.failed++;
@@ -805,6 +1002,7 @@ export class MemberService {
         });
       }
     }
+
     return results;
   }
 
@@ -822,7 +1020,9 @@ export class MemberService {
         if (inQuotes && line[i + 1] === '"') {
           current += '"';
           i++;
-        } else inQuotes = !inQuotes;
+        } else {
+          inQuotes = !inQuotes;
+        }
       } else if (char === ',' && !inQuotes) {
         values.push(current);
         current = '';

@@ -445,7 +445,18 @@ export class EventDetail implements OnInit, OnDestroy {
   getMemberName(member: any): string {
     return `${member.first_name} ${member.last_name}`;
   }
+
   getMemberInitials(member: any): string {
     return `${member.first_name[0]}${member.last_name[0]}`.toUpperCase();
   }
+
+  openFlyerLightbox(): void {
+  if (this.event?.flyer_url) {
+    window.open(this.event.flyer_url, '_blank');
+  }
 }
+}
+
+
+
+

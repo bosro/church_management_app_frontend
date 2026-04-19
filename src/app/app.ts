@@ -5,7 +5,8 @@ import { SupabaseService } from './core/services/supabase';
 import { SubscriptionService } from './core/services/subscription.service';
 import { trigger, style, transition, animate } from '@angular/animations';
 import { SwUpdate, VersionReadyEvent } from '@angular/service-worker';
-import { filter } from 'rxjs/operators';
+import { filter, take } from 'rxjs/operators';
+import { SettingsService } from './features/settings/services';
 
 @Component({
   selector: 'app-root',
@@ -44,6 +45,7 @@ export class App implements OnInit {
     private subscriptionService: SubscriptionService,
     private updates: SwUpdate,
     private ngZone: NgZone,
+    private settingsService: SettingsService
   ) {
     this.authService.setSubscriptionService(this.subscriptionService);
     this.clearStuckLocks();
@@ -91,6 +93,12 @@ export class App implements OnInit {
         this.showLayout = !event.url.includes('/auth');
       }
     });
+
+    this.authService.currentProfile$
+  .pipe(filter(p => !!p), take(1))
+  .subscribe(() => {
+    this.settingsService.refreshChurchProfile(); // seeds the BehaviorSubject early
+  });
 
     this.isOffline = !navigator.onLine;
     window.addEventListener('online', () =>

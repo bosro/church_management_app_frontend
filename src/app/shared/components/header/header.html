@@ -5,14 +5,20 @@
     <i class="ri-menu-line"></i>
   </button>
 
-  <!-- ✅ NEW: Church Logo & Name -->
-  <div class="church-branding" *ngIf="churchProfile">
+  <!-- Church Logo & Name -->
+  <!-- CHANGED: removed *ngIf="churchProfile" so the branding container
+       always exists in the DOM. The logo img and name span each have
+       their own guards so nothing renders until data arrives, but the
+       container itself doesn't flash away on refresh. -->
+  <div class="church-branding">
     <img
       *ngIf="churchLogoUrl"
       [src]="churchLogoUrl"
       [alt]="churchName"
       class="church-logo"
     />
+    <!-- Fallback placeholder shown while logo is loading -->
+    <div *ngIf="!churchLogoUrl" class="church-logo-placeholder"></div>
     <span class="church-name" *ngIf="!isMobile">{{ churchName }}</span>
   </div>
 

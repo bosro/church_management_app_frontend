@@ -526,3 +526,4 @@ export class MemberList implements OnInit, OnDestroy {
     this.router.navigate(['main/members']);
   }
 }
+

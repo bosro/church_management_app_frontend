@@ -1,6 +1,6 @@
 // src/app/features/events/services/events.service.ts
 import { Injectable } from '@angular/core';
-import { Observable, from, throwError } from 'rxjs';
+import { Observable, from, of, throwError } from 'rxjs';
 import { map, catchError, switchMap } from 'rxjs/operators';
 import { SupabaseService } from '../../../core/services/supabase';
 import { AuthService } from '../../../core/services/auth';
@@ -18,7 +18,7 @@ export class EventsService {
   constructor(
     private supabase: SupabaseService,
     private authService: AuthService,
-      private subscriptionService: SubscriptionService,
+    private subscriptionService: SubscriptionService,
   ) {}
 
   // ==================== PERMISSIONS ====================
@@ -86,7 +86,7 @@ export class EventsService {
     const isBranchPastor = this.authService.isBranchPastor();
     const branchId = this.authService.getBranchId();
     const userRole = this.authService.getUserRole();
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toISOString();
 
     return from(
       (async () => {
@@ -144,66 +144,69 @@ export class EventsService {
   }
 
   createEvent(eventData: {
-  title: string;
-  description?: string;
-  category: EventCategory;
-  start_date: string;
-  end_date: string;
-  start_time?: string;
-  end_time?: string;
-  location?: string;
-  max_attendees?: number;
-  registration_deadline?: string;
-  registration_required?: boolean;
-  is_public?: boolean;
-}): Observable<ChurchEvent> {
-  const churchId = this.authService.getChurchId();
-  const userId = this.authService.getUserId();
-  const branchId = this.authService.getBranchId();
+    title: string;
+    description?: string;
+    category: EventCategory;
+    start_date: string;
+    end_date: string;
+    start_time?: string;
+    end_time?: string;
+    location?: string;
+    max_attendees?: number;
+    registration_deadline?: string;
+    registration_required?: boolean;
+    is_public?: boolean;
+  }): Observable<ChurchEvent> {
+    const churchId = this.authService.getChurchId();
+    const userId = this.authService.getUserId();
+    const branchId = this.authService.getBranchId();
 
-  return this.subscriptionService.checkQuota('events').pipe(
-    switchMap((quota) => {
-      if (!quota.allowed) {
-        throw new Error(
-          `QUOTA_EXCEEDED:events:${quota.current}:${quota.limit}`
+    return this.subscriptionService.checkQuota('events').pipe(
+      switchMap((quota) => {
+        if (!quota.allowed) {
+          throw new Error(
+            `QUOTA_EXCEEDED:events:${quota.current}:${quota.limit}`,
+          );
+        }
+        const startDateTime = this.combineDateAndTime(
+          eventData.start_date,
+          eventData.start_time,
         );
-      }
-      const startDateTime = this.combineDateAndTime(
-        eventData.start_date, eventData.start_time
-      );
-      const endDateTime = this.combineDateAndTime(
-        eventData.end_date, eventData.end_time
-      );
-      return from(
-        this.supabase.insert<ChurchEvent>('events', {
-          church_id: churchId,
-          branch_id: branchId || null,
-          title: eventData.title,
-          description: eventData.description || null,
-          category: eventData.category,
-          start_date: startDateTime,
-          end_date: endDateTime,
-          location: eventData.location || null,
-          max_attendees: eventData.max_attendees || null,
-          registration_deadline: eventData.registration_deadline || null,
-          registration_required: eventData.registration_required || false,
-          is_public: eventData.is_public !== undefined ? eventData.is_public : true,
-          created_by: userId,
-        } as any)
-      );
-    }),
-    map(({ data, error }) => {
-      if (error) throw new Error(error.message);
-      if (!data || data.length === 0) throw new Error('Failed to create event');
-      return data[0];
-    }),
-    catchError((err) => {
-      console.error('Error creating event:', err);
-      return throwError(() => err);
-    }),
-  );
-}
-
+        const endDateTime = this.combineDateAndTime(
+          eventData.end_date,
+          eventData.end_time,
+        );
+        return from(
+          this.supabase.insert<ChurchEvent>('events', {
+            church_id: churchId,
+            branch_id: branchId || null,
+            title: eventData.title,
+            description: eventData.description || null,
+            category: eventData.category,
+            start_date: startDateTime,
+            end_date: endDateTime,
+            location: eventData.location || null,
+            max_attendees: eventData.max_attendees || null,
+            registration_deadline: eventData.registration_deadline || null,
+            registration_required: eventData.registration_required || false,
+            is_public:
+              eventData.is_public !== undefined ? eventData.is_public : true,
+            created_by: userId,
+          } as any),
+        );
+      }),
+      map(({ data, error }) => {
+        if (error) throw new Error(error.message);
+        if (!data || data.length === 0)
+          throw new Error('Failed to create event');
+        return data[0];
+      }),
+      catchError((err) => {
+        console.error('Error creating event:', err);
+        return throwError(() => err);
+      }),
+    );
+  }
 
   updateEvent(
     eventId: string,
@@ -220,6 +223,7 @@ export class EventsService {
       registration_deadline?: string;
       registration_required?: boolean;
       is_public?: boolean;
+      flyer_url?: string | null; // ← add this line
     },
   ): Observable<ChurchEvent> {
     const churchId = this.authService.getChurchId();
@@ -602,6 +606,42 @@ export class EventsService {
     const date = new Date(datetime);
     return date.toTimeString().slice(0, 5); // HH:MM format
   }
+
+  uploadEventFlyer(eventId: string, file: File): Observable<string> {
+    return from(this.uploadFlyer(eventId, file));
+  }
+
+  private async uploadFlyer(eventId: string, file: File): Promise<string> {
+    const churchId = this.authService.getChurchId();
+    const fileExt = file.name.split('.').pop()?.toLowerCase();
+    const fileName = `${eventId}_${Date.now()}.${fileExt}`;
+    const filePath = `${churchId}/${fileName}`;
+
+    const { error: uploadError } = await this.supabase.client.storage
+      .from('event-flyers')
+      .upload(filePath, file, { cacheControl: '3600', upsert: true });
+
+    if (uploadError) throw new Error(uploadError.message);
+
+    const { data } = this.supabase.client.storage
+      .from('event-flyers')
+      .getPublicUrl(filePath);
+
+    return data.publicUrl;
+  }
+
+  deleteEventFlyer(flyerUrl: string): Observable<void> {
+    // Extract path from URL: everything after /event-flyers/
+    const path = flyerUrl.split('/event-flyers/')[1];
+    if (!path) return of(undefined);
+
+    return from(
+      this.supabase.client.storage.from('event-flyers').remove([path]),
+    ).pipe(
+      map(({ error }) => {
+        if (error) throw new Error(error.message);
+      }),
+      catchError(() => of(undefined)), // Non-blocking — don't fail if delete fails
+    );
+  }
 }
-
-

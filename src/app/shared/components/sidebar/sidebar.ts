@@ -122,7 +122,7 @@ export class Sidebar implements OnInit {
     },
     {
       icon: 'ri-team-line',
-      label: 'Departments',
+      label: 'Departments/Ministries',
       route: '/main/ministries',
       active: false,
       roles: ['church_admin', 'pastor', 'ministry_leader'],

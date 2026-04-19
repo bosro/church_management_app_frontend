@@ -70,6 +70,15 @@
                 <h1>{{ event.title }}</h1>
                 <p class="event-date-range">{{ formatDateRange(event) }}</p>
               </div>
+
+              <div class="event-flyer" *ngIf="event.flyer_url">
+                <img [src]="event.flyer_url" [alt]="event.title + ' flyer'" (click)="openFlyerLightbox()"
+                  class="event-flyer-img" title="Click to view full size" />
+                <a [href]="event.flyer_url" download class="flyer-download-btn" target="_blank">
+                  <i class="ri-download-line"></i>
+                  Download Flyer
+                </a>
+              </div>
             </div>
 
             <div class="event-description" *ngIf="event.description">
