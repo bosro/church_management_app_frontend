@@ -11,6 +11,7 @@ import {
 } from '../../../../models/attendance.model';
 import { PermissionService } from '../../../../core/services/permission.service';
 import { AuthService } from '../../../../core/services/auth';
+import { MemberService } from '../../../members/services/member.service';
 
 @Component({
   selector: 'app-attendance-list',
@@ -49,17 +50,24 @@ export class AttendanceList implements OnInit, OnDestroy {
   canManageAttendance = false;
   canMarkAttendance = false;
 
+  allCellGroups: { id: string; name: string }[] = [];
+selectedCellGroup = '';
+cellGroupStatsMap: Record<string, { present: number; absent: number }> = {};
+loadingCellStats = false;
+
   constructor(
     private attendanceService: AttendanceService,
     private router: Router,
     public permissionService: PermissionService,
     private authService: AuthService,
+    private memberService: MemberService
   ) {}
 
   ngOnInit(): void {
     this.checkPermissions();
     this.loadEvents();
     this.loadStatistics();
+    this.loadCellGroups();
   }
 
   ngOnDestroy(): void {
@@ -123,6 +131,48 @@ export class AttendanceList implements OnInit, OnDestroy {
       this.permissionService.attendance.checkin ||
       markRoles.includes(role);
   }
+
+
+  private loadCellGroups(): void {
+  // Reuse memberService.getCellGroups() — already available
+  // Or inject CellGroupsService if preferred
+  this.memberService.getCellGroups()
+    .pipe(takeUntil(this.destroy$))
+    .subscribe(groups => { this.allCellGroups = groups; });
+}
+
+
+onCellGroupFilterChange(): void {
+  if (!this.selectedCellGroup) {
+    // Clear cell group stats — show normal event totals
+    this.cellGroupStatsMap = {};
+    return;
+  }
+
+  // Load attendance stats scoped to this cell group
+  this.loadingCellStats = true;
+  this.attendanceService
+    .getAttendanceRecordsByCellGroup(this.selectedCellGroup)
+    .pipe(takeUntil(this.destroy$))
+    .subscribe({
+      next: (statsMap) => {
+        this.cellGroupStatsMap = statsMap;
+        this.loadingCellStats = false;
+      },
+      error: () => { this.loadingCellStats = false; },
+    });
+}
+
+// Helper for the template — returns scoped stats if a cell group is selected
+getCellScopedStats(eventId: string): { present: number; absent: number } | null {
+  if (!this.selectedCellGroup) return null;
+  return this.cellGroupStatsMap[eventId] || { present: 0, absent: 0 };
+}
+
+getSelectedCellGroupName(): string {
+  const group = this.allCellGroups.find(g => g.id === this.selectedCellGroup);
+  return group?.name || '';
+}
 
   loadEvents(): void {
     console.log('kjnjnk');
@@ -289,5 +339,7 @@ export class AttendanceList implements OnInit, OnDestroy {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }
+
+
 
 

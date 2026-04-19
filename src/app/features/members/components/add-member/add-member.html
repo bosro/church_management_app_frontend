@@ -267,6 +267,56 @@
               </div>
             </div>
 
+            <!-- Family Information -->
+            <div class="form-card">
+              <h3>Family Information <span class="optional-indicator">All optional</span></h3>
+
+              <!-- Spouse — only shown when married -->
+              <div class="form-row" *ngIf="memberForm.get('marital_status')?.value === 'married'">
+                <div class="form-group">
+                  <label for="spouse_name">Spouse Name</label>
+                  <input id="spouse_name" type="text" formControlName="spouse_name"
+                    placeholder="Enter spouse's full name" />
+                </div>
+              </div>
+
+              <!-- Children -->
+              <div class="form-row">
+                <div class="form-group full-width">
+                  <label for="children_names">Children's Names</label>
+                  <textarea id="children_names" formControlName="children_names"
+                    placeholder="e.g. John, Mary, Samuel (separate with commas)" rows="2" maxlength="300"></textarea>
+                  <span class="field-hint">Separate multiple names with commas</span>
+                </div>
+              </div>
+
+              <!-- Parents -->
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="father_name">Father's Name</label>
+                  <input id="father_name" type="text" formControlName="father_name"
+                    placeholder="Enter father's full name" />
+                </div>
+
+                <div class="form-group">
+                  <label for="mother_name">Mother's Name</label>
+                  <input id="mother_name" type="text" formControlName="mother_name"
+                    placeholder="Enter mother's full name" />
+                </div>
+
+                <div class="form-group">
+                  <label for="parents_alive_status">Parents Status</label>
+                  <select id="parents_alive_status" formControlName="parents_alive_status">
+                    <option value="">Select status</option>
+                    <option value="both_alive">Both Alive</option>
+                    <option value="father_deceased">Father Deceased</option>
+                    <option value="mother_deceased">Mother Deceased</option>
+                    <option value="both_deceased">Both Deceased</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
             <!-- Church Information -->
             <div class="form-card">
               <h3>Church Information</h3>

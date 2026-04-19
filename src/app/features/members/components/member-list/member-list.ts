@@ -63,6 +63,9 @@ export class MemberList implements OnInit, OnDestroy {
 
   sortOrder: 'created_at_desc' | 'name_asc' | 'name_desc' = 'created_at_desc';
 
+  allCellGroups: { id: string; name: string }[] = [];
+  selectedCellGroupFilter = '';
+
   constructor(
     private memberService: MemberService,
     private authService: AuthService,
@@ -88,6 +91,15 @@ export class MemberList implements OnInit, OnDestroy {
             (g) => g.leader_id === this.currentUserId,
           );
           if (myGroup) this.cellLeaderGroupId = myGroup.id;
+        });
+    }
+
+    if (!this.isCellLeader) {
+      this.memberService
+        .getCellGroups()
+        .pipe(takeUntil(this.destroy$))
+        .subscribe((groups) => {
+          this.allCellGroups = groups;
         });
     }
 
@@ -208,6 +220,7 @@ export class MemberList implements OnInit, OnDestroy {
       status: [''],
       branch: [''],
       ministry: [''],
+      cell_group: [''],
     });
   }
 
@@ -220,7 +233,8 @@ export class MemberList implements OnInit, OnDestroy {
           gender_filter: values.gender || undefined,
           status_filter: values.status || undefined,
           branch_filter: values.branch || undefined,
-          sort_by: this.sortOrder, // ← persist sort across filter changes
+          cell_group_filter: values.cell_group || undefined, // ← ADD
+          sort_by: this.sortOrder,
         };
         this.currentPage = 1;
         this.loadMembers();
@@ -459,6 +473,7 @@ export class MemberList implements OnInit, OnDestroy {
       status: '',
       branch: '',
       ministry: '',
+      cell_group: '',
     });
     this.filters = {};
     this.currentPage = 1;

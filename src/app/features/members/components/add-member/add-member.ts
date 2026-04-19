@@ -92,8 +92,11 @@ export class AddMember implements OnInit, OnDestroy {
 
     // Roles that can add members even without an explicit permission grant
     const allowedRoles = [
-      'pastor', 'senior_pastor', 'associate_pastor',
-      'group_leader', 'cell_leader',
+      'pastor',
+      'senior_pastor',
+      'associate_pastor',
+      'group_leader',
+      'cell_leader',
     ];
 
     this.canAddMember =
@@ -192,6 +195,11 @@ export class AddMember implements OnInit, OnDestroy {
       is_visitor: [false],
       cell_group_id: [''],
       notes: ['', [Validators.maxLength(500)]],
+      spouse_name: ['', [Validators.maxLength(100)]],
+      children_names: ['', [Validators.maxLength(300)]],
+      father_name: ['', [Validators.maxLength(100)]],
+      mother_name: ['', [Validators.maxLength(100)]],
+      parents_alive_status: [''],
     });
   }
 
@@ -269,24 +277,43 @@ export class AddMember implements OnInit, OnDestroy {
     };
 
     if (formValue.middle_name) memberData.middle_name = formValue.middle_name;
-    if (formValue.date_of_birth) memberData.date_of_birth = formValue.date_of_birth;
+    if (formValue.date_of_birth)
+      memberData.date_of_birth = formValue.date_of_birth;
     if (formValue.gender) memberData.gender = formValue.gender;
-    if (formValue.marital_status) memberData.marital_status = formValue.marital_status;
-    if (formValue.phone_primary) memberData.phone_primary = formValue.phone_primary;
-    if (formValue.phone_secondary) memberData.phone_secondary = formValue.phone_secondary;
+    if (formValue.marital_status)
+      memberData.marital_status = formValue.marital_status;
+    if (formValue.phone_primary)
+      memberData.phone_primary = formValue.phone_primary;
+    if (formValue.phone_secondary)
+      memberData.phone_secondary = formValue.phone_secondary;
     if (formValue.email) memberData.email = formValue.email;
     if (formValue.address) memberData.address = formValue.address;
     if (formValue.city) memberData.city = formValue.city;
     if (formValue.occupation) memberData.occupation = formValue.occupation;
     if (formValue.employer) memberData.employer = formValue.employer;
-    if (formValue.education_level) memberData.education_level = formValue.education_level;
-    if (formValue.emergency_contact_name) memberData.emergency_contact_name = formValue.emergency_contact_name;
-    if (formValue.emergency_contact_phone) memberData.emergency_contact_phone = formValue.emergency_contact_phone;
-    if (formValue.emergency_contact_relationship) memberData.emergency_contact_relationship = formValue.emergency_contact_relationship;
-    if (formValue.baptism_date) memberData.baptism_date = formValue.baptism_date;
-    if (formValue.baptism_location) memberData.baptism_location = formValue.baptism_location;
+    if (formValue.education_level)
+      memberData.education_level = formValue.education_level;
+    if (formValue.emergency_contact_name)
+      memberData.emergency_contact_name = formValue.emergency_contact_name;
+    if (formValue.emergency_contact_phone)
+      memberData.emergency_contact_phone = formValue.emergency_contact_phone;
+    if (formValue.emergency_contact_relationship)
+      memberData.emergency_contact_relationship =
+        formValue.emergency_contact_relationship;
+    if (formValue.baptism_date)
+      memberData.baptism_date = formValue.baptism_date;
+    if (formValue.baptism_location)
+      memberData.baptism_location = formValue.baptism_location;
     if (formValue.notes) memberData.notes = formValue.notes;
-    if (formValue.cell_group_id) memberData.cell_group_id = formValue.cell_group_id;
+    if (formValue.cell_group_id)
+      memberData.cell_group_id = formValue.cell_group_id;
+    if (formValue.spouse_name) memberData.spouse_name = formValue.spouse_name;
+    if (formValue.children_names)
+      memberData.children_names = formValue.children_names;
+    if (formValue.father_name) memberData.father_name = formValue.father_name;
+    if (formValue.mother_name) memberData.mother_name = formValue.mother_name;
+    if (formValue.parents_alive_status)
+      memberData.parents_alive_status = formValue.parents_alive_status;
 
     return memberData;
   }
@@ -331,7 +358,9 @@ export class AddMember implements OnInit, OnDestroy {
 
   cancel(): void {
     if (this.memberForm.dirty) {
-      if (confirm('You have unsaved changes. Are you sure you want to leave?')) {
+      if (
+        confirm('You have unsaved changes. Are you sure you want to leave?')
+      ) {
         this.router.navigate(['main/members']);
       }
     } else {
@@ -381,6 +410,3 @@ export class AddMember implements OnInit, OnDestroy {
     else return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
   }
 }
-
-
-

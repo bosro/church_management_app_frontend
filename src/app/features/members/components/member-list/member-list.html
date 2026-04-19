@@ -145,6 +145,15 @@
               </select>
             </div>
 
+            <div class="filter-group" *ngIf="!isCellLeader && allCellGroups.length > 0">
+              <select formControlName="cell_group" class="filter-select">
+                <option value="">All Cell Groups</option>
+                <option *ngFor="let group of allCellGroups" [value]="group.id">
+                  {{ group.name }}
+                </option>
+              </select>
+            </div>
+
             <!-- My Cell filter — only visible to cell leaders -->
             <button type="button" class="btn-secondary btn-my-cell" *ngIf="isCellLeader && cellLeaderGroupId"
               (click)="filterMyCellMembers()" title="Show only my cell members">
@@ -323,7 +332,9 @@
             <div class="card-body">
               <h4 class="member-name">{{ getMemberFullName(member) }}</h4>
               <p class="member-number">{{ member.member_number }}</p>
-              <span class="cell-badge" *ngIf="member.cell_group_id">My Cell</span>
+              <span class="cell-badge" *ngIf="isCellLeader && isMyCell(member)">
+                <i class="ri-group-2-line"></i> My Cell
+              </span>
               <div class="member-details">
                 <p *ngIf="member.email" class="detail-item">
                   <i class="ri-mail-line"></i>

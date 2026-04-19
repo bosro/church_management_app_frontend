@@ -85,7 +85,19 @@
               </option>
             </select>
           </div>
+
+          <!-- Cell Group Filter — separate sibling, NOT inside the select above -->
+          <div class="filter-group" *ngIf="allCellGroups.length > 0">
+            <label>Cell Group</label>
+            <select [(ngModel)]="selectedCellGroup" (change)="onCellGroupFilterChange()" class="filter-select">
+              <option value="">All Cell Groups</option>
+              <option *ngFor="let group of allCellGroups" [value]="group.id">
+                {{ group.name }}
+              </option>
+            </select>
+          </div>
         </div>
+
 
         <!-- Loading State -->
         <div *ngIf="loading" class="loading-container">
@@ -133,25 +145,45 @@
               </div>
 
               <div class="event-stats">
-                <div class="stat-item">
-                  <div class="stat-icon-small">
-                    <i class="ri-group-line"></i>
+                <ng-container *ngIf="!selectedCellGroup">
+                  <!-- Normal: show overall totals -->
+                  <div class="stat-item">
+                    <div class="stat-icon-small"><i class="ri-group-line"></i></div>
+                    <div>
+                      <p class="stat-number">{{ event.total_attendance }}</p>
+                      <p class="stat-text">Attended</p>
+                    </div>
                   </div>
-                  <div>
-                    <p class="stat-number">{{ event.total_attendance }}</p>
-                    <p class="stat-text">Attended</p>
+                  <div class="stat-item" *ngIf="event.expected_attendance">
+                    <div class="stat-icon-small"><i class="ri-user-line"></i></div>
+                    <div>
+                      <p class="stat-number">{{ event.expected_attendance }}</p>
+                      <p class="stat-text">Expected</p>
+                    </div>
                   </div>
-                </div>
+                </ng-container>
 
-                <div class="stat-item" *ngIf="event.expected_attendance">
-                  <div class="stat-icon-small">
-                    <i class="ri-user-line"></i>
+                <ng-container *ngIf="selectedCellGroup">
+                  <!-- Cell-group scoped stats -->
+                  <div class="cell-filter-badge">
+                    <i class="ri-group-2-line"></i>
+                    {{ getSelectedCellGroupName() }}
                   </div>
-                  <div>
-                    <p class="stat-number">{{ event.expected_attendance }}</p>
-                    <p class="stat-text">Expected</p>
+                  <div class="stat-item" *ngIf="getCellScopedStats(event.id) as stats">
+                    <div class="stat-icon-small present"><i class="ri-checkbox-circle-line"></i></div>
+                    <div>
+                      <p class="stat-number text-green">{{ stats.present }}</p>
+                      <p class="stat-text">Present</p>
+                    </div>
                   </div>
-                </div>
+                  <div class="stat-item" *ngIf="getCellScopedStats(event.id) as stats">
+                    <div class="stat-icon-small absent"><i class="ri-close-circle-line"></i></div>
+                    <div>
+                      <p class="stat-number text-red">{{ stats.absent }}</p>
+                      <p class="stat-text">Absent</p>
+                    </div>
+                  </div>
+                </ng-container>
               </div>
 
               <div class="attendance-rate" *ngIf="event.expected_attendance">
@@ -203,9 +235,3 @@
     </div>
   </div>
 </div>
-
-
-
-
-
-

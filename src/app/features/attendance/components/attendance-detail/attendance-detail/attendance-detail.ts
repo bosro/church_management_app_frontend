@@ -30,6 +30,10 @@ export class AttendanceDetail implements OnInit, OnDestroy {
   canManageAttendance = false;
   canMarkAttendance = false;
 
+  allCellGroups: { id: string; name: string }[] = [];
+  selectedCellGroupFilter = '';
+  filteredAttendanceRecords: AttendanceRecord[] = [];
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
@@ -104,9 +108,6 @@ export class AttendanceDetail implements OnInit, OnDestroy {
 
   private loadEventDetails(): void {
     this.loading = true;
-    this.errorMessage = '';
-
-    // Load event
     this.attendanceService
       .getAttendanceEventById(this.eventId)
       .pipe(takeUntil(this.destroy$))
@@ -118,13 +119,12 @@ export class AttendanceDetail implements OnInit, OnDestroy {
         error: (error) => {
           this.errorMessage = error.message || 'Failed to load event';
           this.loading = false;
-          console.error('Error loading event:', error);
         },
       });
 
-    // Load attendance records
     this.loadAttendanceRecords();
   }
+
 
   private loadAttendanceRecords(): void {
     this.attendanceService
@@ -133,11 +133,44 @@ export class AttendanceDetail implements OnInit, OnDestroy {
       .subscribe({
         next: (records) => {
           this.attendanceRecords = records;
+          this.filteredAttendanceRecords = records; // start unfiltered
+
+          // Extract unique cell groups from the records
+          const groupMap = new Map<string, string>();
+          records.forEach((r) => {
+            const cg = (r.member as any)?.cell_group;
+            if (cg?.id && cg?.name) groupMap.set(cg.id, cg.name);
+          });
+          this.allCellGroups = Array.from(groupMap.entries())
+            .map(([id, name]) => ({ id, name }))
+            .sort((a, b) => a.name.localeCompare(b.name));
         },
         error: (error) => {
           console.error('Error loading records:', error);
         },
       });
+  }
+
+  onCellGroupFilterChange(): void {
+    if (!this.selectedCellGroupFilter) {
+      this.filteredAttendanceRecords = this.attendanceRecords;
+      return;
+    }
+    this.filteredAttendanceRecords = this.attendanceRecords.filter((r) => {
+      const cg = (r.member as any)?.cell_group;
+      return cg?.id === this.selectedCellGroupFilter;
+    });
+  }
+
+  // ADD summary helpers:
+  get presentCount(): number {
+    return this.filteredAttendanceRecords.filter((r) => r.status === 'present')
+      .length;
+  }
+
+  get absentCount(): number {
+    return this.filteredAttendanceRecords.filter((r) => r.status === 'absent')
+      .length;
   }
 
   goBack(): void {
@@ -272,3 +305,5 @@ export class AttendanceDetail implements OnInit, OnDestroy {
     return cellGroup?.name || '—';
   }
 }
+
+
