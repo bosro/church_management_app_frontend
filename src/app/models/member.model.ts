@@ -278,6 +278,11 @@ export interface Member {
   membership_status: MembershipStatus;
   is_new_convert: boolean;
   is_visitor: boolean;
+  spouse_name?: string;
+  children_names?: string;
+  father_name?: string;
+  mother_name?: string;
+  parents_alive_status?: string;
   notes?: string;
   created_at: string;
   updated_at: string;
@@ -310,6 +315,11 @@ export interface MemberCreateInput {
   notes?: string;
   branch_id?: string;
   cell_group_id?: string; // ← ADD
+  spouse_name?: string;
+  children_names?: string;
+  father_name?: string;
+  mother_name?: string;
+  parents_alive_status?: string;
 }
 
 export interface MemberSearchFilters {

@@ -356,6 +356,51 @@ export class AttendanceService {
     ).pipe(catchError((err) => throwError(() => err)));
   }
 
+  // Returns a map of eventId → { present: number, absent: number }
+  // for all members belonging to the given cell group.
+  // Used by attendance-list to show cell-group-scoped stats on each event card.
+  getAttendanceRecordsByCellGroup(
+    cellGroupId: string,
+  ): Observable<Record<string, { present: number; absent: number }>> {
+    const churchId = this.authService.getChurchId();
+
+    return from(
+      (async () => {
+        // Get all attendance records where the member belongs to this cell group
+        const { data, error } = await this.supabase.client
+          .from('attendance_records')
+          .select(
+            `
+          attendance_event_id,
+          status,
+          member:members!inner(cell_group_id)
+        `,
+          )
+          .eq('member.cell_group_id', cellGroupId);
+
+        if (error) throw new Error(error.message);
+
+        // Aggregate into a map: eventId → { present, absent }
+        const statsMap: Record<string, { present: number; absent: number }> =
+          {};
+
+        (data || []).forEach((record: any) => {
+          const eventId = record.attendance_event_id;
+          if (!statsMap[eventId]) {
+            statsMap[eventId] = { present: 0, absent: 0 };
+          }
+          if (record.status === 'present') {
+            statsMap[eventId].present++;
+          } else {
+            statsMap[eventId].absent++;
+          }
+        });
+
+        return statsMap;
+      })(),
+    ).pipe(catchError((err) => throwError(() => err)));
+  }
+
   checkInMember(
     eventId: string,
     memberId: string,

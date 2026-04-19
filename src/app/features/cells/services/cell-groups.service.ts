@@ -12,7 +12,6 @@ import {
 
 @Injectable({ providedIn: 'root' })
 export class CellGroupsService {
-
   constructor(
     private supabase: SupabaseService,
     private authService: AuthService,
@@ -37,7 +36,7 @@ export class CellGroupsService {
         if (error) throw new Error(error.message);
         return (data || []) as CellGroup[];
       }),
-      catchError(err => throwError(() => err)),
+      catchError((err) => throwError(() => err)),
     );
   }
 
@@ -55,6 +54,30 @@ export class CellGroupsService {
       map(({ data, error }) => {
         if (error) throw new Error(error.message);
         return (data || []) as CellGroup[];
+      }),
+      catchError(() => of([])),
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // PART 2: cell-groups.service.ts — expose getActiveCellGroups() publicly
+  // (it likely already exists — just confirm it returns all groups with name+id)
+  // If not, add this to CellGroupsService:
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  getAllCellGroups(): Observable<{ id: string; name: string }[]> {
+    const churchId = this.authService.getChurchId();
+    return from(
+      this.supabase.client
+        .from('cell_groups')
+        .select('id, name')
+        .eq('church_id', churchId)
+        .eq('is_active', true)
+        .order('name', { ascending: true }),
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw new Error(error.message);
+        return data || [];
       }),
       catchError(() => of([])),
     );
@@ -79,11 +102,14 @@ export class CellGroupsService {
         if (error) throw new Error(error.message);
         return data as CellGroup;
       }),
-      catchError(err => throwError(() => err)),
+      catchError((err) => throwError(() => err)),
     );
   }
 
-  updateCellGroup(id: string, input: CellGroupUpdateInput): Observable<CellGroup> {
+  updateCellGroup(
+    id: string,
+    input: CellGroupUpdateInput,
+  ): Observable<CellGroup> {
     const churchId = this.getChurchId();
     return from(
       this.supabase.client
@@ -98,7 +124,7 @@ export class CellGroupsService {
         if (error) throw new Error(error.message);
         return data as CellGroup;
       }),
-      catchError(err => throwError(() => err)),
+      catchError((err) => throwError(() => err)),
     );
   }
 
@@ -111,8 +137,10 @@ export class CellGroupsService {
         .eq('id', id)
         .eq('church_id', churchId),
     ).pipe(
-      map(({ error }) => { if (error) throw new Error(error.message); }),
-      catchError(err => throwError(() => err)),
+      map(({ error }) => {
+        if (error) throw new Error(error.message);
+      }),
+      catchError((err) => throwError(() => err)),
     );
   }
 
@@ -124,8 +152,12 @@ export class CellGroupsService {
         .select('id, full_name, email, avatar_url, role')
         .eq('church_id', churchId)
         .in('role', [
-          'cell_leader', 'group_leader', 'pastor',
-          'senior_pastor', 'associate_pastor', 'church_admin',
+          'cell_leader',
+          'group_leader',
+          'pastor',
+          'senior_pastor',
+          'associate_pastor',
+          'church_admin',
         ])
         .eq('is_active', true)
         .order('full_name', { ascending: true }),

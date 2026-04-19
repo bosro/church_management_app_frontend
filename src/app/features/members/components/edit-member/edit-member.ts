@@ -211,6 +211,11 @@ export class EditMember implements OnInit, OnDestroy {
       is_visitor: [false],
       cell_group_id: [''],
       notes: ['', [Validators.maxLength(500)]],
+      spouse_name: ['', [Validators.maxLength(100)]],
+      children_names: ['', [Validators.maxLength(300)]],
+      father_name: ['', [Validators.maxLength(100)]],
+      mother_name: ['', [Validators.maxLength(100)]],
+      parents_alive_status: [''],
     });
   }
 
@@ -279,6 +284,11 @@ export class EditMember implements OnInit, OnDestroy {
       is_visitor: member.is_visitor || false,
       cell_group_id: member.cell_group_id || '',
       notes: member.notes || '',
+      spouse_name: member.spouse_name || '',
+children_names: member.children_names || '',
+father_name: member.father_name || '',
+mother_name: member.mother_name || '',
+parents_alive_status: member.parents_alive_status || '',
     });
   }
 
