@@ -1,0 +1,30 @@
+<!-- src/app/shared/components/confirm-modal/confirm-modal.component.html -->
+<div class="modal-overlay" *ngIf="show" (click)="onOverlayClick()">
+  <div class="modal-box" (click)="$event.stopPropagation()">
+
+    <div class="modal-icon" [ngClass]="variant">
+      <i [class]="iconClass"></i>
+    </div>
+
+    <h3 class="modal-title">{{ title }}</h3>
+    <p class="modal-message">{{ message }}</p>
+    <p class="modal-submessage" *ngIf="submessage">{{ submessage }}</p>
+
+    <div class="modal-warning-box" *ngIf="warningText">
+      <i class="ri-alert-line"></i>
+      <p>{{ warningText }}</p>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" (click)="onCancel()" [disabled]="loading">
+        {{ cancelLabel }}
+      </button>
+      <button [ngClass]="confirmButtonClass" (click)="onConfirm()" [disabled]="loading">
+        <i *ngIf="!loading" [class]="iconClass"></i>
+        <i *ngIf="loading" class="ri-loader-4-line spin"></i>
+        {{ loading ? 'Deleting...' : confirmLabel }}
+      </button>
+    </div>
+
+  </div>
+</div>

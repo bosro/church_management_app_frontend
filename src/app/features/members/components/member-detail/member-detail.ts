@@ -63,6 +63,9 @@ export class MemberDetail implements OnInit, OnDestroy {
   loadingMinistries = false;
   ministriesLoaded = false;
 
+  showConfirmModal = false;
+  confirmModalLoading = false;
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
@@ -90,7 +93,6 @@ export class MemberDetail implements OnInit, OnDestroy {
   // members.edit grant could not edit from the detail page before this fix.
   private checkPermissions(): void {
     const role = this.authService.getCurrentUserRole();
-
     const editRoles = ['pastor', 'senior_pastor', 'associate_pastor'];
 
     this.canEditMember =
@@ -98,7 +100,6 @@ export class MemberDetail implements OnInit, OnDestroy {
       this.permissionService.members.edit ||
       editRoles.includes(role);
 
-    // Delete stays admin-only — too destructive for role bypass
     this.canDeleteMember =
       this.permissionService.isAdmin || this.permissionService.members.delete;
   }
@@ -149,17 +150,34 @@ export class MemberDetail implements OnInit, OnDestroy {
       return;
     }
     if (!this.member) return;
-    const confirmMessage = `Are you sure you want to deactivate ${this.getMemberFullName()}? This action can be reversed by reactivating the member later.`;
-    if (confirm(confirmMessage)) {
-      this.memberService
-        .deleteMember(this.member.id)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: () => this.router.navigate(['main/members']),
-          error: (error) => {
-            this.errorMessage = error.message || 'Failed to delete member';
-          },
-        });
+    // Opens the modal — actual deletion triggered by onDeleteConfirmed()
+    this.showConfirmModal = true;
+  }
+
+  onDeleteConfirmed(): void {
+    if (!this.member) return;
+    this.confirmModalLoading = true;
+
+    this.memberService
+      .hardDeleteMember(this.member.id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.confirmModalLoading = false;
+          this.showConfirmModal = false;
+          this.router.navigate(['main/members']);
+        },
+        error: (error) => {
+          this.confirmModalLoading = false;
+          this.showConfirmModal = false;
+          this.errorMessage = error.message || 'Failed to delete member';
+        },
+      });
+  }
+
+  onDeleteCancelled(): void {
+    if (!this.confirmModalLoading) {
+      this.showConfirmModal = false;
     }
   }
 
