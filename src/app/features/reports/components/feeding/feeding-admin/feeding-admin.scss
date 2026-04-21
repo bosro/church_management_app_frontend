@@ -1,0 +1,635 @@
+// =========================================================
+// Feeding Admin — Styles (fully mobile responsive)
+// =========================================================
+
+.feeding-admin-container {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+  font-family: "Nunito Sans", sans-serif;
+
+  @media (max-width: 768px) {
+    padding: 16px 12px;
+  }
+
+  @media (max-width: 480px) {
+    padding: 12px 8px;
+  }
+}
+
+// ─── Page header ──────────────────────────────────────────
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 12px;
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+
+    h1 {
+      font-size: 22px;
+      font-weight: 800;
+      color: #111827;
+      margin: 0 0 3px;
+
+      @media (max-width: 480px) {
+        font-size: 18px;
+      }
+    }
+
+    .subtitle {
+      font-size: 13px;
+      color: #6b7280;
+      margin: 0;
+
+      @media (max-width: 480px) {
+        font-size: 12px;
+      }
+    }
+  }
+
+  .back-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    i {
+      font-size: 18px;
+      color: #374151;
+    }
+
+    &:hover {
+      background: #f3f4f6;
+      border-color: #d1d5db;
+    }
+  }
+}
+
+// ─── Alerts ───────────────────────────────────────────────
+.success-alert,
+.error-alert {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 16px;
+
+  i {
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+}
+
+.success-alert {
+  background: #d1fae5;
+  border: 1px solid #6ee7b7;
+  color: #065f46;
+}
+
+.error-alert {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+}
+
+// ─── Two-column grid ──────────────────────────────────────
+.admin-grid {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 20px;
+  align-items: start;
+
+  @media (max-width: 1024px) {
+    grid-template-columns: 300px 1fr;
+  }
+
+  @media (max-width: 860px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+// ─── Shared card ──────────────────────────────────────────
+.admin-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 16px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    border-bottom: 1px solid #e5e7eb;
+    background: #f9fafb;
+
+    i {
+      font-size: 18px;
+      color: #4f46e5;
+    }
+
+    h3 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #111827;
+      margin: 0;
+    }
+  }
+
+  .card-body {
+    padding: 16px;
+  }
+}
+
+// ─── Settings card ────────────────────────────────────────
+.settings-filters {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+
+  select {
+    flex: 1;
+    padding: 8px 10px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 13px;
+    background: #f9fafb;
+    font-family: "Nunito Sans", sans-serif;
+    color: #374151;
+    cursor: pointer;
+    min-width: 0; // allow shrinking
+
+    &:focus {
+      outline: none;
+      border-color: #4f46e5;
+      background: white;
+    }
+  }
+}
+
+.amount-input-row {
+  margin-bottom: 12px;
+
+  label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-bottom: 6px;
+  }
+
+  .amount-input-wrap {
+    display: flex;
+    align-items: center;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    overflow: hidden;
+    background: white;
+    transition: border-color 0.2s;
+
+    &:focus-within {
+      border-color: #4f46e5;
+    }
+
+    .currency-prefix {
+      padding: 10px 12px;
+      background: #f9fafb;
+      border-right: 1px solid #e5e7eb;
+      font-size: 13px;
+      font-weight: 700;
+      color: #374151;
+      flex-shrink: 0;
+    }
+
+    input {
+      flex: 1;
+      padding: 10px 12px;
+      border: none;
+      font-size: 14px;
+      font-family: "Nunito Sans", sans-serif;
+      color: #111827;
+      background: transparent;
+      min-width: 0;
+
+      &:focus {
+        outline: none;
+      }
+
+      &::placeholder {
+        color: #d1d5db;
+      }
+    }
+  }
+}
+
+.btn-save-settings {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px;
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: "Nunito Sans", sans-serif;
+  transition: opacity 0.2s;
+
+  i { font-size: 16px; }
+
+  &:hover:not(:disabled) { opacity: 0.9; }
+  &:disabled { opacity: 0.45; cursor: not-allowed; }
+}
+
+.current-rate {
+  margin-top: 10px;
+  text-align: center;
+  font-size: 12px;
+  color: #6b7280;
+
+  strong {
+    color: #4f46e5;
+    font-weight: 700;
+  }
+}
+
+// ─── Public link card ─────────────────────────────────────
+.link-description {
+  font-size: 13px;
+  color: #6b7280;
+  margin: 0 0 12px;
+  line-height: 1.5;
+}
+
+.link-box {
+  display: flex;
+  align-items: center;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 10px;
+
+  .link-text {
+    flex: 1;
+    padding: 9px 12px;
+    font-size: 12px;
+    color: #374151;
+    background: #f9fafb;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-family: "Courier New", monospace;
+    min-width: 0;
+  }
+
+  .btn-copy {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 9px 14px;
+    background: #4f46e5;
+    color: white;
+    border: none;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: "Nunito Sans", sans-serif;
+    white-space: nowrap;
+    transition: background 0.2s;
+    flex-shrink: 0;
+
+    i { font-size: 14px; }
+    &:hover { background: #4338ca; }
+  }
+}
+
+.btn-open-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px solid #4f46e5;
+  color: #4f46e5;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  font-family: "Nunito Sans", sans-serif;
+  transition: all 0.2s;
+  box-sizing: border-box;
+
+  i { font-size: 15px; }
+  &:hover { background: #eef2ff; }
+}
+
+// ─── Right column ─────────────────────────────────────────
+.right-col {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.records-filters {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f9fafb;
+  flex-wrap: wrap;
+
+  input[type="date"] {
+    padding: 8px 10px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: "Nunito Sans", sans-serif;
+    background: white;
+    color: #374151;
+
+    &:focus {
+      outline: none;
+      border-color: #4f46e5;
+    }
+  }
+
+  .records-count {
+    margin-left: auto;
+    font-size: 12px;
+    font-weight: 700;
+    color: #6b7280;
+    background: #e5e7eb;
+    padding: 4px 10px;
+    border-radius: 100px;
+    white-space: nowrap;
+  }
+}
+
+// ─── Daily summary mini bar ───────────────────────────────
+.daily-summary-mini {
+  display: flex;
+  border-bottom: 1px solid #e5e7eb;
+  flex-wrap: wrap;
+
+  .dsm-item {
+    flex: 1;
+    min-width: 80px;
+    padding: 12px 10px;
+    text-align: center;
+    border-right: 1px solid #e5e7eb;
+
+    &:last-child { border-right: none; }
+
+    span {
+      display: block;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: #9ca3af;
+      margin-bottom: 4px;
+    }
+
+    strong {
+      font-size: 14px;
+      font-weight: 800;
+      color: #111827;
+
+      @media (max-width: 480px) {
+        font-size: 12px;
+      }
+    }
+
+    &.present strong { color: #059669; }
+    &.absent strong { color: #dc2626; }
+    &.expected strong { color: #4f46e5; }
+    &.collected strong { color: #059669; }
+
+    &.collected.shortfall {
+      background: #fef2f2;
+      strong { color: #dc2626; }
+    }
+
+    &.shortfall-item {
+      background: #fef2f2;
+      .red { color: #dc2626; }
+    }
+  }
+
+  // On very small screens, wrap into 2-column grid
+  @media (max-width: 400px) {
+    .dsm-item {
+      flex: 1 1 50%;
+      border-bottom: 1px solid #e5e7eb;
+
+      &:nth-child(even) { border-right: none; }
+      &:nth-last-child(-n+2) { border-bottom: none; }
+    }
+  }
+}
+
+// ─── Records table ────────────────────────────────────────
+.records-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.records-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 520px;
+
+  thead {
+    background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+
+    th {
+      padding: 10px 14px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #374151;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      text-align: left;
+      white-space: nowrap;
+    }
+  }
+
+  tbody tr {
+    border-bottom: 1px solid #f3f4f6;
+    transition: background 0.15s;
+
+    &:last-child { border-bottom: none; }
+    &:hover { background: #fafafa; }
+
+    td {
+      padding: 11px 14px;
+      font-size: 13px;
+      color: #374151;
+      vertical-align: middle;
+    }
+  }
+
+  tfoot .total-row {
+    background: #f9fafb;
+    border-top: 2px solid #e5e7eb;
+
+    td {
+      padding: 11px 14px;
+      font-size: 13px;
+    }
+  }
+
+  .text-right { text-align: right; }
+  .text-center { text-align: center; }
+
+  .rec-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #111827;
+    margin: 0 0 2px;
+    white-space: nowrap;
+  }
+
+  .rec-num {
+    font-size: 11px;
+    color: #9ca3af;
+    margin: 0;
+  }
+
+  .amount-cell {
+    font-weight: 700;
+    color: #059669;
+    white-space: nowrap;
+  }
+
+  .timestamp {
+    font-size: 12px;
+    color: #9ca3af;
+    white-space: nowrap;
+  }
+
+  .notes-cell {
+    font-size: 12px;
+    color: #6b7280;
+    max-width: 140px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+// ─── Mobile card view for records (replaces table on small screens) ──
+@media (max-width: 600px) {
+  .records-table-wrap {
+    overflow-x: visible;
+  }
+
+  .records-table {
+    min-width: unset;
+
+    thead { display: none; }
+
+    tbody tr {
+      display: flex;
+      flex-direction: column;
+      padding: 12px 14px;
+      border-bottom: 1px solid #e5e7eb;
+
+      td {
+        padding: 2px 0;
+        border: none;
+        font-size: 13px;
+
+        &::before {
+          content: attr(data-label) ": ";
+          font-size: 10px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.3px;
+          color: #9ca3af;
+          margin-right: 4px;
+        }
+
+        &.text-right, &.text-center { text-align: left; }
+      }
+    }
+
+    tfoot .total-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 14px;
+
+      td { padding: 0; }
+    }
+  }
+}
+
+// ─── Loading / empty states ───────────────────────────────
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 48px 24px;
+  gap: 12px;
+  color: #6b7280;
+
+  .spinner {
+    width: 28px;
+    height: 28px;
+    border: 3px solid #e5e7eb;
+    border-top-color: #4f46e5;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  p { font-size: 14px; margin: 0; }
+}
+
+.empty-records {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 52px 24px;
+  color: #9ca3af;
+  text-align: center;
+
+  i { font-size: 44px; margin-bottom: 12px; }
+  p { font-size: 14px; margin: 0; }
+}
+
+// ─── Animations ───────────────────────────────────────────
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.spin { animation: spin 0.8s linear infinite; }

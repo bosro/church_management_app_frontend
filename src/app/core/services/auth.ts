@@ -316,15 +316,33 @@ export class AuthService {
   signUp(signUpData: SignUpData): Observable<any> {
     this.loadingSubject.next(true);
 
+    // ✅ Compute the role upfront based on signup type
+    // The handle_new_user() trigger reads this from raw_user_meta_data
+    // and writes it to profiles.role immediately on auth.users INSERT
+    const role: UserRole =
+      signUpData.signup_type === 'member'
+        ? 'member'
+        : this.mapPositionToRole(signUpData.position || '');
+
+    // ✅ Build metadata that the trigger will consume
+    const userMetadata: Record<string, any> = {
+      full_name: signUpData.full_name,
+      role: role,
+      phone_number: signUpData.phone,
+    };
+
+    // Only members carry a church_id at signup time
+    if (signUpData.signup_type === 'member' && signUpData.church_id) {
+      userMetadata['church_id'] = signUpData.church_id;
+    }
+
     return from(
       this.supabase.client.auth.signUp({
         email: signUpData.email,
         password: signUpData.password,
         options: {
           emailRedirectTo: `${window.location.origin}/auth/email-confirmed`,
-          data: {
-            full_name: signUpData.full_name,
-          },
+          data: userMetadata,
         },
       }),
     ).pipe(
@@ -338,20 +356,34 @@ export class AuthService {
           throw new Error('User creation failed');
         }
 
+        // Small delay to let the handle_new_user trigger finish writing to profiles
         await new Promise((resolve) => setTimeout(resolve, 1000));
 
         try {
           if (signUpData.signup_type === 'member' && signUpData.church_id) {
             return await this.handleMemberSignup(data, signUpData);
-          } else {
+          } else if (signUpData.signup_type === 'admin') {
             return await this.handleAdminSignup(data, signUpData);
+          } else {
+            // ✅ Defensive: don't create junk signup_requests rows for ambiguous signups
+            console.warn(
+              'Signup completed but signup_type was ambiguous:',
+              signUpData.signup_type,
+            );
+            return {
+              ...data,
+              needsEmailConfirmation: !data.user.email_confirmed_at,
+              pendingApproval: false,
+              message:
+                'Account created! Please check your email to confirm your account.',
+            };
           }
         } catch (postSignupError) {
           console.error('Post-signup process error:', postSignupError);
           return {
             ...data,
             needsEmailConfirmation: true,
-            pendingApproval: signUpData.signup_type !== 'member',
+            pendingApproval: signUpData.signup_type === 'admin',
             message:
               'Account created. Please check your email to confirm your account.',
           };

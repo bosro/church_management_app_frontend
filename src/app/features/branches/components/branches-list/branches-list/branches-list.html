@@ -235,4 +235,84 @@
       </div>
     </div>
   </div>
+
+  <!-- Delete Confirmation Modal -->
+<div class="modal-overlay" *ngIf="showDeleteModal && deleteModalBranch" (click)="closeDeleteModal()">
+  <div class="delete-modal" (click)="$event.stopPropagation()">
+
+    <!-- Step 1 -->
+    <ng-container *ngIf="deleteModalStep === 1">
+      <div class="delete-modal-icon" [class.hard]="deleteModalHardDelete">
+        <i [class]="deleteModalHardDelete ? 'ri-delete-bin-2-line' : 'ri-eye-off-line'"></i>
+      </div>
+
+      <h3>{{ deleteModalHardDelete ? 'Permanently Delete Branch?' : 'Deactivate Branch?' }}</h3>
+
+      <p class="delete-modal-name">{{ deleteModalBranch.name }}</p>
+
+      <div class="delete-modal-warning" *ngIf="deleteModalHardDelete">
+        <i class="ri-error-warning-line"></i>
+        <span>This is a <strong>destructive action</strong> and cannot be undone.</span>
+      </div>
+
+      <ul class="delete-modal-details">
+        <li *ngIf="deleteModalBranch.member_count > 0">
+          <i class="ri-group-line"></i>
+          {{ deleteModalBranch.member_count }} member(s) will be unlinked from this branch
+        </li>
+        <li *ngIf="deleteModalBranch.pastor_name && deleteModalHardDelete">
+          <i class="ri-user-line"></i>
+          Pastor "{{ deleteModalBranch.pastor_name }}" will be unassigned
+        </li>
+        <li *ngIf="!deleteModalHardDelete">
+          <i class="ri-information-line"></i>
+          Branch will be marked inactive. To permanently delete, remove the pastor first.
+        </li>
+        <li *ngIf="deleteModalHardDelete">
+          <i class="ri-database-2-line"></i>
+          All branch data and member assignments will be permanently removed
+        </li>
+      </ul>
+
+      <div class="delete-modal-actions">
+        <button class="modal-btn-cancel" (click)="closeDeleteModal()">Cancel</button>
+        <button class="modal-btn-confirm" [class.hard]="deleteModalHardDelete"
+          (click)="onDeleteModalConfirmStep1()">
+          <i [class]="deleteModalHardDelete ? 'ri-delete-bin-line' : 'ri-eye-off-line'"></i>
+          {{ deleteModalHardDelete ? 'Yes, Delete Permanently' : 'Deactivate Branch' }}
+        </button>
+      </div>
+    </ng-container>
+
+    <!-- Step 2 (hard delete only) -->
+    <ng-container *ngIf="deleteModalStep === 2">
+      <div class="delete-modal-icon hard pulse">
+        <i class="ri-alarm-warning-line"></i>
+      </div>
+
+      <h3>Final Confirmation</h3>
+      <p class="delete-modal-subtitle">
+        You are about to <strong>permanently delete</strong>
+        <span class="branch-name-highlight">"{{ deleteModalBranch.name }}"</span>.
+        There is no going back.
+      </p>
+
+      <div class="delete-modal-warning hard">
+        <i class="ri-shield-cross-line"></i>
+        <span>Type <strong>DELETE</strong> in your mind and click confirm only if you are 100% sure.</span>
+      </div>
+
+      <div class="delete-modal-actions">
+        <button class="modal-btn-cancel" (click)="closeDeleteModal()">Cancel</button>
+        <button class="modal-btn-confirm hard" (click)="onDeleteModalConfirmStep2()">
+          <i class="ri-delete-bin-2-line"></i>
+          Permanently Delete
+        </button>
+      </div>
+    </ng-container>
+
+  </div>
 </div>
+</div>
+
+

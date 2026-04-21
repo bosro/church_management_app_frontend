@@ -526,3 +526,92 @@
 }
 
 
+
+
+/* ── Tab action bar (sits above the table card in Fees / Payments tab) ── */
+.tab-action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px 10px 0 0;
+  border-bottom: none;
+  gap: 12px;
+  flex-wrap: wrap;
+
+  /* When it's right above .table-card, merge the borders */
+  + .table-card {
+    border-radius: 0 0 12px 12px;
+  }
+
+  @media (max-width: 480px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+
+  .tab-action-info {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 13px;
+    color: #6b7280;
+
+    i {
+      color: #4f46e5;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+  }
+}
+
+/* ── Export Statement button ─────────────────────────────────────────── */
+.btn-export-statement {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background: #4f46e5;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: "Nunito Sans", sans-serif;
+  white-space: nowrap;
+
+  i { font-size: 15px; }
+
+  &:hover:not(:disabled) {
+    background: #4338ca;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(79, 70, 229, 0.3);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  @media (max-width: 480px) {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* ── Spin icon for loading state ─────────────────────────────────────── */
+.spin-icon {
+  animation: spin-detail 0.8s linear infinite;
+}
+
+@keyframes spin-detail {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+

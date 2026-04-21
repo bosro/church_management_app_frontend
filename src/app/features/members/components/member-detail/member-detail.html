@@ -704,4 +704,18 @@
       </div>
     </div>
   </div>
+
+   <app-confirm-modal
+    [show]="showConfirmModal"
+    title="Delete Member"
+    [message]="'You are about to permanently delete ' + getMemberFullName() + '.'"
+    submessage="All their attendance, giving, pledge, and ministry records will also be permanently removed."
+    warningText="This action cannot be undone. The member will be removed from the system entirely."
+    confirmLabel="Yes, Delete Permanently"
+    variant="danger"
+    icon="ri-delete-bin-line"
+    [loading]="confirmModalLoading"
+    (confirmed)="onDeleteConfirmed()"
+    (cancelled)="onDeleteCancelled()">
+  </app-confirm-modal>
 </div>

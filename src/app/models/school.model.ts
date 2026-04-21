@@ -75,8 +75,16 @@ export interface FeePayment {
   academic_year: string;
   term: string;
   received_by?: string;
+  received_by_name?: string;  // ← add this
+  amount_due?: string;
   notes?: string;
-  fee_items: { fee_name: string; amount: number }[];
+ fee_items: {
+  fee_name: string;
+  amount: number;
+  is_arrears?: boolean;
+  amount_due?: number;
+  amount_paid_total?: number;
+}[];
   created_at: string;
 }
 

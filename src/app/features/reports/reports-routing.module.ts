@@ -22,6 +22,7 @@ import { GradingScaleComponent } from './components/settings/grading-scale/gradi
 import { SubjectsList } from './components/settings/subjects-list/subjects-list';
 import { StudentFees } from './components/fees/student-fees/student-fees';
 import { ImportStudents } from './components/add-student/import-students/import-students';
+import { FeedingAdmin } from './components/feeding/feeding-admin/feeding-admin';
 
 const routes: Routes = [
   {
@@ -137,6 +138,16 @@ const routes: Routes = [
       requiresFeature: 'reports',
     },
   },
+   {
+    path: 'fees/feeding-admin',
+    component: FeedingAdmin,
+    canActivate: [PermissionGuard],
+    data: {
+      roles: ['super_admin', 'church_admin'],
+      permission: 'school.manage',
+      requiresFeature: 'reports',
+    },
+  },
   // Receipts
   {
     path: 'receipts/:receiptNumber',
@@ -217,3 +228,6 @@ const routes: Routes = [
   exports: [RouterModule, SharedModule],
 })
 export class ReportsRoutingModule {}
+
+
+

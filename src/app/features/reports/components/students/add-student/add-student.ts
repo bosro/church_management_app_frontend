@@ -1,9 +1,8 @@
-
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { Subject } from 'rxjs';
-import { takeUntil, switchMap } from 'rxjs/operators';
+import { takeUntil } from 'rxjs/operators';
 import { SchoolService } from '../../../services/school.service';
 import { PermissionService } from '../../../../../core/services/permission.service';
 import { SchoolClass } from '../../../../../models/school.model';
@@ -25,11 +24,16 @@ export class AddStudent implements OnInit, OnDestroy {
   errorMessage = '';
   successMessage = '';
 
+  // Pre-selected class from query param (set by class card "Add Student" button)
+  preSelectedClassId = '';
+  preSelectedClassName = '';
+
   constructor(
     private fb: FormBuilder,
     private schoolService: SchoolService,
     public permissionService: PermissionService,
     private router: Router,
+    private route: ActivatedRoute,
     private supabase: SupabaseService,
     private authService: AuthService,
   ) {}
@@ -38,6 +42,16 @@ export class AddStudent implements OnInit, OnDestroy {
     this.checkPermissions();
     this.initForm();
     this.loadClasses();
+
+    // Read classId from query params if navigated from class card
+    this.route.queryParams
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((params) => {
+        if (params['classId']) {
+          this.preSelectedClassId = params['classId'];
+          this.studentForm.patchValue({ class_id: params['classId'] });
+        }
+      });
   }
 
   ngOnDestroy(): void {
@@ -46,7 +60,7 @@ export class AddStudent implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-    if (!this.permissionService.school.manage) {
+    if (!this.permissionService.school?.manage) {
       this.router.navigate(['/unauthorized']);
     }
   }
@@ -71,7 +85,14 @@ export class AddStudent implements OnInit, OnDestroy {
       .getClasses()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (classes) => (this.classes = classes),
+        next: (classes) => {
+          this.classes = classes;
+          // Resolve name after classes load
+          if (this.preSelectedClassId) {
+            const found = classes.find((c) => c.id === this.preSelectedClassId);
+            this.preSelectedClassName = found?.name || '';
+          }
+        },
         error: (err) => console.error(err),
       });
   }
@@ -85,43 +106,65 @@ export class AddStudent implements OnInit, OnDestroy {
 
     this.loading = true;
     this.errorMessage = '';
+    this.successMessage = '';
 
-    const churchId = this.authService.getChurchId() || '';
+    const formValue = this.sanitizeFormValue(this.studentForm.value);
 
-    // Generate student number then create student
-    this.supabase.client
-      .rpc('generate_student_number', { p_church_id: churchId })
-      .then(({ data: studentNumber, error }) => {
-        if (error) {
-          this.errorMessage = error.message;
+    // Use the service method instead of calling RPC directly
+    this.schoolService
+      .createStudent(formValue)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (student) => {
           this.loading = false;
-          return;
-        }
+          this.successMessage = `Student ${student.first_name} ${student.last_name} added successfully!`;
 
-        this.schoolService
-          .createStudentWithNumber(this.studentForm.value, studentNumber)
-          .pipe(takeUntil(this.destroy$))
-          .subscribe({
-            next: (student) => {
-              this.successMessage = `Student ${student.first_name} ${student.last_name} added successfully!`;
-              this.loading = false;
-              setTimeout(() => {
-                this.router.navigate(['main/reports/students', student.id]);
-              }, 1500);
-            },
-            error: (err) => {
-              this.errorMessage = err.message || 'Failed to add student';
-              this.loading = false;
-            },
-          });
+          const targetClassId = this.preSelectedClassId || formValue.class_id;
+          setTimeout(() => {
+            if (targetClassId) {
+              this.router.navigate(['main/reports/students'], {
+                queryParams: { classId: targetClassId },
+              });
+            } else {
+              this.router.navigate(['main/reports/students', student.id]);
+            }
+          }, 1500);
+        },
+        error: (err) => {
+          this.loading = false;
+          this.errorMessage = err.message || 'Failed to add student';
+        },
       });
+  }
+
+  private sanitizeFormValue(value: any): any {
+    return {
+      ...value,
+      date_of_birth: value.date_of_birth?.trim() || null,
+      middle_name: value.middle_name?.trim() || null,
+      parent_name: value.parent_name?.trim() || null,
+      parent_phone: value.parent_phone?.trim() || null,
+      parent_email: value.parent_email?.trim() || null,
+      address: value.address?.trim() || null,
+      gender: value.gender || null,
+    };
   }
 
   cancel(): void {
     if (this.studentForm.dirty) {
       if (confirm('You have unsaved changes. Leave?')) {
-        this.router.navigate(['main/reports/students']);
+        this.goBack();
       }
+    } else {
+      this.goBack();
+    }
+  }
+
+  private goBack(): void {
+    if (this.preSelectedClassId) {
+      this.router.navigate(['main/reports/students'], {
+        queryParams: { classId: this.preSelectedClassId },
+      });
     } else {
       this.router.navigate(['main/reports/students']);
     }
@@ -130,8 +173,6 @@ export class AddStudent implements OnInit, OnDestroy {
   private markAllTouched(): void {
     Object.values(this.studentForm.controls).forEach((c) => c.markAsTouched());
   }
-
-
 
   getError(field: string): string {
     const control = this.studentForm.get(field);
@@ -143,8 +184,3 @@ export class AddStudent implements OnInit, OnDestroy {
     return 'Invalid input';
   }
 }
-
-
-
-
-

@@ -28,7 +28,7 @@ export interface BranchPastor {
   email: string;
   avatar_url?: string;
   phone_number?: string;
-  role?: string; 
+  role?: string;
 }
 
 // src/app/models/branch.model.ts (UPDATE this interface)
@@ -112,6 +112,8 @@ export interface AssignBranchPastorRequest {
   branch_id: string;
   send_welcome_email: boolean;
 }
+
+
 
 
 

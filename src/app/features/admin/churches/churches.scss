@@ -748,3 +748,49 @@
     color: #5b21b6;
   }
 }
+
+
+.church-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap; // ← allow wrapping
+
+  .btn {
+    flex: 1 1 auto;   // ← shrink/grow as needed
+    min-width: 80px;  // ← don't collapse too small
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    padding: 0.625rem 0.75rem; // ← slightly tighter padding
+    border-radius: 6px;
+    font-size: 0.8125rem;      // ← slightly smaller text
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+
+    i {
+      font-size: 0.9375rem;
+    }
+
+    &.btn-secondary {
+      background: #f3f4f6;
+      color: #374151;
+      &:hover { background: #e5e7eb; }
+    }
+
+    &.btn-danger {
+      background: #fee2e2;
+      color: #dc2626;
+      &:hover { background: #fca5a5; }
+    }
+  }
+}
+
+.btn-subscription {
+  background: #ede9fe !important;
+  color: #5b21b6 !important;
+  &:hover { background: #ddd6fe !important; }
+}

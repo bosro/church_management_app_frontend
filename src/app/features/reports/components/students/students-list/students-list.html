@@ -21,11 +21,11 @@
               <i class="ri-download-line"></i>
               {{ exporting ? 'Exporting...' : 'Export' }}
             </button>
-            <button class="btn-secondary" routerLink="import" *ngIf="permissionService.school.manage">
+            <button class="btn-secondary" routerLink="import" *ngIf="permissionService.school?.manage">
               <i class="ri-upload-2-line"></i>
               Import
             </button>
-            <button class="btn-primary" (click)="addStudent()" *ngIf="permissionService.school.manage">
+            <button class="btn-primary" (click)="addStudent()" *ngIf="permissionService.school?.manage">
               <i class="ri-user-add-line"></i>
               Add Student
             </button>
@@ -33,9 +33,52 @@
         </div>
 
         <!-- Alerts -->
+        <div *ngIf="successMessage" class="success-alert">
+          <i class="ri-checkbox-circle-line"></i>
+          <span>{{ successMessage }}</span>
+        </div>
         <div *ngIf="errorMessage" class="error-alert">
           <i class="ri-error-warning-line"></i>
           <span>{{ errorMessage }}</span>
+          <button class="close-btn-inline" (click)="errorMessage = ''"><i class="ri-close-line"></i></button>
+        </div>
+
+        <!-- Active class filter banner -->
+        <div *ngIf="activeClassFilter" class="class-filter-banner">
+          <div class="class-filter-banner-left">
+            <div class="class-filter-icon">
+              <i class="ri-building-line"></i>
+            </div>
+            <div>
+              <p class="class-filter-label">Filtered by class</p>
+              <p class="class-filter-name">{{ activeClassFilter.name }} — {{ activeClassFilter.academic_year }}</p>
+            </div>
+          </div>
+          <button class="class-filter-clear" (click)="clearClassFilter()">
+            <i class="ri-close-line"></i>
+            Show All Classes
+          </button>
+        </div>
+
+        <!-- Duplicate warning banner -->
+        <div *ngIf="permissionService.isAdmin && duplicateStats && duplicateStats.toDelete > 0" class="duplicate-notice">
+          <div class="notice-content">
+            <div class="notice-icon">
+              <i class="ri-user-unfollow-line"></i>
+            </div>
+            <div class="notice-text">
+              <p class="notice-title">Duplicate Students Detected</p>
+              <p class="notice-message">
+                {{ duplicateStats.toDelete }} duplicate record{{ duplicateStats.toDelete > 1 ? 's' : '' }}
+                across {{ duplicateStats.groups }} group{{ duplicateStats.groups > 1 ? 's' : '' }}.
+                The oldest record in each group will be kept.
+              </p>
+            </div>
+          </div>
+          <button class="btn-dedup" (click)="openDuplicateConfirm()">
+            <i class="ri-delete-bin-line"></i>
+            Remove Duplicates
+          </button>
         </div>
 
         <!-- Term/Year selector for fee data -->
@@ -51,16 +94,12 @@
             </select>
           </div>
           <div class="term-fee-bar-right" *ngIf="selectedStudentIds.size > 0">
-            <span class="selection-count">
-              {{ selectedStudentIds.size }} selected
-            </span>
+            <span class="selection-count">{{ selectedStudentIds.size }} selected</span>
             <button class="btn-bulk" (click)="exportSelected()">
-              <i class="ri-download-line"></i>
-              Export Selected
+              <i class="ri-download-line"></i> Export Selected
             </button>
             <button class="btn-bulk btn-bulk-print" (click)="printSelected()">
-              <i class="ri-printer-line"></i>
-              Print Selected
+              <i class="ri-printer-line"></i> Print Selected
             </button>
             <button class="btn-bulk-clear" (click)="clearSelection()">
               <i class="ri-close-line"></i>
@@ -79,9 +118,7 @@
             <div class="filter-group">
               <select formControlName="classId" class="filter-select">
                 <option value="">All Classes</option>
-                <option *ngFor="let class of classes" [value]="class.id">
-                  {{ class.name }}
-                </option>
+                <option *ngFor="let class of classes" [value]="class.id">{{ class.name }}</option>
               </select>
             </div>
             <div class="filter-group">
@@ -91,10 +128,41 @@
                 <option value="">All</option>
               </select>
             </div>
-            <button type="button" class="btn-clear" *ngIf="filterForm.dirty" (click)="clearFilters()">
+
+            <!-- ── Sort buttons (A-Z / Z-A) ── -->
+            <div class="sort-group">
+              <button type="button" class="btn-sort" [class.active]="sortOrder === 'name_asc'"
+                (click)="setSortOrder('name_asc')" title="Sort A–Z">
+                <i class="ri-sort-asc"></i>
+                <span>A–Z</span>
+              </button>
+              <button type="button" class="btn-sort" [class.active]="sortOrder === 'name_desc'"
+                (click)="setSortOrder('name_desc')" title="Sort Z–A">
+                <i class="ri-sort-desc"></i>
+                <span>Z–A</span>
+              </button>
+            </div>
+
+            <button type="button" class="btn-clear" *ngIf="filterForm.dirty || sortOrder !== 'name_asc'" (click)="clearFilters()">
               <i class="ri-close-line"></i> Clear
             </button>
           </form>
+        </div>
+
+        <!-- Bulk action bar -->
+        <div *ngIf="selectedStudentIds.size > 0 && permissionService.isAdmin" class="bulk-action-bar">
+          <div class="bulk-info">
+            <i class="ri-checkbox-multiple-line"></i>
+            <span>{{ selectedStudentIds.size }} student{{ selectedStudentIds.size > 1 ? 's' : '' }} selected</span>
+          </div>
+          <div class="bulk-actions">
+            <button class="btn-bulk-cancel" (click)="clearSelection()">
+              <i class="ri-close-line"></i> Deselect All
+            </button>
+            <button class="btn-bulk-delete" (click)="openBulkDeleteConfirm()">
+              <i class="ri-delete-bin-line"></i> Delete Selected
+            </button>
+          </div>
         </div>
 
         <!-- Loading -->
@@ -109,11 +177,11 @@
             <table class="data-table">
               <thead>
                 <tr>
-                  <!-- Select all checkbox -->
-                  <th class="checkbox-col" *ngIf="permissionService.school.fees">
-                    <label class="checkbox-wrap">
+                  <th class="checkbox-col" *ngIf="permissionService.isAdmin">
+                    <label class="custom-checkbox">
                       <input type="checkbox" [checked]="allSelected" [indeterminate]="someSelected"
                         (change)="toggleSelectAll($event)" />
+                      <span class="checkmark"></span>
                     </label>
                   </th>
                   <th>Student</th>
@@ -128,25 +196,25 @@
                 </tr>
               </thead>
               <tbody>
-                <tr *ngFor="let student of students" class="table-row" (click)="viewStudent(student.id)"
-                  [class.row-selected]="selectedStudentIds.has(student.id)">
+                <tr *ngFor="let student of students" class="table-row"
+                  [class.row-selected]="selectedStudentIds.has(student.id)"
+                  (click)="viewStudent(student.id)">
 
-                  <!-- 1: Checkbox -->
-                  <td class="checkbox-col" *ngIf="permissionService.school.fees" (click)="$event.stopPropagation()">
-                    <label class="checkbox-wrap">
+                  <!-- Checkbox -->
+                  <td class="checkbox-col" *ngIf="permissionService.isAdmin" (click)="$event.stopPropagation()">
+                    <label class="custom-checkbox">
                       <input type="checkbox" [checked]="selectedStudentIds.has(student.id)"
                         (change)="toggleStudent(student.id, $event)" />
+                      <span class="checkmark"></span>
                     </label>
                   </td>
 
-                  <!-- 2: Student -->
+                  <!-- Student -->
                   <td>
                     <div class="student-cell">
                       <div class="avatar">
                         <img *ngIf="student.photo_url" [src]="student.photo_url" [alt]="getFullName(student)" />
-                        <div *ngIf="!student.photo_url" class="avatar-placeholder">
-                          {{ getInitials(student) }}
-                        </div>
+                        <div *ngIf="!student.photo_url" class="avatar-placeholder">{{ getInitials(student) }}</div>
                       </div>
                       <div>
                         <p class="student-name">{{ getFullName(student) }}</p>
@@ -157,39 +225,21 @@
                     </div>
                   </td>
 
-                  <!-- 3: Student No -->
                   <td><span class="student-number">{{ student.student_number }}</span></td>
-
-                  <!-- 4: Class -->
                   <td>{{ student.class?.name || '—' }}</td>
-
-                  <!-- 5: Gender -->
                   <td class="capitalize">{{ student.gender || '—' }}</td>
 
-                  <!-- 6: Fees Due -->
                   <td class="text-right fee-amount" *ngIf="permissionService.school.fees">
-                    {{ getStudentFeeData(student.id)?.totalDue != null
-                    ? formatCurrency(getStudentFeeData(student.id).totalDue)
-                    : '—' }}
+                    {{ getStudentFeeData(student.id)?.totalDue != null ? formatCurrency(getStudentFeeData(student.id).totalDue) : '—' }}
                   </td>
-
-                  <!-- 7: Paid -->
                   <td class="text-right fee-amount paid" *ngIf="permissionService.school.fees">
-                    {{ getStudentFeeData(student.id)?.totalPaid != null
-                    ? formatCurrency(getStudentFeeData(student.id).totalPaid)
-                    : '—' }}
+                    {{ getStudentFeeData(student.id)?.totalPaid != null ? formatCurrency(getStudentFeeData(student.id).totalPaid) : '—' }}
                   </td>
-
-                  <!-- 8: Balance -->
                   <td class="text-right fee-amount"
                     [class.outstanding]="(getStudentFeeData(student.id)?.totalBalance || 0) > 0"
                     *ngIf="permissionService.school.fees">
-                    {{ getStudentFeeData(student.id)?.totalBalance != null
-                    ? formatCurrency(getStudentFeeData(student.id).totalBalance)
-                    : '—' }}
+                    {{ getStudentFeeData(student.id)?.totalBalance != null ? formatCurrency(getStudentFeeData(student.id).totalBalance) : '—' }}
                   </td>
-
-                  <!-- 9: Status -->
                   <td *ngIf="permissionService.school.fees">
                     <span *ngIf="getStudentFeeData(student.id) as fd" class="status-badge"
                       [ngClass]="'status-' + fd.status">
@@ -198,7 +248,7 @@
                     <span *ngIf="!getStudentFeeData(student.id)">—</span>
                   </td>
 
-                  <!-- 10: Actions -->
+                  <!-- Actions -->
                   <td>
                     <div class="action-buttons">
                       <button class="btn-icon-small" (click)="editStudent(student.id, $event)"
@@ -215,14 +265,20 @@
 
                 <!-- Empty state -->
                 <tr *ngIf="students.length === 0">
-                  <td [attr.colspan]="permissionService.school.fees ? 10 : 6">
+                  <td [attr.colspan]="permissionService.isAdmin ? (permissionService.school.fees ? 10 : 5) : (permissionService.school.fees ? 9 : 4)">
                     <div class="empty-state">
                       <div class="empty-icon"><i class="ri-user-line"></i></div>
                       <h3>No students found</h3>
-                      <p>Try adjusting your filters or add your first student</p>
-                      <button class="btn-primary-small" (click)="addStudent()" *ngIf="permissionService.school.manage">
-                        <i class="ri-user-add-line"></i> Add First Student
-                      </button>
+                      <p *ngIf="activeClassFilter">No students enrolled in <strong>{{ activeClassFilter.name }}</strong> yet.</p>
+                      <p *ngIf="!activeClassFilter">Try adjusting your filters or add your first student</p>
+                      <div class="empty-state-actions">
+                        <button class="btn-primary-small" (click)="addStudent()" *ngIf="permissionService.school.manage">
+                          <i class="ri-user-add-line"></i> Add Student
+                        </button>
+                        <button class="btn-secondary-small" (click)="clearClassFilter()" *ngIf="activeClassFilter">
+                          <i class="ri-list-check"></i> Show All Students
+                        </button>
+                      </div>
                     </div>
                   </td>
                 </tr>
@@ -235,10 +291,7 @@
             <button class="pagination-btn" [disabled]="currentPage === 1" (click)="previousPage()">
               <i class="ri-arrow-left-s-line"></i> Previous
             </button>
-            <span class="page-info">
-              Page {{ currentPage }} of {{ totalPages }}
-              ({{ totalStudents }} students)
-            </span>
+            <span class="page-info">Page {{ currentPage }} of {{ totalPages }} ({{ totalStudents }} students)</span>
             <button class="pagination-btn" [disabled]="currentPage === totalPages" (click)="nextPage()">
               Next <i class="ri-arrow-right-s-line"></i>
             </button>
@@ -250,18 +303,14 @@
   </div>
 </div>
 
-<!-- Export Modal -->
+<!-- ── Export Modal ──────────────────────────────────────── -->
 <div class="modal-overlay" *ngIf="showExportModal" (click)="showExportModal = false">
   <div class="export-modal" (click)="$event.stopPropagation()">
     <div class="export-modal-header">
       <h3><i class="ri-download-2-line"></i> Export Students</h3>
-      <button class="modal-close-btn" (click)="showExportModal = false">
-        <i class="ri-close-line"></i>
-      </button>
+      <button class="modal-close-btn" (click)="showExportModal = false"><i class="ri-close-line"></i></button>
     </div>
-    <p class="export-subtitle">
-      {{ totalStudents }} student{{ totalStudents !== 1 ? 's' : '' }} will be exported
-    </p>
+    <p class="export-subtitle">{{ totalStudents }} student{{ totalStudents !== 1 ? 's' : '' }} will be exported</p>
     <div class="export-options">
       <button class="export-option" (click)="exportAs('csv')">
         <div class="export-icon csv"><i class="ri-file-text-line"></i></div>
@@ -277,6 +326,52 @@
         <div class="export-icon pdf"><i class="ri-file-pdf-2-line"></i></div>
         <div class="export-info"><strong>PDF</strong><span>Branded report, ready to print</span></div>
         <i class="ri-arrow-right-s-line export-arrow"></i>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Bulk Delete Confirm Modal ───────────────────── -->
+<div class="modal-overlay" *ngIf="showBulkDeleteConfirm" (click)="closeBulkDeleteConfirm()">
+  <div class="confirm-modal" (click)="$event.stopPropagation()">
+    <div class="confirm-icon danger">
+      <i class="ri-delete-bin-line"></i>
+    </div>
+    <h3>Delete {{ selectedStudentIds.size }} Student{{ selectedStudentIds.size > 1 ? 's' : '' }}</h3>
+    <p>You are about to permanently delete {{ selectedStudentIds.size }} selected student{{ selectedStudentIds.size > 1 ? 's' : '' }}.</p>
+    <p class="confirm-sub">All their fee records, payment history, and exam results will also be removed.</p>
+    <div class="confirm-warning">
+      <i class="ri-error-warning-line"></i>
+      This action cannot be undone.
+    </div>
+    <div class="confirm-actions">
+      <button class="btn-cancel" (click)="closeBulkDeleteConfirm()" [disabled]="bulkDeleting">Cancel</button>
+      <button class="btn-confirm-delete" (click)="executeBulkDelete()" [disabled]="bulkDeleting">
+        <span *ngIf="!bulkDeleting"><i class="ri-delete-bin-line"></i> Delete {{ selectedStudentIds.size }} Student{{ selectedStudentIds.size > 1 ? 's' : '' }}</span>
+        <span *ngIf="bulkDeleting"><i class="ri-loader-4-line spin"></i> Deleting...</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Duplicate Remove Confirm Modal ───────────────── -->
+<div class="modal-overlay" *ngIf="showDuplicateConfirm" (click)="closeDuplicateConfirm()">
+  <div class="confirm-modal" (click)="$event.stopPropagation()">
+    <div class="confirm-icon warning">
+      <i class="ri-user-unfollow-line"></i>
+    </div>
+    <h3>Remove Duplicate Students</h3>
+    <p>Found <strong>{{ duplicateStats?.toDelete }}</strong> duplicate record{{ (duplicateStats?.toDelete || 0) > 1 ? 's' : '' }} across <strong>{{ duplicateStats?.groups }}</strong> group{{ (duplicateStats?.groups || 0) > 1 ? 's' : '' }}.</p>
+    <p class="confirm-sub">The <strong>oldest</strong> record in each group will be kept. All newer duplicates and their related data will be permanently deleted.</p>
+    <div class="confirm-warning warning">
+      <i class="ri-information-line"></i>
+      Make sure you have reviewed the duplicates before proceeding.
+    </div>
+    <div class="confirm-actions">
+      <button class="btn-cancel" (click)="closeDuplicateConfirm()" [disabled]="deduplicating">Cancel</button>
+      <button class="btn-confirm-warning" (click)="executeDeduplication()" [disabled]="deduplicating">
+        <span *ngIf="!deduplicating"><i class="ri-delete-bin-line"></i> Delete {{ duplicateStats?.toDelete }} Duplicate{{ (duplicateStats?.toDelete || 0) > 1 ? 's' : '' }}</span>
+        <span *ngIf="deduplicating"><i class="ri-loader-4-line spin"></i> Removing...</span>
       </button>
     </div>
   </div>
@@ -302,23 +397,7 @@
     </div>
     <table class="ps-table">
       <thead>
-        <tr>
-          <th class="checkbox-col" *ngIf="permissionService.school.fees">
-            <label class="checkbox-wrap">
-              <input type="checkbox" [checked]="allSelected" [indeterminate]="someSelected"
-                (change)="toggleSelectAll($event)" />
-            </label>
-          </th>
-          <th>Student</th>
-          <th>Student No.</th>
-          <th>Class</th>
-          <th>Gender</th>
-          <th *ngIf="permissionService.school.fees" class="text-right">Fees Due</th>
-          <th *ngIf="permissionService.school.fees" class="text-right">Paid</th>
-          <th *ngIf="permissionService.school.fees" class="text-right">Balance</th>
-          <th *ngIf="permissionService.school.fees">Status</th>
-          <th>Actions</th>
-        </tr>
+        <tr><th>Fee</th><th>Due</th><th>Paid</th><th>Balance</th><th>Status</th></tr>
       </thead>
       <tbody>
         <tr *ngFor="let f of s.fees">

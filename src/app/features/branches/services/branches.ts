@@ -191,31 +191,136 @@ export class BranchesService {
     );
   }
 
-  deleteBranch(branchId: string): Observable<void> {
+  deleteBranch(
+    branchId: string,
+    hardDelete: boolean = false,
+  ): Observable<void> {
     const churchId = this.getChurchId();
 
     return from(
       (async () => {
+        // Verify ownership
         const { data: existing } = await this.supabase.client
           .from('branches')
-          .select('id, name, member_count')
+          .select('id, name, pastor_id, is_active')
           .eq('id', branchId)
           .eq('church_id', churchId)
           .single();
 
         if (!existing) throw new Error('Branch not found or access denied');
 
-        return this.supabase.update<Branch>('branches', branchId, {
-          is_active: false,
-          updated_at: new Date().toISOString(),
-        });
+        if (hardDelete) {
+          const sb = this.supabase.client;
+          const now = new Date().toISOString();
+
+          // ── Nullify all 12 FK references (data stays, branch link removed) ──
+
+          // 1. members.branch_id
+          await sb
+            .from('members')
+            .update({ branch_id: null, updated_at: now })
+            .eq('branch_id', branchId);
+
+          // 2. profiles.branch_id (pastor + any other users assigned to branch)
+          await sb
+            .from('profiles')
+            .update({ branch_id: null, updated_at: now })
+            .eq('branch_id', branchId);
+
+          // 3. attendance_events.branch_id
+          await sb
+            .from('attendance_events')
+            .update({ branch_id: null })
+            .eq('branch_id', branchId);
+
+          // 4. cell_groups.branch_id
+          await sb
+            .from('cell_groups')
+            .update({ branch_id: null })
+            .eq('branch_id', branchId);
+
+          // 5. custom_forms.branch_id
+          await sb
+            .from('custom_forms')
+            .update({ branch_id: null })
+            .eq('branch_id', branchId);
+
+          // 6. events.branch_id
+          await sb
+            .from('events')
+            .update({ branch_id: null })
+            .eq('branch_id', branchId);
+
+          // 7. giving_transactions.branch_id
+          await sb
+            .from('giving_transactions')
+            .update({ branch_id: null })
+            .eq('branch_id', branchId);
+
+          // 8. message_recipients.branch_id
+          await sb
+            .from('message_recipients')
+            .update({ branch_id: null })
+            .eq('branch_id', branchId);
+
+          // 9. messages.branch_id
+          await sb
+            .from('messages')
+            .update({ branch_id: null })
+            .eq('branch_id', branchId);
+
+          // 10. ministries.branch_id
+          await sb
+            .from('ministries')
+            .update({ branch_id: null })
+            .eq('branch_id', branchId);
+
+          // 11. sermons.branch_id
+          await sb
+            .from('sermons')
+            .update({ branch_id: null })
+            .eq('branch_id', branchId);
+
+          // 12. visitors.branch_id
+          await sb
+            .from('visitors')
+            .update({ branch_id: null })
+            .eq('branch_id', branchId);
+
+          // 13. branch_members rows — hard delete the join table (no useful data)
+          await sb.from('branch_members').delete().eq('branch_id', branchId);
+
+          // 14. Also unlink pastor from branches table itself before deleting
+          if (existing.pastor_id) {
+            await sb
+              .from('branches')
+              .update({ pastor_id: null, pastor_name: null, updated_at: now })
+              .eq('id', branchId);
+          }
+
+          // 15. Finally hard delete the branch row
+          const { error } = await sb
+            .from('branches')
+            .delete()
+            .eq('id', branchId)
+            .eq('church_id', churchId);
+
+          if (error) throw new Error(error.message);
+        } else {
+          // Soft delete — deactivate only, no data changes
+          const { error } = await this.supabase.client
+            .from('branches')
+            .update({
+              is_active: false,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', branchId)
+            .eq('church_id', churchId);
+
+          if (error) throw new Error(error.message);
+        }
       })(),
-    ).pipe(
-      map(({ error }) => {
-        if (error) throw new Error(error.message);
-      }),
-      catchError((err) => throwError(() => err)),
-    );
+    ).pipe(catchError((err) => throwError(() => err)));
   }
 
   // ==================== BRANCH MEMBERS ====================

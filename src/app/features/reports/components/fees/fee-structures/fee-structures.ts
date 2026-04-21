@@ -65,6 +65,23 @@ export class FeeStructures implements OnInit, OnDestroy {
     term: TERMS[0],
   };
 
+  // Add these new properties:
+  showAssignAllModal = false;
+
+  showAssignToStudentModal = false;
+  assignToStudentFees: FeeStructure[] = [];
+  assignToStudentFeeId = '';
+  assignToStudentId = '';
+  assignToStudentYear = '';
+  assignToStudentTerm = '';
+  assigningToStudent = false;
+  studentSearchQuery = '';
+  studentSearchResults: any[] = [];
+  searchingStudents = false;
+
+  showAssignGeneralFeeAllModal = false;
+  generalFeeToAssignAll: FeeStructure | null = null;
+
   constructor(
     private schoolService: SchoolService,
     public permissionService: PermissionService,
@@ -118,13 +135,38 @@ export class FeeStructures implements OnInit, OnDestroy {
 
   get groupedFees(): { class: SchoolClass; fees: FeeStructure[] }[] {
     const groups: { [key: string]: FeeStructure[] } = {};
+
     this.feeStructures.forEach((f) => {
-      if (!groups[f.class_id]) groups[f.class_id] = [];
-      groups[f.class_id].push(f);
+      const key = f.class_id || '__general__';
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(f);
     });
-    return Object.keys(groups).map((classId) => ({
-      class: groups[classId][0].class || ({ name: 'Unknown' } as SchoolClass),
-      fees: groups[classId],
+
+    return Object.keys(groups).map((key) => ({
+      class:
+        key === '__general__'
+          ? ({
+              id: '__general__',
+              name: 'General Fees',
+              church_id: '',
+              level_order: 0,
+              academic_year: this.selectedYear,
+              is_active: true,
+              created_at: '',
+              updated_at: '',
+            } as SchoolClass)
+          : groups[key][0].class ||
+            ({
+              id: key,
+              name: 'Unknown',
+              church_id: '',
+              level_order: 0,
+              academic_year: this.selectedYear,
+              is_active: true,
+              created_at: '',
+              updated_at: '',
+            } as SchoolClass),
+      fees: groups[key],
     }));
   }
 
@@ -235,12 +277,9 @@ export class FeeStructures implements OnInit, OnDestroy {
   }
 
   saveFee(): void {
-    if (
-      !this.feeForm.class_id ||
-      !this.feeForm.fee_name ||
-      !this.feeForm.amount
-    ) {
-      this.errorMessage = 'Class, fee name and amount are required';
+    // Remove class_id from required check — it's now optional
+    if (!this.feeForm.fee_name || !this.feeForm.amount) {
+      this.errorMessage = 'Fee name and amount are required';
       return;
     }
     this.processing = true;
@@ -710,6 +749,112 @@ export class FeeStructures implements OnInit, OnDestroy {
           this.errorMessage = err.message || 'Failed to assign fees';
           this.processing = false;
           this.showAssignModal = false;
+        },
+      });
+  }
+
+  confirmAssignGeneralFeeToAll(fee: FeeStructure): void {
+    this.generalFeeToAssignAll = fee;
+    this.showAssignGeneralFeeAllModal = true;
+  }
+
+  executeAssignGeneralFeeToAll(): void {
+    if (!this.generalFeeToAssignAll) return;
+    this.processing = true;
+    // Call a new service method that assigns ONE specific fee structure to all students
+    this.schoolService
+      .assignSingleFeeToAllStudents(
+        this.generalFeeToAssignAll.id,
+        this.selectedYear,
+        this.selectedTerm,
+      )
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.successMessage = `"${this.generalFeeToAssignAll?.fee_name}" assigned to all students!`;
+          this.processing = false;
+          this.showAssignGeneralFeeAllModal = false;
+          this.generalFeeToAssignAll = null;
+          this.loadFeeStructures();
+          setTimeout(() => (this.successMessage = ''), 4000);
+        },
+        error: (err) => {
+          this.errorMessage = err.message || 'Failed to assign fee';
+          this.processing = false;
+          this.showAssignGeneralFeeAllModal = false;
+        },
+      });
+  }
+
+  // Add these methods
+  openAssignToStudentModal(fees: FeeStructure[]): void {
+    this.assignToStudentFees = fees;
+    // If exactly one fee passed, pre-select it automatically
+    this.assignToStudentFeeId = fees.length === 1 ? fees[0].id : '';
+    this.assignToStudentYear = this.selectedYear;
+    this.assignToStudentTerm = this.selectedTerm;
+    this.assignToStudentId = '';
+    this.studentSearchQuery = '';
+    this.studentSearchResults = [];
+    this.showAssignToStudentModal = true;
+  }
+
+  closeAssignToStudentModal(): void {
+    this.showAssignToStudentModal = false;
+    this.assignToStudentFeeId = '';
+    this.assignToStudentId = '';
+    this.studentSearchQuery = '';
+    this.studentSearchResults = [];
+  }
+
+  searchStudents(): void {
+    if (!this.studentSearchQuery || this.studentSearchQuery.length < 2) {
+      this.studentSearchResults = [];
+      return;
+    }
+    this.searchingStudents = true;
+    this.schoolService
+      .getStudents({ search: this.studentSearchQuery }, 1, 10)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: ({ data }) => {
+          this.studentSearchResults = data;
+          this.searchingStudents = false;
+        },
+        error: () => {
+          this.searchingStudents = false;
+        },
+      });
+  }
+
+  selectStudent(student: any): void {
+    this.assignToStudentId = student.id;
+    this.studentSearchQuery = `${student.first_name} ${student.last_name} (${student.student_number})`;
+    this.studentSearchResults = [];
+  }
+
+  executeAssignToStudent(): void {
+    if (!this.assignToStudentFeeId || !this.assignToStudentId) return;
+    this.assigningToStudent = true;
+
+    this.schoolService
+      .assignFeeToStudent(
+        this.assignToStudentId,
+        this.assignToStudentFeeId,
+        this.assignToStudentYear,
+        this.assignToStudentTerm,
+      )
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.successMessage = 'Fee assigned to student successfully!';
+          this.assigningToStudent = false;
+          this.closeAssignToStudentModal();
+          setTimeout(() => (this.successMessage = ''), 4000);
+        },
+        error: (err) => {
+          this.errorMessage = err.message || 'Failed to assign fee';
+          this.assigningToStudent = false;
         },
       });
   }

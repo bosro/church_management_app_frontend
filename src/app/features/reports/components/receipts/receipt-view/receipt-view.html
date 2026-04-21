@@ -1,23 +1,17 @@
-<div class="dashboard-layout no-print">
-  <app-sidebar></app-sidebar>
+<div class="dashboard-layout">
+  <app-sidebar class="no-print"></app-sidebar>
   <div class="dashboard-content">
-    <app-header></app-header>
+    <app-header class="no-print"></app-header>
     <div class="dashboard-body">
       <div class="receipt-page-container">
 
-        <!-- Action Bar (hidden when printing) -->
+        <!-- Action Bar -->
         <div class="action-bar no-print">
           <button class="back-btn" (click)="goBack()">
             <i class="ri-arrow-left-line"></i>
             Back
           </button>
           <div style="display:flex; gap:8px;">
-            <!-- Branding customisation -->
-            <button class="btn-secondary" (click)="showBrandingModal = true" *ngIf="payment"
-              title="Customise receipt branding">
-              <i class="ri-palette-line"></i>
-              Branding
-            </button>
             <button class="btn-primary" (click)="printReceipt()" *ngIf="payment">
               <i class="ri-printer-line"></i>
               Print Receipt
@@ -45,11 +39,9 @@
 
         <!-- Receipt (printable) -->
         <div *ngIf="!loading && payment" class="receipt-wrapper" id="receipt">
-
-          <!-- Receipt Card -->
           <div class="receipt-card">
 
-            <!-- Header -->
+            <!-- ── HEADER ─────────────────────────────────── -->
             <div class="receipt-header">
               <div class="church-brand">
                 <img *ngIf="churchLogo" [src]="churchLogo" [alt]="churchName" class="church-logo" />
@@ -61,13 +53,13 @@
               </div>
               <div class="receipt-title">
                 <h2>OFFICIAL RECEIPT</h2>
-                <p class="receipt-number">Receipt No: <strong>{{ payment.receipt_number }}</strong></p>
+                <p class="receipt-number">No: <strong>{{ payment.receipt_number }}</strong></p>
               </div>
             </div>
 
             <div class="receipt-divider"></div>
 
-            <!-- Student Info -->
+            <!-- ── STUDENT INFO ───────────────────────────── -->
             <div class="receipt-student-info">
               <div class="info-row">
                 <span class="info-label">Student Name:</span>
@@ -91,19 +83,25 @@
               </div>
               <div class="info-row">
                 <span class="info-label">Payment Date:</span>
-                <span class="info-value">
-                  {{ payment.payment_date | date:'MMMM d, y' }}
-                </span>
+                <span class="info-value">{{ payment.payment_date | date:'MMMM d, y' }}</span>
               </div>
               <div class="info-row">
                 <span class="info-label">Payment Method:</span>
                 <span class="info-value">{{ payment.payment_method }}</span>
               </div>
+              <div class="info-row" *ngIf="payment.received_by_name">
+                <span class="info-label">Received By:</span>
+                <span class="info-value"><strong>{{ payment.received_by_name }}</strong></span>
+              </div>
             </div>
 
             <div class="receipt-divider"></div>
 
-            <!-- Fee Items Table -->
+            <!-- ── THIS PAYMENT'S FEE ITEMS ──────────────── -->
+            <p class="section-label">
+              <i class="ri-file-list-3-line"></i>
+              Payment Details
+            </p>
             <table class="receipt-table">
               <thead>
                 <tr>
@@ -113,51 +111,136 @@
               </thead>
               <tbody>
                 <tr *ngFor="let item of payment.fee_items">
-                  <td>{{ item.fee_name }}</td>
+                  <td>
+                    {{ item.fee_name }}
+                    <span *ngIf="item.is_arrears" class="arrears-badge">Arrears</span>
+                  </td>
                   <td class="amount-col">{{ formatCurrency(item.amount) }}</td>
                 </tr>
               </tbody>
               <tfoot>
+                <!-- Total fees billed -->
+                <tr class="total-billed-row">
+                  <td>TOTAL FEES BILLED</td>
+                  <td class="amount-col">
+                    {{ formatCurrency(getTotalBilled()) }}
+                  </td>
+                </tr>
+                <!-- Amount paid this session -->
                 <tr class="total-row">
-                  <td><strong>TOTAL PAID</strong></td>
+                  <td><strong>AMOUNT PAID (This Payment)</strong></td>
                   <td class="amount-col">
                     <strong>{{ formatCurrency(payment.amount) }}</strong>
+                  </td>
+                </tr>
+                <!-- Remaining balance -->
+                <tr class="balance-row" *ngIf="getTotalBalance() > 0">
+                  <td><strong>REMAINING BALANCE</strong></td>
+                  <td class="amount-col">
+                    <strong>{{ formatCurrency(getTotalBalance()) }}</strong>
+                  </td>
+                </tr>
+                <tr class="cleared-row" *ngIf="getTotalBalance() === 0">
+                  <td colspan="2" style="text-align:center;">
+                    <strong>✓ All fees cleared</strong>
                   </td>
                 </tr>
               </tfoot>
             </table>
 
-            <!-- Amount in Words -->
+            <!-- ── AMOUNT IN WORDS ────────────────────────── -->
             <div class="amount-words">
               <span class="words-label">Amount in Words:</span>
               <span class="words-value">{{ numberToWords(payment.amount) }}</span>
             </div>
 
-            <!-- Notes -->
+            <!-- ── NOTES ─────────────────────────────────── -->
             <div class="receipt-notes" *ngIf="payment.notes">
               <span class="notes-label">Notes:</span>
               <span>{{ payment.notes }}</span>
             </div>
 
+            <!-- ── PREVIOUS PAYMENT HISTORY ──────────────── -->
+            <div class="payment-history-section" *ngIf="allStudentPayments.length > 1 || (allStudentPayments.length === 1 && allStudentPayments[0].receipt_number !== payment.receipt_number)">
+              <div class="receipt-divider" style="margin: 14px 0 10px;"></div>
+              <p class="section-label">
+                <i class="ri-history-line"></i>
+                Full Payment History — {{ payment.term }} {{ payment.academic_year }}
+              </p>
+
+              <table class="history-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Receipt No.</th>
+                    <th>Date</th>
+                    <th>Amount Paid</th>
+                    <th>Method</th>
+                    <th>Received By</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let p of allStudentPayments; let i = index"
+                      [class.current-payment-row]="p.receipt_number === payment.receipt_number">
+                    <td style="text-align:center; color:#9ca3af; font-size:11px;">{{ i + 1 }}</td>
+                    <td>
+                      <span class="history-receipt-no">{{ p.receipt_number }}</span>
+                      <span *ngIf="p.receipt_number === payment.receipt_number" class="current-badge">current</span>
+                    </td>
+                    <td>{{ p.payment_date | date:'MMM d, y' }}</td>
+                    <td style="text-align:right; font-weight:600; color:#059669;">{{ formatCurrency(p.amount) }}</td>
+                    <td>{{ p.payment_method }}</td>
+                    <td>{{ p.received_by_name || '—' }}</td>
+                  </tr>
+                </tbody>
+                <tfoot>
+                  <tr class="history-total-row">
+                    <td colspan="3" style="text-align:right;"><strong>Total Paid to Date</strong></td>
+                    <td style="text-align:right;"><strong>{{ formatCurrency(getCumulativePaid()) }}</strong></td>
+                    <td colspan="2"></td>
+                  </tr>
+                </tfoot>
+              </table>
+
+              <!-- Progress bar -->
+              <div class="payment-progress" *ngIf="getTotalBilled() > 0">
+                <div class="progress-labels">
+                  <span>Paid: {{ formatCurrency(getCumulativePaid()) }}</span>
+                  <span>Total: {{ formatCurrency(getTotalBilled()) }}</span>
+                </div>
+                <div class="progress-bar-track">
+                  <div class="progress-bar-fill"
+                       [style.width.%]="getPaymentPercentage()"
+                       [style.background]="getPaymentPercentage() >= 100 ? '#10b981' : '#4f46e5'">
+                  </div>
+                </div>
+                <p class="progress-label-text">
+                  {{ getPaymentPercentage() | number:'1.0-0' }}% of fees paid
+                  <span *ngIf="getTotalBalance() > 0">
+                    — {{ formatCurrency(getTotalBalance()) }} remaining
+                  </span>
+                </p>
+              </div>
+            </div>
+
             <div class="receipt-divider"></div>
 
-            <!-- Footer -->
+            <!-- ── FOOTER ─────────────────────────────────── -->
             <div class="receipt-footer">
               <div class="signature-section">
                 <div class="signature-line">
                   <div class="line"></div>
-                  <p>Received By</p>
+                  <p>{{ payment.received_by_name || 'Received By' }}</p>
                 </div>
                 <div class="signature-line">
                   <div class="line"></div>
                   <p>Parent/Guardian Signature</p>
                 </div>
               </div>
-
               <div class="receipt-stamp">
-                <div class="stamp-circle">
+                <div class="stamp-circle" [class.partial-stamp]="getTotalBalance() > 0">
                   <i class="ri-checkbox-circle-fill"></i>
-                  <span>PAID</span>
+                  <span>{{ getTotalBalance() > 0 ? 'PARTIAL' : 'PAID' }}</span>
                 </div>
               </div>
             </div>
@@ -173,8 +256,8 @@
     </div>
   </div>
 
-
-  <div class="modal-overlay" *ngIf="showBrandingModal" (click)="showBrandingModal = false">
+  <!-- Branding Modal -->
+  <div class="modal-overlay no-print" *ngIf="showBrandingModal" (click)="showBrandingModal = false">
     <app-export-branding (close)="showBrandingModal = false" (saved)="onBrandingSaved()">
     </app-export-branding>
   </div>

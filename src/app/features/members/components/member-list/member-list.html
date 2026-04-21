@@ -7,33 +7,26 @@
 
     <div class="dashboard-body">
       <div class="members-container">
+
         <!-- Page Header -->
         <div class="page-header">
           <div class="header-left">
-
             <h1>Members</h1>
             <p class="subtitle">Manage your church members</p>
           </div>
-          <!-- In the page header actions section -->
           <div class="header-actions">
-            <button class="btn-secondary" (click)="navigateToRegistrationLinks()" [disabled]="!canImportExport"
-              *ngIf="canImportExport">
+            <button class="btn-secondary" (click)="navigateToRegistrationLinks()" *ngIf="canImportExport">
               <i class="ri-links-line"></i>
               <span class="desktop-only">Registration Links</span>
             </button>
-
-            <button class="btn-secondary" (click)="importMembers()" [disabled]="!canImportExport"
-              *ngIf="canImportExport">
+            <button class="btn-secondary" (click)="importMembers()" *ngIf="canImportExport">
               <i class="ri-upload-line"></i>
               <span class="desktop-only">Import</span>
             </button>
-
-            <button class="btn-secondary" (click)="exportMembers()" [disabled]="!canImportExport || exporting"
-              *ngIf="canImportExport">
+            <button class="btn-secondary" (click)="exportMembers()" [disabled]="exporting" *ngIf="canImportExport">
               <i class="ri-download-line"></i>
               <span class="desktop-only">{{ exporting ? 'Exporting...' : 'Export' }}</span>
             </button>
-
             <button class="btn-primary" (click)="addMember()" [disabled]="!canAddMember">
               <i class="ri-user-add-line"></i>
               <span class="desktop-only">Add Member</span>
@@ -41,70 +34,77 @@
           </div>
         </div>
 
+        <!-- Success Message -->
+        <div *ngIf="successMessage" class="success-alert">
+          <i class="ri-checkbox-circle-line"></i>
+          <span>{{ successMessage }}</span>
+        </div>
+
         <!-- Error Message -->
         <div *ngIf="error" class="error-alert">
           <i class="ri-error-warning-line"></i>
           <span>{{ error }}</span>
-          <button class="close-btn" (click)="error = ''">
-            <i class="ri-close-line"></i>
-          </button>
+          <button class="close-btn" (click)="error = ''"><i class="ri-close-line"></i></button>
         </div>
 
-
-        <!-- Birthday Notice - ADD THIS ENTIRE SECTION -->
-        <div *ngIf="showBirthdayNotice" class="birthday-notice">
+        <!-- Duplicate Warning Banner -->
+        <div *ngIf="canDeleteMember && duplicateStats && duplicateStats.toDelete > 0" class="duplicate-notice">
           <div class="notice-content">
             <div class="notice-icon">
-              <i class="ri-cake-2-line"></i>
+              <i class="ri-user-unfollow-line"></i>
             </div>
             <div class="notice-text">
-              <p class="notice-title">Upcoming Birthdays </p>
+              <p class="notice-title">Duplicate Members Detected</p>
               <p class="notice-message">
-                Showing {{ filteredMemberCount }} member(s) with birthdays in the next 30 days
+                {{ duplicateStats.toDelete }} duplicate record{{ duplicateStats.toDelete > 1 ? 's' : '' }}
+                found across {{ duplicateStats.groups }} group{{ duplicateStats.groups > 1 ? 's' : '' }}.
+                The oldest record in each group will be kept.
               </p>
             </div>
           </div>
-          <button class="notice-close" (click)="closeBirthdayNotice()" title="Dismiss">
-            <i class="ri-close-line"></i>
+          <button class="btn-dedup" (click)="openDeleteDuplicatesModal()">
+            <i class="ri-delete-bin-line"></i>
+            <span>Remove Duplicates</span>
           </button>
+        </div>
+
+        <!-- Birthday Notice -->
+        <div *ngIf="showBirthdayNotice" class="birthday-notice">
+          <div class="notice-content">
+            <div class="notice-icon"><i class="ri-cake-2-line"></i></div>
+            <div class="notice-text">
+              <p class="notice-title">Upcoming Birthdays</p>
+              <p class="notice-message">Showing {{ filteredMemberCount }} member(s) with birthdays in the next 30 days</p>
+            </div>
+          </div>
+          <button class="notice-close" (click)="closeBirthdayNotice()"><i class="ri-close-line"></i></button>
         </div>
 
         <!-- Statistics Cards -->
         <div class="stats-grid" *ngIf="statistics && !loading">
           <div class="stat-card">
-            <div class="stat-icon" style="background: #DDD6FE; color: #7C3AED;">
-              <i class="ri-group-line"></i>
-            </div>
+            <div class="stat-icon" style="background:#DDD6FE;color:#7C3AED"><i class="ri-group-line"></i></div>
             <div class="stat-info">
               <p class="stat-label">Total Members</p>
               <h3 class="stat-value">{{ statistics.total_members || 0 }}</h3>
             </div>
           </div>
-
           <div class="stat-card">
-            <div class="stat-icon" style="background: #D1FAE5; color: #10B981;">
-              <i class="ri-user-add-line"></i>
-            </div>
+            <div class="stat-icon" style="background:#D1FAE5;color:#10B981"><i class="ri-user-add-line"></i></div>
             <div class="stat-info">
               <p class="stat-label">Active Members</p>
               <h3 class="stat-value">{{ statistics.active_members || 0 }}</h3>
             </div>
           </div>
-
           <div class="stat-card">
-            <div class="stat-icon" style="background: #DBEAFE; color: #3B82F6;">
-              <i class="ri-user-star-line"></i>
-            </div>
+            <div class="stat-icon" style="background:#DBEAFE;color:#3B82F6"><i class="ri-user-star-line"></i></div>
             <div class="stat-info">
               <p class="stat-label">New This Month</p>
               <h3 class="stat-value">{{ statistics.new_members_this_month || 0 }}</h3>
             </div>
           </div>
-
           <div class="stat-card">
-            <div class="stat-icon" style="background: #FEF3C7; color: #F59E0B;">
-              <i class="ri-user-heart-line"></i>
-            </div>
+            <div class="stat-icon" style="background:#FEF3C7;color:#F59E0B"><i class="ri-user-heart-line"></i></div>
             <div class="stat-info">
               <p class="stat-label">New This Year</p>
               <h3 class="stat-value">{{ statistics.new_members_this_year || 0 }}</h3>
@@ -115,16 +115,10 @@
         <!-- Filters & Search -->
         <div class="filters-card">
           <form [formGroup]="filterForm" class="filters-form">
-            <!-- Search -->
             <div class="filter-group search-group">
               <i class="ri-search-line search-icon"></i>
-              <input type="text" formControlName="search" placeholder="Search members by name, email, or phone..."
-                class="search-input" />
-              <i *ngIf="filterForm.get('search')?.value" class="ri-close-line clear-search"
-                (click)="filterForm.get('search')?.setValue('')"></i>
+              <input type="text" formControlName="search" placeholder="Search members..." class="search-input" />
             </div>
-
-            <!-- Gender Filter -->
             <div class="filter-group">
               <select formControlName="gender" class="filter-select">
                 <option value="">All Genders</option>
@@ -133,8 +127,6 @@
                 <option value="other">Other</option>
               </select>
             </div>
-
-            <!-- Status Filter -->
             <div class="filter-group">
               <select formControlName="status" class="filter-select">
                 <option value="">All Status</option>
@@ -144,52 +136,54 @@
                 <option value="deceased">Deceased</option>
               </select>
             </div>
-
             <div class="filter-group" *ngIf="!isCellLeader && allCellGroups.length > 0">
               <select formControlName="cell_group" class="filter-select">
                 <option value="">All Cell Groups</option>
-                <option *ngFor="let group of allCellGroups" [value]="group.id">
-                  {{ group.name }}
-                </option>
+                <option *ngFor="let group of allCellGroups" [value]="group.id">{{ group.name }}</option>
               </select>
             </div>
-
-            <!-- My Cell filter — only visible to cell leaders -->
             <button type="button" class="btn-secondary btn-my-cell" *ngIf="isCellLeader && cellLeaderGroupId"
-              (click)="filterMyCellMembers()" title="Show only my cell members">
-              <i class="ri-group-2-line"></i>
-              <span>My Cell</span>
+              (click)="filterMyCellMembers()">
+              <i class="ri-group-2-line"></i><span>My Cell</span>
             </button>
-
-            <!-- Clear Filters -->
-            <button type="button" class="btn-clear" (click)="clearFilters()" *ngIf="filterForm.dirty"
-              title="Clear all filters">
-              <i class="ri-close-line"></i>
-              <span class="desktop-only">Clear</span>
+            <button type="button" class="btn-clear" (click)="clearFilters()" *ngIf="filterForm.dirty">
+              <i class="ri-close-line"></i><span class="desktop-only">Clear</span>
             </button>
-
-            <!-- View Toggle -->
-            <button type="button" class="btn-icon" (click)="toggleViewMode()"
-              [title]="viewMode === 'list' ? 'Switch to grid view' : 'Switch to list view'">
+            <button type="button" class="btn-icon" (click)="toggleViewMode()">
               <i [class]="viewMode === 'list' ? 'ri-grid-line' : 'ri-list-check'"></i>
             </button>
-
             <div class="sort-group">
               <button type="button" class="btn-sort" [class.active]="sortOrder === 'name_asc'"
-                (click)="setSortOrder('name_asc')" title="Sort A-Z">
-                <i class="ri-sort-asc"></i>
-                <span class="desktop-only">A-Z</span>
+                (click)="setSortOrder('name_asc')">
+                <i class="ri-sort-asc"></i><span class="desktop-only">A-Z</span>
               </button>
               <button type="button" class="btn-sort" [class.active]="sortOrder === 'name_desc'"
-                (click)="setSortOrder('name_desc')" title="Sort Z-A">
-                <i class="ri-sort-desc"></i>
-                <span class="desktop-only">Z-A</span>
+                (click)="setSortOrder('name_desc')">
+                <i class="ri-sort-desc"></i><span class="desktop-only">Z-A</span>
               </button>
             </div>
           </form>
         </div>
 
-        <!-- Loading State -->
+        <!-- Bulk Action Bar -->
+        <div *ngIf="selectedCount > 0 && canDeleteMember" class="bulk-action-bar">
+          <div class="bulk-info">
+            <i class="ri-checkbox-multiple-line"></i>
+            <span>{{ selectedCount }} member{{ selectedCount > 1 ? 's' : '' }} selected</span>
+          </div>
+          <div class="bulk-actions">
+            <button class="btn-bulk-cancel" (click)="clearSelection()">
+              <i class="ri-close-line"></i>
+              <span>Deselect All</span>
+            </button>
+            <button class="btn-bulk-delete" (click)="bulkDelete()">
+              <i class="ri-delete-bin-line"></i>
+              <span>Delete Selected</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Loading -->
         <div *ngIf="loading" class="loading-container">
           <div class="spinner"></div>
           <p>Loading members...</p>
@@ -201,6 +195,13 @@
             <table class="members-table">
               <thead>
                 <tr>
+                  <!-- Select-all checkbox — only for admins who can delete -->
+                  <th *ngIf="canDeleteMember" class="col-check">
+                    <label class="custom-checkbox">
+                      <input type="checkbox" [checked]="selectAll" (change)="toggleSelectAll()" />
+                      <span class="checkmark"></span>
+                    </label>
+                  </th>
                   <th>Member</th>
                   <th>Member Number</th>
                   <th>Contact</th>
@@ -212,19 +213,28 @@
                 </tr>
               </thead>
               <tbody>
-                <tr *ngFor="let member of members" class="member-row" (click)="viewMember(member.id)">
+                <tr *ngFor="let member of members" class="member-row"
+                  [class.row-selected]="isSelected(member.id)"
+                  (click)="viewMember(member.id)">
+
+                  <!-- Row checkbox -->
+                  <td *ngIf="canDeleteMember" class="col-check" (click)="$event.stopPropagation()">
+                    <label class="custom-checkbox">
+                      <input type="checkbox" [checked]="isSelected(member.id)"
+                        (change)="toggleSelect(member.id)" />
+                      <span class="checkmark"></span>
+                    </label>
+                  </td>
+
                   <td>
                     <div class="member-cell">
                       <div class="member-avatar">
                         <img *ngIf="member.photo_url" [src]="member.photo_url" [alt]="getMemberFullName(member)"
                           (error)="member.photo_url = undefined" />
-                        <div *ngIf="!member.photo_url" class="avatar-placeholder">
-                          {{ getMemberInitials(member) }}
-                        </div>
+                        <div *ngIf="!member.photo_url" class="avatar-placeholder">{{ getMemberInitials(member) }}</div>
                       </div>
                       <div class="member-info">
                         <p class="member-name">{{ getMemberFullName(member) }}</p>
-                        <!-- My Cell badge -->
                         <span class="cell-badge" *ngIf="isCellLeader && isMyCell(member)">
                           <i class="ri-group-2-line"></i> My Cell
                         </span>
@@ -232,28 +242,16 @@
                       </div>
                     </div>
                   </td>
-                  <td>
-                    <span class="member-number">{{ member.member_number }}</span>
-                  </td>
+                  <td><span class="member-number">{{ member.member_number }}</span></td>
                   <td>
                     <div class="contact-info">
-                      <p *ngIf="member.email" class="contact-item">
-                        <i class="ri-mail-line"></i>
-                        <span class="desktop-only">{{ member.email }}</span>
-                      </p>
-                      <p *ngIf="member.phone_primary" class="contact-item">
-                        <i class="ri-phone-line"></i>
-                        {{ member.phone_primary }}
-                      </p>
+                      <p *ngIf="member.email"><i class="ri-mail-line"></i><span class="desktop-only">{{ member.email }}</span></p>
+                      <p *ngIf="member.phone_primary"><i class="ri-phone-line"></i>{{ member.phone_primary }}</p>
                     </div>
                   </td>
+                  <td class="desktop-only"><span class="capitalize">{{ member.gender || '-' }}</span></td>
                   <td class="desktop-only">
-                    <span class="capitalize">{{ member.gender || '-' }}</span>
-                  </td>
-                  <td class="desktop-only">
-                    <span *ngIf="calculateAge(member.date_of_birth) !== null">
-                      {{ calculateAge(member.date_of_birth) }} years
-                    </span>
+                    <span *ngIf="calculateAge(member.date_of_birth) !== null">{{ calculateAge(member.date_of_birth) }} yrs</span>
                     <span *ngIf="calculateAge(member.date_of_birth) === null">-</span>
                   </td>
                   <td class="desktop-only">{{ member.join_date | date:'MMM d, y' }}</td>
@@ -263,7 +261,7 @@
                     </span>
                   </td>
                   <td>
-                    <div class="action-buttons">
+                    <div class="action-buttons" (click)="$event.stopPropagation()">
                       <button class="btn-icon-small" (click)="editMember(member.id, $event)" title="Edit"
                         *ngIf="canEditMember && isMyCell(member)">
                         <i class="ri-edit-line"></i>
@@ -276,15 +274,12 @@
                   </td>
                 </tr>
 
-                <!-- Empty State -->
                 <tr *ngIf="members.length === 0">
-                  <td colspan="8" class="empty-state">
+                  <td [attr.colspan]="canDeleteMember ? 9 : 8" class="empty-state">
                     <i class="ri-user-line"></i>
                     <p>No members found</p>
-                    <p class="empty-hint">Try adjusting your filters or add your first member</p>
                     <button class="btn-primary-small" (click)="addMember()" *ngIf="canAddMember">
-                      <i class="ri-user-add-line"></i>
-                      Add Your First Member
+                      <i class="ri-user-add-line"></i> Add Your First Member
                     </button>
                   </td>
                 </tr>
@@ -295,40 +290,37 @@
           <!-- Pagination -->
           <div class="pagination" *ngIf="totalPages > 1">
             <button class="pagination-btn" [disabled]="currentPage === 1" (click)="previousPage()">
-              <i class="ri-arrow-left-s-line"></i>
-              <span class="desktop-only">Previous</span>
+              <i class="ri-arrow-left-s-line"></i><span class="desktop-only">Previous</span>
             </button>
-
-            <div class="pagination-pages">
-              <span class="page-info">
-                Page {{ currentPage }} of {{ totalPages }}
-                <span class="desktop-only">({{ totalMembers }} members)</span>
-              </span>
-            </div>
-
+            <span class="page-info">Page {{ currentPage }} of {{ totalPages }} <span class="desktop-only">({{ totalMembers }} members)</span></span>
             <button class="pagination-btn" [disabled]="currentPage === totalPages" (click)="nextPage()">
-              <span class="desktop-only">Next</span>
-              <i class="ri-arrow-right-s-line"></i>
+              <span class="desktop-only">Next</span><i class="ri-arrow-right-s-line"></i>
             </button>
           </div>
         </div>
 
-        <!-- Members Grid View -->
+        <!-- Grid View -->
         <div *ngIf="!loading && viewMode === 'grid'" class="members-grid">
-          <div *ngFor="let member of members" class="member-card" (click)="viewMember(member.id)">
+          <div *ngFor="let member of members" class="member-card"
+            [class.card-selected]="isSelected(member.id)"
+            (click)="viewMember(member.id)">
             <div class="card-header">
+              <!-- Grid checkbox -->
+              <div *ngIf="canDeleteMember" class="card-check" (click)="$event.stopPropagation()">
+                <label class="custom-checkbox">
+                  <input type="checkbox" [checked]="isSelected(member.id)" (change)="toggleSelect(member.id)" />
+                  <span class="checkmark"></span>
+                </label>
+              </div>
               <div class="member-avatar-large">
                 <img *ngIf="member.photo_url" [src]="member.photo_url" [alt]="getMemberFullName(member)"
                   (error)="member.photo_url = undefined" />
-                <div *ngIf="!member.photo_url" class="avatar-placeholder-large">
-                  {{ getMemberInitials(member) }}
-                </div>
+                <div *ngIf="!member.photo_url" class="avatar-placeholder-large">{{ getMemberInitials(member) }}</div>
               </div>
               <span class="status-badge-small" [ngClass]="getStatusClass(member.membership_status)">
                 {{ member.membership_status }}
               </span>
             </div>
-
             <div class="card-body">
               <h4 class="member-name">{{ getMemberFullName(member) }}</h4>
               <p class="member-number">{{ member.member_number }}</p>
@@ -336,106 +328,78 @@
                 <i class="ri-group-2-line"></i> My Cell
               </span>
               <div class="member-details">
-                <p *ngIf="member.email" class="detail-item">
-                  <i class="ri-mail-line"></i>
-                  <span>{{ member.email }}</span>
-                </p>
-                <p *ngIf="member.phone_primary" class="detail-item">
-                  <i class="ri-phone-line"></i>
-                  <span>{{ member.phone_primary }}</span>
-                </p>
-                <p *ngIf="member.date_of_birth" class="detail-item">
-                  <i class="ri-calendar-line"></i>
-                  <span>{{ calculateAge(member.date_of_birth) }} years old</span>
-                </p>
+                <p *ngIf="member.email"><i class="ri-mail-line"></i><span>{{ member.email }}</span></p>
+                <p *ngIf="member.phone_primary"><i class="ri-phone-line"></i><span>{{ member.phone_primary }}</span></p>
+                <p *ngIf="member.date_of_birth"><i class="ri-calendar-line"></i><span>{{ calculateAge(member.date_of_birth) }} years old</span></p>
               </div>
             </div>
-
-            <div class="card-footer">
-              <button class="btn-card" (click)="editMember(member.id, $event)"
-                *ngIf="canEditMember && isMyCell(member)">
-                <i class="ri-edit-line"></i>
-                Edit
+            <div class="card-footer" (click)="$event.stopPropagation()">
+              <button class="btn-card" (click)="editMember(member.id, $event)" *ngIf="canEditMember && isMyCell(member)">
+                <i class="ri-edit-line"></i> Edit
               </button>
-              <button class="btn-card btn-danger" (click)="deleteMember(member.id, $event)"
-                *ngIf="canDeleteMember && isMyCell(member)">
-                <i class="ri-delete-bin-line"></i>
-                Delete
+              <button class="btn-card btn-danger" (click)="deleteMember(member.id, $event)" *ngIf="canDeleteMember && isMyCell(member)">
+                <i class="ri-delete-bin-line"></i> Delete
               </button>
             </div>
           </div>
 
-          <!-- Empty State -->
           <div *ngIf="members.length === 0" class="empty-grid-state">
             <i class="ri-user-line"></i>
             <p>No members found</p>
-            <p class="empty-hint">Try adjusting your filters or add your first member</p>
             <button class="btn-primary" (click)="addMember()" *ngIf="canAddMember">
-              <i class="ri-user-add-line"></i>
-              Add Your First Member
+              <i class="ri-user-add-line"></i> Add Your First Member
             </button>
           </div>
         </div>
-      </div>
-    </div>
-  </div>
+
+      </div><!-- /members-container -->
+    </div><!-- /dashboard-body -->
+  </div><!-- /dashboard-content -->
 
 
   <!-- Export Modal -->
   <div class="modal-overlay" *ngIf="showExportModal" (click)="showExportModal = false">
     <div class="export-modal" (click)="$event.stopPropagation()">
-
       <div class="export-modal-header">
-        <h3>
-          <i class="ri-download-2-line"></i>
-          Export Members
-        </h3>
-        <button class="modal-close-btn" (click)="showExportModal = false">
-          <i class="ri-close-line"></i>
-        </button>
+        <h3><i class="ri-download-2-line"></i> Export Members</h3>
+        <button class="modal-close-btn" (click)="showExportModal = false"><i class="ri-close-line"></i></button>
       </div>
-
-      <p class="export-subtitle">
-        {{ totalMembers }} member{{ totalMembers !== 1 ? 's' : '' }} will be exported
-        based on your current filters
-      </p>
-
+      <p class="export-subtitle">{{ totalMembers }} member{{ totalMembers !== 1 ? 's' : '' }} will be exported based on your current filters</p>
       <div class="export-options">
-
         <button class="export-option" (click)="exportAs('csv')">
-          <div class="export-icon csv">
-            <i class="ri-file-text-line"></i>
-          </div>
-          <div class="export-info">
-            <strong>CSV</strong>
-            <span>Plain text, works with any spreadsheet app</span>
-          </div>
+          <div class="export-icon csv"><i class="ri-file-text-line"></i></div>
+          <div class="export-info"><strong>CSV</strong><span>Plain text, works with any spreadsheet app</span></div>
           <i class="ri-arrow-right-s-line export-arrow"></i>
         </button>
-
         <button class="export-option" (click)="exportAs('excel')">
-          <div class="export-icon excel">
-            <i class="ri-file-excel-2-line"></i>
-          </div>
-          <div class="export-info">
-            <strong>Excel (.xlsx)</strong>
-            <span>Formatted workbook with a summary sheet</span>
-          </div>
+          <div class="export-icon excel"><i class="ri-file-excel-2-line"></i></div>
+          <div class="export-info"><strong>Excel (.xlsx)</strong><span>Formatted workbook with a summary sheet</span></div>
           <i class="ri-arrow-right-s-line export-arrow"></i>
         </button>
-
         <button class="export-option" (click)="exportAs('pdf')">
-          <div class="export-icon pdf">
-            <i class="ri-file-pdf-2-line"></i>
-          </div>
-          <div class="export-info">
-            <strong>PDF</strong>
-            <span>Branded report with stats, ready to print or share</span>
-          </div>
+          <div class="export-icon pdf"><i class="ri-file-pdf-2-line"></i></div>
+          <div class="export-info"><strong>PDF</strong><span>Branded report with stats, ready to print or share</span></div>
           <i class="ri-arrow-right-s-line export-arrow"></i>
         </button>
-
       </div>
     </div>
   </div>
+
+  <!-- Confirm Modal (replaces all confirm() calls) -->
+  <app-confirm-modal
+    [show]="showConfirmModal"
+    [title]="confirmModalConfig.title"
+    [message]="confirmModalConfig.message"
+    [submessage]="confirmModalConfig.submessage"
+    [warningText]="confirmModalConfig.warningText"
+    [confirmLabel]="confirmModalConfig.confirmLabel"
+    [variant]="confirmModalConfig.variant"
+    [icon]="confirmModalConfig.icon"
+    [loading]="confirmModalConfig.loading"
+    (confirmed)="onModalConfirmed()"
+    (cancelled)="onModalCancelled()">
+  </app-confirm-modal>
+
 </div>
+
+

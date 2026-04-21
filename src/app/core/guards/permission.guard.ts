@@ -55,14 +55,14 @@ private check(
   // console.log('🛡️ GUARD check() called — permission:', requiredPermission, '| roles:', requiredRoles);
 
   return this.authService.authReady$.pipe(
-    tap(ready => console.log('🛡️ authReady$:', ready)),
+    tap(ready => console.log('', ready)),
     filter((ready) => ready === true),
     take(1),
     switchMap(() => {
       // console.log('🛡️ authReady resolved, checking permissionsLoaded$...');
       return this.userRolesService.permissionsLoaded$;
     }),
-    tap(loaded => console.log('🛡️ permissionsLoaded$:', loaded)),
+    tap(loaded => console.log('', loaded)),
     filter((loaded) => loaded === true),
     take(1),
     map(() => {

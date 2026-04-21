@@ -212,6 +212,259 @@ export class MemberService {
     );
   }
 
+  hardDeleteMember(id: string): Observable<void> {
+    const churchId = this.getChurchId();
+    return from(this._cascadeDelete([id], churchId));
+  }
+
+  // ── Hard-delete multiple members ────────────────────────────────────────────
+  bulkHardDeleteMembers(
+    ids: string[],
+  ): Observable<{ deleted: number; errors: string[] }> {
+    const churchId = this.getChurchId();
+    return from(this._bulkCascadeDelete(ids, churchId));
+  }
+
+  // ── Delete all duplicate members (keep oldest per name+DOB group) ───────────
+  deleteDuplicateMembers(): Observable<{ deleted: number; groups: number }> {
+    const churchId = this.getChurchId();
+    return from(this._deleteDuplicates(churchId));
+  }
+
+  // ── Fetch ALL members for dedup (no pagination — we need the full set) ─────
+  private async _fetchAllMembersForDedup(churchId: string): Promise<
+    {
+      id: string;
+      first_name: string;
+      last_name: string;
+      date_of_birth: string | null;
+      phone_primary: string | null;
+      created_at: string;
+    }[]
+  > {
+    // Supabase default max is 1000 rows per request — use range loop to get all
+    const pageSize = 1000;
+    let page = 0;
+    const all: any[] = [];
+
+    while (true) {
+      const from = page * pageSize;
+      const to = from + pageSize - 1;
+
+      const { data, error } = await this.supabase.client
+        .from('members')
+        .select(
+          'id, first_name, last_name, date_of_birth, phone_primary, created_at',
+        )
+        .eq('church_id', churchId)
+        .order('created_at', { ascending: true })
+        .range(from, to);
+
+      if (error) throw new Error(error.message);
+      if (!data || data.length === 0) break;
+
+      all.push(...data);
+
+      // If we got fewer than pageSize, we've reached the end
+      if (data.length < pageSize) break;
+      page++;
+    }
+
+    return all;
+  }
+
+  // ── Build duplicate groups from full member list ───────────────────────────
+  // Returns a Map of groupKey → array of member IDs (oldest first)
+  private _buildDuplicateGroups(
+    members: {
+      id: string;
+      first_name: string;
+      last_name: string;
+      date_of_birth: string | null;
+      phone_primary: string | null;
+      created_at: string;
+    }[],
+  ): Map<string, string[]> {
+    const groups = new Map<string, string[]>();
+
+    for (const m of members) {
+      const firstName = m.first_name?.toLowerCase().trim() || '';
+      const lastName = m.last_name?.toLowerCase().trim() || '';
+
+      let key: string | null = null;
+
+      // Strategy A: name + DOB (most precise)
+      if (m.date_of_birth) {
+        key = `dob|${firstName}|${lastName}|${m.date_of_birth}`;
+      }
+      // Strategy B: name + phone (when no DOB)
+      else if (m.phone_primary) {
+        key = `phone|${firstName}|${lastName}|${m.phone_primary.trim()}`;
+      }
+      // Strategy C: exact name match only (last resort — names that are very
+      // common might cause false positives, so we only use this if both
+      // firstName and lastName are non-trivial, length > 2 each)
+      else if (firstName.length > 2 && lastName.length > 2) {
+        key = `name|${firstName}|${lastName}`;
+      }
+
+      if (!key) continue;
+
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(m.id);
+    }
+
+    return groups;
+  }
+
+  // ── Find how many duplicates exist ──────────────────────────────────────────
+  getDuplicateStats(): Observable<{ groups: number; toDelete: number }> {
+    const churchId = this.getChurchId();
+    return from(this._fetchDuplicateStats(churchId));
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Private helpers
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  private async _cascadeDelete(ids: string[], churchId: string): Promise<void> {
+    const sb = this.supabase.client;
+
+    // 1. Tables with simple member_id FK (nullify-safe or deletable)
+    const simpleTables = [
+      'attendance_records',
+      'branch_members',
+      'email_logs',
+      'event_attendees',
+      'event_registrations',
+      'family_members',
+      'form_submissions',
+      'giving_transactions',
+      'member_custom_fields',
+      'member_ministry_map',
+      'member_notes',
+      'message_recipients',
+      'ministry_attendance',
+      'ministry_leaders',
+      'ministry_members',
+      'payment_transactions',
+      'pledges',
+      'qr_scan_logs',
+      'sms_logs',
+      'visitors',
+      'voting_nominees',
+    ];
+
+    for (const table of simpleTables) {
+      const { error } = await sb.from(table).delete().in('member_id', ids);
+      if (error) console.warn(`Could not clean ${table}:`, error.message);
+    }
+
+    // 2. Tables where member is referenced differently
+    // ministries.leader_id — nullify instead of delete (ministry still exists)
+    await sb
+      .from('ministries')
+      .update({ leader_id: null })
+      .in('leader_id', ids);
+
+    // sermons.preacher_id — nullify
+    await sb
+      .from('sermons')
+      .update({ preacher_id: null })
+      .in('preacher_id', ids);
+
+    // families.head_of_family_id — nullify
+    await sb
+      .from('families')
+      .update({ head_of_family_id: null })
+      .in('head_of_family_id', ids);
+
+    // 3. Finally delete the member rows (scoped to this church for safety)
+    const { error: deleteError } = await sb
+      .from('members')
+      .delete()
+      .in('id', ids)
+      .eq('church_id', churchId);
+
+    if (deleteError) throw new Error(deleteError.message);
+  }
+
+  private async _bulkCascadeDelete(
+    ids: string[],
+    churchId: string,
+  ): Promise<{ deleted: number; errors: string[] }> {
+    const errors: string[] = [];
+    let deleted = 0;
+
+    try {
+      await this._cascadeDelete(ids, churchId);
+      deleted = ids.length;
+    } catch (err: any) {
+      // If batch fails, try one by one
+      for (const id of ids) {
+        try {
+          await this._cascadeDelete([id], churchId);
+          deleted++;
+        } catch (e: any) {
+          errors.push(`${id}: ${e.message}`);
+        }
+      }
+    }
+
+    return { deleted, errors };
+  }
+
+  private async _deleteDuplicates(
+    churchId: string,
+  ): Promise<{ deleted: number; groups: number }> {
+    const members = await this._fetchAllMembersForDedup(churchId);
+    const groups = this._buildDuplicateGroups(members);
+
+    // Collect IDs to delete (skip ids[0] = oldest = keeper)
+    const toDelete: string[] = [];
+    let groupCount = 0;
+
+    for (const [, ids] of groups) {
+      if (ids.length > 1) {
+        groupCount++;
+        toDelete.push(...ids.slice(1));
+      }
+    }
+
+    if (toDelete.length === 0) return { deleted: 0, groups: 0 };
+
+    // Delete in batches of 50
+    const batchSize = 50;
+    let totalDeleted = 0;
+
+    for (let i = 0; i < toDelete.length; i += batchSize) {
+      const batch = toDelete.slice(i, i + batchSize);
+      await this._cascadeDelete(batch, churchId);
+      totalDeleted += batch.length;
+    }
+
+    return { deleted: totalDeleted, groups: groupCount };
+  }
+
+  private async _fetchDuplicateStats(
+    churchId: string,
+  ): Promise<{ groups: number; toDelete: number }> {
+    const members = await this._fetchAllMembersForDedup(churchId);
+    const groups = this._buildDuplicateGroups(members);
+
+    let groupCount = 0;
+    let toDelete = 0;
+
+    for (const [, ids] of groups) {
+      if (ids.length > 1) {
+        groupCount++;
+        toDelete += ids.length - 1; // keep 1, delete the rest
+      }
+    }
+
+    return { groups: groupCount, toDelete };
+  }
+
   deleteMember(id: string): Observable<void> {
     const churchId = this.getChurchId();
     return from(
@@ -619,7 +872,7 @@ export class MemberService {
     // so we can check duplicates in-memory (fast, avoids N DB round trips)
     const { data: existingMembers } = await this.supabase.client
       .from('members')
-      .select('email, phone_primary')
+      .select('email, phone_primary, first_name, last_name, date_of_birth')
       .eq('church_id', churchId);
 
     const existingEmails = new Set(
@@ -632,6 +885,17 @@ export class MemberService {
         .map((m: any) => m.phone_primary?.trim())
         .filter(Boolean),
     );
+    // NEW: name+DOB set for catching duplicates without email/phone
+    const existingNameDob = new Set(
+      (existingMembers || [])
+        .filter((m: any) => m.date_of_birth)
+        .map(
+          (m: any) =>
+            `${m.first_name?.toLowerCase().trim()}|${m.last_name?.toLowerCase().trim()}|${m.date_of_birth}`,
+        ),
+    );
+
+    const seenNameDobThisBatch = new Set<string>(); // NEW
 
     // ── Track phones/emails seen within THIS import batch
     // so we catch duplicates inside the file itself
@@ -684,15 +948,12 @@ export class MemberService {
           row[canonical] = String(val ?? '').trim();
         });
 
-        // ── Required fields
         const firstName = row['first_name'];
         const lastName = row['last_name'];
-
         if (!firstName || !lastName) {
           throw new Error('First name and last name are required');
         }
 
-        // ── Normalise optional fields
         const email = row['email']?.toLowerCase() || undefined;
         const phone = row['phone'] || undefined;
         const dob = this.normalizeDate(row['date_of_birth']);
@@ -701,40 +962,49 @@ export class MemberService {
           new Date().toISOString().split('T')[0];
         const gender = row['gender']?.toLowerCase() || undefined;
 
-        // ── Validate email format
         if (email && !this.isValidEmail(email)) {
           throw new Error(`Invalid email format: ${email}`);
         }
 
-        // ── Duplicate check: email against DB
+        // Email checks
         if (email && existingEmails.has(email)) {
           throw new Error(
-            `Member with email "${email}" already exists in your church — skipped`,
+            `Member with email "${email}" already exists — skipped`,
           );
         }
-
-        // ── Duplicate check: email within this batch
         if (email && seenEmailsThisBatch.has(email)) {
           throw new Error(
             `Email "${email}" appears more than once in this file — skipped`,
           );
         }
 
-        // ── Duplicate check: phone against DB
+        // Phone checks
         if (phone && existingPhones.has(phone)) {
           throw new Error(
-            `Member with phone "${phone}" already exists in your church — skipped`,
+            `Member with phone "${phone}" already exists — skipped`,
           );
         }
-
-        // ── Duplicate check: phone within this batch
         if (phone && seenPhonesThisBatch.has(phone)) {
           throw new Error(
             `Phone "${phone}" appears more than once in this file — skipped`,
           );
         }
 
-        // ── Build member record
+        // Name+DOB checks (NEW)
+        if (dob) {
+          const nameDobKey = `${firstName.toLowerCase().trim()}|${lastName.toLowerCase().trim()}|${dob}`;
+          if (existingNameDob.has(nameDobKey)) {
+            throw new Error(
+              `Member "${firstName} ${lastName}" (DOB: ${dob}) already exists — skipped`,
+            );
+          }
+          if (seenNameDobThisBatch.has(nameDobKey)) {
+            throw new Error(
+              `"${firstName} ${lastName}" (DOB: ${dob}) appears more than once in this file — skipped`,
+            );
+          }
+        }
+
         const memberData: any = {
           first_name: firstName,
           last_name: lastName,
@@ -758,7 +1028,6 @@ export class MemberService {
           .insert(memberData);
 
         if (error) {
-          // Catch any DB-level unique constraint as a final safety net
           if (
             error.code === '23505' ||
             error.message?.includes('members_email_unique')
@@ -775,20 +1044,25 @@ export class MemberService {
           throw new Error(error.message);
         }
 
-        // ── Only track in sets AFTER successful insert
-        if (email) existingEmails.add(email);
-        if (phone) existingPhones.add(phone);
-        if (email) seenEmailsThisBatch.add(email);
-        if (phone) seenPhonesThisBatch.add(phone);
+        // Track after successful insert
+        if (email) {
+          existingEmails.add(email);
+          seenEmailsThisBatch.add(email);
+        }
+        if (phone) {
+          existingPhones.add(phone);
+          seenPhonesThisBatch.add(phone);
+        }
+        if (dob) {
+          const key = `${firstName.toLowerCase().trim()}|${lastName.toLowerCase().trim()}|${dob}`;
+          existingNameDob.add(key);
+          seenNameDobThisBatch.add(key);
+        }
 
         results.success++;
       } catch (error: any) {
         results.failed++;
-        results.errors.push({
-          row: i + 2, // +2 = header row + 1-indexed
-          error: error.message,
-          data: '',
-        });
+        results.errors.push({ row: i + 2, error: error.message, data: '' });
       }
     }
 
@@ -843,9 +1117,10 @@ export class MemberService {
     const results: ImportResult = { success: 0, failed: 0, errors: [] };
 
     // ── Pre-load existing members for duplicate detection
+    // NOW includes first_name, last_name, date_of_birth for name+DOB check
     const { data: existingMembers } = await this.supabase.client
       .from('members')
-      .select('email, phone_primary')
+      .select('email, phone_primary, first_name, last_name, date_of_birth')
       .eq('church_id', churchId);
 
     const existingEmails = new Set(
@@ -858,28 +1133,50 @@ export class MemberService {
         .map((m: any) => m.phone_primary?.trim())
         .filter(Boolean),
     );
+    // Name+DOB set — catches duplicates with no email/phone
+    const existingNameDob = new Set(
+      (existingMembers || [])
+        .filter((m: any) => m.date_of_birth)
+        .map(
+          (m: any) =>
+            `${m.first_name?.toLowerCase().trim()}|${m.last_name?.toLowerCase().trim()}|${m.date_of_birth}`,
+        ),
+    );
 
     const seenPhonesThisBatch = new Set<string>();
     const seenEmailsThisBatch = new Set<string>();
+    const seenNameDobThisBatch = new Set<string>(); // NEW
 
     const headerAliases: Record<string, string> = {
       first_name: 'first_name',
+      'first name': 'first_name',
+      firstname: 'first_name',
       last_name: 'last_name',
+      'last name': 'last_name',
+      lastname: 'last_name',
+      surname: 'last_name',
       email: 'email',
+      'email address': 'email',
       phone: 'phone',
       phone_number: 'phone',
       phonenumber: 'phone',
       mobile: 'phone',
+      'mobile number': 'phone',
       gender: 'gender',
       date_of_birth: 'date_of_birth',
+      'date of birth': 'date_of_birth',
       dob: 'date_of_birth',
       dateofbirth: 'date_of_birth',
+      birthday: 'date_of_birth',
       join_date: 'join_date',
+      'join date': 'join_date',
       joindate: 'join_date',
+      'membership date': 'join_date',
       address: 'address',
       city: 'city',
       title: 'title',
       cell_group: 'cell_group',
+      'cell group': 'cell_group',
       cellgroup: 'cell_group',
       notes: 'notes',
     };
@@ -922,6 +1219,7 @@ export class MemberService {
           throw new Error(`Invalid email format: ${email}`);
         }
 
+        // Email checks
         if (email && existingEmails.has(email)) {
           throw new Error(
             `Member with email "${email}" already exists in your church — skipped`,
@@ -932,6 +1230,8 @@ export class MemberService {
             `Email "${email}" appears more than once in this file — skipped`,
           );
         }
+
+        // Phone checks
         if (phone && existingPhones.has(phone)) {
           throw new Error(
             `Member with phone "${phone}" already exists in your church — skipped`,
@@ -941,6 +1241,21 @@ export class MemberService {
           throw new Error(
             `Phone "${phone}" appears more than once in this file — skipped`,
           );
+        }
+
+        // Name+DOB checks — prevents re-import of same person
+        if (dob) {
+          const nameDobKey = `${firstName.toLowerCase().trim()}|${lastName.toLowerCase().trim()}|${dob}`;
+          if (existingNameDob.has(nameDobKey)) {
+            throw new Error(
+              `Member "${firstName} ${lastName}" (DOB: ${dob}) already exists in your church — skipped`,
+            );
+          }
+          if (seenNameDobThisBatch.has(nameDobKey)) {
+            throw new Error(
+              `"${firstName} ${lastName}" (DOB: ${dob}) appears more than once in this file — skipped`,
+            );
+          }
         }
 
         const memberData: any = {
@@ -987,10 +1302,20 @@ export class MemberService {
           throw new Error(error.message);
         }
 
-        if (email) existingEmails.add(email);
-        if (phone) existingPhones.add(phone);
-        if (email) seenEmailsThisBatch.add(email);
-        if (phone) seenPhonesThisBatch.add(phone);
+        // Track after successful insert
+        if (email) {
+          existingEmails.add(email);
+          seenEmailsThisBatch.add(email);
+        }
+        if (phone) {
+          existingPhones.add(phone);
+          seenPhonesThisBatch.add(phone);
+        }
+        if (dob) {
+          const key = `${firstName.toLowerCase().trim()}|${lastName.toLowerCase().trim()}|${dob}`;
+          existingNameDob.add(key);
+          seenNameDobThisBatch.add(key);
+        }
 
         results.success++;
       } catch (error: any) {
@@ -1368,3 +1693,5 @@ export class MemberService {
     return this.cellGroupsService.getActiveCellGroups();
   }
 }
+
+

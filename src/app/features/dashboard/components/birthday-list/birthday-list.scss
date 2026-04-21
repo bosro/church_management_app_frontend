@@ -185,19 +185,16 @@
   }
 }
 
-// Mobile Cards
-.mobile-cards {
-  display: none;
 
-  @media (max-width: 768px) {
-    display: block;
-  }
-}
 
 .birthday-cards {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  display: none;  // hide by default
+
+  @media (max-width: 768px) {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
 }
 
 .birthday-card {
@@ -308,6 +305,8 @@
     color: #7C3AED;
   }
 }
+
+
 
 
 

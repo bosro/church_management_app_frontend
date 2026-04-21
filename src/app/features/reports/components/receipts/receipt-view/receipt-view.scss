@@ -479,35 +479,49 @@
 
 // ─── Print Styles ─────────────────────────────────────────
 @media print {
-  .no-print {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  @page {
+    margin: 0.8cm 1cm;
+    size: A4 portrait;
+  }
+
+  .no-print,
+  app-sidebar,
+  app-header {
     display: none !important;
   }
 
   .dashboard-layout {
     display: block !important;
   }
-  app-sidebar,
-  app-header {
-    display: none !important;
-  }
+
   .dashboard-content {
-    margin: 0 !important;
+    margin-left: 0 !important;
+    width: 100% !important;
     padding: 0 !important;
   }
+
   .dashboard-body {
     padding: 0 !important;
   }
 
   .receipt-page-container {
-    padding: 0;
-  }
-  .receipt-card {
-    border: none;
-    padding: 20px;
-    max-width: 100%;
+    padding: 0 !important;
+    max-width: 100% !important;
   }
 
-  // Restore two-column grid for print
+  .receipt-card {
+    border: none !important;
+    box-shadow: none !important;
+    padding: 16px !important;
+    max-width: 100% !important;
+  }
+
   .receipt-student-info {
     grid-template-columns: 1fr 1fr !important;
   }
@@ -518,11 +532,6 @@
       text-align: right !important;
     }
   }
-
-  @page {
-    margin: 1cm;
-    size: A4;
-  }
 }
 
 // ─── Animation ────────────────────────────────────────────
@@ -532,6 +541,26 @@
   }
 }
 
+.receipt-table {
+  tfoot {
+    .balance-row td {
+      background: #fef2f2;
+      color: #dc2626;
+      font-size: 13px;
+      border-top: 1px dashed #fecaca;
+      font-weight: 700;
+    }
+
+    .cleared-row td {
+      background: #f0fdf4;
+      color: #059669;
+      font-size: 13px;
+      border-top: 1px dashed #bbf7d0;
+      font-weight: 600;
+      padding: 8px 12px;
+    }
+  }
+}
 
 .success-alert {
   display: flex;
@@ -545,4 +574,214 @@
   margin-bottom: 16px;
   font-size: 14px;
   font-weight: 500;
+}
+
+// ── ARREARS badge style (add to receipt-view.scss) ────────────────────────
+.arrears-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 7px;
+  background: #fef3c7;
+  color: #92400e;
+  border-radius: 100px;
+  font-size: 10px;
+  font-weight: 600;
+  margin-left: 6px;
+  vertical-align: middle;
+
+  &::before {
+    content: "\e8d9"; // ri-time-line unicode
+    font-family: "remixicon";
+    font-size: 10px;
+  }
+}
+
+// ── Received-by line on receipt ────────────────────────────────────────────
+.receipt-received-by {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-top: 1px dashed #e5e7eb;
+  margin-top: 8px;
+  font-size: 12px;
+  color: #6b7280;
+
+  strong {
+    color: #374151;
+  }
+}
+
+
+/* ── Section label ──────────────────────────────────────────────────── */
+.section-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0 0 8px;
+
+  i {
+    font-size: 14px;
+    color: #4f46e5;
+  }
+}
+
+/* ── Total billed row (new row above amount paid) ────────────────────── */
+.receipt-table tfoot .total-billed-row td {
+  background: #eef2ff;
+  color: #4f46e5;
+  font-size: 12px;
+  font-weight: 600;
+  border-top: 1px solid #c7d2fe;
+  padding: 8px 12px;
+
+  @media (max-width: 480px) {
+    font-size: 11px;
+    padding: 7px 10px;
+  }
+}
+
+/* ── History table ──────────────────────────────────────────────────── */
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin-bottom: 12px;
+
+  th {
+    background: #f0fdf4;
+    padding: 8px 10px;
+    text-align: left;
+    font-size: 10px;
+    font-weight: 700;
+    color: #374151;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    border-bottom: 2px solid #bbf7d0;
+
+    @media (max-width: 480px) {
+      padding: 6px 8px;
+      font-size: 9px;
+    }
+  }
+
+  td {
+    padding: 8px 10px;
+    color: #374151;
+    border-bottom: 1px solid #f3f4f6;
+    font-size: 12px;
+    word-break: break-word;
+
+    @media (max-width: 480px) {
+      padding: 6px 8px;
+      font-size: 11px;
+    }
+  }
+
+  tr:last-child td { border-bottom: none; }
+
+  /* Highlight current payment row */
+  .current-payment-row {
+    background: #fefce8;
+
+    td { color: #78350f; }
+  }
+
+  .history-total-row td {
+    background: #f0fdf4;
+    color: #065f46;
+    font-weight: 700;
+    border-top: 2px solid #bbf7d0;
+    font-size: 12px;
+  }
+}
+
+.history-receipt-no {
+  font-family: monospace;
+  font-size: 11px;
+  background: #f3f4f6;
+  padding: 1px 6px;
+  border-radius: 3px;
+  margin-right: 4px;
+}
+
+.current-badge {
+  display: inline-flex;
+  padding: 1px 6px;
+  background: #fef3c7;
+  color: #92400e;
+  border-radius: 100px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+/* ── Payment progress bar ────────────────────────────────────────────── */
+.payment-progress {
+  margin-top: 10px;
+
+  .progress-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: #6b7280;
+    margin-bottom: 4px;
+  }
+
+  .progress-bar-track {
+    height: 8px;
+    background: #e5e7eb;
+    border-radius: 100px;
+    overflow: hidden;
+    margin-bottom: 4px;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    border-radius: 100px;
+    transition: width 0.3s ease;
+    min-width: 2%;
+  }
+
+  .progress-label-text {
+    font-size: 11px;
+    color: #6b7280;
+    text-align: center;
+    margin: 0;
+    font-style: italic;
+  }
+}
+
+/* ── Partial stamp variant ──────────────────────────────────────────── */
+.receipt-stamp .stamp-circle.partial-stamp {
+  border-color: #f59e0b;
+  color: #f59e0b;
+}
+
+/* ── Print adjustments ──────────────────────────────────────────────── */
+@media print {
+  .payment-history-section {
+    page-break-inside: avoid;
+  }
+
+  .history-table th,
+  .history-table td {
+    font-size: 9px;
+    padding: 5px 8px;
+  }
+
+  .receipt-table tfoot .total-billed-row td {
+    font-size: 10px;
+  }
+
+  .progress-bar-track,
+  .progress-bar-fill {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
 }

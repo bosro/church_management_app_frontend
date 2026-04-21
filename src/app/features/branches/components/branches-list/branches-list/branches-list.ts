@@ -39,6 +39,11 @@ export class BranchesList implements OnInit, OnDestroy {
   showExportModal = false;
   exporting = false;
 
+  showDeleteModal = false;
+  deleteModalHardDelete = false;
+  deleteModalBranch: Branch | null = null;
+  deleteModalStep: 1 | 2 = 1;
+
   constructor(
     private branchesService: BranchesService,
     private router: Router,
@@ -58,26 +63,26 @@ export class BranchesList implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-  const role = this.authService.getCurrentUserRole();
+    const role = this.authService.getCurrentUserRole();
 
-  // Branches is admin-only by default; other roles can be granted via permission
-  const viewRoles = ['super_admin', 'church_admin'];
-  const manageRoles = ['super_admin', 'church_admin'];
+    // Branches is admin-only by default; other roles can be granted via permission
+    const viewRoles = ['super_admin', 'church_admin'];
+    const manageRoles = ['super_admin', 'church_admin'];
 
-  this.canViewBranches =
-    this.permissionService.isAdmin ||
-    this.permissionService.branches.view ||
-    viewRoles.includes(role);
+    this.canViewBranches =
+      this.permissionService.isAdmin ||
+      this.permissionService.branches.view ||
+      viewRoles.includes(role);
 
-  this.canManageBranches =
-    this.permissionService.isAdmin ||
-    this.permissionService.branches.manage ||
-    manageRoles.includes(role);
+    this.canManageBranches =
+      this.permissionService.isAdmin ||
+      this.permissionService.branches.manage ||
+      manageRoles.includes(role);
 
-  if (!this.canViewBranches) {
-    this.router.navigate(['/unauthorized']);
+    if (!this.canViewBranches) {
+      this.router.navigate(['/unauthorized']);
+    }
   }
-}
 
   loadBranches(): void {
     this.loading = true;
@@ -142,44 +147,64 @@ export class BranchesList implements OnInit, OnDestroy {
 
   deleteBranch(branchId: string, event: MouseEvent): void {
     event.stopPropagation();
-
     if (!this.canManageBranches) {
       this.errorMessage = 'You do not have permission to delete branches';
       this.scrollToTop();
       return;
     }
-
     const branch = this.branches.find((b) => b.id === branchId);
     if (!branch) return;
 
-    const confirmMessage =
-      branch.member_count > 0
-        ? `This branch has ${branch.member_count} member${branch.member_count !== 1 ? 's' : ''}. Are you sure you want to delete it? This will not delete members.`
-        : 'Are you sure you want to delete this branch?';
+    const isUnassigned = !branch.pastor_id && !branch.pastor_name;
+    this.deleteModalHardDelete = !branch.is_active || isUnassigned;
+    this.deleteModalBranch = branch;
+    this.deleteModalStep = 1;
+    this.showDeleteModal = true;
+  }
 
-    if (!confirm(confirmMessage)) {
-      return;
+  onDeleteModalConfirmStep1(): void {
+    if (this.deleteModalHardDelete) {
+      // Go to step 2 for hard delete
+      this.deleteModalStep = 2;
+    } else {
+      this.executeDelete();
     }
+  }
+
+  onDeleteModalConfirmStep2(): void {
+    this.executeDelete();
+  }
+
+  private executeDelete(): void {
+    if (!this.deleteModalBranch) return;
+    const branch = this.deleteModalBranch;
+    this.showDeleteModal = false;
 
     this.branchesService
-      .deleteBranch(branchId)
+      .deleteBranch(branch.id, this.deleteModalHardDelete)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
-          this.successMessage = 'Branch deleted successfully!';
+          this.successMessage = this.deleteModalHardDelete
+            ? `"${branch.name}" has been permanently deleted.`
+            : `"${branch.name}" has been deactivated.`;
+          this.deleteModalBranch = null;
           this.loadBranches();
           this.loadStatistics();
-
-          setTimeout(() => {
-            this.successMessage = '';
-          }, 3000);
+          setTimeout(() => (this.successMessage = ''), 4000);
         },
         error: (error) => {
           this.errorMessage = error.message || 'Failed to delete branch';
+          this.deleteModalBranch = null;
           this.scrollToTop();
-          console.error('Delete error:', error);
         },
       });
+  }
+
+  closeDeleteModal(): void {
+    this.showDeleteModal = false;
+    this.deleteModalBranch = null;
+    this.deleteModalStep = 1;
   }
 
   exportBranches(): void {
@@ -484,9 +509,3 @@ export class BranchesList implements OnInit, OnDestroy {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }
-
-
-
-
-
-

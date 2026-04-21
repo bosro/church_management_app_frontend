@@ -10,13 +10,12 @@
   </div>
 
   <div class="events-list">
-    <div
-      *ngFor="let event of events"
-      class="event-item"
-      (click)="onViewEvent(event.id)"
-    >
-      <div class="event-icon" [style.background-color]="getEventColor(event.type) + '20'">
+    <div *ngFor="let event of events" class="event-item" (click)="onViewEvent(event.id)">
+      <div class="event-icon" *ngIf="!event.flyer_url" [style.background-color]="getEventColor(event.type) + '20'">
         <i [class]="getEventIcon(event.type)" [style.color]="getEventColor(event.type)"></i>
+      </div>
+      <div class="event-flyer" *ngIf="event.flyer_url">
+        <img [src]="event.flyer_url" [alt]="event.title" (error)="event.flyer_url = null" />
       </div>
 
       <div class="event-info">
@@ -50,5 +49,3 @@
     </div>
   </div>
 </div>
-
-

@@ -85,12 +85,14 @@
 }
 
 // Upcoming Events Banner
+// Fix the upcoming banner layout
 .upcoming-banner {
   background: linear-gradient(135deg, #5b21b6 0%, #7c3aed 100%);
   border-radius: 12px;
   padding: 1.5rem;
   margin-bottom: 2rem;
   color: white;
+  overflow: hidden; // ← ADD THIS
 
   .banner-header {
     display: flex;
@@ -106,22 +108,6 @@
       font-size: 1.25rem;
       font-weight: 700;
       margin: 0;
-    }
-
-    .event-flyer-thumb {
-      width: 56px;
-      height: 56px;
-      border-radius: 8px;
-      overflow: hidden;
-      flex-shrink: 0;
-      border: 2px solid rgba(255, 255, 255, 0.25);
-
-      img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        display: block;
-      }
     }
   }
 
@@ -140,6 +126,7 @@
       cursor: pointer;
       transition: all 0.2s;
       backdrop-filter: blur(10px);
+      overflow: hidden; // ← ADD THIS
 
       &:hover {
         background: rgba(255, 255, 255, 0.2);
@@ -153,6 +140,7 @@
         justify-content: center;
         width: 56px;
         height: 56px;
+        min-width: 56px; // ← ADD to prevent shrinking
         background: white;
         color: #5b21b6;
         border-radius: 8px;
@@ -171,19 +159,45 @@
         }
       }
 
+      // ← THIS IS THE KEY FIX
+      .event-flyer-thumb {
+        width: 56px;
+        height: 56px;
+        min-width: 56px;     // ← prevent flex from stretching it
+        max-width: 56px;     // ← hard cap
+        border-radius: 8px;
+        overflow: hidden;
+        flex-shrink: 0;
+        border: 2px solid rgba(255, 255, 255, 0.25);
+
+        img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          display: block;
+        }
+      }
+
       .event-info {
         flex: 1;
+        min-width: 0; // ← prevents text overflow
 
         h4 {
           font-size: 1rem;
           font-weight: 700;
           margin: 0 0 0.25rem 0;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
 
         p {
           font-size: 0.875rem;
           opacity: 0.9;
           margin: 0;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
       }
 
@@ -193,6 +207,7 @@
         font-size: 0.75rem;
         font-weight: 600;
         background: rgba(255, 255, 255, 0.2);
+        flex-shrink: 0; // ← ADD to prevent badge from shrinking
       }
     }
   }
@@ -1375,3 +1390,5 @@
 .event-card:hover .event-card-flyer img {
   transform: scale(1.03);
 }
+
+
