@@ -1,5 +1,11 @@
 // src/app/shared/components/sidebar/sidebar.component.ts
-import { Component, OnInit, HostListener } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  HostListener,
+  ViewChild,
+  ElementRef,
+} from '@angular/core';
 import { Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { User } from '../../../models/user.model';
@@ -274,6 +280,14 @@ export class Sidebar implements OnInit {
           roles: ['church_admin', 'finance_officer'],
           permission: 'school.fees',
         },
+         {
+          icon: 'ri-restaurant-line',
+          label: 'Feeding fees',
+          route: '/main/reports/fees/feeding-admin',
+          active: false,
+          roles: ['church_admin'],
+          permission: 'school.fees',
+        },
         // ── Exams ─────────────────────────────────────
         // {
         //   icon: 'ri-file-list-line',
@@ -326,6 +340,9 @@ export class Sidebar implements OnInit {
 
   subscriptionLoaded = false;
 
+  @ViewChild('sidebarNav') sidebarNavRef!: ElementRef<HTMLElement>;
+  private savedScrollTop = 0;
+
   constructor(
     private router: Router,
     public authService: AuthService,
@@ -359,10 +376,21 @@ export class Sidebar implements OnInit {
     this.router.events
       .pipe(filter((event) => event instanceof NavigationEnd))
       .subscribe((event: any) => {
+        // Save scroll position before update
+        this.savedScrollTop = this.sidebarNavRef?.nativeElement?.scrollTop ?? 0;
+
         this.updateActiveMenuItem(event.url);
+
         if (this.isMobile) {
           this.sidebarService.close();
         }
+
+        // Restore scroll position after Angular has re-rendered
+        setTimeout(() => {
+          if (this.sidebarNavRef?.nativeElement) {
+            this.sidebarNavRef.nativeElement.scrollTop = this.savedScrollTop;
+          }
+        }, 0);
       });
   }
 

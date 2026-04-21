@@ -34,7 +34,6 @@ const routes: Routes = [
     canActivate: [AuthGuard],
   },
 
-
   {
     path: 'unauthorized',
     component: Unauthorized,
@@ -50,13 +49,10 @@ const routes: Routes = [
   imports: [
     RouterModule.forRoot(routes, {
       useHash: false,
-      scrollPositionRestoration: 'top',
-      enableTracing: false, // Set to true for debugging
+      scrollPositionRestoration: 'enabled', // restores position on back/forward, doesn't force-reset on new nav
+      enableTracing: false,
     }),
   ],
   exports: [RouterModule],
 })
 export class AppRoutingModule {}
-
-
-

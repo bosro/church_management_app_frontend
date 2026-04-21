@@ -103,32 +103,48 @@ export class EditStudent implements OnInit, OnDestroy {
   }
 
   onSubmit(): void {
-    if (this.studentForm.invalid) {
-      Object.values(this.studentForm.controls).forEach((c) => c.markAsTouched());
-      this.errorMessage = 'Please fill in all required fields';
-      return;
-    }
-
-    this.loading = true;
-    this.errorMessage = '';
-
-    this.schoolService
-      .updateStudent(this.studentId, this.studentForm.value)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (student) => {
-          this.successMessage = 'Student updated successfully!';
-          this.loading = false;
-          setTimeout(() => {
-            this.router.navigate(['main/reports/students', student.id]);
-          }, 1500);
-        },
-        error: (err) => {
-          this.errorMessage = err.message || 'Failed to update student';
-          this.loading = false;
-        },
-      });
+  if (this.studentForm.invalid) {
+    Object.values(this.studentForm.controls).forEach((c) => c.markAsTouched());
+    this.errorMessage = 'Please fill in all required fields';
+    return;
   }
+
+  this.loading = true;
+  this.errorMessage = '';
+
+  const formValue = this.sanitizeFormValue(this.studentForm.value); // ← sanitize
+
+  this.schoolService
+    .updateStudent(this.studentId, formValue)  // ← use formValue
+    .pipe(takeUntil(this.destroy$))
+    .subscribe({
+      next: (student) => {
+        this.successMessage = 'Student updated successfully!';
+        this.loading = false;
+        setTimeout(() => {
+          this.router.navigate(['main/reports/students', student.id]);
+        }, 1500);
+      },
+      error: (err) => {
+        this.errorMessage = err.message || 'Failed to update student';
+        this.loading = false;
+      },
+    });
+}
+
+// Same helper — add to edit-student class too
+private sanitizeFormValue(value: any): any {
+  return {
+    ...value,
+    date_of_birth: value.date_of_birth?.trim() || null,
+    middle_name: value.middle_name?.trim() || null,
+    parent_name: value.parent_name?.trim() || null,
+    parent_phone: value.parent_phone?.trim() || null,
+    parent_email: value.parent_email?.trim() || null,
+    address: value.address?.trim() || null,
+    gender: value.gender || null,
+  };
+}
 
   cancel(): void {
     this.router.navigate(['main/reports/students', this.studentId]);
@@ -144,3 +160,5 @@ export class EditStudent implements OnInit, OnDestroy {
     return 'Invalid input';
   }
 }
+
+

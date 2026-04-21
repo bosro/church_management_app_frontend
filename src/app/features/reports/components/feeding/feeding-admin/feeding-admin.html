@@ -1,0 +1,190 @@
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+  <div class="dashboard-content">
+    <app-header></app-header>
+    <div class="dashboard-body">
+      <div class="feeding-admin-container">
+
+        <!-- Header -->
+        <div class="page-header">
+          <div class="header-left">
+            <button class="back-btn" (click)="router.navigate(['main/reports'])">
+              <i class="ri-arrow-left-line"></i>
+            </button>
+            <div>
+              <h1>Feeding Fee Management</h1>
+              <p class="subtitle">Set daily rates and view payment records</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Alerts -->
+        <div *ngIf="successMessage" class="success-alert">
+          <i class="ri-checkbox-circle-line"></i>{{ successMessage }}
+        </div>
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i>{{ errorMessage }}
+        </div>
+
+        <div class="admin-grid">
+
+          <!-- Left column -->
+          <div class="left-col">
+
+            <!-- Settings Card -->
+            <div class="admin-card">
+              <div class="card-header">
+                <i class="ri-settings-3-line"></i>
+                <h3>Daily Fee Settings</h3>
+              </div>
+              <div class="card-body">
+                <div class="settings-filters">
+                  <select [(ngModel)]="selectedTerm" (change)="onFilterChange()">
+                    <option *ngFor="let t of terms" [value]="t">{{ t }}</option>
+                  </select>
+                  <select [(ngModel)]="selectedYear" (change)="onFilterChange()">
+                    <option *ngFor="let y of academicYears" [value]="y">{{ y }}</option>
+                  </select>
+                </div>
+                <div class="amount-input-row">
+                  <label>Daily Feeding Amount (GHS)</label>
+                  <div class="amount-input-wrap">
+                    <span class="currency-prefix">GH₵</span>
+                    <input type="number" [(ngModel)]="editingAmount" min="0" step="0.01" placeholder="0.00" />
+                  </div>
+                </div>
+                <button class="btn-save-settings" (click)="saveSettings()"
+                  [disabled]="savingSettings || editingAmount <= 0">
+                  <i class="ri-loader-4-line spin" *ngIf="savingSettings"></i>
+                  <i class="ri-save-line" *ngIf="!savingSettings"></i>
+                  {{ savingSettings ? 'Saving...' : 'Save Daily Amount' }}
+                </button>
+                <div *ngIf="dailyAmount > 0" class="current-rate">
+                  Current rate: <strong>{{ formatCurrency(dailyAmount) }}/day</strong>
+                </div>
+              </div>
+            </div>
+
+            <!-- Public Link Card -->
+            <div class="admin-card">
+              <div class="card-header">
+                <i class="ri-link"></i>
+                <h3>Teacher Access Link</h3>
+              </div>
+              <div class="card-body">
+                <p class="link-description">
+                  Share this link with the teacher to record daily feeding fees.
+                  No login required.
+                </p>
+                <div class="link-box">
+                  <span class="link-text">{{ publicLink }}</span>
+                  <button class="btn-copy" (click)="copyLink()">
+                    <i class="ri-check-line" *ngIf="linkCopied"></i>
+                    <i class="ri-file-copy-line" *ngIf="!linkCopied"></i>
+                    {{ linkCopied ? 'Copied!' : 'Copy' }}
+                  </button>
+                </div>
+                <a [href]="publicLink" target="_blank" class="btn-open-link">
+                  <i class="ri-external-link-line"></i>
+                  Open Teacher Page
+                </a>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Right column: Records -->
+          <div class="right-col">
+
+            <!-- Date filter -->
+            <div class="records-filters">
+              <input type="date" [(ngModel)]="selectedDate" (change)="onDateChange()" />
+              <span class="records-count">
+                {{ payments.length }} record{{ payments.length !== 1 ? 's' : '' }}
+              </span>
+            </div>
+
+            <!-- Daily Summary -->
+            <div class="daily-summary-mini" *ngIf="dailySummary">
+              <div class="dsm-item present">
+                <span>Present</span>
+                <strong>{{ dailySummary.present }}</strong>
+              </div>
+              <div class="dsm-item absent">
+                <span>Absent</span>
+                <strong>{{ dailySummary.absent }}</strong>
+              </div>
+              <div class="dsm-item expected">
+                <span>Expected</span>
+                <strong>{{ formatCurrency(dailySummary.expectedTotal) }}</strong>
+              </div>
+              <div class="dsm-item collected" [class.shortfall]="dailySummary.shortfall > 0">
+                <span>Collected</span>
+                <strong>{{ formatCurrency(dailySummary.totalCollected) }}</strong>
+              </div>
+              <div class="dsm-item shortfall-item" *ngIf="dailySummary.shortfall > 0">
+                <span>Shortfall</span>
+                <strong class="red">{{ formatCurrency(dailySummary.shortfall) }}</strong>
+              </div>
+            </div>
+
+            <!-- Payments table -->
+            <div class="records-table-wrap">
+
+              <div *ngIf="loadingPayments" class="loading-state">
+                <div class="spinner"></div>
+                <p>Loading records...</p>
+              </div>
+
+              <table class="records-table" *ngIf="!loadingPayments && payments.length > 0">
+                <thead>
+                  <tr>
+                    <th>Student</th>
+                    <th>Class</th>
+                    <th class="text-right">Amount</th>
+                    <th class="text-center">Days</th>
+                    <th>Time</th>
+                    <th>Notes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let p of payments; trackBy: trackByPaymentId">
+                    <td data-label="Student">
+                      <p class="rec-name">{{ getStudentName(p.student) }}</p>
+                      <p class="rec-num">{{ p.student?.student_number }}</p>
+                    </td>
+                    <td data-label="Class">{{ p.student?.class?.name || '—' }}</td>
+                    <td data-label="Amount" class="text-right amount-cell">
+                      {{ formatCurrency(p.amount_paid) }}
+                    </td>
+                    <td data-label="Days" class="text-center">{{ p.days_covered }}</td>
+                    <td data-label="Time" class="timestamp">
+                      {{ p.created_at | date:'h:mm a' }}
+                    </td>
+                    <td data-label="Notes" class="notes-cell">{{ p.notes || '—' }}</td>
+                  </tr>
+                </tbody>
+                <tfoot>
+                  <tr class="total-row">
+                    <td colspan="2"><strong>Total Collected</strong></td>
+                    <td class="text-right">
+                      <strong>{{ formatCurrency(totalCollectedToday) }}</strong>
+                    </td>
+                    <td colspan="3"></td>
+                  </tr>
+                </tfoot>
+              </table>
+
+              <div *ngIf="!loadingPayments && payments.length === 0" class="empty-records">
+                <i class="ri-inbox-line"></i>
+                <p>No payments recorded for this date</p>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>

@@ -21,6 +21,8 @@ import { GradingScaleComponent } from './components/settings/grading-scale/gradi
 import { SubjectsList } from './components/settings/subjects-list/subjects-list';
 import { ImportStudents } from './components/add-student/import-students/import-students';
 import { ExportBrandingSettings } from './components/export-branding-settings/export-branding-settings';
+import { FeedingRecord } from '../public/feeding-record/feeding-record';
+import { FeedingAdmin } from './components/feeding/feeding-admin/feeding-admin';
 
 
 
@@ -44,7 +46,8 @@ import { ExportBrandingSettings } from './components/export-branding-settings/ex
     GradingScaleComponent,
     SubjectsList,
     ImportStudents,
-    ExportBrandingSettings
+    ExportBrandingSettings,
+    FeedingAdmin
   ],
   imports: [
     CommonModule,

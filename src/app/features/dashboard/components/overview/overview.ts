@@ -231,6 +231,7 @@ export class Overview implements OnInit, OnDestroy {
               location: event.location || 'TBA',
               type: event.category || 'other',
               attendees: event.max_attendees,
+              flyer_url: event.flyer_url || null, // ← ADD THIS
             }));
 
             // console.log('📅 Formatted events:', this.upcomingEvents);
@@ -586,7 +587,3 @@ export class Overview implements OnInit, OnDestroy {
     this.loadDashboardData();
   }
 }
-
-
-
-

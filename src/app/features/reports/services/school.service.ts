@@ -105,6 +105,7 @@ export class SchoolService {
       academicYear?: string;
       search?: string;
       isActive?: boolean;
+      sortBy?: 'name_asc' | 'name_desc' | 'created_at_desc';
     },
     page = 1,
     pageSize = 20,
@@ -124,9 +125,18 @@ export class SchoolService {
     }
 
     const from_range = (page - 1) * pageSize;
-    query = query
-      .range(from_range, from_range + pageSize - 1)
-      .order('last_name');
+
+    // Apply sort
+    if (filters?.sortBy === 'name_asc') {
+      query = query.order('first_name', { ascending: true });
+    } else if (filters?.sortBy === 'name_desc') {
+      query = query.order('first_name', { ascending: false });
+    } else {
+      // default: last_name ascending (original behaviour)
+      query = query.order('last_name');
+    }
+
+    query = query.range(from_range, from_range + pageSize - 1);
 
     return from(query).pipe(
       map(({ data, error, count }) => {
@@ -242,6 +252,245 @@ export class SchoolService {
     );
   }
 
+  // ─── BULK DELETE STUDENTS ─────────────────────────────────────────────────
+
+  bulkDeleteStudents(
+    ids: string[],
+  ): Observable<{ deleted: number; errors: string[] }> {
+    return from(this._bulkDeleteStudents(ids));
+  }
+
+  private async _bulkDeleteStudents(
+    ids: string[],
+  ): Promise<{ deleted: number; errors: string[] }> {
+    const errors: string[] = [];
+    let deleted = 0;
+
+    try {
+      await this._cascadeDeleteStudents(ids);
+      deleted = ids.length;
+    } catch {
+      for (const id of ids) {
+        try {
+          await this._cascadeDeleteStudents([id]);
+          deleted++;
+        } catch (e: any) {
+          errors.push(`${id}: ${e.message}`);
+        }
+      }
+    }
+
+    return { deleted, errors };
+  }
+
+  private async _cascadeDeleteStudents(ids: string[]): Promise<void> {
+    const sb = this.supabase.client;
+
+    const { error: feesError } = await sb
+      .from('student_fees')
+      .delete()
+      .in('student_id', ids);
+    if (feesError)
+      console.warn('Could not clean student_fees:', feesError.message);
+
+    const { error: paymentsError } = await sb
+      .from('fee_payments')
+      .delete()
+      .in('student_id', ids);
+    if (paymentsError)
+      console.warn('Could not clean fee_payments:', paymentsError.message);
+
+    const { error: resultsError } = await sb
+      .from('exam_results')
+      .delete()
+      .in('student_id', ids);
+    if (resultsError)
+      console.warn('Could not clean exam_results:', resultsError.message);
+
+    const { error } = await sb
+      .from('students')
+      .delete()
+      .in('id', ids)
+      .eq('church_id', this.churchId);
+
+    if (error) throw new Error(error.message);
+  }
+
+  // ─── STUDENT DUPLICATE DETECTION ──────────────────────────────────────────
+
+  /**
+   * Fetches ALL active students across all pages for deduplication.
+   * Uses a paginated loop identical to the members service approach.
+   */
+  private async _fetchAllStudentsForDedup(): Promise<
+    {
+      id: string;
+      first_name: string;
+      last_name: string;
+      date_of_birth: string | null;
+      parent_phone: string | null;
+      created_at: string;
+    }[]
+  > {
+    const pageSize = 1000;
+    let page = 0;
+    const all: any[] = [];
+
+    while (true) {
+      const from_idx = page * pageSize;
+      const to_idx = from_idx + pageSize - 1;
+
+      const { data, error } = await this.supabase.client
+        .from('students')
+        .select(
+          'id, first_name, last_name, date_of_birth, parent_phone, created_at',
+        )
+        .eq('church_id', this.churchId)
+        .eq('is_active', true)
+        .order('created_at', { ascending: true })
+        .range(from_idx, to_idx);
+
+      if (error) throw new Error(error.message);
+      if (!data || data.length === 0) break;
+      all.push(...data);
+      if (data.length < pageSize) break;
+      page++;
+    }
+
+    return all;
+  }
+
+  /**
+   * Builds duplicate groups using three strategies (matching members service):
+   *   A) first_name + last_name + date_of_birth  (most reliable)
+   *   B) first_name + last_name + parent_phone    (fallback)
+   *   C) exact full name only, non-trivial names  (last resort)
+   */
+  private _buildStudentDuplicateGroups(
+    students: {
+      id: string;
+      first_name: string;
+      last_name: string;
+      date_of_birth: string | null;
+      parent_phone: string | null;
+      created_at: string;
+    }[],
+  ): Map<string, string[]> {
+    const groups = new Map<string, string[]>();
+
+    for (const s of students) {
+      const firstName = (s.first_name || '').toLowerCase().trim();
+      const lastName = (s.last_name || '').toLowerCase().trim();
+
+      let key: string | null = null;
+
+      if (s.date_of_birth) {
+        key = `dob|${firstName}|${lastName}|${s.date_of_birth}`;
+      } else if (s.parent_phone) {
+        key = `phone|${firstName}|${lastName}|${s.parent_phone.trim()}`;
+      } else if (firstName.length > 2 && lastName.length > 2) {
+        key = `name|${firstName}|${lastName}`;
+      }
+
+      if (!key) continue;
+
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(s.id);
+    }
+
+    return groups;
+  }
+
+  getStudentDuplicateStats(): Observable<{ groups: number; toDelete: number }> {
+    return from(this._fetchStudentDuplicateStats());
+  }
+
+  deleteStudentDuplicates(): Observable<{ deleted: number; groups: number }> {
+    return from(this._deleteStudentDuplicates());
+  }
+
+  private async _fetchStudentDuplicateStats(): Promise<{
+    groups: number;
+    toDelete: number;
+  }> {
+    const students = await this._fetchAllStudentsForDedup();
+    const groups = this._buildStudentDuplicateGroups(students);
+
+    let groupCount = 0;
+    let toDelete = 0;
+
+    for (const [, ids] of groups) {
+      if (ids.length > 1) {
+        groupCount++;
+        toDelete += ids.length - 1;
+      }
+    }
+
+    return { groups: groupCount, toDelete };
+  }
+
+  private async _deleteStudentDuplicates(): Promise<{
+    deleted: number;
+    groups: number;
+  }> {
+    const students = await this._fetchAllStudentsForDedup();
+    const groups = this._buildStudentDuplicateGroups(students);
+
+    const toDelete: string[] = [];
+    let groupCount = 0;
+
+    for (const [, ids] of groups) {
+      if (ids.length > 1) {
+        groupCount++;
+        toDelete.push(...ids.slice(1)); // keep ids[0] (oldest), delete rest
+      }
+    }
+
+    if (toDelete.length === 0) return { deleted: 0, groups: 0 };
+
+    let totalDeleted = 0;
+    const batchSize = 50;
+
+    for (let i = 0; i < toDelete.length; i += batchSize) {
+      const batch = toDelete.slice(i, i + batchSize);
+      await this._cascadeDeleteStudents(batch);
+      totalDeleted += batch.length;
+    }
+
+    return { deleted: totalDeleted, groups: groupCount };
+  }
+
+  // ─── STUDENT COUNTS BY CLASS ───────────────────────────────────────────────
+
+  getStudentCountsByClass(
+    academicYear?: string,
+  ): Observable<{ [classId: string]: number }> {
+    return from(this._getStudentCountsByClass(academicYear));
+  }
+
+  private async _getStudentCountsByClass(
+    academicYear?: string,
+  ): Promise<{ [classId: string]: number }> {
+    let query = this.supabase.client
+      .from('students')
+      .select('class_id')
+      .eq('church_id', this.churchId)
+      .eq('is_active', true)
+      .not('class_id', 'is', null);
+
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
+
+    const counts: { [classId: string]: number } = {};
+    (data || []).forEach((row: any) => {
+      if (row.class_id) {
+        counts[row.class_id] = (counts[row.class_id] || 0) + 1;
+      }
+    });
+
+    return counts;
+  }
+
   // ─── FEE STRUCTURES ──────────────────────────────────────
 
   getFeeStructures(
@@ -290,7 +539,12 @@ export class SchoolService {
     return from(
       this.supabase.client
         .from('fee_structures')
-        .insert({ ...data, church_id: this.churchId })
+        .insert({
+          ...data,
+          church_id: this.churchId,
+          // Convert empty string to null for UUID fields
+          class_id: data.class_id || null,
+        })
         .select('*, class:school_classes(*)')
         .single(),
     ).pipe(
@@ -308,7 +562,10 @@ export class SchoolService {
     return from(
       this.supabase.client
         .from('fee_structures')
-        .update(data)
+        .update({
+          ...data,
+          class_id: data.class_id || null, // ← add this
+        })
         .eq('id', id)
         .eq('church_id', this.churchId)
         .select('*, class:school_classes(*)')
@@ -323,14 +580,27 @@ export class SchoolService {
 
   deleteFeeStructure(id: string): Observable<void> {
     return from(
-      this.supabase.client
-        .from('fee_structures')
-        .delete()
-        .eq('id', id)
-        .eq('church_id', this.churchId),
+      this.supabase.client.rpc('delete_fee_structure_safe', {
+        p_fee_structure_id: id,
+        p_church_id: this.churchId,
+      }),
     ).pipe(
       map(({ error }) => {
-        if (error) throw error;
+        if (error) throw new Error(error.message);
+      }),
+    );
+  }
+
+  assignFeesToAllClasses(academicYear: string, term: string): Observable<void> {
+    return from(
+      this.supabase.client.rpc('assign_fees_to_all_classes', {
+        p_church_id: this.churchId,
+        p_academic_year: academicYear,
+        p_term: term,
+      }),
+    ).pipe(
+      map(({ error }) => {
+        if (error) throw new Error(error.message);
       }),
     );
   }
@@ -350,6 +620,25 @@ export class SchoolService {
     ).pipe(
       map(({ error }) => {
         if (error) throw error;
+      }),
+    );
+  }
+
+  assignSingleFeeToAllStudents(
+    feeStructureId: string,
+    academicYear: string,
+    term: string,
+  ): Observable<void> {
+    return from(
+      this.supabase.client.rpc('assign_single_fee_to_all_students', {
+        p_church_id: this.churchId,
+        p_fee_structure_id: feeStructureId,
+        p_academic_year: academicYear,
+        p_term: term,
+      }),
+    ).pipe(
+      map(({ error }) => {
+        if (error) throw new Error(error.message);
       }),
     );
   }
@@ -460,7 +749,6 @@ export class SchoolService {
     return from(query).pipe(
       map(({ data, error, count }) => {
         if (error) throw error;
-        // Group by receipt_number to reconstruct FeePayment objects
         const grouped = this.groupPaymentsByReceipt(data || []);
         return { data: grouped, count: count || 0 };
       }),
@@ -486,7 +774,6 @@ export class SchoolService {
     );
   }
 
-  // Helper to group individual fee_payment rows into FeePayment objects
   private groupPaymentsByReceipt(rows: any[]): FeePayment[] {
     const map: { [receipt: string]: FeePayment } = {};
     rows.forEach((row) => {
@@ -504,6 +791,7 @@ export class SchoolService {
           academic_year: row.academic_year,
           term: row.term,
           received_by: row.received_by,
+          received_by_name: row.received_by_name,
           notes: row.notes,
           fee_items: [],
           created_at: row.created_at,
@@ -513,9 +801,55 @@ export class SchoolService {
       map[rn].fee_items.push({
         fee_name: row.student_fee?.fee_structure?.fee_name || 'Fee',
         amount: Number(row.amount),
+        // Carry balance info from student_fee for remaining balance display
+        amount_due: Number(row.student_fee?.amount_due || 0),
+        amount_paid_total: Number(row.student_fee?.amount_paid || 0),
+        is_arrears: !row.student_fee_id,
       });
     });
     return Object.values(map);
+  }
+
+  assignFeeToStudent(
+    studentId: string,
+    feeStructureId: string,
+    academicYear: string,
+    term: string,
+  ): Observable<string> {
+    return from(
+      this.supabase.client.rpc('assign_fee_to_student', {
+        p_church_id: this.churchId,
+        p_student_id: studentId,
+        p_fee_structure_id: feeStructureId,
+        p_academic_year: academicYear,
+        p_term: term,
+      }),
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw new Error(error.message);
+        return data as string;
+      }),
+    );
+  }
+
+  getAllFeeStructuresForAssignment(
+    academicYear: string,
+    term: string,
+  ): Observable<FeeStructure[]> {
+    return from(
+      this.supabase.client
+        .from('fee_structures')
+        .select('*, class:school_classes(*)')
+        .eq('church_id', this.churchId)
+        .eq('academic_year', academicYear)
+        .eq('term', term)
+        .order('fee_name'),
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw new Error(error.message);
+        return data as FeeStructure[];
+      }),
+    );
   }
 
   recordPayment(paymentData: {
@@ -544,9 +878,24 @@ export class SchoolService {
   }
 
   recordPaymentWithReceipt(
-    paymentData: any,
+    paymentData: {
+      studentId: string;
+      amount: number;
+      paymentMethod: string;
+      paymentDate: string;
+      academicYear: string;
+      term: string;
+      feeItems: {
+        feeId: string | null;
+        feeName: string;
+        amount: number;
+        is_arrears?: boolean;
+      }[];
+      notes?: string;
+      receivedBy?: string;
+    },
     receiptNumber: string,
-  ): Observable<FeePayment> {
+  ): Observable<any> {
     return from(
       this.supabase.client.rpc('record_fee_payment', {
         p_church_id: this.churchId,
@@ -559,11 +908,30 @@ export class SchoolService {
         p_term: paymentData.term,
         p_fee_items: paymentData.feeItems,
         p_notes: paymentData.notes || null,
+        p_received_by_name: paymentData.receivedBy || null, // ← text name now
       }),
     ).pipe(
       map(({ data, error }) => {
-        if (error) throw error;
-        return data as FeePayment;
+        if (error) throw new Error(error.message);
+        return data;
+      }),
+    );
+  }
+
+  getFeePaymentHistory(feeId: string): Observable<any[]> {
+    return from(
+      this.supabase.client
+        .from('fee_payments')
+        .select(
+          'id, amount, payment_date, payment_method, receipt_number, received_by_name, notes, created_at',
+        )
+        .eq('church_id', this.churchId)
+        .eq('student_fee_id', feeId)
+        .order('payment_date', { ascending: false }),
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw new Error(error.message);
+        return data || [];
       }),
     );
   }
@@ -964,8 +1332,8 @@ export class SchoolService {
 
   private normalizeGender(raw: string): string | null {
     const val = (raw || '').trim().toLowerCase();
-    if (['male', 'm', 'boy'].includes(val)) return 'male';
-    if (['female', 'f', 'girl'].includes(val)) return 'female';
+    if (['male', 'm', 'boy', 'b'].includes(val)) return 'male';
+    if (['female', 'f', 'girl', 'g'].includes(val)) return 'female';
     return val || null;
   }
 
@@ -985,7 +1353,7 @@ export class SchoolService {
       return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
     }
 
-    // MM/DD/YY(YY)
+    // MM/DD/YY(YY) — try to detect by checking day > 12
     const mdy = str.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
     if (mdy) {
       const [, m, d, y] = mdy;
@@ -1004,13 +1372,115 @@ export class SchoolService {
     const parsed = new Date(str);
     if (!isNaN(parsed.getTime())) return parsed.toISOString().split('T')[0];
 
-    return null; // unparseable — store null rather than crash
+    return null;
   }
+
+  // ── Column header aliases (comprehensive — matches members service) ─────────
+
+  private readonly STUDENT_HEADER_ALIASES: Record<string, string> = {
+    // First name
+    'first name': 'first_name',
+    first_name: 'first_name',
+    firstname: 'first_name',
+    'given name': 'first_name',
+    given_name: 'first_name',
+    forename: 'first_name',
+    // Middle name
+    'middle name': 'middle_name',
+    middle_name: 'middle_name',
+    middlename: 'middle_name',
+    // Last name
+    'last name': 'last_name',
+    last_name: 'last_name',
+    lastname: 'last_name',
+    surname: 'last_name',
+    'family name': 'last_name',
+    family_name: 'last_name',
+    // Full name (will be split)
+    'full name': 'full_name',
+    full_name: 'full_name',
+    fullname: 'full_name',
+    name: 'full_name',
+    'student name': 'full_name',
+    student_name: 'full_name',
+    // DOB
+    'date of birth': 'date_of_birth',
+    date_of_birth: 'date_of_birth',
+    dob: 'date_of_birth',
+    dateofbirth: 'date_of_birth',
+    birthday: 'date_of_birth',
+    'birth date': 'date_of_birth',
+    birth_date: 'date_of_birth',
+    birthdate: 'date_of_birth',
+    // Gender
+    gender: 'gender',
+    sex: 'gender',
+    // Class
+    class: 'class',
+    'class name': 'class',
+    class_name: 'class',
+    classname: 'class',
+    grade: 'class',
+    level: 'class',
+    form: 'class',
+    // Parent / guardian
+    'parent name': 'parent_name',
+    parent_name: 'parent_name',
+    parentname: 'parent_name',
+    guardian: 'parent_name',
+    'guardian name': 'parent_name',
+    guardian_name: 'parent_name',
+    "father's name": 'parent_name',
+    fathers_name: 'parent_name',
+    father: 'parent_name',
+    "mother's name": 'parent_name',
+    mothers_name: 'parent_name',
+    mother: 'parent_name',
+    'next of kin': 'parent_name',
+    next_of_kin: 'parent_name',
+    'nok name': 'parent_name',
+    nok: 'parent_name',
+    // Phone
+    'parent phone': 'parent_phone',
+    parent_phone: 'parent_phone',
+    parentphone: 'parent_phone',
+    phone: 'parent_phone',
+    'phone number': 'parent_phone',
+    phone_number: 'parent_phone',
+    mobile: 'parent_phone',
+    'mobile number': 'parent_phone',
+    contact: 'parent_phone',
+    'guardian phone': 'parent_phone',
+    guardian_phone: 'parent_phone',
+    'n.o.k contact': 'parent_phone',
+    'nok contact': 'parent_phone',
+    nok_contact: 'parent_phone',
+    'father phone': 'parent_phone',
+    'mother phone': 'parent_phone',
+    // Email
+    'parent email': 'parent_email',
+    parent_email: 'parent_email',
+    email: 'parent_email',
+    'email address': 'parent_email',
+    'guardian email': 'parent_email',
+    guardian_email: 'parent_email',
+    // Address
+    address: 'address',
+    'home address': 'address',
+    home_address: 'address',
+    location: 'address',
+    // Student number (allow override)
+    'student number': 'student_number',
+    student_number: 'student_number',
+    'admission number': 'student_number',
+    admission_number: 'student_number',
+    'student id': 'student_number',
+    student_id: 'student_number',
+  };
 
   // ── JMS Admission Form row → internal row ─────────────────
 
   private mapJmsRow(rawRow: Record<string, any>): Record<string, string> {
-    // Build an uppercase-keyed lookup so column header casing doesn't matter
     const r: Record<string, string> = {};
     Object.entries(rawRow).forEach(([k, v]) => {
       r[k.trim().toUpperCase()] = String(v ?? '').trim();
@@ -1018,26 +1488,154 @@ export class SchoolService {
 
     const nameParsed = this.parseStudentName(r['STUDENT NAME'] || '');
 
-    // Parent: Next of Kin preferred, then Father's, then Mother's
     const parentName =
-      r['NEXT OF KING'] || r["FATHER'S NAME"] || r["MOTHER'S NAME"] || '';
+      r['NEXT OF KING'] ||
+      r['NEXT OF KIN'] ||
+      r["FATHER'S NAME"] ||
+      r["MOTHER'S NAME"] ||
+      '';
 
-    // Phone: NOK contact preferred, then general CONTACT
-    const parentPhone = r['N.O.K CONTACT'] || r['CONTACT'] || '';
+    const parentPhone =
+      r['N.O.K CONTACT'] ||
+      r['NOK CONTACT'] ||
+      r['CONTACT'] ||
+      r['PHONE'] ||
+      '';
 
     return {
       first_name: nameParsed.first_name,
       middle_name: nameParsed.middle_name,
       last_name: nameParsed.last_name,
-      date_of_birth: r['BIRTH DATE'] || '',
-      gender: r['GENDER'] || '',
-      // JMS form has no class column — will use defaultClassId if provided
-      class: r['CLASS'] || r['CLASS NAME'] || '',
+      date_of_birth: r['BIRTH DATE'] || r['DATE OF BIRTH'] || r['DOB'] || '',
+      gender: r['GENDER'] || r['SEX'] || '',
+      class: r['CLASS'] || r['CLASS NAME'] || r['GRADE'] || '',
       parent_name: parentName,
       parent_phone: parentPhone,
       parent_email: r['E-MAIL'] || r['EMAIL'] || '',
-      address: r['ADDRESS'] || '',
+      address: r['ADDRESS'] || r['HOME ADDRESS'] || '',
     };
+  }
+
+  // ── Normalise a raw row using header aliases ───────────────────────────────
+
+  private normalizeRowKeys(
+    rawRow: Record<string, any>,
+  ): Record<string, string> {
+    const row: Record<string, string> = {};
+    Object.entries(rawRow).forEach(([key, val]) => {
+      const lowerKey = key.trim().toLowerCase().replace(/\s+/g, ' ');
+      const canonical =
+        this.STUDENT_HEADER_ALIASES[lowerKey] || lowerKey.replace(/\s+/g, '_');
+      // Only set first occurrence (don't overwrite earlier canonical mapping)
+      if (!(canonical in row)) {
+        row[canonical] = String(val ?? '').trim();
+      }
+    });
+    return row;
+  }
+
+  // ── Pre-load existing students for duplicate detection ────────────────────
+
+  private async _preloadExistingStudents(): Promise<{
+    phones: Set<string>;
+    nameDobs: Set<string>;
+  }> {
+    const pageSize = 1000;
+    let page = 0;
+    const phones = new Set<string>();
+    const nameDobs = new Set<string>();
+
+    while (true) {
+      const from_idx = page * pageSize;
+      const to_idx = from_idx + pageSize - 1;
+
+      const { data, error } = await this.supabase.client
+        .from('students')
+        .select('first_name, last_name, date_of_birth, parent_phone')
+        .eq('church_id', this.churchId)
+        .eq('is_active', true)
+        .range(from_idx, to_idx);
+
+      if (error) throw new Error(error.message);
+      if (!data || data.length === 0) break;
+
+      for (const s of data) {
+        if (s.parent_phone) phones.add(s.parent_phone.trim());
+        if (s.date_of_birth) {
+          nameDobs.add(
+            `${(s.first_name || '').toLowerCase().trim()}|${(s.last_name || '').toLowerCase().trim()}|${s.date_of_birth}`,
+          );
+        }
+      }
+
+      if (data.length < pageSize) break;
+      page++;
+    }
+
+    return { phones, nameDobs };
+  }
+
+  // ── Check a parsed row for duplicates ────────────────────────────────────
+
+  private checkStudentDuplicate(
+    row: Record<string, string>,
+    existing: { phones: Set<string>; nameDobs: Set<string> },
+    seenPhonesThisBatch: Set<string>,
+    seenNameDobsThisBatch: Set<string>,
+  ): void {
+    const phone = row['parent_phone'];
+    const dob = row['date_of_birth'];
+    const firstName = (row['first_name'] || '').toLowerCase().trim();
+    const lastName = (row['last_name'] || '').toLowerCase().trim();
+
+    if (phone) {
+      if (existing.phones.has(phone)) {
+        throw new Error(
+          `Student with phone "${phone}" already exists — skipped`,
+        );
+      }
+      if (seenPhonesThisBatch.has(phone)) {
+        throw new Error(
+          `Phone "${phone}" appears more than once in this file — skipped`,
+        );
+      }
+    }
+
+    if (dob && firstName && lastName) {
+      const key = `${firstName}|${lastName}|${dob}`;
+      if (existing.nameDobs.has(key)) {
+        throw new Error(
+          `Student "${row['first_name']} ${row['last_name']}" (DOB: ${dob}) already exists — skipped`,
+        );
+      }
+      if (seenNameDobsThisBatch.has(key)) {
+        throw new Error(
+          `"${row['first_name']} ${row['last_name']}" (DOB: ${dob}) appears more than once in this file — skipped`,
+        );
+      }
+    }
+  }
+
+  private trackInserted(
+    row: Record<string, string>,
+    existing: { phones: Set<string>; nameDobs: Set<string> },
+    seenPhonesThisBatch: Set<string>,
+    seenNameDobsThisBatch: Set<string>,
+  ): void {
+    const phone = row['parent_phone'];
+    const dob = row['date_of_birth'];
+    const firstName = (row['first_name'] || '').toLowerCase().trim();
+    const lastName = (row['last_name'] || '').toLowerCase().trim();
+
+    if (phone) {
+      existing.phones.add(phone);
+      seenPhonesThisBatch.add(phone);
+    }
+    if (dob && firstName && lastName) {
+      const key = `${firstName}|${lastName}|${dob}`;
+      existing.nameDobs.add(key);
+      seenNameDobsThisBatch.add(key);
+    }
   }
 
   // ── Excel import ──────────────────────────────────────────
@@ -1047,8 +1645,6 @@ export class SchoolService {
     defaultClassId?: string,
   ): Promise<ImportResult> {
     const buffer = await file.arrayBuffer();
-    // raw:true so we get the raw Excel value for dates (serial numbers)
-    // then we handle conversion ourselves via normalizeDateOfBirth
     const workbook = XLSX.read(buffer, { type: 'array', raw: true });
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const rows: any[] = XLSX.utils.sheet_to_json(sheet, {
@@ -1067,6 +1663,10 @@ export class SchoolService {
       .eq('church_id', this.churchId)
       .eq('is_active', true);
 
+    const existing = await this._preloadExistingStudents();
+    const seenPhonesThisBatch = new Set<string>();
+    const seenNameDobsThisBatch = new Set<string>();
+
     const results: ImportResult = { success: 0, failed: 0, errors: [] };
 
     for (let i = 0; i < rows.length; i++) {
@@ -1076,36 +1676,46 @@ export class SchoolService {
         if (format === 'jms_admission') {
           row = this.mapJmsRow(rows[i]);
         } else {
-          // Standard format
-          row = {};
-          Object.entries(rows[i]).forEach(([key, val]) => {
-            row[key.trim().toLowerCase().replace(/\s+/g, '_')] = String(
-              val ?? '',
-            ).trim();
-          });
+          row = this.normalizeRowKeys(rows[i]);
         }
 
-        // Normalise date and gender regardless of format
+        // If a 'full_name' column exists (no separate first/last), split it
+        if (row['full_name'] && !row['first_name']) {
+          const parsed = this.parseStudentName(row['full_name']);
+          row['first_name'] = parsed.first_name;
+          row['middle_name'] = row['middle_name'] || parsed.middle_name;
+          row['last_name'] = parsed.last_name;
+        }
+
+        // Normalise date and gender
         row['date_of_birth'] =
           this.normalizeDateOfBirth(row['date_of_birth']) || '';
         row['gender'] = this.normalizeGender(row['gender']) || '';
 
-        // Skip entirely blank rows (common in JMS form — blank rows below headers)
+        // Skip entirely blank rows
         const hasData = Object.values(row).some((v) => v !== '');
         if (!hasData) continue;
 
-        // Validate required name fields
         if (!row['first_name'] || !row['last_name']) {
           throw new Error(
             format === 'jms_admission'
               ? 'STUDENT NAME is missing or could not be split into first/last name'
-              : 'First Name and Last Name are required',
+              : 'First Name and Last Name are required (or provide a "Full Name" column)',
           );
         }
 
-        // Class resolution — inline class column wins; defaultClassId is fallback
+        // Duplicate detection
+        this.checkStudentDuplicate(
+          row,
+          existing,
+          seenPhonesThisBatch,
+          seenNameDobsThisBatch,
+        );
+
+        // Class resolution
         let resolvedClassId: string | null = null;
-        const classNameInRow = row['class'] || row['class_name'] || '';
+        const classNameInRow =
+          row['class'] || row['class_name'] || row['grade'] || '';
 
         if (classNameInRow) {
           resolvedClassId = this.resolveClassId(classNameInRow, classes || []);
@@ -1117,9 +1727,14 @@ export class SchoolService {
         } else if (defaultClassId) {
           resolvedClassId = defaultClassId;
         }
-        // else: no class at all — still valid, class_id will be null
 
         await this.insertStudentRow(row, resolvedClassId);
+        this.trackInserted(
+          row,
+          existing,
+          seenPhonesThisBatch,
+          seenNameDobsThisBatch,
+        );
         results.success++;
       } catch (err: any) {
         results.failed++;
@@ -1150,29 +1765,64 @@ export class SchoolService {
       .eq('church_id', this.churchId)
       .eq('is_active', true);
 
-    const headers = lines[0].split(',').map((h) =>
-      h
-        .trim()
-        .toLowerCase()
-        .replace(/\s+/g, '_')
-        .replace(/[^a-z0-9_]/g, ''),
-    );
+    const existing = await this._preloadExistingStudents();
+    const seenPhonesThisBatch = new Set<string>();
+    const seenNameDobsThisBatch = new Set<string>();
+
+    // Parse headers using aliases
+    const rawHeaders = this.parseCSVLine(lines[0]);
+    const headers = rawHeaders.map((h) => {
+      const lowerKey = h.trim().toLowerCase().replace(/\s+/g, ' ');
+      return (
+        this.STUDENT_HEADER_ALIASES[lowerKey] ||
+        lowerKey.replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '')
+      );
+    });
 
     const results: ImportResult = { success: 0, failed: 0, errors: [] };
 
     for (let i = 1; i < lines.length; i++) {
       try {
-        const values = lines[i].split(',');
+        const values = this.parseCSVLine(lines[i]);
         const row: Record<string, string> = {};
         headers.forEach((h, idx) => {
-          row[h] = values[idx]?.trim() || '';
+          if (!(h in row)) {
+            row[h] = values[idx]?.trim() || '';
+          }
         });
+
+        // Handle full_name column
+        if (row['full_name'] && !row['first_name']) {
+          const parsed = this.parseStudentName(row['full_name']);
+          row['first_name'] = parsed.first_name;
+          row['middle_name'] = row['middle_name'] || parsed.middle_name;
+          row['last_name'] = parsed.last_name;
+        }
 
         row['date_of_birth'] =
           this.normalizeDateOfBirth(row['date_of_birth']) || '';
         row['gender'] = this.normalizeGender(row['gender']) || '';
 
-        const classNameInRow = row['class'] || row['class_name'] || '';
+        // Skip blank rows
+        const hasData = Object.values(row).some((v) => v !== '');
+        if (!hasData) continue;
+
+        if (!row['first_name'] || !row['last_name']) {
+          throw new Error(
+            'First Name and Last Name are required (or provide a "Full Name" column)',
+          );
+        }
+
+        // Duplicate detection
+        this.checkStudentDuplicate(
+          row,
+          existing,
+          seenPhonesThisBatch,
+          seenNameDobsThisBatch,
+        );
+
+        const classNameInRow =
+          row['class'] || row['class_name'] || row['grade'] || '';
         let resolvedClassId: string | null = null;
 
         if (classNameInRow) {
@@ -1185,6 +1835,12 @@ export class SchoolService {
         }
 
         await this.insertStudentRow(row, resolvedClassId);
+        this.trackInserted(
+          row,
+          existing,
+          seenPhonesThisBatch,
+          seenNameDobsThisBatch,
+        );
         results.success++;
       } catch (err: any) {
         results.failed++;
@@ -1195,14 +1851,47 @@ export class SchoolService {
     return results;
   }
 
+  // ── CSV line parser (handles quoted fields) ───────────────────────────────
+
+  private parseCSVLine(line: string): string[] {
+    const values: string[] = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      if (char === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          current += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === ',' && !inQuotes) {
+        values.push(current);
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    values.push(current);
+    return values;
+  }
+
   // ── Helpers ───────────────────────────────────────────────
 
   private resolveClassId(className: string, classes: any[]): string | null {
     if (!className) return null;
-    const match = classes.find(
-      (c) => c.name.toLowerCase().trim() === className.toLowerCase().trim(),
+    const needle = className.toLowerCase().trim();
+    // Exact match first
+    const exact = classes.find((c) => c.name.toLowerCase().trim() === needle);
+    if (exact) return exact.id;
+    // Partial match fallback (e.g. "P3" → "Primary 3")
+    const partial = classes.find(
+      (c) =>
+        c.name.toLowerCase().trim().includes(needle) ||
+        needle.includes(c.name.toLowerCase().trim()),
     );
-    return match?.id || null;
+    return partial?.id || null;
   }
 
   private async insertStudentRow(
@@ -1229,8 +1918,8 @@ export class SchoolService {
       gender: row['gender'] || null,
       class_id: classId || null,
       parent_name: row['parent_name'] || null,
-      parent_phone: row['parent_phone'] || row['phone'] || null,
-      parent_email: row['parent_email'] || row['email'] || null,
+      parent_phone: row['parent_phone'] || null,
+      parent_email: row['parent_email'] || null,
       address: row['address'] || null,
       is_active: true,
     });

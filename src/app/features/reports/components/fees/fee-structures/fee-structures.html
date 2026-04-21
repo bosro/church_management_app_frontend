@@ -17,19 +17,12 @@
             </div>
           </div>
           <div class="header-actions">
-            <!-- Branding button -->
-            <button class="btn-icon-outline" (click)="showBrandingModal = true"
-              title="Customise export branding">
-              <i class="ri-palette-line" style="color: #4f46e5;"></i>
-            </button>
             <!-- Bulk export all classes -->
-            <button class="btn-secondary" (click)="openExport()"
-              [disabled]="exporting" *ngIf="groupedFees.length > 0">
+            <button class="btn-secondary" (click)="openExport()" [disabled]="exporting" *ngIf="groupedFees.length > 0">
               <i class="ri-download-line"></i>
               {{ exporting ? 'Exporting...' : 'Export All' }}
             </button>
-            <button class="btn-primary" (click)="openCreateModal()"
-              *ngIf="permissionService.school.fees">
+            <button class="btn-primary" (click)="openCreateModal()" *ngIf="permissionService.school.fees">
               <i class="ri-add-line"></i>
               Add Fee
             </button>
@@ -70,28 +63,53 @@
           <div *ngFor="let group of groupedFees" class="class-fee-card">
             <div class="class-fee-header">
               <div class="class-info">
-                <h3>{{ group.class.name }}</h3>
+                <h3>
+                  <!-- Class fee group -->
+                  <span *ngIf="group.class && group.class.id !== '__general__'">{{ group.class.name }}</span>
+                  <!-- General / no-class fee group -->
+                  <span *ngIf="!group.class || group.class.id === '__general__'" class="general-fee-label">
+                    <i class="ri-global-line"></i> General Fees
+                  </span>
+                </h3>
                 <span class="total-badge">
                   Total: {{ formatCurrency(getClassTotal(group.fees)) }}
                 </span>
               </div>
               <div class="class-actions">
-                <!-- Export this class fee statement — NOW INSIDE *ngFor so group exists -->
+                <!-- Export button — only for class fee groups -->
                 <button class="btn-icon-outline"
+                  *ngIf="group.class && group.class.id !== '__general__'"
                   (click)="openClassExport(group.class.id, group.class.name)"
                   title="Export fee statement for this class"
                   [disabled]="exportingClass">
                   <i class="ri-download-line"></i>
                 </button>
-                <!-- Assign to students -->
-                <button class="btn-assign"
-                  (click)="confirmAssign(group.class.id, group.class.name)"
-                  *ngIf="permissionService.school.fees"
-                  title="Assign these fees to all students in this class">
-                  <i class="ri-user-add-line"></i>
-                  Assign to Students
-                </button>
+
+                <!-- CLASS fee group: Assign to Class + Assign to individual student -->
+                <ng-container *ngIf="group.class && group.class.id !== '__general__' && permissionService.school.fees">
+                  <button class="btn-assign"
+                    (click)="confirmAssign(group.class.id, group.class.name)"
+                    title="Assign these fees to all students in this class">
+                    <i class="ri-user-add-line"></i>
+                    Assign to Class
+                  </button>
+                  <button class="btn-assign btn-assign-student"
+                    (click)="openAssignToStudentModal(group.fees)"
+                    title="Assign a fee from this class to a specific student">
+                    <i class="ri-user-follow-line"></i>
+                    Assign to Student
+                  </button>
+                </ng-container>
+
+                <!-- GENERAL fee group: no header-level assign buttons
+                     (per-fee actions are in the table rows below) -->
               </div>
+            </div>
+
+            <!-- General fees: info banner explaining per-row actions -->
+            <div *ngIf="!group.class || group.class.id === '__general__'" class="general-fee-info-banner">
+              <i class="ri-information-line"></i>
+              General fees are not tied to a class. Use the per-fee buttons below to assign each fee individually.
             </div>
 
             <table class="fee-table">
@@ -114,13 +132,29 @@
                   </td>
                   <td *ngIf="permissionService.school.fees">
                     <div class="action-buttons">
+                      <!-- Edit / Delete — always shown -->
                       <button class="btn-icon-small" (click)="openEditModal(fee)" title="Edit">
                         <i class="ri-edit-line"></i>
                       </button>
-                      <button class="btn-icon-small btn-danger"
-                        (click)="confirmDelete(fee)" title="Delete">
+                      <button class="btn-icon-small btn-danger" (click)="confirmDelete(fee)" title="Delete">
                         <i class="ri-delete-bin-line"></i>
                       </button>
+
+                      <!-- GENERAL fee row: "Assign to All Students" + "Assign to Student" -->
+                      <ng-container *ngIf="!group.class || group.class.id === '__general__'">
+                        <button class="btn-assign-inline btn-assign-all-students"
+                          (click)="confirmAssignGeneralFeeToAll(fee)"
+                          title="Assign this fee to ALL students in the system">
+                          <i class="ri-team-line"></i>
+                          All Students
+                        </button>
+                        <button class="btn-assign-inline btn-assign-student-inline"
+                          (click)="openAssignToStudentModal([fee])"
+                          title="Assign this fee to a specific student">
+                          <i class="ri-user-follow-line"></i>
+                          One Student
+                        </button>
+                      </ng-container>
                     </div>
                   </td>
                 </tr>
@@ -145,8 +179,7 @@
             </div>
             <h3>No Fee Structures</h3>
             <p>Create fee structures for each class and term</p>
-            <button class="btn-primary" (click)="openCreateModal()"
-              *ngIf="permissionService.school.fees">
+            <button class="btn-primary" (click)="openCreateModal()" *ngIf="permissionService.school.fees">
               <i class="ri-add-line"></i>
               Add First Fee
             </button>
@@ -169,9 +202,10 @@
     </div>
     <div class="modal-body">
       <div class="form-group">
-        <label>Class *</label>
+        <label>Class <span style="color:#9CA3AF; font-weight:400;">(optional — leave blank for general/student-specific
+            fees)</span></label>
         <select [(ngModel)]="feeForm.class_id">
-          <option value="">Select Class</option>
+          <option value="">No Class (General Fee)</option>
           <option *ngFor="let c of classes" [value]="c.id">{{ c.name }}</option>
         </select>
       </div>
@@ -189,13 +223,11 @@
       </div>
       <div class="form-group">
         <label>Fee Name *</label>
-        <input type="text" [(ngModel)]="feeForm.fee_name"
-          placeholder="e.g., Tuition, Sports Levy, PTA" />
+        <input type="text" [(ngModel)]="feeForm.fee_name" placeholder="e.g., Tuition, Sports Levy, PTA" />
       </div>
       <div class="form-group">
         <label>Amount (GHS) *</label>
-        <input type="number" [(ngModel)]="feeForm.amount"
-          min="0" step="0.01" placeholder="0.00" />
+        <input type="number" [(ngModel)]="feeForm.amount" min="0" step="0.01" placeholder="0.00" />
       </div>
       <div class="form-group">
         <label class="checkbox-label">
@@ -280,7 +312,7 @@
   </div>
 </div>
 
-<!-- Assign Confirmation Modal -->
+<!-- Assign to Class Confirmation Modal -->
 <div class="modal-overlay" *ngIf="showAssignModal" (click)="showAssignModal = false">
   <div class="assign-modal" (click)="$event.stopPropagation()">
     <div class="assign-modal-icon">
@@ -308,9 +340,7 @@
 
 <!-- Branding Modal -->
 <div class="modal-overlay" *ngIf="showBrandingModal" (click)="showBrandingModal = false">
-  <app-export-branding
-    (close)="showBrandingModal = false"
-    (saved)="successMessage = 'Export branding saved!'">
+  <app-export-branding (close)="showBrandingModal = false" (saved)="successMessage = 'Export branding saved!'">
   </app-export-branding>
 </div>
 
@@ -350,11 +380,132 @@
         <i class="ri-arrow-right-s-line export-arrow"></i>
       </button>
     </div>
-    <div class="export-branding-hint"
-      (click)="showClassExportModal = false; showBrandingModal = true">
+    <div class="export-branding-hint" (click)="showClassExportModal = false; showBrandingModal = true">
       <i class="ri-palette-line"></i>
       <span>Customise export branding</span>
       <i class="ri-arrow-right-s-line"></i>
+    </div>
+  </div>
+</div>
+
+<!-- Assign General Fee to ALL Students Confirmation Modal -->
+<div class="modal-overlay" *ngIf="showAssignGeneralFeeAllModal" (click)="showAssignGeneralFeeAllModal = false">
+  <div class="assign-modal" (click)="$event.stopPropagation()">
+    <div class="assign-modal-icon" style="background:#FEF3C7;">
+      <i class="ri-team-line" style="color:#D97706;"></i>
+    </div>
+    <h3>Assign Fee to All Students</h3>
+    <p>This will assign <strong>"{{ generalFeeToAssignAll?.fee_name }}"</strong> to all active students
+      across all classes for <strong>{{ selectedTerm }} {{ selectedYear }}</strong>.
+    </p>
+    <p class="assign-note">
+      <i class="ri-information-line"></i>
+      Students who already have this fee assigned will not be duplicated. Only new fee records will be created.
+    </p>
+    <div class="assign-modal-actions">
+      <button class="btn-cancel" (click)="showAssignGeneralFeeAllModal = false" [disabled]="processing">
+        Cancel
+      </button>
+      <button class="btn-confirm-assign" (click)="executeAssignGeneralFeeToAll()" [disabled]="processing">
+        <i class="ri-team-line"></i>
+        {{ processing ? 'Assigning...' : 'Yes, Assign to All' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Assign Fee to Specific Student Modal -->
+<div class="modal-overlay" *ngIf="showAssignToStudentModal" (click)="closeAssignToStudentModal()">
+  <div class="modal-content" style="max-width:520px;" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>Assign Fee to Student</h2>
+      <button class="close-btn" (click)="closeAssignToStudentModal()">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+
+      <!-- Fee selector — only shown when multiple fees passed -->
+      <div class="form-group" *ngIf="assignToStudentFees.length > 1">
+        <label>Fee to Assign *</label>
+        <select [(ngModel)]="assignToStudentFeeId">
+          <option value="">Select a fee</option>
+          <option *ngFor="let fee of assignToStudentFees" [value]="fee.id">
+            {{ fee.fee_name }} — {{ formatCurrency(fee.amount) }}
+            <span *ngIf="fee.class"> ({{ fee.class.name }})</span>
+          </option>
+        </select>
+      </div>
+
+      <!-- When only one fee passed, show it as a read-only label -->
+      <div class="form-group" *ngIf="assignToStudentFees.length === 1">
+        <label>Fee to Assign</label>
+        <div class="selected-fee-display">
+          <i class="ri-price-tag-3-line"></i>
+          <span>{{ assignToStudentFees[0].fee_name }}</span>
+          <strong>{{ formatCurrency(assignToStudentFees[0].amount) }}</strong>
+        </div>
+      </div>
+
+      <!-- Term and Year -->
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <div class="form-group">
+          <label>Term *</label>
+          <select [(ngModel)]="assignToStudentTerm">
+            <option *ngFor="let t of terms" [value]="t">{{ t }}</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Academic Year *</label>
+          <select [(ngModel)]="assignToStudentYear">
+            <option *ngFor="let y of academicYears" [value]="y">{{ y }}</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Student search -->
+      <div class="form-group" style="position:relative;">
+        <label>Search Student *</label>
+        <input type="text" [(ngModel)]="studentSearchQuery" (input)="searchStudents()"
+          placeholder="Type student name or number..." autocomplete="off" />
+
+        <div *ngIf="studentSearchResults.length > 0" class="student-search-dropdown">
+          <div *ngFor="let s of studentSearchResults" class="student-search-result" (click)="selectStudent(s)">
+            <div class="student-search-avatar">
+              {{ s.first_name[0] }}{{ s.last_name[0] }}
+            </div>
+            <div>
+              <p class="student-search-name">{{ s.first_name }} {{ s.last_name }}</p>
+              <p class="student-search-meta">{{ s.student_number }} · {{ s.class?.name || 'No class' }}</p>
+            </div>
+          </div>
+        </div>
+
+        <div *ngIf="searchingStudents" class="student-search-loading">
+          <i class="ri-loader-4-line spin"></i> Searching...
+        </div>
+
+        <div *ngIf="assignToStudentId && !studentSearchResults.length" class="student-selected-tag">
+          <i class="ri-checkbox-circle-fill" style="color:#059669;"></i>
+          Student selected
+        </div>
+      </div>
+
+      <div *ngIf="errorMessage" class="error-alert" style="margin-top:8px;">
+        {{ errorMessage }}
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-secondary" (click)="closeAssignToStudentModal()" [disabled]="assigningToStudent">
+        Cancel
+      </button>
+      <button class="btn-primary" (click)="executeAssignToStudent()"
+        [disabled]="!assignToStudentFeeId || !assignToStudentId || assigningToStudent">
+        <i class="ri-user-follow-line" *ngIf="!assigningToStudent"></i>
+        <i class="ri-loader-4-line spin" *ngIf="assigningToStudent"></i>
+        {{ assigningToStudent ? 'Assigning...' : 'Assign to Student' }}
+      </button>
     </div>
   </div>
 </div>

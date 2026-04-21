@@ -268,12 +268,13 @@ export class AdminService {
         .from('churches')
         .select(
           `
-        id, name, location, is_active, created_at,
-        subscription_plan, subscription_tier,
-        subscription_expires_at, subscription_started_at,
-        billing_email, payment_reference,
-        contact_email, size_category
-      `,
+      id, name, location, is_active, created_at,
+      subscription_plan, subscription_tier,
+      subscription_expires_at, subscription_started_at,
+      billing_email, payment_reference,
+      contact_email, contact_phone, size_category,
+      enabled_features
+    `, // ← ADD enabled_features here
         )
         .order('created_at', { ascending: false }),
     ).pipe(

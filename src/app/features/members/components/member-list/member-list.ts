@@ -115,9 +115,7 @@ export class MemberList implements OnInit, OnDestroy {
         .getCellGroups()
         .pipe(takeUntil(this.destroy$))
         .subscribe((groups) => {
-          const myGroup = groups.find(
-            (g) => g.leader_id === this.currentUserId,
-          );
+          const myGroup = groups.find((g) => g.leader_id === this.currentUserId);
           if (myGroup) this.cellLeaderGroupId = myGroup.id;
         });
     }
@@ -133,15 +131,13 @@ export class MemberList implements OnInit, OnDestroy {
 
     this.initFilterForm();
 
-    this.route.queryParams
-      .pipe(takeUntil(this.destroy$))
-      .subscribe((params) => {
-        if (params['filter'] === 'birthdays') {
-          this.filterByUpcomingBirthdays();
-        } else {
-          this.loadMembers();
-        }
-      });
+    this.route.queryParams.pipe(takeUntil(this.destroy$)).subscribe((params) => {
+      if (params['filter'] === 'birthdays') {
+        this.filterByUpcomingBirthdays();
+      } else {
+        this.loadMembers();
+      }
+    });
 
     this.loadStatistics();
     this.setupFilterListener();
@@ -224,7 +220,7 @@ export class MemberList implements OnInit, OnDestroy {
 
   private openConfirm(
     config: Partial<typeof this.confirmModalConfig>,
-    action: () => void,
+    action: () => void
   ): void {
     this.confirmModalConfig = {
       title: config.title || 'Are you sure?',
@@ -271,15 +267,13 @@ export class MemberList implements OnInit, OnDestroy {
       {
         title: 'Delete Member',
         message: `You are about to permanently delete ${name}.`,
-        submessage:
-          'This will remove all their attendance, giving, and ministry records.',
-        warningText:
-          'This action cannot be undone. The member will be removed from the system entirely.',
+        submessage: 'This will remove all their attendance, giving, and ministry records.',
+        warningText: 'This action cannot be undone. The member will be removed from the system entirely.',
         confirmLabel: 'Yes, Delete Permanently',
         variant: 'danger',
         icon: 'ri-delete-bin-line',
       },
-      () => this._doDeleteMember(memberId),
+      () => this._doDeleteMember(memberId)
     );
   }
 
@@ -301,8 +295,7 @@ export class MemberList implements OnInit, OnDestroy {
         error: (err) => {
           this.confirmModalConfig.loading = false;
           this.showConfirmModal = false;
-          this.error =
-            'Failed to delete member: ' + (err.message || 'Unknown error');
+          this.error = 'Failed to delete member: ' + (err.message || 'Unknown error');
         },
       });
   }
@@ -318,15 +311,13 @@ export class MemberList implements OnInit, OnDestroy {
       {
         title: `Delete ${count} Member${count > 1 ? 's' : ''}`,
         message: `You are about to permanently delete ${count} selected member${count > 1 ? 's' : ''}.`,
-        submessage:
-          'All their attendance, giving, and ministry records will also be removed.',
-        warningText:
-          'This action cannot be undone. These members will be removed from the system entirely.',
+        submessage: 'All their attendance, giving, and ministry records will also be removed.',
+        warningText: 'This action cannot be undone. These members will be removed from the system entirely.',
         confirmLabel: `Delete ${count} Member${count > 1 ? 's' : ''}`,
         variant: 'danger',
         icon: 'ri-delete-bin-line',
       },
-      () => this._doBulkDelete(),
+      () => this._doBulkDelete()
     );
   }
 
@@ -352,8 +343,7 @@ export class MemberList implements OnInit, OnDestroy {
         error: (err) => {
           this.confirmModalConfig.loading = false;
           this.showConfirmModal = false;
-          this.error =
-            'Bulk delete failed: ' + (err.message || 'Unknown error');
+          this.error = 'Bulk delete failed: ' + (err.message || 'Unknown error');
         },
       });
   }
@@ -387,13 +377,12 @@ export class MemberList implements OnInit, OnDestroy {
         message: `Found ${toDelete} duplicate record${toDelete > 1 ? 's' : ''} across ${groups} group${groups > 1 ? 's' : ''}.`,
         submessage:
           'The oldest record in each group will be kept. All newer duplicates and their related data will be permanently deleted.',
-        warningText:
-          'This cannot be undone. Make sure you have reviewed the duplicates before proceeding.',
+        warningText: 'This cannot be undone. Make sure you have reviewed the duplicates before proceeding.',
         confirmLabel: `Delete ${toDelete} Duplicate${toDelete > 1 ? 's' : ''}`,
         variant: 'warning',
         icon: 'ri-user-unfollow-line',
       },
-      () => this._doDeleteDuplicates(),
+      () => this._doDeleteDuplicates()
     );
   }
 
@@ -419,8 +408,7 @@ export class MemberList implements OnInit, OnDestroy {
         error: (err) => {
           this.confirmModalConfig.loading = false;
           this.showConfirmModal = false;
-          this.error =
-            'Failed to remove duplicates: ' + (err.message || 'Unknown error');
+          this.error = 'Failed to remove duplicates: ' + (err.message || 'Unknown error');
         },
       });
   }
@@ -436,13 +424,7 @@ export class MemberList implements OnInit, OnDestroy {
 
   private setPermissions(): void {
     const role = this.authService.getCurrentUserRole();
-    const createRoles = [
-      'pastor',
-      'senior_pastor',
-      'associate_pastor',
-      'group_leader',
-      'cell_leader',
-    ];
+    const createRoles = ['pastor', 'senior_pastor', 'associate_pastor', 'group_leader', 'cell_leader'];
     const editRoles = ['pastor', 'senior_pastor', 'associate_pastor'];
     const importExportRoles = ['pastor', 'senior_pastor', 'associate_pastor'];
 
@@ -518,8 +500,7 @@ export class MemberList implements OnInit, OnDestroy {
           this.showBirthdayNotice = true;
         },
         error: (error) => {
-          this.error =
-            error.message || 'Failed to load members with upcoming birthdays';
+          this.error = error.message || 'Failed to load members with upcoming birthdays';
           this.loading = false;
         },
       });
@@ -541,9 +522,7 @@ export class MemberList implements OnInit, OnDestroy {
           this.loading = false;
           // Re-sync selectAll state
           if (this.selectedIds.size > 0) {
-            this.selectAll = this.members.every((m) =>
-              this.selectedIds.has(m.id),
-            );
+            this.selectAll = this.members.every((m) => this.selectedIds.has(m.id));
           }
         },
         error: (error) => {
@@ -675,14 +654,7 @@ export class MemberList implements OnInit, OnDestroy {
 
   clearFilters(): void {
     this.sortOrder = 'created_at_desc';
-    this.filterForm.reset({
-      search: '',
-      gender: '',
-      status: '',
-      branch: '',
-      ministry: '',
-      cell_group: '',
-    });
+    this.filterForm.reset({ search: '', gender: '', status: '', branch: '', ministry: '', cell_group: '' });
     this.filters = {};
     this.currentPage = 1;
   }
@@ -721,11 +693,7 @@ export class MemberList implements OnInit, OnDestroy {
     const birthDate = new Date(dateOfBirth);
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (
-      monthDiff < 0 ||
-      (monthDiff === 0 && today.getDate() < birthDate.getDate())
-    )
-      age--;
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) age--;
     return age;
   }
 }

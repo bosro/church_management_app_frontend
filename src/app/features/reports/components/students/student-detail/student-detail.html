@@ -19,15 +19,11 @@
               <i class="ri-arrow-left-line"></i>
             </button>
             <div class="header-actions">
-              <button class="btn-secondary"
-                      *ngIf="permissionService.school.fees"
-                      (click)="recordPayment()">
+              <button class="btn-secondary" *ngIf="permissionService.school.fees" (click)="recordPayment()">
                 <i class="ri-money-dollar-circle-line"></i>
                 Record Payment
               </button>
-              <button class="btn-secondary"
-                      *ngIf="permissionService.school.manage"
-                      (click)="editStudent()">
+              <button class="btn-secondary" *ngIf="permissionService.school.manage" (click)="editStudent()">
                 <i class="ri-edit-line"></i>
                 Edit
               </button>
@@ -48,8 +44,7 @@
           <div class="profile-card">
             <div class="profile-left">
               <div class="profile-avatar">
-                <img *ngIf="student.photo_url"
-                     [src]="student.photo_url" [alt]="getFullName()" />
+                <img *ngIf="student.photo_url" [src]="student.photo_url" [alt]="getFullName()" />
                 <div *ngIf="!student.photo_url" class="avatar-large">
                   {{ getInitials() }}
                 </div>
@@ -58,9 +53,7 @@
                 <h1>{{ getFullName() }}</h1>
                 <p class="student-number">{{ student.student_number }}</p>
                 <span class="class-badge">{{ student.class?.name }}</span>
-                <span class="status-badge"
-                      [class.active]="student.is_active"
-                      [class.inactive]="!student.is_active">
+                <span class="status-badge" [class.active]="student.is_active" [class.inactive]="!student.is_active">
                   {{ student.is_active ? 'Active' : 'Inactive' }}
                 </span>
               </div>
@@ -122,13 +115,11 @@
           <div class="tabs-container" *ngIf="permissionService.school.fees">
             <div class="tabs">
               <button class="tab" [class.active]="activeTab === 'overview'"
-                      (click)="activeTab = 'overview'">Overview</button>
-              <button class="tab" [class.active]="activeTab === 'fees'"
-                      (click)="activeTab = 'fees'">
+                (click)="activeTab = 'overview'">Overview</button>
+              <button class="tab" [class.active]="activeTab === 'fees'" (click)="activeTab = 'fees'">
                 Fees ({{ fees.length }})
               </button>
-              <button class="tab" [class.active]="activeTab === 'payments'"
-                      (click)="activeTab = 'payments'">
+              <button class="tab" [class.active]="activeTab === 'payments'" (click)="activeTab = 'payments'">
                 Payments ({{ payments.length }})
               </button>
             </div>
@@ -158,6 +149,22 @@
 
           <!-- Fees Tab -->
           <div *ngIf="activeTab === 'fees'" class="tab-content">
+
+            <!-- Export Statement Button -->
+            <div class="tab-action-bar">
+              <div class="tab-action-info">
+                <i class="ri-file-list-3-line"></i>
+                <span>{{ fees.length }} fee{{ fees.length !== 1 ? 's' : '' }} assigned for {{ currentTerm }} {{
+                  currentAcademicYear }}</span>
+              </div>
+              <button class="btn-export-statement" (click)="exportStatementOfBilling()" [disabled]="exportingStatement"
+                title="Export/Print student statement of billing">
+                <i class="ri-file-pdf-line" *ngIf="!exportingStatement"></i>
+                <i class="ri-loader-4-line spin-icon" *ngIf="exportingStatement"></i>
+                {{ exportingStatement ? 'Generating...' : 'Export Statement' }}
+              </button>
+            </div>
+
             <div class="table-card">
               <table class="data-table">
                 <thead>
@@ -173,8 +180,9 @@
                   <tr *ngFor="let fee of fees">
                     <td>{{ fee.fee_name }}</td>
                     <td>{{ formatCurrency(fee.amount_due) }}</td>
-                    <td>{{ formatCurrency(fee.amount_paid) }}</td>
-                    <td>{{ formatCurrency(fee.amount_due - fee.amount_paid) }}</td>
+                    <td style="color:#059669; font-weight:500;">{{ formatCurrency(fee.amount_paid) }}</td>
+                    <td style="color:#dc2626; font-weight:500;">{{ formatCurrency(fee.amount_due - fee.amount_paid) }}
+                    </td>
                     <td>
                       <span class="status-badge" [ngClass]="getFeeStatusClass(fee.status)">
                         {{ fee.status | titlecase }}
@@ -182,8 +190,12 @@
                     </td>
                   </tr>
                   <tr *ngIf="fees.length === 0">
-                    <td colspan="5" class="empty-state">
-                      <p>No fees assigned for this term</p>
+                    <td colspan="5">
+                      <div class="empty-state">
+                        <i class="ri-file-list-3-line"
+                          style="font-size:36px; color:#d1d5db; display:block; margin-bottom:8px;"></i>
+                        <p>No fees assigned for this term</p>
+                      </div>
                     </td>
                   </tr>
                 </tbody>
@@ -191,8 +203,8 @@
                   <tr class="total-row">
                     <td><strong>Total</strong></td>
                     <td><strong>{{ formatCurrency(getTotalDue()) }}</strong></td>
-                    <td><strong>{{ formatCurrency(getTotalPaid()) }}</strong></td>
-                    <td><strong>{{ formatCurrency(getTotalBalance()) }}</strong></td>
+                    <td><strong style="color:#059669;">{{ formatCurrency(getTotalPaid()) }}</strong></td>
+                    <td><strong style="color:#dc2626;">{{ formatCurrency(getTotalBalance()) }}</strong></td>
                     <td></td>
                   </tr>
                 </tfoot>
@@ -200,8 +212,24 @@
             </div>
           </div>
 
+
           <!-- Payments Tab -->
           <div *ngIf="activeTab === 'payments'" class="tab-content">
+
+            <!-- Export Statement from Payments tab too -->
+            <div class="tab-action-bar" *ngIf="payments.length > 0">
+              <div class="tab-action-info">
+                <i class="ri-money-dollar-circle-line"></i>
+                <span>{{ payments.length }} payment{{ payments.length !== 1 ? 's' : '' }} recorded</span>
+              </div>
+              <button class="btn-export-statement" (click)="exportStatementOfBilling()" [disabled]="exportingStatement"
+                title="Export full statement including payment history">
+                <i class="ri-file-pdf-line" *ngIf="!exportingStatement"></i>
+                <i class="ri-loader-4-line spin-icon" *ngIf="exportingStatement"></i>
+                {{ exportingStatement ? 'Generating...' : 'Export Statement' }}
+              </button>
+            </div>
+
             <div class="table-card">
               <table class="data-table">
                 <thead>
@@ -210,6 +238,7 @@
                     <th>Date</th>
                     <th>Amount</th>
                     <th>Method</th>
+                    <th>Received By</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -219,22 +248,33 @@
                       <span class="receipt-number">{{ payment.receipt_number }}</span>
                     </td>
                     <td>{{ payment.payment_date | date:'MMM d, y' }}</td>
-                    <td>{{ formatCurrency(payment.amount) }}</td>
+                    <td style="font-weight:600; color:#059669;">{{ formatCurrency(payment.amount) }}</td>
                     <td>{{ payment.payment_method }}</td>
+                    <td>{{ payment.received_by_name || '—' }}</td>
                     <td>
-                      <button class="btn-icon-small"
-                              (click)="viewReceipt(payment.receipt_number)"
-                              title="View Receipt">
+                      <button class="btn-icon-small" (click)="viewReceipt(payment.receipt_number)" title="View Receipt">
                         <i class="ri-file-text-line"></i>
                       </button>
                     </td>
                   </tr>
                   <tr *ngIf="payments.length === 0">
-                    <td colspan="5" class="empty-state">
-                      <p>No payments recorded for this term</p>
+                    <td colspan="6">
+                      <div class="empty-state">
+                        <i class="ri-receipt-line"
+                          style="font-size:36px; color:#d1d5db; display:block; margin-bottom:8px;"></i>
+                        <p>No payments recorded for this term</p>
+                      </div>
                     </td>
                   </tr>
                 </tbody>
+                <!-- Payments total row -->
+                <tfoot *ngIf="payments.length > 0">
+                  <tr class="total-row">
+                    <td colspan="2"><strong>Total Paid This Term</strong></td>
+                    <td><strong style="color:#059669;">{{ formatCurrency(getTotalPaymentsAmount()) }}</strong></td>
+                    <td colspan="3"></td>
+                  </tr>
+                </tfoot>
               </table>
             </div>
           </div>

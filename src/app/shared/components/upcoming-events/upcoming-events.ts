@@ -9,6 +9,7 @@ interface Event {
   location: string;
   type: 'service' | 'meeting' | 'event' | 'other';
   attendees?: number;
+  flyer_url?: string | null;  // ← ADD THIS
 }
 
 @Component({

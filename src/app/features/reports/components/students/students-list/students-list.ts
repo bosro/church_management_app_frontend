@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { FormBuilder, FormGroup } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { takeUntil, debounceTime, distinctUntilChanged } from 'rxjs/operators';
@@ -19,7 +19,7 @@ import { ClassFeeExportService } from '../../../services/class-fee-export.servic
   styleUrl: './students-list.scss',
 })
 export class StudentsList implements OnInit, OnDestroy {
- private destroy$ = new Subject<void>();
+  private destroy$ = new Subject<void>();
 
   students: Student[] = [];
   classes: SchoolClass[] = [];
@@ -37,27 +37,48 @@ export class StudentsList implements OnInit, OnDestroy {
   terms = TERMS;
   academicYears = generateAcademicYears();
 
+  // ── Sort ──────────────────────────────────────────────────
+  sortOrder: 'name_asc' | 'name_desc' | 'created_at_desc' = 'name_asc';
+
   // Fee data per student
   feeTerm = TERMS[0];
   feeYear = currentAcademicYear();
   feeDataMap: Map<string, any> = new Map();
 
-  // Selection
+  // ── Bulk Selection ────────────────────────────────────────
   selectedStudentIds = new Set<string>();
+  get allSelected(): boolean {
+    return this.students.length > 0 && this.students.every(s => this.selectedStudentIds.has(s.id));
+  }
+  get someSelected(): boolean {
+    return this.selectedStudentIds.size > 0 && !this.allSelected;
+  }
 
-  // Modals
+  // ── Bulk Delete / Duplicates ──────────────────────────────
+  showBulkDeleteConfirm = false;
+  showDuplicateConfirm = false;
+  bulkDeleting = false;
+  deduplicating = false;
+  duplicateStats: { groups: number; toDelete: number } | null = null;
+  loadingDuplicateStats = false;
+
+  // ── Modals ────────────────────────────────────────────────
   showExportModal = false;
   showBrandingModal = false;
 
-  // Print
+  // ── Print ─────────────────────────────────────────────────
   printStatements: any[] = [];
   printBrandingName = '';
+
+  // ── Class filter label (shown when coming from class card) ─
+  activeClassFilter: SchoolClass | null = null;
 
   constructor(
     private fb: FormBuilder,
     private schoolService: SchoolService,
     public permissionService: PermissionService,
     public router: Router,
+    private route: ActivatedRoute,
     private classFeeExport: ClassFeeExportService,
     private pdfBranding: PdfBrandingService,
   ) {}
@@ -77,7 +98,23 @@ export class StudentsList implements OnInit, OnDestroy {
       });
 
     this.loadClasses();
-    this.loadStudents();
+
+    this.route.queryParams
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(params => {
+        if (params['classId']) {
+          this.filterForm.patchValue({ classId: params['classId'] }, { emitEvent: false });
+        }
+        this.loadStudents();
+      });
+
+    if (this.permissionService.school?.fees) {
+      this.loadFeeData();
+    }
+
+    if (this.permissionService.isAdmin) {
+      this.loadDuplicateStats();
+    }
   }
 
   ngOnDestroy(): void {
@@ -88,11 +125,36 @@ export class StudentsList implements OnInit, OnDestroy {
   loadClasses(): void {
     this.schoolService.getClasses()
       .pipe(takeUntil(this.destroy$))
-      .subscribe({ next: (c) => (this.classes = c) });
+      .subscribe({
+        next: (c) => {
+          this.classes = c;
+          this.resolveActiveClassLabel();
+        },
+      });
   }
+
+  private resolveActiveClassLabel(): void {
+    const classId = this.filterForm.value.classId;
+    if (classId && this.classes.length) {
+      this.activeClassFilter = this.classes.find(c => c.id === classId) || null;
+    } else {
+      this.activeClassFilter = null;
+    }
+  }
+
+  // ── Sort ──────────────────────────────────────────────────
+
+  setSortOrder(order: 'name_asc' | 'name_desc' | 'created_at_desc'): void {
+    this.sortOrder = order;
+    this.currentPage = 1;
+    this.loadStudents();
+  }
+
+  // ── Load ──────────────────────────────────────────────────
 
   loadStudents(): void {
     this.loading = true;
+    this.resolveActiveClassLabel();
     const { search, classId, isActive } = this.filterForm.value;
 
     this.schoolService.getStudents(
@@ -100,6 +162,7 @@ export class StudentsList implements OnInit, OnDestroy {
         search: search || undefined,
         classId: classId || undefined,
         isActive: isActive === '' ? undefined : isActive === 'true',
+        sortBy: this.sortOrder,
       },
       this.currentPage,
       this.pageSize,
@@ -110,7 +173,7 @@ export class StudentsList implements OnInit, OnDestroy {
         this.students = data;
         this.totalStudents = count;
         this.loading = false;
-        if (this.permissionService.school.fees) {
+        if (this.permissionService.school?.fees) {
           this.loadFeeData();
         }
       },
@@ -121,13 +184,12 @@ export class StudentsList implements OnInit, OnDestroy {
     });
   }
 
-  // ── Fee data for all visible students ────────────────────
+  // ── Fee data ─────────────────────────────────────────────
 
   loadFeeData(): void {
     if (this.students.length === 0) return;
     const studentIds = this.students.map(s => s.id);
 
-    // Fetch student_fees for all visible students in one query
     this.schoolService
       .getStudentFeesForMultiple(studentIds, this.feeYear, this.feeTerm)
       .pipe(takeUntil(this.destroy$))
@@ -135,7 +197,6 @@ export class StudentsList implements OnInit, OnDestroy {
         next: (fees) => {
           this.feeDataMap.clear();
           const map: { [sid: string]: any } = {};
-
           fees.forEach((fee: any) => {
             const sid = fee.student_id;
             if (!map[sid]) {
@@ -155,12 +216,11 @@ export class StudentsList implements OnInit, OnDestroy {
             else if (fee.status === 'partial' && map[sid].status !== 'unpaid')
               map[sid].status = 'partial';
           });
-
           Object.entries(map).forEach(([sid, data]) => {
             this.feeDataMap.set(sid, data);
           });
         },
-        error: () => { /* fee data unavailable — show dashes */ },
+        error: () => { /* non-critical */ },
       });
   }
 
@@ -168,28 +228,14 @@ export class StudentsList implements OnInit, OnDestroy {
     return this.feeDataMap.get(studentId) || null;
   }
 
-  onFeeFilterChange(): void {
-    this.loadFeeData();
-  }
+  onFeeFilterChange(): void { this.loadFeeData(); }
 
-  // ── Selection ─────────────────────────────────────────────
-
-  get allSelected(): boolean {
-    return this.students.length > 0 &&
-      this.students.every(s => this.selectedStudentIds.has(s.id));
-  }
-
-  get someSelected(): boolean {
-    return this.selectedStudentIds.size > 0 && !this.allSelected;
-  }
+  // ── Bulk Selection ────────────────────────────────────────
 
   toggleSelectAll(event: Event): void {
     const checked = (event.target as HTMLInputElement).checked;
-    if (checked) {
-      this.students.forEach(s => this.selectedStudentIds.add(s.id));
-    } else {
-      this.students.forEach(s => this.selectedStudentIds.delete(s.id));
-    }
+    if (checked) this.students.forEach(s => this.selectedStudentIds.add(s.id));
+    else this.students.forEach(s => this.selectedStudentIds.delete(s.id));
     this.selectedStudentIds = new Set(this.selectedStudentIds);
   }
 
@@ -205,6 +251,92 @@ export class StudentsList implements OnInit, OnDestroy {
     this.selectedStudentIds = new Set();
   }
 
+  get selectedCount(): number { return this.selectedStudentIds.size; }
+
+  // ── Bulk Delete ───────────────────────────────────────────
+
+  openBulkDeleteConfirm(): void {
+    if (this.selectedStudentIds.size === 0) return;
+    this.showBulkDeleteConfirm = true;
+  }
+
+  closeBulkDeleteConfirm(): void {
+    if (!this.bulkDeleting) this.showBulkDeleteConfirm = false;
+  }
+
+  executeBulkDelete(): void {
+    const ids = Array.from(this.selectedStudentIds);
+    this.bulkDeleting = true;
+
+    this.schoolService
+      .bulkDeleteStudents(ids)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (result) => {
+          this.bulkDeleting = false;
+          this.showBulkDeleteConfirm = false;
+          this.clearSelection();
+          this.successMessage = `Deleted ${result.deleted} student${result.deleted !== 1 ? 's' : ''} successfully.`;
+          if (result.errors.length > 0) {
+            this.errorMessage = `${result.errors.length} student(s) could not be deleted.`;
+          }
+          this.loadStudents();
+          this.loadDuplicateStats();
+          setTimeout(() => (this.successMessage = ''), 4000);
+        },
+        error: (err) => {
+          this.bulkDeleting = false;
+          this.errorMessage = 'Bulk delete failed: ' + (err.message || 'Unknown error');
+        },
+      });
+  }
+
+  // ── Duplicate Detection ───────────────────────────────────
+
+  loadDuplicateStats(): void {
+    this.loadingDuplicateStats = true;
+    this.schoolService
+      .getStudentDuplicateStats()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (stats) => {
+          this.duplicateStats = stats;
+          this.loadingDuplicateStats = false;
+        },
+        error: () => { this.loadingDuplicateStats = false; },
+      });
+  }
+
+  openDuplicateConfirm(): void {
+    if (!this.duplicateStats || this.duplicateStats.toDelete === 0) return;
+    this.showDuplicateConfirm = true;
+  }
+
+  closeDuplicateConfirm(): void {
+    if (!this.deduplicating) this.showDuplicateConfirm = false;
+  }
+
+  executeDeduplication(): void {
+    this.deduplicating = true;
+    this.schoolService
+      .deleteStudentDuplicates()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (result) => {
+          this.deduplicating = false;
+          this.showDuplicateConfirm = false;
+          this.duplicateStats = { groups: 0, toDelete: 0 };
+          this.successMessage = `Removed ${result.deleted} duplicate record${result.deleted !== 1 ? 's' : ''} across ${result.groups} group${result.groups !== 1 ? 's' : ''}.`;
+          this.loadStudents();
+          setTimeout(() => (this.successMessage = ''), 5000);
+        },
+        error: (err) => {
+          this.deduplicating = false;
+          this.errorMessage = 'Failed to remove duplicates: ' + (err.message || 'Unknown error');
+        },
+      });
+  }
+
   // ── Export selected as PDF ────────────────────────────────
 
   async exportSelected(): Promise<void> {
@@ -214,9 +346,7 @@ export class StudentsList implements OnInit, OnDestroy {
       const branding = await this.pdfBranding.getBranding();
       const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
       const pw = doc.internal.pageSize.getWidth();
-      const today = new Date().toLocaleDateString('en-GB', {
-        day: '2-digit', month: 'long', year: 'numeric',
-      });
+      const today = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
       let isFirst = true;
 
       for (const studentId of this.selectedStudentIds) {
@@ -227,28 +357,19 @@ export class StudentsList implements OnInit, OnDestroy {
         if (!isFirst) doc.addPage();
         isFirst = false;
 
-        // Header
         doc.setFillColor(79, 70, 229);
         doc.rect(0, 0, pw, 28, 'F');
         if (branding.logoBase64) {
-          try {
-            doc.addImage(
-              branding.logoBase64,
-              branding.logoMimeType.replace('image/', '').toUpperCase(),
-              14, 4, 18, 18,
-            );
-          } catch { /* skip */ }
+          try { doc.addImage(branding.logoBase64, branding.logoMimeType.replace('image/', '').toUpperCase(), 14, 4, 18, 18); } catch { }
         }
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(16); doc.setFont('helvetica', 'bold');
         doc.text(branding.name, 36, 13);
         doc.setFontSize(10); doc.setFont('helvetica', 'normal');
         doc.text('Student Fee Statement', 36, 21);
-        if (branding.tagline) { doc.setFontSize(8); doc.text(branding.tagline, 36, 27); }
         doc.setFontSize(8);
         doc.text(today, pw - 14, 21, { align: 'right' });
 
-        // Student info
         doc.setFillColor(248, 250, 252);
         doc.roundedRect(14, 34, pw - 28, 30, 3, 3, 'F');
         doc.setTextColor(17, 24, 39);
@@ -261,13 +382,8 @@ export class StudentsList implements OnInit, OnDestroy {
         doc.text(`${this.feeTerm}  |  ${this.feeYear}`, 20, 62);
 
         if (fd) {
-          // Summary boxes
-          const statusColors: Record<string, [number, number, number]> = {
-            paid: [6, 95, 70], partial: [146, 64, 14], unpaid: [153, 27, 27],
-          };
-          const statusBg: Record<string, [number, number, number]> = {
-            paid: [209, 250, 229], partial: [254, 243, 199], unpaid: [254, 226, 226],
-          };
+          const statusBg: Record<string, [number,number,number]> = { paid:[209,250,229], partial:[254,243,199], unpaid:[254,226,226] };
+          const statusColors: Record<string, [number,number,number]> = { paid:[6,95,70], partial:[146,64,14], unpaid:[153,27,27] };
           const st = fd.status || 'unpaid';
           doc.setFillColor(...(statusBg[st] || statusBg['unpaid']));
           doc.roundedRect(pw - 52, 36, 38, 12, 3, 3, 'F');
@@ -276,15 +392,14 @@ export class StudentsList implements OnInit, OnDestroy {
           doc.text(st.charAt(0).toUpperCase() + st.slice(1), pw - 33, 44, { align: 'center' });
 
           const boxes = [
-            { label: 'Total Due', value: this.fmtPDF(fd.totalDue), color: [238, 242, 255] as [number, number, number], text: [79, 70, 229] as [number, number, number] },
-            { label: 'Total Paid', value: this.fmtPDF(fd.totalPaid), color: [209, 250, 229] as [number, number, number], text: [6, 95, 70] as [number, number, number] },
-            { label: 'Balance', value: this.fmtPDF(fd.totalBalance), color: fd.totalBalance > 0 ? [254, 226, 226] as [number, number, number] : [209, 250, 229] as [number, number, number], text: fd.totalBalance > 0 ? [153, 27, 27] as [number, number, number] : [6, 95, 70] as [number, number, number] },
+            { label: 'Total Due', value: this.fmtPDF(fd.totalDue), color: [238,242,255] as [number,number,number], text: [79,70,229] as [number,number,number] },
+            { label: 'Total Paid', value: this.fmtPDF(fd.totalPaid), color: [209,250,229] as [number,number,number], text: [6,95,70] as [number,number,number] },
+            { label: 'Balance', value: this.fmtPDF(fd.totalBalance), color: fd.totalBalance > 0 ? [254,226,226] as [number,number,number] : [209,250,229] as [number,number,number], text: fd.totalBalance > 0 ? [153,27,27] as [number,number,number] : [6,95,70] as [number,number,number] },
           ];
           const bw = (pw - 28 - 12) / 3;
           boxes.forEach((box, i) => {
             const x = 14 + i * (bw + 6);
-            doc.setFillColor(...box.color);
-            doc.roundedRect(x, 70, bw, 22, 3, 3, 'F');
+            doc.setFillColor(...box.color); doc.roundedRect(x, 70, bw, 22, 3, 3, 'F');
             doc.setTextColor(...box.text);
             doc.setFontSize(8); doc.setFont('helvetica', 'normal');
             doc.text(box.label, x + bw / 2, 78, { align: 'center' });
@@ -292,52 +407,27 @@ export class StudentsList implements OnInit, OnDestroy {
             doc.text(box.value, x + bw / 2, 87, { align: 'center' });
           });
 
-          // Fee table
           autoTable(doc, {
             startY: 100,
             head: [['Fee Item', 'Amount Due', 'Amount Paid', 'Balance', 'Status']],
             body: fd.fees.length > 0
-              ? fd.fees.map((f: any) => [
-                  f.feeName,
-                  this.fmtPDF(f.amountDue),
-                  this.fmtPDF(f.amountPaid),
-                  this.fmtPDF(f.balance),
-                  f.status.charAt(0).toUpperCase() + f.status.slice(1),
-                ])
+              ? fd.fees.map((f: any) => [f.feeName, this.fmtPDF(f.amountDue), this.fmtPDF(f.amountPaid), this.fmtPDF(f.balance), f.status.charAt(0).toUpperCase() + f.status.slice(1)])
               : [['No fees assigned', '', '', '', '']],
-            foot: fd.fees.length > 0 ? [[
-              'TOTAL',
-              this.fmtPDF(fd.totalDue),
-              this.fmtPDF(fd.totalPaid),
-              this.fmtPDF(fd.totalBalance),
-              '',
-            ]] : undefined,
+            foot: fd.fees.length > 0 ? [['TOTAL', this.fmtPDF(fd.totalDue), this.fmtPDF(fd.totalPaid), this.fmtPDF(fd.totalBalance), '']] : undefined,
             styles: { fontSize: 9, cellPadding: 3.5 },
             headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold' },
             footStyles: { fillColor: [255, 247, 237], textColor: [146, 64, 14], fontStyle: 'bold' },
             alternateRowStyles: { fillColor: [249, 250, 251] },
-            columnStyles: {
-              1: { halign: 'right' }, 2: { halign: 'right' },
-              3: { halign: 'right', textColor: [220, 38, 38] as [number, number, number] },
-              4: { halign: 'center' },
-            },
+            columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right', textColor: [220,38,38] as [number,number,number] }, 4: { halign: 'center' } },
           });
         } else {
-          doc.setTextColor(156, 163, 175);
-          doc.setFontSize(11); doc.setFont('helvetica', 'normal');
+          doc.setTextColor(156, 163, 175); doc.setFontSize(11);
           doc.text('No fee data available for this term.', pw / 2, 85, { align: 'center' });
         }
 
-        // Footer
         doc.setFontSize(7); doc.setTextColor(156, 163, 175); doc.setFont('helvetica', 'normal');
-        doc.text(
-          `${branding.name}${branding.address ? '  •  ' + branding.address : ''}${branding.phone ? '  •  ' + branding.phone : ''}`,
-          pw / 2, doc.internal.pageSize.getHeight() - 10, { align: 'center' },
-        );
-        doc.text(
-          'This is an official fee statement.',
-          pw / 2, doc.internal.pageSize.getHeight() - 6, { align: 'center' },
-        );
+        doc.text(`${branding.name}${branding.address ? '  •  ' + branding.address : ''}${branding.phone ? '  •  ' + branding.phone : ''}`, pw / 2, doc.internal.pageSize.getHeight() - 10, { align: 'center' });
+        doc.text('This is an official fee statement.', pw / 2, doc.internal.pageSize.getHeight() - 6, { align: 'center' });
       }
 
       const blob = new Blob([doc.output('arraybuffer')], { type: 'application/pdf' });
@@ -348,7 +438,6 @@ export class StudentsList implements OnInit, OnDestroy {
       document.body.appendChild(a); a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
-
     } catch (e: any) {
       this.errorMessage = 'Export failed: ' + e.message;
     } finally {
@@ -356,13 +445,10 @@ export class StudentsList implements OnInit, OnDestroy {
     }
   }
 
-  // ── Print selected ────────────────────────────────────────
-
   async printSelected(): Promise<void> {
     if (this.selectedStudentIds.size === 0) return;
     const branding = await this.pdfBranding.getBranding();
     this.printBrandingName = branding.name;
-
     this.printStatements = [];
     for (const studentId of this.selectedStudentIds) {
       const student = this.students.find(s => s.id === studentId);
@@ -379,12 +465,8 @@ export class StudentsList implements OnInit, OnDestroy {
         status: fd?.status || '—',
       });
     }
-
-    // Wait for Angular to render then print
     setTimeout(() => window.print(), 300);
   }
-
-  // ── Export single student statement ───────────────────────
 
   async exportStudentStatement(studentId: string, event: Event): Promise<void> {
     event.stopPropagation();
@@ -398,10 +480,17 @@ export class StudentsList implements OnInit, OnDestroy {
   // ── Navigation ────────────────────────────────────────────
 
   viewStudent(id: string): void { this.router.navigate(['main/reports/students', id]); }
+
   addStudent(): void { this.router.navigate(['main/reports/students/add']); }
+
   editStudent(id: string, event: Event): void {
     event.stopPropagation();
     this.router.navigate(['main/reports/students', id, 'edit']);
+  }
+
+  clearClassFilter(): void {
+    this.filterForm.patchValue({ classId: '' });
+    this.router.navigate(['main/reports/students']);
   }
 
   previousPage(): void { if (this.currentPage > 1) { this.currentPage--; this.loadStudents(); } }
@@ -409,12 +498,13 @@ export class StudentsList implements OnInit, OnDestroy {
 
   clearFilters(): void {
     this.filterForm.reset({ search: '', classId: '', isActive: 'true' });
+    this.sortOrder = 'name_asc';
+    this.router.navigate(['main/reports/students']);
   }
 
   openExport(): void { this.showExportModal = true; }
 
   async exportAs(format: 'csv' | 'xlsx' | 'pdf'): Promise<void> {
-    // existing export logic — keep as is
     this.showExportModal = false;
   }
 
@@ -433,9 +523,7 @@ export class StudentsList implements OnInit, OnDestroy {
   }
 
   private fmtPDF(amount: number): string {
-    return new Intl.NumberFormat('en-GH', {
-      style: 'currency', currency: 'GHS', currencyDisplay: 'code',
-    }).format(amount || 0);
+    return new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS', currencyDisplay: 'code' }).format(amount || 0);
   }
 }
 

@@ -5,6 +5,7 @@
     <div class="dashboard-body">
       <div class="record-payment-container">
 
+        <!-- Page Header -->
         <div class="page-header">
           <div class="header-left">
             <button class="back-btn" (click)="cancel()">
@@ -19,6 +20,7 @@
           </div>
         </div>
 
+        <!-- Alerts -->
         <div *ngIf="successMessage" class="success-alert">
           <i class="ri-checkbox-circle-line"></i>
           {{ successMessage }}
@@ -26,6 +28,7 @@
         <div *ngIf="errorMessage" class="error-alert">
           <i class="ri-error-warning-line"></i>
           {{ errorMessage }}
+          <button class="close-inline" (click)="errorMessage = ''"><i class="ri-close-line"></i></button>
         </div>
 
         <!-- Term Selector -->
@@ -46,45 +49,136 @@
 
         <div *ngIf="!loading" class="payment-layout">
 
-          <!-- Left: Fees to Pay -->
-          <div class="fees-panel">
-            <div class="panel-header">
-              <h3>Outstanding Fees</h3>
-            </div>
+          <!-- Left column -->
+          <div class="left-column">
 
-            <div *ngIf="fees.length === 0" class="empty-state">
-              <i class="ri-checkbox-circle-line" style="color: #10B981;"></i>
-              <p>No outstanding fees for this term!</p>
-            </div>
-
-            <div *ngFor="let fp of feePayments" class="fee-row">
-              <div class="fee-select">
-                <input type="checkbox" [(ngModel)]="fp.selected" />
+            <!-- NEW: Fee Structure Overview Card -->
+            <div class="fee-overview-card" *ngIf="fees.length > 0">
+              <div class="fee-overview-header">
+                <h3><i class="ri-file-list-3-line"></i> Fee Summary — {{ selectedTerm }} {{ selectedYear }}</h3>
               </div>
-              <div class="fee-info">
-                <p class="fee-name">{{ fp.fee.fee_name }}</p>
-                <p class="fee-balance">
-                  Balance: {{ formatCurrency(fp.fee.amount_due - fp.fee.amount_paid) }}
+              <div class="fee-overview-stats">
+                <div class="fee-stat">
+                  <p class="fee-stat-label">Total Charged</p>
+                  <p class="fee-stat-value">{{ formatCurrency(totalFeesDue) }}</p>
+                </div>
+                <div class="fee-stat paid">
+                  <p class="fee-stat-label">Total Paid</p>
+                  <p class="fee-stat-value">{{ formatCurrency(totalFeesPaid) }}</p>
+                </div>
+                <div class="fee-stat" [class.outstanding]="totalFeesBalance > 0">
+                  <p class="fee-stat-label">Remaining</p>
+                  <p class="fee-stat-value">{{ formatCurrency(totalFeesBalance) }}</p>
+                </div>
+              </div>
+              <!-- Per-fee breakdown (all fees including paid) -->
+              <div class="fee-overview-list">
+                <div *ngFor="let fee of fees" class="fee-overview-row">
+                  <div class="fee-overview-info">
+                    <span class="fee-overview-name">{{ fee.fee_name }}</span>
+                    <span class="fee-status-mini" [class]="'status-' + fee.status">{{ fee.status | titlecase }}</span>
+                  </div>
+                  <div class="fee-overview-amounts">
+                    <span class="fee-due">{{ formatCurrency(fee.amount_due) }}</span>
+                    <span class="fee-paid-of">paid {{ formatCurrency(fee.amount_paid) }}</span>
+                    <span class="fee-balance" [class.zero]="(fee.amount_due - fee.amount_paid) === 0">
+                      {{ formatCurrency(fee.amount_due - fee.amount_paid) }} left
+                    </span>
+                    <!-- NEW: History button -->
+                    <button class="btn-history" (click)="openPaymentHistory(fee, $event)"
+                      title="View payment history for this fee">
+                      <i class="ri-history-line"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Outstanding Fees to pay -->
+            <div class="fees-panel">
+              <div class="panel-header">
+                <h3>Outstanding Fees</h3>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span class="panel-subtitle">Select fees to pay now</span>
+                  <button class="btn-assign-fee" (click)="openAssignFeeModal()"
+                    title="Assign an additional fee to this student">
+                    <i class="ri-add-line"></i> Assign Fee
+                  </button>
+                </div>
+              </div>
+
+              <div *ngIf="feePayments.length === 0" class="empty-state">
+                <i class="ri-checkbox-circle-line" style="color:#10B981;font-size:32px;"></i>
+                <p>No outstanding fees for this term!</p>
+              </div>
+
+              <div *ngFor="let fp of feePayments" class="fee-row">
+                <div class="fee-select">
+                  <input type="checkbox" [(ngModel)]="fp.selected" />
+                </div>
+                <div class="fee-info">
+                  <p class="fee-name">{{ fp.fee.fee_name }}</p>
+                  <p class="fee-balance-txt">
+                    Balance: {{ formatCurrency(fp.fee.amount_due - fp.fee.amount_paid) }}
+                  </p>
+                  <span class="fee-status" [class]="'status-' + fp.fee.status">
+                    {{ fp.fee.status | titlecase }}
+                  </span>
+                </div>
+                <div class="fee-amount-input">
+                  <input type="number" [(ngModel)]="fp.amount" [disabled]="!fp.selected"
+                    [max]="fp.fee.amount_due - fp.fee.amount_paid" min="0" step="0.01" class="amount-input" />
+                </div>
+              </div>
+
+              <!-- Payment subtotal -->
+              <div class="payment-subtotal" *ngIf="feePayments.length > 0">
+                <span>Fees subtotal</span>
+                <strong>{{ formatCurrency(selectedFeePaymentTotal) }}</strong>
+              </div>
+            </div>
+
+            <!-- NEW: Arrears Panel -->
+            <!-- <div class="arrears-panel">
+              <div class="arrears-toggle" (click)="includeArrears = !includeArrears">
+                <div class="arrears-toggle-left">
+                  <div class="arrears-icon">
+                    <i class="ri-time-line"></i>
+                  </div>
+                  <div>
+                    <p class="arrears-title">Include Previous Balance (Arrears)</p>
+                    <p class="arrears-sub">Add an outstanding balance from a previous period</p>
+                  </div>
+                </div>
+                <div class="toggle-switch" [class.active]="includeArrears">
+                  <div class="toggle-knob"></div>
+                </div>
+              </div>
+
+              <div *ngIf="includeArrears" class="arrears-inputs">
+                <div class="arrears-row">
+                  <div class="arrears-field">
+                    <label>Amount (GHS) *</label>
+                    <input type="number" [(ngModel)]="arrearsAmount" min="0" step="0.01" placeholder="0.00"
+                      class="arrears-amount-input" />
+                  </div>
+                  <div class="arrears-field wide">
+                    <label>Description</label>
+                    <input type="text" [(ngModel)]="arrearsDescription" placeholder="e.g., Term 2 2025/2026 balance"
+                      class="arrears-desc-input" />
+                  </div>
+                </div>
+                <p class="arrears-note">
+                  <i class="ri-information-line"></i>
+                  This will be recorded as an arrears line item on the receipt.
                 </p>
-                <span class="fee-status" [class]="'status-' + fp.fee.status">
-                  {{ fp.fee.status | titlecase }}
-                </span>
               </div>
-              <div class="fee-amount-input">
-                <input type="number" [(ngModel)]="fp.amount" [disabled]="!fp.selected"
-                  [max]="fp.fee.amount_due - fp.fee.amount_paid" min="0" step="0.01" class="amount-input" />
-              </div>
-            </div>
+            </div> -->
 
-            <!-- Total -->
-            <div class="payment-total" *ngIf="fees.length > 0">
-              <span>Total Payment</span>
-              <strong>{{ formatCurrency(totalPayment) }}</strong>
-            </div>
-          </div>
+          </div><!-- /left-column -->
 
           <!-- Right: Payment Details -->
-          <div class="payment-details-panel" *ngIf="fees.length > 0">
+          <div class="payment-details-panel" *ngIf="fees.length > 0 || includeArrears">
             <div class="panel-header">
               <h3>Payment Details</h3>
             </div>
@@ -97,26 +191,41 @@
             <div class="form-group">
               <label>Payment Method *</label>
               <select [(ngModel)]="paymentForm.payment_method">
-                <option *ngFor="let method of paymentMethods" [value]="method">
-                  {{ method }}
-                </option>
+                <option *ngFor="let method of paymentMethods" [value]="method">{{ method }}</option>
               </select>
+            </div>
+
+            <!-- NEW: Received By -->
+            <div class="form-group">
+              <label>Received By *</label>
+              <input type="text" [(ngModel)]="paymentForm.received_by" placeholder="Name of person receiving payment" />
             </div>
 
             <div class="form-group">
               <label>Notes (Optional)</label>
-              <textarea [(ngModel)]="paymentForm.notes" rows="3" placeholder="Any additional notes..."></textarea>
+              <textarea [(ngModel)]="paymentForm.notes" rows="2" placeholder="Any additional notes..."></textarea>
             </div>
 
-            <!-- Summary -->
+            <!-- Payment Summary -->
             <div class="payment-summary">
               <h4>Payment Summary</h4>
+
               <ng-container *ngFor="let fp of feePayments">
                 <div class="summary-row" *ngIf="fp.selected && fp.amount > 0">
                   <span>{{ fp.fee.fee_name }}</span>
                   <span>{{ formatCurrency(fp.amount) }}</span>
                 </div>
               </ng-container>
+
+              <!-- Arrears line if included -->
+              <div class="summary-row arrears-row-summary" *ngIf="includeArrears && arrearsAmount > 0">
+                <span>
+                  <i class="ri-time-line"></i>
+                  {{ arrearsDescription || 'Arrears (Previous Balance)' }}
+                </span>
+                <span>{{ formatCurrency(arrearsAmount) }}</span>
+              </div>
+
               <div class="summary-total">
                 <strong>Total</strong>
                 <strong>{{ formatCurrency(totalPayment) }}</strong>
@@ -137,10 +246,153 @@
             <button class="btn-secondary btn-full" (click)="cancel()" [disabled]="processing">
               Cancel
             </button>
-          </div>
+          </div><!-- /payment-details-panel -->
 
+        </div><!-- /payment-layout -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Payment History Modal ─────────────────────────────── -->
+<div class="modal-overlay" *ngIf="showHistoryModal" (click)="closeHistoryModal()">
+  <div class="history-modal" (click)="$event.stopPropagation()">
+    <div class="history-modal-header">
+      <div class="history-modal-title">
+        <i class="ri-history-line"></i>
+        <div>
+          <h3>Payment History</h3>
+          <p *ngIf="selectedFeeHistory">{{ selectedFeeHistory.fee_name }}</p>
         </div>
       </div>
+      <button class="modal-close-btn" (click)="closeHistoryModal()">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+
+    <div class="history-modal-body">
+      <!-- Fee summary at top -->
+      <div class="history-fee-summary" *ngIf="selectedFeeHistory">
+        <div class="history-stat">
+          <span>Total Due</span>
+          <strong>{{ formatCurrency(selectedFeeHistory.amount_due) }}</strong>
+        </div>
+        <div class="history-stat paid">
+          <span>Total Paid</span>
+          <strong>{{ formatCurrency(selectedFeeHistory.amount_paid) }}</strong>
+        </div>
+        <div class="history-stat"
+          [class.outstanding]="(selectedFeeHistory.amount_due - selectedFeeHistory.amount_paid) > 0">
+          <span>Balance</span>
+          <strong>{{ formatCurrency(selectedFeeHistory.amount_due - selectedFeeHistory.amount_paid) }}</strong>
+        </div>
+      </div>
+
+      <!-- Loading -->
+      <div *ngIf="loadingHistory" class="history-loading">
+        <div class="spinner"></div>
+        <p>Loading payment history...</p>
+      </div>
+
+      <!-- History list -->
+      <div *ngIf="!loadingHistory && feePaymentHistory.length > 0" class="history-list">
+        <div *ngFor="let payment of feePaymentHistory" class="history-item">
+          <div class="history-item-left">
+            <div class="history-icon">
+              <i class="ri-money-dollar-circle-line"></i>
+            </div>
+            <div>
+              <p class="history-amount">{{ formatCurrency(payment.amount) }}</p>
+              <p class="history-date">{{ payment.payment_date | date:'MMM d, y' }}</p>
+              <p class="history-method">
+                <i class="ri-bank-card-line"></i> {{ payment.payment_method }}
+              </p>
+            </div>
+          </div>
+          <div class="history-item-right">
+            <span class="history-receipt">{{ payment.receipt_number }}</span>
+            <div class="receipt-received-by" *ngIf="payment.received_by_name">
+              <span>Received by: <strong>{{ payment.received_by_name }}</strong></span>
+            </div>
+            <p class="history-notes" *ngIf="payment.notes">{{ payment.notes }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty -->
+      <div *ngIf="!loadingHistory && feePaymentHistory.length === 0" class="history-empty">
+        <i class="ri-inbox-line"></i>
+        <p>No payments recorded yet for this fee.</p>
+      </div>
+    </div>
+  </div>
+
+
+</div>
+
+
+<!-- Assign Fee to Student Modal -->
+<div class="modal-overlay" *ngIf="showAssignFeeModal" (click)="closeAssignFeeModal()">
+  <div class="assign-fee-modal" (click)="$event.stopPropagation()">
+    <div class="assign-fee-modal-header">
+      <div>
+        <h3>Assign Fee to Student</h3>
+        <p>Add an extra fee (e.g. arrears, special levy) directly to this student</p>
+      </div>
+      <button class="modal-close-btn" (click)="closeAssignFeeModal()">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+
+    <div class="assign-fee-modal-body">
+      <div *ngIf="loadingFeeStructures" style="text-align:center; padding:24px; color:#6B7280;">
+        <i class="ri-loader-4-line spin"></i> Loading fee structures...
+      </div>
+
+      <div *ngIf="!loadingFeeStructures">
+        <div *ngIf="availableFeeStructures.length === 0" style="text-align:center; padding:24px; color:#9CA3AF;">
+          <i class="ri-file-list-3-line" style="font-size:32px; display:block; margin-bottom:8px;"></i>
+          <p style="margin:0; font-size:14px;">No additional fees available.<br>
+            <small>Create fee structures first, then assign them here.</small>
+          </p>
+        </div>
+
+        <div *ngIf="availableFeeStructures.length > 0">
+          <p style="font-size:13px; color:#374151; margin:0 0 12px; font-weight:600;">
+            Select a fee structure to assign to {{ getFullName() }}:
+          </p>
+          <div class="fee-structure-list">
+            <label *ngFor="let fs of availableFeeStructures" class="fee-structure-option"
+              [class.selected]="selectedFeeStructureToAssign === fs.id">
+              <input type="radio" name="feeStructure" [value]="fs.id" [(ngModel)]="selectedFeeStructureToAssign" />
+              <div class="fee-structure-info">
+                <span class="fee-structure-name">{{ fs.fee_name }}</span>
+                <span class="fee-structure-class">{{ fs.class?.name }}</span>
+              </div>
+              <span class="fee-structure-amount">{{ formatCurrency(fs.amount) }}</span>
+            </label>
+          </div>
+
+          <p class="assign-fee-note">
+            <i class="ri-information-line"></i>
+            The selected fee will be added to this student's fee record for
+            {{ selectedTerm }} {{ selectedYear }}. It will appear as a separate line item
+            on their receipt and in all reports.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="assign-fee-modal-footer" *ngIf="availableFeeStructures.length > 0">
+      <button class="btn-cancel-assign" (click)="closeAssignFeeModal()" [disabled]="assigningFee">
+        Cancel
+      </button>
+      <button class="btn-confirm-assign-fee" (click)="assignFeeToStudent()"
+        [disabled]="!selectedFeeStructureToAssign || assigningFee">
+        <i class="ri-add-line" *ngIf="!assigningFee"></i>
+        <i class="ri-loader-4-line spin" *ngIf="assigningFee"></i>
+        {{ assigningFee ? 'Assigning...' : 'Assign Fee' }}
+      </button>
     </div>
   </div>
 </div>

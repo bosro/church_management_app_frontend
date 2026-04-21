@@ -8,3 +8,25 @@
 
 
 
+.preselect-notice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: #EEF2FF;
+  border: 1px solid #C7D2FE;
+  border-radius: 8px;
+  color: #3730A3;
+  font-size: 14px;
+  margin-bottom: 20px;
+
+  i {
+    font-size: 18px;
+    color: #4F46E5;
+    flex-shrink: 0;
+  }
+
+  strong { color: #1E1B4B; }
+}
+
+

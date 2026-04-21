@@ -3,10 +3,11 @@ import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Routes } from '@angular/router';
 import { ReactiveFormsModule, FormsModule } from '@angular/forms';
-import { QrCodeModule } from 'ng-qrcode'; // or whatever your qr package is
+import { QrCodeModule } from 'ng-qrcode';
 
 import { LinkCheckin } from './link-checkin/link-checkin';
 import { MemberRegistration } from './member-registration/member-registration';
+import { FeedingRecord } from './feeding-record/feeding-record';
 
 const routes: Routes = [
   {
@@ -17,13 +18,14 @@ const routes: Routes = [
     path: 'register/:token',
     component: MemberRegistration,
   },
+  {
+    path: 'feeding-fees/:churchId', // ← was :token
+    component: FeedingRecord,
+  },
 ];
 
 @NgModule({
-  declarations: [
-    LinkCheckin,
-    MemberRegistration,
-  ],
+  declarations: [LinkCheckin, MemberRegistration, FeedingRecord],
   imports: [
     CommonModule,
     FormsModule,

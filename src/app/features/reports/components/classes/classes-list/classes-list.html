@@ -61,11 +61,11 @@
                 <i class="ri-building-line"></i>
               </div>
               <div class="class-actions" *ngIf="permissionService.isAdmin">
-                <button class="btn-icon-small" (click)="openEditModal(class)" title="Edit">
+                <button class="btn-icon-small" (click)="openEditModal(class)" title="Edit class">
                   <i class="ri-edit-line"></i>
                 </button>
                 <button class="btn-icon-small btn-danger"
-                        (click)="deleteClass(class)" title="Deactivate">
+                        (click)="deleteClass(class)" title="Deactivate class">
                   <i class="ri-delete-bin-line"></i>
                 </button>
               </div>
@@ -80,10 +80,18 @@
               </p>
             </div>
 
+            <!-- NEW: two-button footer -->
             <div class="class-footer">
               <button class="btn-view" (click)="viewStudents(class.id)">
                 <i class="ri-group-line"></i>
                 View Students
+              </button>
+              <button class="btn-add-student"
+                      (click)="addStudentToClass(class.id)"
+                      *ngIf="permissionService.school?.manage"
+                      title="Enrol a new student into this class">
+                <i class="ri-user-add-line"></i>
+                Add Student
               </button>
             </div>
           </div>
@@ -111,7 +119,7 @@
   </div>
 </div>
 
-<!-- Create Modal -->
+<!-- ── Create Modal ─────────────────────────────────────────────── -->
 <div class="modal-overlay" *ngIf="showCreateModal" (click)="closeCreateModal()">
   <div class="modal-content" (click)="$event.stopPropagation()">
     <div class="modal-header">
@@ -124,7 +132,8 @@
       <div class="form-group">
         <label>Class Name *</label>
         <input type="text" [(ngModel)]="classForm.name"
-               placeholder="e.g., Primary 1, JHS 2" />
+               placeholder="e.g., Primary 1, Grade 3, JHS 2, KG 1" />
+        <p class="help-text">Any naming style works — Primary, Grade, KG, JHS, etc.</p>
       </div>
       <div class="form-group">
         <label>Academic Year *</label>
@@ -157,7 +166,7 @@
   </div>
 </div>
 
-<!-- Edit Modal -->
+<!-- ── Edit Modal ───────────────────────────────────────────────── -->
 <div class="modal-overlay" *ngIf="showEditModal" (click)="closeEditModal()">
   <div class="modal-content" (click)="$event.stopPropagation()">
     <div class="modal-header">
@@ -169,7 +178,9 @@
     <div class="modal-body">
       <div class="form-group">
         <label>Class Name *</label>
-        <input type="text" [(ngModel)]="classForm.name" />
+        <input type="text" [(ngModel)]="classForm.name"
+               placeholder="e.g., Primary 1, Grade 3, JHS 2" />
+        <p class="help-text">Any naming style works — Primary, Grade, KG, JHS, etc.</p>
       </div>
       <div class="form-group">
         <label>Class Teacher</label>
@@ -194,7 +205,70 @@
   </div>
 </div>
 
-<!-- Seed Modal -->
+<!-- ── NEW: Seed Style Picker Modal ────────────────────────────── -->
+<div class="modal-overlay" *ngIf="showSeedStyleModal" (click)="closeSeedStyleModal()">
+  <div class="modal-content seed-style-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2><i class="ri-magic-line"></i> Choose Naming Style</h2>
+      <button class="close-btn" (click)="closeSeedStyleModal()">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p class="seed-intro">Select the class naming convention your school uses:</p>
+
+      <div class="style-options">
+        <!-- Ghana-style -->
+        <label class="style-option" [class.selected]="seedNamingStyle === 'primary'">
+          <input type="radio" [(ngModel)]="seedNamingStyle" value="primary" />
+          <div class="style-option-content">
+            <div class="style-icon" style="background:#EEF2FF; color:#4F46E5;">
+              <i class="ri-flag-line"></i>
+            </div>
+            <div>
+              <strong>Ghana Style</strong>
+              <p>Nursery, KG 1–3, Primary 1–6, JHS 1–3</p>
+              <div class="style-chips">
+                <span>KG 1</span><span>Primary 3</span><span>JHS 2</span>
+              </div>
+            </div>
+          </div>
+        </label>
+
+        <!-- International/Grade style -->
+        <label class="style-option" [class.selected]="seedNamingStyle === 'grade'">
+          <input type="radio" [(ngModel)]="seedNamingStyle" value="grade" />
+          <div class="style-option-content">
+            <div class="style-icon" style="background:#FEF3C7; color:#D97706;">
+              <i class="ri-global-line"></i>
+            </div>
+            <div>
+              <strong>International Style</strong>
+              <p>Nursery, Kindergarten 1–2, Grade 1–9</p>
+              <div class="style-chips">
+                <span>KG 1</span><span>Grade 3</span><span>Grade 9</span>
+              </div>
+            </div>
+          </div>
+        </label>
+      </div>
+
+      <p class="seed-note">
+        <i class="ri-information-line"></i>
+        You can always rename individual classes afterwards, or add custom ones manually.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" (click)="closeSeedStyleModal()">Cancel</button>
+      <button class="btn-primary" (click)="confirmSeedStyle()">
+        <i class="ri-arrow-right-line"></i>
+        Preview & Create
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Seed Preview Modal ────────────────────────────────────────── -->
 <div class="modal-overlay" *ngIf="showSeedModal" (click)="closeSeedModal()">
   <div class="modal-content" (click)="$event.stopPropagation()">
     <div class="modal-header">
@@ -207,7 +281,7 @@
       <p>This will create the following classes for
         <strong>{{ selectedYear }}</strong>:</p>
       <div class="default-classes-list">
-        <span *ngFor="let cls of defaultClasses" class="class-chip">
+        <span *ngFor="let cls of seedClassesPreview" class="class-chip">
           {{ cls.name }}
         </span>
       </div>

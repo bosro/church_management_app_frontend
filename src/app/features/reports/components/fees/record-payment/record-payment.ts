@@ -1,3 +1,8 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// FILE 1: record-payment.ts  — FULL REPLACEMENT
+// Path: src/app/features/reports/components/fees/record-payment/record-payment.ts
+// ═══════════════════════════════════════════════════════════════════════════
+
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { Subject } from 'rxjs';
@@ -38,15 +43,34 @@ export class RecordPayment implements OnInit, OnDestroy {
   academicYears: string[] = [];
   paymentMethods = PAYMENT_METHODS;
 
-  // Payment form
+  // ── Payment form ──────────────────────────────────────
   paymentForm = {
     payment_date: new Date().toISOString().split('T')[0],
     payment_method: 'Cash',
+    received_by: '', // NEW: who is recording the payment
     notes: '',
   };
 
   // Per-fee payment amounts
   feePayments: { fee: StudentFee; amount: number; selected: boolean }[] = [];
+
+  // ── NEW: Arrears ──────────────────────────────────────
+  includeArrears = false;
+  arrearsAmount = 0;
+  arrearsDescription = '';
+
+  // ── NEW: Payment history modal ────────────────────────
+  showHistoryModal = false;
+  selectedFeeHistory: StudentFee | null = null;
+  feePaymentHistory: any[] = [];
+  loadingHistory = false;
+
+  // Add these properties
+  showAssignFeeModal = false;
+  availableFeeStructures: any[] = [];
+  loadingFeeStructures = false;
+  assigningFee = false;
+  selectedFeeStructureToAssign = '';
 
   constructor(
     private schoolService: SchoolService,
@@ -66,6 +90,10 @@ export class RecordPayment implements OnInit, OnDestroy {
     this.studentId = this.route.snapshot.paramMap.get('studentId') || '';
     this.academicYears = generateAcademicYears();
     this.selectedYear = currentAcademicYear();
+
+    // Pre-fill received_by with current user's name
+    this.paymentForm.received_by =
+      this.authService.currentProfile?.full_name || '';
 
     this.loadStudent();
   }
@@ -98,13 +126,15 @@ export class RecordPayment implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (fees) => {
-          // Only show unpaid/partial fees
-          this.fees = fees.filter((f) => f.status !== 'paid');
-          this.feePayments = this.fees.map((f) => ({
-            fee: f,
-            amount: f.amount_due - f.amount_paid, // default to full balance
-            selected: true,
-          }));
+          // Show ALL fees (paid, partial, unpaid) so user can see full picture
+          this.fees = fees;
+          this.feePayments = fees
+            .filter((f) => f.status !== 'paid') // only allow paying unpaid/partial
+            .map((f) => ({
+              fee: f,
+              amount: Number((f.amount_due - f.amount_paid).toFixed(2)), // default = full balance
+              selected: true,
+            }));
           this.loading = false;
         },
         error: (err) => {
@@ -118,24 +148,90 @@ export class RecordPayment implements OnInit, OnDestroy {
     this.loadFees();
   }
 
-  get totalPayment(): number {
+  // ── Computed ──────────────────────────────────────────
+
+  get totalFeesDue(): number {
+    return this.fees.reduce((s, f) => s + Number(f.amount_due), 0);
+  }
+
+  get totalFeesPaid(): number {
+    return this.fees.reduce((s, f) => s + Number(f.amount_paid), 0);
+  }
+
+  get totalFeesBalance(): number {
+    return this.totalFeesDue - this.totalFeesPaid;
+  }
+
+  get selectedFeePaymentTotal(): number {
     return this.feePayments
       .filter((fp) => fp.selected)
       .reduce((s, fp) => s + Number(fp.amount), 0);
   }
 
+  get totalPayment(): number {
+    const arrears = this.includeArrears ? Number(this.arrearsAmount) : 0;
+    return this.selectedFeePaymentTotal + arrears;
+  }
+
   get selectedFeeItems(): any[] {
-    return this.feePayments
+    const items: any[] = this.feePayments
       .filter((fp) => fp.selected && fp.amount > 0)
       .map((fp) => ({
-        feeId: fp.fee.id,
+        feeId: fp.fee.id as string | null,
         feeName: fp.fee.fee_name,
         amount: Number(fp.amount),
       }));
+
+    if (this.includeArrears && this.arrearsAmount > 0) {
+      items.push({
+        feeId: null as string | null,
+        feeName: this.arrearsDescription || 'Arrears (Previous Balance)',
+        amount: Number(this.arrearsAmount),
+        is_arrears: true,
+      } as any);
+    }
+
+    return items;
   }
 
+  // ── Payment History ────────────────────────────────────
+
+  openPaymentHistory(fee: StudentFee, event: Event): void {
+    event.stopPropagation();
+    this.selectedFeeHistory = fee;
+    this.showHistoryModal = true;
+    this.loadFeePaymentHistory(fee.id);
+  }
+
+  closeHistoryModal(): void {
+    this.showHistoryModal = false;
+    this.selectedFeeHistory = null;
+    this.feePaymentHistory = [];
+  }
+
+  loadFeePaymentHistory(feeId: string): void {
+    this.loadingHistory = true;
+    this.schoolService
+      .getFeePaymentHistory(feeId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (history) => {
+          this.feePaymentHistory = history;
+          this.loadingHistory = false;
+        },
+        error: () => {
+          this.loadingHistory = false;
+        },
+      });
+  }
+
+  // ── Submit ─────────────────────────────────────────────
+
   onSubmit(): void {
-    if (this.selectedFeeItems.length === 0) {
+    if (
+      this.selectedFeeItems.filter((i) => !i.is_arrears).length === 0 &&
+      !this.includeArrears
+    ) {
       this.errorMessage = 'Please select at least one fee and enter an amount';
       return;
     }
@@ -147,11 +243,20 @@ export class RecordPayment implements OnInit, OnDestroy {
 
     // Validate amounts don't exceed balance
     for (const fp of this.feePayments.filter((f) => f.selected)) {
-      const balance = fp.fee.amount_due - fp.fee.amount_paid;
-      if (fp.amount > balance) {
-        this.errorMessage = `Amount for "${fp.fee.fee_name}" exceeds outstanding balance`;
+      const balance = Number(fp.fee.amount_due) - Number(fp.fee.amount_paid);
+      if (Number(fp.amount) > balance + 0.01) {
+        // small tolerance for float rounding
+        this.errorMessage = `Amount for "${fp.fee.fee_name}" exceeds outstanding balance of ${this.formatCurrency(balance)}`;
         return;
       }
+    }
+
+    if (
+      this.includeArrears &&
+      (!this.arrearsAmount || this.arrearsAmount <= 0)
+    ) {
+      this.errorMessage = 'Please enter a valid arrears amount';
+      return;
     }
 
     this.processing = true;
@@ -159,7 +264,7 @@ export class RecordPayment implements OnInit, OnDestroy {
 
     const churchId = this.authService.getChurchId() || '';
 
-    // Generate receipt number then record payment
+    // Generate receipt number ONCE then record all fee payments atomically
     this.supabase.client
       .rpc('generate_receipt_number', { p_church_id: churchId })
       .then(({ data: receiptNumber, error }) => {
@@ -180,6 +285,7 @@ export class RecordPayment implements OnInit, OnDestroy {
               term: this.selectedTerm,
               feeItems: this.selectedFeeItems,
               notes: this.paymentForm.notes,
+              receivedBy: this.paymentForm.received_by,
             },
             receiptNumber,
           )
@@ -200,13 +306,72 @@ export class RecordPayment implements OnInit, OnDestroy {
       });
   }
 
+  // Add these methods
+  openAssignFeeModal(): void {
+    this.showAssignFeeModal = true;
+    this.selectedFeeStructureToAssign = '';
+    this.loadAvailableFeeStructures();
+  }
+
+  closeAssignFeeModal(): void {
+    this.showAssignFeeModal = false;
+    this.selectedFeeStructureToAssign = '';
+  }
+
+  loadAvailableFeeStructures(): void {
+    this.loadingFeeStructures = true;
+    this.schoolService
+      .getAllFeeStructuresForAssignment(this.selectedYear, this.selectedTerm)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (structures) => {
+          // Filter out fees already assigned to this student
+          const assignedIds = this.fees.map((f) => f.fee_structure_id);
+          this.availableFeeStructures = structures.filter(
+            (s) => !assignedIds.includes(s.id),
+          );
+          this.loadingFeeStructures = false;
+        },
+        error: () => {
+          this.loadingFeeStructures = false;
+        },
+      });
+  }
+
+  assignFeeToStudent(): void {
+    if (!this.selectedFeeStructureToAssign) return;
+    this.assigningFee = true;
+    const churchId = this.authService.getChurchId() || '';
+
+    this.schoolService
+      .assignFeeToStudent(
+        this.studentId,
+        this.selectedFeeStructureToAssign,
+        this.selectedYear,
+        this.selectedTerm,
+      )
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.assigningFee = false;
+          this.closeAssignFeeModal();
+          this.loadFees(); // Reload fees to show newly assigned one
+          this.successMessage = 'Fee assigned successfully!';
+          setTimeout(() => (this.successMessage = ''), 3000);
+        },
+        error: (err) => {
+          this.errorMessage = err.message || 'Failed to assign fee';
+          this.assigningFee = false;
+        },
+      });
+  }
   cancel(): void {
     this.router.navigate(['main/reports/students', this.studentId]);
   }
 
   getFullName(): string {
     if (!this.student) return '';
-    return `${this.student.first_name} ${this.student.last_name}`;
+    return `${this.student.first_name} ${this.student.last_name}`.trim();
   }
 
   formatCurrency(amount: number): string {
@@ -216,3 +381,5 @@ export class RecordPayment implements OnInit, OnDestroy {
     }).format(amount || 0);
   }
 }
+
+
