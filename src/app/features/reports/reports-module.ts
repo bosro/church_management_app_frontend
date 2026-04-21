@@ -23,6 +23,7 @@ import { ImportStudents } from './components/add-student/import-students/import-
 import { ExportBrandingSettings } from './components/export-branding-settings/export-branding-settings';
 import { FeedingRecord } from '../public/feeding-record/feeding-record';
 import { FeedingAdmin } from './components/feeding/feeding-admin/feeding-admin';
+import { ReceiptsList } from './components/fees/receipts-list/receipts-list';
 
 
 
@@ -47,7 +48,8 @@ import { FeedingAdmin } from './components/feeding/feeding-admin/feeding-admin';
     SubjectsList,
     ImportStudents,
     ExportBrandingSettings,
-    FeedingAdmin
+    FeedingAdmin,
+    ReceiptsList
   ],
   imports: [
     CommonModule,

@@ -541,4 +541,8 @@ export class StudentDetail implements OnInit, OnDestroy {
   getTotalPaymentsAmount(): number {
     return this.payments.reduce((s, p) => s + Number(p.amount), 0);
   }
+
+  navigatToReceipts() {
+    this.router.navigate(['main/reports/fees/receipts']);
+  }
 }

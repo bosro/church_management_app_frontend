@@ -1,0 +1,151 @@
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+  <div class="dashboard-content">
+    <app-header></app-header>
+    <div class="dashboard-body">
+      <div class="receipts-container">
+
+        <!-- Page Header -->
+        <div class="page-header">
+          <div class="header-left">
+            <button class="back-btn" (click)="router.navigate(['main/reports'])">
+              <i class="ri-arrow-left-line"></i>
+            </button>
+            <div>
+              <h1>Receipts</h1>
+              <p class="subtitle">Find and reprint any past payment receipt</p>
+            </div>
+          </div>
+        </div>
+
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i>
+          {{ errorMessage }}
+        </div>
+
+        <!-- Search + Filters -->
+        <div class="search-filter-bar">
+          <!-- Search box -->
+          <div class="search-wrap">
+            <i class="ri-search-line search-icon"></i>
+            <input
+              [formControl]="searchControl"
+              type="text"
+              placeholder="Search by receipt no., student name or student number…"
+              class="search-input" />
+            <button class="search-clear"
+                    *ngIf="searchControl.value"
+                    (click)="searchControl.setValue('')">
+              <i class="ri-close-line"></i>
+            </button>
+          </div>
+
+          <!-- Term / Year -->
+          <select [(ngModel)]="selectedTerm" (change)="onFilterChange()" class="filter-select">
+            <option *ngFor="let t of terms" [value]="t">{{ t }}</option>
+          </select>
+          <select [(ngModel)]="selectedYear" (change)="onFilterChange()" class="filter-select">
+            <option *ngFor="let y of academicYears" [value]="y">{{ y }}</option>
+          </select>
+        </div>
+
+        <!-- Loading -->
+        <div *ngIf="loading" class="loading-container">
+          <div class="spinner"></div>
+          <p>Loading receipts…</p>
+        </div>
+
+        <!-- Receipts list -->
+        <div *ngIf="!loading">
+
+          <!-- Empty state -->
+          <div *ngIf="payments.length === 0" class="empty-state">
+            <div class="empty-icon">
+              <i class="ri-receipt-line"></i>
+            </div>
+            <h3>No receipts found</h3>
+            <p *ngIf="searchControl.value">
+              No receipts match "<strong>{{ searchControl.value }}</strong>"
+            </p>
+            <p *ngIf="!searchControl.value">
+              No payments recorded for {{ selectedTerm }} {{ selectedYear }}
+            </p>
+          </div>
+
+          <!-- Receipt cards grid -->
+          <div *ngIf="payments.length > 0" class="receipts-grid">
+            <div *ngFor="let payment of payments"
+                 class="receipt-card"
+                 (click)="viewReceipt(payment.receipt_number)">
+
+              <!-- Card top: receipt number + amount -->
+              <div class="receipt-card-top">
+                <div class="receipt-icon-wrap">
+                  <i class="ri-receipt-line"></i>
+                </div>
+                <div class="receipt-card-meta">
+                  <span class="receipt-no">{{ payment.receipt_number }}</span>
+                  <span class="receipt-date">{{ payment.payment_date | date:'MMM d, y' }}</span>
+                </div>
+                <div class="receipt-amount">
+                  {{ formatCurrency(payment.amount) }}
+                </div>
+              </div>
+
+              <!-- Divider -->
+              <div class="receipt-card-divider"></div>
+
+              <!-- Card bottom: student + actions -->
+              <div class="receipt-card-bottom">
+                <div class="receipt-student"
+                     (click)="viewStudent(payment.student?.id); $event.stopPropagation()">
+                  <div class="student-avatar">
+                    {{ payment.student?.first_name?.[0] || '?' }}{{ payment.student?.last_name?.[0] || '' }}
+                  </div>
+                  <div class="student-info">
+                    <p class="student-name">{{ getStudentName(payment) }}</p>
+                    <p class="student-meta">
+                      {{ payment.student?.student_number }}
+                      <span *ngIf="payment.student?.class?.name">
+                        · {{ payment.student?.class?.name }}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+
+                <div class="receipt-card-actions">
+                  <span class="method-chip">
+                    <i class="ri-bank-card-line"></i>
+                    {{ payment.payment_method }}
+                  </span>
+                  <button class="btn-reprint"
+                          (click)="viewReceipt(payment.receipt_number); $event.stopPropagation()"
+                          title="View & reprint this receipt">
+                    <i class="ri-printer-line"></i>
+                    Reprint
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Pagination -->
+          <div class="pagination" *ngIf="totalPages > 1">
+            <button class="pagination-btn" [disabled]="currentPage === 1" (click)="previousPage()">
+              <i class="ri-arrow-left-s-line"></i> Previous
+            </button>
+            <span class="page-info">
+              Page {{ currentPage }} of {{ totalPages }}
+            </span>
+            <button class="pagination-btn" [disabled]="currentPage === totalPages" (click)="nextPage()">
+              Next <i class="ri-arrow-right-s-line"></i>
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
