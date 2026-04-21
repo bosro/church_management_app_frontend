@@ -228,6 +228,11 @@
                 <i class="ri-loader-4-line spin-icon" *ngIf="exportingStatement"></i>
                 {{ exportingStatement ? 'Generating...' : 'Export Statement' }}
               </button>
+              <button class="btn-secondary" style="font-size:12px;"
+                (click)="navigatToReceipts()">
+                <i class="ri-receipt-line"></i>
+                All Receipts
+              </button>
             </div>
 
             <div class="table-card">
