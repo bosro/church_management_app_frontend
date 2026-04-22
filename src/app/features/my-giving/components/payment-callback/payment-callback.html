@@ -1,0 +1,54 @@
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+  <div class="dashboard-content">
+    <app-header></app-header>
+    <div class="dashboard-body">
+      <div class="callback-page">
+
+        <!-- Verifying -->
+        <div *ngIf="state === 'verifying'" class="callback-card">
+          <div class="spinner-wrap">
+            <div class="big-spinner"></div>
+          </div>
+          <h2>Verifying payment...</h2>
+          <p>Please wait while we confirm your transaction. <strong>Do not close this tab.</strong></p>
+          <p class="sub">This usually takes less than 15 seconds.</p>
+        </div>
+
+        <!-- Success -->
+        <div *ngIf="state === 'success'" class="callback-card">
+          <div class="icon-circle success-circle">
+            <i class="ri-checkbox-circle-fill"></i>
+          </div>
+          <h2>Payment Successful!</h2>
+          <p>{{ message }}</p>
+          <p class="sub">Redirecting you to your giving history...</p>
+          <button class="btn-primary" (click)="goHome()">
+            <i class="ri-arrow-left-line"></i>
+            Go to My Giving
+          </button>
+        </div>
+
+        <!-- Failed -->
+        <div *ngIf="state === 'failed'" class="callback-card">
+          <div class="icon-circle failed-circle">
+            <i class="ri-close-circle-fill"></i>
+          </div>
+          <h2>Payment Not Completed</h2>
+          <p>{{ message }}</p>
+          <div class="btn-row">
+            <button class="btn-secondary" (click)="goHome()">
+              <i class="ri-home-line"></i>
+              Go Home
+            </button>
+            <button class="btn-primary" (click)="tryAgain()">
+              <i class="ri-refresh-line"></i>
+              Try Again
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>

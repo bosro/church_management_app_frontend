@@ -22,11 +22,11 @@
 
   i {
     font-size: 1.125rem;
-    color: #5B21B6;
+    color: #5b21b6;
   }
 
   .required {
-    color: #EF4444;
+    color: #ef4444;
   }
 }
 
@@ -36,19 +36,19 @@
   font-size: 0.9375rem;
   color: #111827;
   background: white;
-  border: 1px solid #D1D5DB;
+  border: 1px solid #d1d5db;
   border-radius: 8px;
   font-family: inherit;
   transition: all 0.2s;
 
   &:focus {
     outline: none;
-    border-color: #5B21B6;
+    border-color: #5b21b6;
     box-shadow: 0 0 0 3px rgba(91, 33, 182, 0.1);
   }
 
   &.error {
-    border-color: #EF4444;
+    border-color: #ef4444;
 
     &:focus {
       box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
@@ -56,11 +56,11 @@
   }
 
   &::placeholder {
-    color: #9CA3AF;
+    color: #9ca3af;
   }
 
   &:disabled {
-    background: #F3F4F6;
+    background: #f3f4f6;
     cursor: not-allowed;
   }
 }
@@ -78,14 +78,14 @@ textarea.form-control {
   display: block;
   margin-top: 0.5rem;
   font-size: 0.8125rem;
-  color: #EF4444;
+  color: #ef4444;
 }
 
 .char-count {
   display: block;
   margin-top: 0.5rem;
   font-size: 0.8125rem;
-  color: #6B7280;
+  color: #6b7280;
   text-align: right;
 }
 
@@ -112,14 +112,14 @@ textarea.form-control {
   gap: 0.5rem;
   padding: 1.25rem 1rem;
   background: white;
-  border: 2px solid #E5E7EB;
+  border: 2px solid #e5e7eb;
   border-radius: 12px;
   cursor: pointer;
   transition: all 0.2s;
 
   i {
     font-size: 2rem;
-    color: #6B7280;
+    color: #6b7280;
     transition: all 0.2s;
   }
 
@@ -131,24 +131,28 @@ textarea.form-control {
   }
 
   &:hover {
-    border-color: #5B21B6;
+    border-color: #5b21b6;
     background: rgba(91, 33, 182, 0.02);
 
     i {
-      color: #5B21B6;
+      color: #5b21b6;
     }
   }
 
   &.selected {
-    border-color: #5B21B6;
-    background: linear-gradient(135deg, rgba(91, 33, 182, 0.05) 0%, rgba(124, 58, 237, 0.05) 100%);
+    border-color: #5b21b6;
+    background: linear-gradient(
+      135deg,
+      rgba(91, 33, 182, 0.05) 0%,
+      rgba(124, 58, 237, 0.05) 100%
+    );
 
     i {
-      color: #5B21B6;
+      color: #5b21b6;
     }
 
     span {
-      color: #5B21B6;
+      color: #5b21b6;
     }
   }
 
@@ -163,6 +167,29 @@ textarea.form-control {
       font-size: 0.8125rem;
     }
   }
+
+  &.paystack-card {
+    border-color: #5b21b6;
+    background: linear-gradient(
+      135deg,
+      rgba(91, 33, 182, 0.04) 0%,
+      rgba(124, 58, 237, 0.06) 100%
+    );
+
+    i {
+      color: #5b21b6;
+    }
+
+    .paystack-badge {
+      font-size: 0.625rem;
+      font-weight: 700;
+      background: #5b21b6;
+      color: white;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-top: -2px;
+    }
+  }
 }
 
 .form-actions {
@@ -170,7 +197,7 @@ textarea.form-control {
   gap: 1rem;
   margin-top: 2rem;
   padding-top: 1.5rem;
-  border-top: 1px solid #E5E7EB;
+  border-top: 1px solid #e5e7eb;
 
   @media (max-width: 576px) {
     flex-direction: column-reverse;
@@ -204,20 +231,20 @@ textarea.form-control {
 }
 
 .btn-secondary {
-  background: #E5E7EB;
+  background: #e5e7eb;
   color: #374151;
 
   &:hover:not(:disabled) {
-    background: #D1D5DB;
+    background: #d1d5db;
   }
 }
 
 .btn-primary {
-  background: #5B21B6;
+  background: #5b21b6;
   color: white;
 
   &:hover:not(:disabled) {
-    background: #6D28D9;
+    background: #6d28d9;
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(91, 33, 182, 0.3);
   }
@@ -239,3 +266,20 @@ textarea.form-control {
 }
 
 
+.paystack-card {
+  border-color: #5B21B6 !important;
+  background: linear-gradient(135deg, rgba(91,33,182,0.04), rgba(124,58,237,0.06)) !important;
+
+  i, span { color: #5B21B6 !important; }
+
+  .paystack-badge {
+    font-size: 0.5625rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    background: #5B21B6;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-top: -4px;
+  }
+}

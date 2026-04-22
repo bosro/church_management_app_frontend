@@ -1,0 +1,158 @@
+.dashboard-layout {
+  display: flex;
+  min-height: 100vh;
+  background: #f9fafb;
+}
+
+.dashboard-content {
+  margin-left: 280px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  @media (max-width: 768px) {
+    margin-left: 0;
+  }
+}
+
+.dashboard-body {
+  flex: 1;
+  padding: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  @media (max-width: 768px) {
+    padding: 1rem;
+  }
+}
+
+.callback-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 60vh;
+}
+
+.callback-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 3rem 2.5rem;
+  max-width: 460px;
+  width: 100%;
+  text-align: center;
+
+  h2 {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #111827;
+    margin: 1.25rem 0 0.75rem;
+  }
+
+  p {
+    color: #6b7280;
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    margin: 0 0 0.75rem;
+  }
+
+  .sub {
+    font-size: 0.8125rem;
+    color: #9ca3af;
+  }
+}
+
+// Spinner
+.spinner-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 0.25rem;
+}
+
+.big-spinner {
+  width: 72px;
+  height: 72px;
+  border: 6px solid #e5e7eb;
+  border-top-color: #5b21b6;
+  border-radius: 50%;
+  animation: spin 0.85s linear infinite;
+}
+
+// Icon circles
+.icon-circle {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 0.25rem;
+
+  i {
+    font-size: 3rem;
+  }
+
+  &.success-circle {
+    background: #d1fae5;
+    i {
+      color: #059669;
+    }
+  }
+
+  &.failed-circle {
+    background: #fee2e2;
+    i {
+      color: #dc2626;
+    }
+  }
+}
+
+// Buttons
+.btn-primary,
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  border: none;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s;
+  i {
+    font-size: 1.125rem;
+  }
+}
+
+.btn-primary {
+  background: #5b21b6;
+  color: white;
+  margin-top: 1.25rem;
+  &:hover {
+    background: #6d28d9;
+    transform: translateY(-1px);
+  }
+}
+
+.btn-secondary {
+  background: #f3f4f6;
+  color: #374151;
+  &:hover {
+    background: #e5e7eb;
+  }
+}
+
+.btn-row {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  margin-top: 1.25rem;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

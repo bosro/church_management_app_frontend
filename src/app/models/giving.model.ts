@@ -9,7 +9,8 @@ export type PaymentMethod =
   | 'check'
   | 'cheque'
   | 'card'
-  | 'online';
+  | 'online'
+  | 'paystack';
 
 export interface GivingCategory {
   id: string;
@@ -30,14 +31,15 @@ export interface GivingTransaction {
   currency: string;
   payment_method: PaymentMethod;
   transaction_reference?: string;
+  paystack_reference?: string;         // ← new
+  payment_status?: 'pending' | 'completed' | 'failed' | 'abandoned';  // ← new
+  payment_channel?: string;            // ← new
   transaction_date: string;
   fiscal_year?: number;
   notes?: string;
   recorded_by: string;
   created_at: string;
   updated_at: string;
-
-  // Joined fields (from queries)
   category_name?: string;
   member_name?: string;
 }
@@ -87,6 +89,8 @@ export interface GivingSummary {
   total_offerings: number;
   total_seeds: number;
   total_transactions: number;
+  avg_transaction?: number;    // ← RPC returns this
+  last_giving_date?: string;   // ← RPC returns this
   currency: string;
 }
 

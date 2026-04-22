@@ -8,18 +8,15 @@
         <i class="ri-list-check"></i>
         Giving Type <span class="required">*</span>
       </label>
-      <select
-        id="category_id"
-        formControlName="category_id"
-        class="form-control"
-        [class.error]="paymentForm.get('category_id')?.invalid && paymentForm.get('category_id')?.touched"
-      >
+      <select id="category_id" formControlName="category_id" class="form-control"
+        [class.error]="paymentForm.get('category_id')?.invalid && paymentForm.get('category_id')?.touched">
         <option value="" disabled>Select giving type</option>
         <option *ngFor="let category of categories" [value]="category.id">
           {{ category.name }}
         </option>
       </select>
-      <span *ngIf="paymentForm.get('category_id')?.invalid && paymentForm.get('category_id')?.touched" class="error-message">
+      <span *ngIf="paymentForm.get('category_id')?.invalid && paymentForm.get('category_id')?.touched"
+        class="error-message">
         {{ getErrorMessage('category_id') }}
       </span>
     </div>
@@ -30,16 +27,8 @@
         <i class="ri-money-dollar-circle-line"></i>
         Amount (GHS) <span class="required">*</span>
       </label>
-      <input
-        type="number"
-        id="amount"
-        formControlName="amount"
-        class="form-control"
-        placeholder="Enter amount"
-        min="1"
-        step="0.01"
-        [class.error]="paymentForm.get('amount')?.invalid && paymentForm.get('amount')?.touched"
-      />
+      <input type="number" id="amount" formControlName="amount" class="form-control" placeholder="Enter amount" min="1"
+        step="0.01" [class.error]="paymentForm.get('amount')?.invalid && paymentForm.get('amount')?.touched" />
       <span *ngIf="paymentForm.get('amount')?.invalid && paymentForm.get('amount')?.touched" class="error-message">
         {{ getErrorMessage('amount') }}
       </span>
@@ -52,17 +41,17 @@
         Payment Method <span class="required">*</span>
       </label>
       <div class="payment-methods">
-        <div
-          *ngFor="let method of paymentMethods"
-          class="payment-method-card"
+        <div *ngFor="let method of paymentMethods" class="payment-method-card"
           [class.selected]="paymentForm.get('payment_method')?.value === method.value"
-          (click)="paymentForm.patchValue({ payment_method: method.value })"
-        >
+          [class.paystack-card]="method.value === 'paystack'"
+          (click)="paymentForm.patchValue({ payment_method: method.value })">
           <i [class]="method.icon"></i>
           <span>{{ method.label }}</span>
+          <span *ngIf="method.value === 'paystack'" class="paystack-badge">RECOMMENDED</span>
         </div>
       </div>
-      <span *ngIf="paymentForm.get('payment_method')?.invalid && paymentForm.get('payment_method')?.touched" class="error-message">
+      <span *ngIf="paymentForm.get('payment_method')?.invalid && paymentForm.get('payment_method')?.touched"
+        class="error-message">
         {{ getErrorMessage('payment_method') }}
       </span>
     </div>
@@ -73,15 +62,11 @@
         <i class="ri-smartphone-line"></i>
         Mobile Money Number <span class="required">*</span>
       </label>
-      <input
-        type="tel"
-        id="mobile_number"
-        formControlName="mobile_number"
-        class="form-control"
+      <input type="tel" id="mobile_number" formControlName="mobile_number" class="form-control"
         placeholder="e.g., 0244123456"
-        [class.error]="paymentForm.get('mobile_number')?.invalid && paymentForm.get('mobile_number')?.touched"
-      />
-      <span *ngIf="paymentForm.get('mobile_number')?.invalid && paymentForm.get('mobile_number')?.touched" class="error-message">
+        [class.error]="paymentForm.get('mobile_number')?.invalid && paymentForm.get('mobile_number')?.touched" />
+      <span *ngIf="paymentForm.get('mobile_number')?.invalid && paymentForm.get('mobile_number')?.touched"
+        class="error-message">
         {{ getErrorMessage('mobile_number') }}
       </span>
     </div>
@@ -93,15 +78,11 @@
           <i class="ri-bank-line"></i>
           Bank Name <span class="required">*</span>
         </label>
-        <input
-          type="text"
-          id="bank_name"
-          formControlName="bank_name"
-          class="form-control"
+        <input type="text" id="bank_name" formControlName="bank_name" class="form-control"
           placeholder="e.g., Access Bank"
-          [class.error]="paymentForm.get('bank_name')?.invalid && paymentForm.get('bank_name')?.touched"
-        />
-        <span *ngIf="paymentForm.get('bank_name')?.invalid && paymentForm.get('bank_name')?.touched" class="error-message">
+          [class.error]="paymentForm.get('bank_name')?.invalid && paymentForm.get('bank_name')?.touched" />
+        <span *ngIf="paymentForm.get('bank_name')?.invalid && paymentForm.get('bank_name')?.touched"
+          class="error-message">
           {{ getErrorMessage('bank_name') }}
         </span>
       </div>
@@ -111,15 +92,11 @@
           <i class="ri-hashtag"></i>
           Account Number <span class="required">*</span>
         </label>
-        <input
-          type="text"
-          id="account_number"
-          formControlName="account_number"
-          class="form-control"
+        <input type="text" id="account_number" formControlName="account_number" class="form-control"
           placeholder="Enter account number"
-          [class.error]="paymentForm.get('account_number')?.invalid && paymentForm.get('account_number')?.touched"
-        />
-        <span *ngIf="paymentForm.get('account_number')?.invalid && paymentForm.get('account_number')?.touched" class="error-message">
+          [class.error]="paymentForm.get('account_number')?.invalid && paymentForm.get('account_number')?.touched" />
+        <span *ngIf="paymentForm.get('account_number')?.invalid && paymentForm.get('account_number')?.touched"
+          class="error-message">
           {{ getErrorMessage('account_number') }}
         </span>
       </div>
@@ -131,16 +108,11 @@
         <i class="ri-bank-card-line"></i>
         Card Number <span class="required">*</span>
       </label>
-      <input
-        type="text"
-        id="card_number"
-        formControlName="card_number"
-        class="form-control"
-        placeholder="1234 5678 9012 3456"
-        maxlength="19"
-        [class.error]="paymentForm.get('card_number')?.invalid && paymentForm.get('card_number')?.touched"
-      />
-      <span *ngIf="paymentForm.get('card_number')?.invalid && paymentForm.get('card_number')?.touched" class="error-message">
+      <input type="text" id="card_number" formControlName="card_number" class="form-control"
+        placeholder="1234 5678 9012 3456" maxlength="19"
+        [class.error]="paymentForm.get('card_number')?.invalid && paymentForm.get('card_number')?.touched" />
+      <span *ngIf="paymentForm.get('card_number')?.invalid && paymentForm.get('card_number')?.touched"
+        class="error-message">
         {{ getErrorMessage('card_number') }}
       </span>
     </div>
@@ -151,14 +123,8 @@
         <i class="ri-file-text-line"></i>
         Notes (Optional)
       </label>
-      <textarea
-        id="notes"
-        formControlName="notes"
-        class="form-control"
-        placeholder="Add any additional notes..."
-        rows="3"
-        maxlength="500"
-      ></textarea>
+      <textarea id="notes" formControlName="notes" class="form-control" placeholder="Add any additional notes..."
+        rows="3" maxlength="500"></textarea>
       <span class="char-count">
         {{ paymentForm.get('notes')?.value?.length || 0 }} / 500
       </span>
@@ -166,20 +132,11 @@
 
     <!-- Form Actions -->
     <div class="form-actions">
-      <button
-        type="button"
-        class="btn btn-secondary"
-        (click)="onCancel()"
-        [disabled]="loading"
-      >
+      <button type="button" class="btn btn-secondary" (click)="onCancel()" [disabled]="loading">
         <i class="ri-close-line"></i>
         Cancel
       </button>
-      <button
-        type="submit"
-        class="btn btn-primary"
-        [disabled]="loading || paymentForm.invalid"
-      >
+      <button type="submit" class="btn btn-primary" [disabled]="loading || paymentForm.invalid">
         <i class="ri-send-plane-fill" *ngIf="!loading"></i>
         <div class="spinner" *ngIf="loading"></div>
         {{ loading ? 'Processing...' : 'Submit Payment' }}
@@ -187,5 +144,3 @@
     </div>
   </form>
 </div>
-
-
