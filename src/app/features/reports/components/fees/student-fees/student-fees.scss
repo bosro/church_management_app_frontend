@@ -123,7 +123,7 @@
   font-size: 14px;
 }
 
-// ─── Filters ──────────────────────────────────────────────
+// ─── Term/Year/Class filter dropdowns row ─────────────────
 .filters-card {
   display: flex;
   gap: 12px;
@@ -132,7 +132,7 @@
   border: 1px solid #f3f4f6;
   border-radius: 12px;
   padding: 16px 20px;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
 
   .filter-select {
     padding: 9px 12px;
@@ -148,6 +148,164 @@
       outline: none;
       border-color: #4f46e5;
       background: white;
+    }
+  }
+}
+
+// ─── Search + Sort bar ────────────────────────────────────
+.search-sort-bar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  background: white;
+  border: 1px solid #f3f4f6;
+  border-radius: 12px;
+  padding: 14px 20px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 12px;
+    gap: 8px;
+  }
+
+  .search-group {
+    flex: 1;
+    min-width: 280px;
+    position: relative;
+
+    @media (max-width: 768px) {
+      min-width: 0;
+      width: 100%;
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 16px;
+      color: #9ca3af;
+      pointer-events: none;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 9px 38px 9px 36px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 14px;
+      background: #f9fafb;
+      font-family: "Nunito Sans", sans-serif;
+      transition: all 0.2s;
+      box-sizing: border-box;
+      &:focus {
+        outline: none;
+        border-color: #4f46e5;
+        background: white;
+      }
+    }
+
+    .search-clear {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #e5e7eb;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      color: #6b7280;
+      transition: all 0.15s;
+      &:hover {
+        background: #d1d5db;
+        color: #374151;
+      }
+      i {
+        font-size: 14px;
+      }
+    }
+  }
+
+  .sort-group {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+
+    @media (max-width: 768px) {
+      width: 100%;
+    }
+  }
+
+  .btn-sort {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 8px 14px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #6b7280;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: "Nunito Sans", sans-serif;
+    white-space: nowrap;
+
+    i {
+      font-size: 15px;
+    }
+
+    &:hover {
+      background: #f9fafb;
+      border-color: #4f46e5;
+      color: #4f46e5;
+    }
+
+    &.active {
+      background: #eef2ff;
+      border-color: #4f46e5;
+      color: #4f46e5;
+      font-weight: 700;
+    }
+
+    @media (max-width: 768px) {
+      flex: 1;
+      justify-content: center;
+    }
+  }
+
+  .btn-clear {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 9px 14px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #6b7280;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    font-family: "Nunito Sans", sans-serif;
+    &:hover {
+      background: #fee2e2;
+      border-color: #fca5a5;
+      color: #dc2626;
+    }
+
+    @media (max-width: 768px) {
+      align-self: flex-start;
     }
   }
 }
@@ -336,10 +494,10 @@
     color: #6b7280;
   }
   &:hover {
-    background: #fee2e2;
-    border-color: #fca5a5;
+    background: #eef2ff;
+    border-color: #4f46e5;
     i {
-      color: #dc2626;
+      color: #4f46e5;
     }
   }
 }
@@ -518,9 +676,7 @@
   }
 }
 
-
-// ─── MOBILE RESPONSIVENESS ────────────────────────────────
-
+// ─── MOBILE ────────────────────────────────────────────────
 @media (max-width: 768px) {
   .student-fees-container {
     padding: 12px 8px;
@@ -533,8 +689,12 @@
     .header-left {
       min-width: 0;
       flex: 1;
-      h1 { font-size: 18px; }
-      .subtitle { font-size: 12px; }
+      h1 {
+        font-size: 18px;
+      }
+      .subtitle {
+        font-size: 12px;
+      }
     }
 
     .header-actions {
@@ -545,11 +705,9 @@
     }
   }
 
-  // ── Filters ────────────────────────────────────────────
   .filters-card {
     padding: 12px;
     gap: 8px;
-
     .filter-select {
       flex: 1;
       min-width: 0;
@@ -558,47 +716,58 @@
     }
   }
 
-  // ── Table ──────────────────────────────────────────────
-  .table-card { border-radius: 10px; }
-
-  .data-table {
-    thead th { padding: 10px 10px; font-size: 11px; }
-    tbody .table-row td { padding: 12px 10px; font-size: 13px; }
-
-    // Hide Class + Total Due columns — keep Student, Paid, Balance, Status, Actions
-    thead th:nth-child(2),
-    thead th:nth-child(3) { display: none; }
-
-    tbody tr td:nth-child(2),
-    tbody tr td:nth-child(3) { display: none; }
+  .table-card {
+    border-radius: 10px;
   }
 
-  // ── Student cell in table ──────────────────────────────
-  .student-name { font-size: 13px; }
-  .student-num  { font-size: 11px; }
+  .data-table {
+    thead th {
+      padding: 10px 10px;
+      font-size: 11px;
+    }
+    tbody .table-row td {
+      padding: 12px 10px;
+      font-size: 13px;
+    }
 
-  // ── Balance amount ─────────────────────────────────────
+    thead th:nth-child(2),
+    thead th:nth-child(3) {
+      display: none;
+    }
+
+    tbody tr td:nth-child(2),
+    tbody tr td:nth-child(3) {
+      display: none;
+    }
+  }
+
+  .student-name {
+    font-size: 13px;
+  }
+  .student-num {
+    font-size: 11px;
+  }
+
   .balance-amount {
     font-size: 13px;
     white-space: nowrap;
   }
 
-  // ── Action buttons ─────────────────────────────────────
   .action-buttons {
     flex-direction: column;
     gap: 4px;
     align-items: flex-start;
-
     .btn-pay {
       font-size: 11px;
       padding: 5px 8px;
     }
   }
 
-  // ── Status badge ───────────────────────────────────────
-  .status-badge { font-size: 11px; padding: 2px 7px; }
+  .status-badge {
+    font-size: 11px;
+    padding: 2px 7px;
+  }
 
-  // ── Export modal ───────────────────────────────────────
   .modal-overlay {
     padding: 12px;
     align-items: flex-end;
@@ -610,8 +779,12 @@
     max-height: 85vh;
     overflow-y: auto;
 
-    .export-modal-header h3 { font-size: 1rem; }
-    .export-subtitle { margin-bottom: 1rem; }
+    .export-modal-header h3 {
+      font-size: 1rem;
+    }
+    .export-subtitle {
+      margin-bottom: 1rem;
+    }
   }
 
   .export-option {
@@ -621,23 +794,29 @@
     .export-icon {
       width: 38px;
       height: 38px;
-      i { font-size: 1.2rem; }
+      i {
+        font-size: 1.2rem;
+      }
     }
 
     .export-info {
-      strong { font-size: 0.875rem; }
-      span   { font-size: 0.75rem; }
+      strong {
+        font-size: 0.875rem;
+      }
+      span {
+        font-size: 0.75rem;
+      }
     }
   }
 }
 
 @media (max-width: 480px) {
-  // Also hide Total Paid column, keep Balance only
   .data-table {
     thead th:nth-child(4),
-    tbody tr td:nth-child(4) { display: none; }
+    tbody tr td:nth-child(4) {
+      display: none;
+    }
 
-    // Tighten remaining amount cols
     thead th:nth-child(5),
     tbody tr td:nth-child(5) {
       font-size: 12px;
@@ -645,13 +824,10 @@
     }
   }
 
-  // Stack status + actions tighter
   .action-buttons {
-    .btn-pay { width: 100%; justify-content: center; }
+    .btn-pay {
+      width: 100%;
+      justify-content: center;
+    }
   }
 }
-
-
-
-
-

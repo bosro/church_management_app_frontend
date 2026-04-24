@@ -24,6 +24,9 @@ import { ExportBrandingSettings } from './components/export-branding-settings/ex
 import { FeedingRecord } from '../public/feeding-record/feeding-record';
 import { FeedingAdmin } from './components/feeding/feeding-admin/feeding-admin';
 import { ReceiptsList } from './components/fees/receipts-list/receipts-list';
+import { StudentRegistrationLinks } from './components/students/student-registration-links/student-registration-links';
+import { QrCodeComponent } from 'ng-qrcode';
+import { SettingScopePipe } from '../../core/pipes/settings.pipe';
 
 
 
@@ -49,11 +52,16 @@ import { ReceiptsList } from './components/fees/receipts-list/receipts-list';
     ImportStudents,
     ExportBrandingSettings,
     FeedingAdmin,
-    ReceiptsList
+    ReceiptsList,
+    StudentRegistrationLinks,
+    SettingScopePipe
+
   ],
   imports: [
     CommonModule,
-    ReportsRoutingModule
+    ReportsRoutingModule,
+    QrCodeComponent,
+
   ]
 })
 export class ReportsModule { }

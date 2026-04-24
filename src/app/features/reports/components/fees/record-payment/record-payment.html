@@ -60,14 +60,17 @@
               <div class="fee-overview-stats">
                 <div class="fee-stat">
                   <p class="fee-stat-label">Total Charged</p>
+                  <!-- ✅ FIX 2: totalFeesDue = sum of amount_due (full billed amount) -->
                   <p class="fee-stat-value">{{ formatCurrency(totalFeesDue) }}</p>
                 </div>
                 <div class="fee-stat paid">
                   <p class="fee-stat-label">Total Paid</p>
+                  <!-- ✅ totalFeesPaid = sum of amount_paid (what has been received) -->
                   <p class="fee-stat-value">{{ formatCurrency(totalFeesPaid) }}</p>
                 </div>
                 <div class="fee-stat" [class.outstanding]="totalFeesBalance > 0">
                   <p class="fee-stat-label">Remaining</p>
+                  <!-- ✅ totalFeesBalance = what's still owed -->
                   <p class="fee-stat-value">{{ formatCurrency(totalFeesBalance) }}</p>
                 </div>
               </div>

@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Observable, from } from 'rxjs';
+import { Observable, from, throwError } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 import { Church } from '../../../models/church.model';
 import { SignupRequest, User } from '../../../models/user.model';
@@ -162,11 +162,21 @@ export class AdminService {
    * Update user role
    */
   updateUserRole(userId: string, role: string): Observable<any> {
-    return from(this.supabase.update('profiles', userId, { role })).pipe(
-      map(({ data, error }) => {
-        if (error) throw error;
-        return data;
+    return from(
+      Promise.all([
+        this.supabase.update('profiles', userId, { role }),
+        this.supabase.client
+          .from('users')
+          .update({ role, updated_at: new Date().toISOString() })
+          .eq('id', userId),
+      ]),
+    ).pipe(
+      map(([profilesResult, usersResult]) => {
+        if (profilesResult.error) throw profilesResult.error;
+        if (usersResult.error) throw usersResult.error;
+        return profilesResult.data;
       }),
+      catchError((err) => throwError(() => err)),
     );
   }
 
@@ -216,14 +226,23 @@ export class AdminService {
    */
   updateUserChurch(userId: string, churchId: string | null): Observable<any> {
     return from(
-      this.supabase.update('profiles', userId, { church_id: churchId }),
+      Promise.all([
+        this.supabase.update('profiles', userId, { church_id: churchId }),
+        this.supabase.client
+          .from('users')
+          .update({ church_id: churchId, updated_at: new Date().toISOString() })
+          .eq('id', userId),
+      ]),
     ).pipe(
-      map(({ data, error }) => {
-        if (error) throw error;
-        return data;
+      map(([profilesResult, usersResult]) => {
+        if (profilesResult.error) throw profilesResult.error;
+        if (usersResult.error) throw usersResult.error;
+        return profilesResult.data;
       }),
+      catchError((err) => throwError(() => err)),
     );
   }
+
   /**
    * Update church
    */

@@ -13,7 +13,7 @@
             </button>
             <div>
               <h1>Feeding Fee Management</h1>
-              <p class="subtitle">Set daily rates and view payment records</p>
+              <p class="subtitle">Configure tier rates, class overrides, and view payment records</p>
             </div>
           </div>
         </div>
@@ -24,44 +24,167 @@
         </div>
         <div *ngIf="errorMessage" class="error-alert">
           <i class="ri-error-warning-line"></i>{{ errorMessage }}
+          <button (click)="errorMessage = ''"
+            style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:16px;">
+            <i class="ri-close-line"></i>
+          </button>
+        </div>
+
+        <!-- Term/Year filter bar -->
+        <div class="filter-bar">
+          <div class="filter-item">
+            <label>Term</label>
+            <select [(ngModel)]="selectedTerm" (change)="onFilterChange()">
+              <option *ngFor="let t of terms" [value]="t">{{ t }}</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <label>Academic Year</label>
+            <select [(ngModel)]="selectedYear" (change)="onFilterChange()">
+              <option *ngFor="let y of academicYears" [value]="y">{{ y }}</option>
+            </select>
+          </div>
         </div>
 
         <div class="admin-grid">
 
-          <!-- Left column -->
+          <!-- ── Left column ──────────────────────────────── -->
           <div class="left-col">
 
-            <!-- Settings Card -->
+            <!-- Tier Rate Settings -->
             <div class="admin-card">
               <div class="card-header">
-                <i class="ri-settings-3-line"></i>
-                <h3>Daily Fee Settings</h3>
+                <i class="ri-price-tag-3-line"></i>
+                <h3>Daily Rates by Tier</h3>
+                <span class="card-header-sub">Set base rates — override per class below</span>
               </div>
               <div class="card-body">
-                <div class="settings-filters">
-                  <select [(ngModel)]="selectedTerm" (change)="onFilterChange()">
-                    <option *ngFor="let t of terms" [value]="t">{{ t }}</option>
-                  </select>
-                  <select [(ngModel)]="selectedYear" (change)="onFilterChange()">
-                    <option *ngFor="let y of academicYears" [value]="y">{{ y }}</option>
-                  </select>
+
+                <div *ngIf="loadingSettings" class="settings-loading">
+                  <div class="spinner"></div>
+                  <span>Loading...</span>
                 </div>
-                <div class="amount-input-row">
-                  <label>Daily Feeding Amount (GHS)</label>
-                  <div class="amount-input-wrap">
-                    <span class="currency-prefix">GH₵</span>
-                    <input type="number" [(ngModel)]="editingAmount" min="0" step="0.01" placeholder="0.00" />
+
+                <ng-container *ngIf="!loadingSettings">
+
+                  <!-- Tier rows -->
+                  <div class="settings-rows">
+                    <div class="setting-row"
+                      *ngFor="let row of settingRows | settingScope:'tier'; trackBy: trackByRowLabel">
+                      <div class="setting-row-label">
+                        <span class="tier-badge" [ngClass]="row.tier">{{ getTierLabel(row.tier) }}</span>
+                      </div>
+                      <div class="setting-row-value" *ngIf="!row.editing">
+                        <span class="rate-display" [class.not-set]="row.dailyAmount === 0">
+                          {{ row.dailyAmount > 0 ? formatCurrency(row.dailyAmount) + '/day' : 'Not set' }}
+                        </span>
+                        <button class="btn-icon-edit" (click)="startEdit(row)" title="Edit rate">
+                          <i class="ri-edit-line"></i>
+                        </button>
+                      </div>
+                      <div class="setting-row-edit" *ngIf="row.editing">
+                        <div class="amount-input-wrap compact">
+                          <span class="currency-prefix">GH₵</span>
+                          <input type="number" [(ngModel)]="row.editingAmount" min="0" step="0.01" placeholder="0.00"
+                            (keydown.enter)="saveSetting(row)" />
+                        </div>
+                        <button class="btn-save-inline" (click)="saveSetting(row)"
+                          [disabled]="row.saving || row.editingAmount <= 0">
+                          <i class="ri-loader-4-line spin" *ngIf="row.saving"></i>
+                          <i class="ri-check-line" *ngIf="!row.saving"></i>
+                        </button>
+                        <button class="btn-cancel-inline" (click)="cancelEdit(row)" [disabled]="row.saving">
+                          <i class="ri-close-line"></i>
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                </div>
-                <button class="btn-save-settings" (click)="saveSettings()"
-                  [disabled]="savingSettings || editingAmount <= 0">
-                  <i class="ri-loader-4-line spin" *ngIf="savingSettings"></i>
-                  <i class="ri-save-line" *ngIf="!savingSettings"></i>
-                  {{ savingSettings ? 'Saving...' : 'Save Daily Amount' }}
-                </button>
-                <div *ngIf="dailyAmount > 0" class="current-rate">
-                  Current rate: <strong>{{ formatCurrency(dailyAmount) }}/day</strong>
-                </div>
+
+                  <!-- Class override rows -->
+                  <div class="override-section"
+                    *ngIf="(settingRows | settingScope:'class').length > 0 || showAddOverride">
+                    <div class="override-header">
+                      <i class="ri-git-branch-line"></i>
+                      <span>Class Overrides</span>
+                      <span class="override-hint">These override the tier rate for a specific class</span>
+                    </div>
+
+                    <div class="settings-rows override-rows">
+                      <div class="setting-row override"
+                        *ngFor="let row of settingRows | settingScope:'class'; trackBy: trackByRowLabel">
+                        <div class="setting-row-label">
+                          <span class="class-name-badge">{{ row.label }}</span>
+                          <span class="tier-mini-badge" *ngIf="row.classTier">
+                            {{ getTierLabel(row.classTier) }}
+                          </span>
+                        </div>
+                        <div class="setting-row-value" *ngIf="!row.editing">
+                          <span class="rate-display override-rate">
+                            {{ formatCurrency(row.dailyAmount) }}/day
+                          </span>
+                          <button class="btn-icon-edit" (click)="startEdit(row)" title="Edit">
+                            <i class="ri-edit-line"></i>
+                          </button>
+                          <button class="btn-icon-delete" (click)="deleteOverride(row)" title="Remove override">
+                            <i class="ri-delete-bin-line"></i>
+                          </button>
+                        </div>
+                        <div class="setting-row-edit" *ngIf="row.editing">
+                          <div class="amount-input-wrap compact">
+                            <span class="currency-prefix">GH₵</span>
+                            <input type="number" [(ngModel)]="row.editingAmount" min="0" step="0.01" placeholder="0.00"
+                              (keydown.enter)="saveSetting(row)" />
+                          </div>
+                          <button class="btn-save-inline" (click)="saveSetting(row)"
+                            [disabled]="row.saving || row.editingAmount <= 0">
+                            <i class="ri-loader-4-line spin" *ngIf="row.saving"></i>
+                            <i class="ri-check-line" *ngIf="!row.saving"></i>
+                          </button>
+                          <button class="btn-cancel-inline" (click)="cancelEdit(row)" [disabled]="row.saving">
+                            <i class="ri-close-line"></i>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Add override -->
+                  <div class="add-override-section">
+                    <button class="btn-add-override" (click)="showAddOverride = !showAddOverride"
+                      *ngIf="!showAddOverride && availableClassesForOverride.length > 0">
+                      <i class="ri-add-line"></i> Add Class Override
+                    </button>
+
+                    <div class="add-override-form" *ngIf="showAddOverride">
+                      <p class="add-override-title">Add class-specific rate</p>
+                      <select [(ngModel)]="addOverrideClassId" class="override-class-select">
+                        <option value="">Select a class...</option>
+                        <option *ngFor="let c of availableClassesForOverride" [value]="c.id">
+                          {{ c.name }}
+                        </option>
+                      </select>
+                      <div class="amount-input-wrap compact" style="margin-top: 8px;">
+                        <span class="currency-prefix">GH₵</span>
+                        <input type="number" [(ngModel)]="addOverrideAmount" min="0" step="0.01"
+                          placeholder="Daily amount" />
+                      </div>
+                      <div class="add-override-actions">
+                        <button class="btn-cancel-inline"
+                          (click)="showAddOverride = false; addOverrideClassId = ''; addOverrideAmount = 0">
+                          Cancel
+                        </button>
+                        <button class="btn-save-settings"
+                          [disabled]="!addOverrideClassId || addOverrideAmount <= 0 || addingOverride"
+                          (click)="addClassOverride()">
+                          <i class="ri-loader-4-line spin" *ngIf="addingOverride"></i>
+                          <i class="ri-add-line" *ngIf="!addingOverride"></i>
+                          {{ addingOverride ? 'Adding...' : 'Add Override' }}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                </ng-container>
               </div>
             </div>
 
@@ -73,8 +196,7 @@
               </div>
               <div class="card-body">
                 <p class="link-description">
-                  Share this link with the teacher to record daily feeding fees.
-                  No login required.
+                  Share this link with the teacher to record daily feeding fees. No login required.
                 </p>
                 <div class="link-box">
                   <span class="link-text">{{ publicLink }}</span>
@@ -93,12 +215,12 @@
 
           </div>
 
-          <!-- Right column: Records -->
+          <!-- ── Right column: Records ────────────────────── -->
           <div class="right-col">
 
             <!-- Date filter -->
             <div class="records-filters">
-              <input type="date" [(ngModel)]="selectedDate" (change)="onDateChange()" />
+              <input type="date" [(ngModel)]="selectedDate" (change)="onDateChange()" [max]="today" />
               <span class="records-count">
                 {{ payments.length }} record{{ payments.length !== 1 ? 's' : '' }}
               </span>
@@ -114,17 +236,9 @@
                 <span>Absent</span>
                 <strong>{{ dailySummary.absent }}</strong>
               </div>
-              <div class="dsm-item expected">
-                <span>Expected</span>
-                <strong>{{ formatCurrency(dailySummary.expectedTotal) }}</strong>
-              </div>
-              <div class="dsm-item collected" [class.shortfall]="dailySummary.shortfall > 0">
+              <div class="dsm-item collected">
                 <span>Collected</span>
                 <strong>{{ formatCurrency(dailySummary.totalCollected) }}</strong>
-              </div>
-              <div class="dsm-item shortfall-item" *ngIf="dailySummary.shortfall > 0">
-                <span>Shortfall</span>
-                <strong class="red">{{ formatCurrency(dailySummary.shortfall) }}</strong>
               </div>
             </div>
 
@@ -141,10 +255,12 @@
                   <tr>
                     <th>Student</th>
                     <th>Class</th>
+                    <th>Rate</th>
                     <th class="text-right">Amount</th>
                     <th class="text-center">Days</th>
                     <th>Time</th>
                     <th>Notes</th>
+                    <th class="text-center">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -154,6 +270,11 @@
                       <p class="rec-num">{{ p.student?.student_number }}</p>
                     </td>
                     <td data-label="Class">{{ p.student?.class?.name || '—' }}</td>
+                    <td data-label="Rate">
+                      <span class="mini-rate-chip">
+                        {{ formatCurrency(resolveRateForDisplay(p.student?.class?.id, p.student?.class?.tier)) }}
+                      </span>
+                    </td>
                     <td data-label="Amount" class="text-right amount-cell">
                       {{ formatCurrency(p.amount_paid) }}
                     </td>
@@ -162,15 +283,25 @@
                       {{ p.created_at | date:'h:mm a' }}
                     </td>
                     <td data-label="Notes" class="notes-cell">{{ p.notes || '—' }}</td>
+                    <td data-label="Actions" class="text-center">
+                      <div class="table-actions">
+                        <button class="btn-tbl-edit" (click)="openEditPaymentModal(p)" title="Edit payment">
+                          <i class="ri-edit-line"></i>
+                        </button>
+                        <button class="btn-tbl-delete" (click)="deletePayment(p)" title="Delete payment">
+                          <i class="ri-delete-bin-line"></i>
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 </tbody>
                 <tfoot>
                   <tr class="total-row">
-                    <td colspan="2"><strong>Total Collected</strong></td>
+                    <td colspan="3"><strong>Total Collected</strong></td>
                     <td class="text-right">
                       <strong>{{ formatCurrency(totalCollectedToday) }}</strong>
                     </td>
-                    <td colspan="3"></td>
+                    <td colspan="4"></td>
                   </tr>
                 </tfoot>
               </table>
@@ -185,6 +316,62 @@
         </div>
 
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Edit Payment Modal (admin) ──────────────────────────── -->
+<div class="modal-overlay" *ngIf="showEditPaymentModal" (click)="closeEditPaymentModal()">
+  <div class="edit-payment-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div>
+        <h3>Edit Payment</h3>
+        <p>{{ getStudentName(editingPayment?.student) }} · {{ editingPayment?.student?.class?.name }}</p>
+      </div>
+      <button class="close-btn" (click)="closeEditPaymentModal()">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <div class="rate-info-row" *ngIf="editingPayment">
+        <i class="ri-information-line"></i>
+        Daily rate for this class:
+        <strong class="rate-value">
+          {{ formatCurrency(resolveRateForDisplay(editingPayment?.student?.class?.id,
+          editingPayment?.student?.class?.tier)) }}
+        </strong>
+      </div>
+
+      <div class="form-group">
+        <label>Amount (GHS) *</label>
+        <div class="amount-input-wrap">
+          <span class="currency-prefix">GH₵</span>
+          <input type="number" [(ngModel)]="editPaymentAmount" min="0.01" step="0.01" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Payment Date</label>
+        <input type="date" [(ngModel)]="editPaymentDate" [max]="today" />
+      </div>
+
+      <div class="form-group">
+        <label>Notes</label>
+        <input type="text" [(ngModel)]="editPaymentNotes" placeholder="Optional note" />
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-cancel" (click)="closeEditPaymentModal()" [disabled]="processingPaymentEdit">
+        Cancel
+      </button>
+      <button class="btn-save" (click)="submitPaymentEdit()"
+        [disabled]="!editPaymentAmount || editPaymentAmount <= 0 || processingPaymentEdit">
+        <i class="ri-loader-4-line spin" *ngIf="processingPaymentEdit"></i>
+        <i class="ri-save-line" *ngIf="!processingPaymentEdit"></i>
+        {{ processingPaymentEdit ? 'Saving...' : 'Save Changes' }}
+      </button>
     </div>
   </div>
 </div>

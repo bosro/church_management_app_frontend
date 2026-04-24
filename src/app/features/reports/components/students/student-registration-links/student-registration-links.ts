@@ -1,28 +1,27 @@
-// src/app/features/members/components/registration-links/registration-links.component.ts
-// KEY FIX: checkPermissions() now includes role-based fallback.
-// AuthService was already injected — no import change needed.
-// All other logic is unchanged from your original.
+
+// src/app/features/reports/components/school/students/student-registration-links/student-registration-links.ts
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import {
-  RegistrationLinkService,
-  RegistrationLink,
-} from '../../services/registration-link.service';
-import { AuthService } from '../../../../core/services/auth';
-import { PermissionService } from '../../../../core/services/permission.service';
+import { StudentRegistrationLink, StudentRegistrationLinkService } from '../../../services/student-registration-link.service';
+import { SchoolClass } from '../../../../../models/school.model';
+import { AuthService } from '../../../../../core/services/auth';
+import { PermissionService } from '../../../../../core/services/permission.service';
+import { SchoolService } from '../../../services/school.service';
+
 
 @Component({
-  selector: 'app-registration-links',
+  selector: 'app-student-registration-links',
   standalone: false,
-  templateUrl: './registration-links.html',
-  styleUrl: './registration-links.scss',
+  templateUrl: './student-registration-links.html',
+  styleUrl: './student-registration-links.scss',
 })
-export class RegistrationLinks implements OnInit, OnDestroy {
+export class StudentRegistrationLinks implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
-  links: RegistrationLink[] = [];
+  links: StudentRegistrationLink[] = [];
+  classes: SchoolClass[] = [];
   loading = false;
   errorMessage = '';
   successMessage = '';
@@ -31,17 +30,20 @@ export class RegistrationLinks implements OnInit, OnDestroy {
   showQRModal = false;
   selectedLinkForQR: any = null;
   qrCodeValue = '';
-  selectedLink: RegistrationLink | null = null;
 
+  // Form state
   hasExpiry = false;
   expiresInHours = 24;
   hasMaxUses = false;
   maxUses: number | null = null;
+  restrictToClass = false;
+  selectedClassId = '';
 
   canManageLinks = false;
 
   constructor(
-    private linkService: RegistrationLinkService,
+    private linkService: StudentRegistrationLinkService,
+    private schoolService: SchoolService,
     private authService: AuthService,
     private router: Router,
     public permissionService: PermissionService,
@@ -50,6 +52,7 @@ export class RegistrationLinks implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.checkPermissions();
     this.loadLinks();
+    this.loadClasses();
   }
 
   ngOnDestroy(): void {
@@ -58,19 +61,22 @@ export class RegistrationLinks implements OnInit, OnDestroy {
   }
 
   private checkPermissions(): void {
-    const role = this.authService.getCurrentUserRole();
-
-    // Registration links are an admin/pastor-level feature — not for cell leaders
-    const manageRoles = ['pastor', 'senior_pastor', 'associate_pastor'];
-
     this.canManageLinks =
       this.permissionService.isAdmin ||
-      this.permissionService.members.import ||
-      manageRoles.includes(role);
+      this.permissionService.school?.manage;
 
     if (!this.canManageLinks) {
       this.router.navigate(['/unauthorized']);
     }
+  }
+
+  loadClasses(): void {
+    this.schoolService
+      .getClasses()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (c) => (this.classes = c),
+      });
   }
 
   loadLinks(): void {
@@ -86,8 +92,7 @@ export class RegistrationLinks implements OnInit, OnDestroy {
           this.loading = false;
         },
         error: (error) => {
-          this.errorMessage =
-            error.message || 'Failed to load registration links';
+          this.errorMessage = error.message || 'Failed to load links';
           this.loading = false;
         },
       });
@@ -99,6 +104,8 @@ export class RegistrationLinks implements OnInit, OnDestroy {
     this.expiresInHours = 24;
     this.hasMaxUses = false;
     this.maxUses = null;
+    this.restrictToClass = false;
+    this.selectedClassId = '';
     this.errorMessage = '';
   }
 
@@ -113,7 +120,11 @@ export class RegistrationLinks implements OnInit, OnDestroy {
       return;
     }
     if (this.hasMaxUses && (!this.maxUses || this.maxUses < 1)) {
-      this.errorMessage = 'Please enter a valid maximum uses (at least 1)';
+      this.errorMessage = 'Please enter a valid max uses (at least 1)';
+      return;
+    }
+    if (this.restrictToClass && !this.selectedClassId) {
+      this.errorMessage = 'Please select a class';
       return;
     }
 
@@ -124,11 +135,12 @@ export class RegistrationLinks implements OnInit, OnDestroy {
       .createLink({
         expires_in_hours: this.hasExpiry ? this.expiresInHours : null,
         max_uses: this.hasMaxUses ? this.maxUses! : null,
+        class_id: this.restrictToClass ? this.selectedClassId : null,
       })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
-          this.successMessage = 'Registration link created successfully!';
+          this.successMessage = 'Registration link created!';
           this.loadLinks();
           this.closeCreateModal();
           this.loading = false;
@@ -154,9 +166,8 @@ export class RegistrationLinks implements OnInit, OnDestroy {
       });
   }
 
-  showQRCode(link: any): void {
-    const fullUrl = `${window.location.origin}/public/register/${link.link_token}`;
-    this.qrCodeValue = fullUrl;
+  showQRCode(link: StudentRegistrationLink): void {
+    this.qrCodeValue = this.linkService.getRegistrationUrl(link.link_token);
     this.selectedLinkForQR = link;
     this.showQRModal = true;
   }
@@ -168,51 +179,33 @@ export class RegistrationLinks implements OnInit, OnDestroy {
   }
 
   downloadQRCode(): void {
-    const canvas = document.querySelector(
-      '.qr-code-image canvas',
-    ) as HTMLCanvasElement;
+    const canvas = document.querySelector('.qr-code-image canvas') as HTMLCanvasElement;
     if (canvas) {
       const url = canvas.toDataURL('image/png');
       const a = document.createElement('a');
       a.href = url;
-      a.download = `registration-qr-${this.selectedLinkForQR?.link_token || 'code'}.png`;
+      a.download = `student-registration-qr-${this.selectedLinkForQR?.link_token || 'code'}.png`;
       a.click();
     }
   }
 
-  copyLink(link: RegistrationLink): void {
+  copyLink(link: StudentRegistrationLink): void {
     const url = this.linkService.getRegistrationUrl(link.link_token);
-    navigator.clipboard
-      .writeText(url)
-      .then(() => {
-        this.successMessage = 'Link copied to clipboard!';
-        setTimeout(() => (this.successMessage = ''), 3000);
-      })
-      .catch(() => {
-        this.errorMessage = 'Failed to copy link';
-        setTimeout(() => (this.errorMessage = ''), 3000);
-      });
+    this.copyToClipboard(url);
   }
 
   deactivateLink(linkId: string): void {
-    if (
-      !confirm(
-        'Are you sure you want to deactivate this link? You can reactivate it later.',
-      )
-    )
-      return;
+    if (!confirm('Deactivate this link? You can reactivate it later.')) return;
     this.linkService
       .deactivateLink(linkId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
-          this.successMessage = 'Link deactivated successfully';
+          this.successMessage = 'Link deactivated';
           this.loadLinks();
           setTimeout(() => (this.successMessage = ''), 3000);
         },
-        error: (error) => {
-          this.errorMessage = error.message || 'Failed to deactivate link';
-        },
+        error: (err) => (this.errorMessage = err.message || 'Failed'),
       });
   }
 
@@ -222,37 +215,35 @@ export class RegistrationLinks implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
-          this.successMessage = 'Link reactivated successfully';
+          this.successMessage = 'Link reactivated';
           this.loadLinks();
           setTimeout(() => (this.successMessage = ''), 3000);
         },
-        error: (error) => {
-          this.errorMessage = error.message || 'Failed to reactivate link';
-        },
+        error: (err) => (this.errorMessage = err.message || 'Failed'),
       });
   }
 
-  getRegistrationUrl(link: RegistrationLink): string {
+  getRegistrationUrl(link: StudentRegistrationLink): string {
     return this.linkService.getRegistrationUrl(link.link_token);
   }
 
-  isExpired(link: RegistrationLink): boolean {
+  isExpired(link: StudentRegistrationLink): boolean {
     if (!link.expires_at) return false;
     return new Date(link.expires_at) < new Date();
   }
 
-  isMaxedOut(link: RegistrationLink): boolean {
+  isMaxedOut(link: StudentRegistrationLink): boolean {
     return link.max_uses !== null && link.current_uses >= link.max_uses;
   }
 
-  getLinkStatus(link: RegistrationLink): string {
+  getLinkStatus(link: StudentRegistrationLink): string {
     if (this.isExpired(link)) return 'Expired';
     if (this.isMaxedOut(link)) return 'Max Uses Reached';
     if (!link.is_active) return 'Deactivated';
     return 'Active';
   }
 
-  getStatusClass(link: RegistrationLink): string {
+  getStatusClass(link: StudentRegistrationLink): string {
     if (this.isExpired(link)) return 'status-expired';
     if (this.isMaxedOut(link)) return 'status-maxed';
     if (!link.is_active) return 'status-inactive';
@@ -270,8 +261,6 @@ export class RegistrationLinks implements OnInit, OnDestroy {
   }
 
   goBack(): void {
-    this.router.navigate(['main/members']);
+    this.router.navigate(['main/reports/students']);
   }
 }
-
-

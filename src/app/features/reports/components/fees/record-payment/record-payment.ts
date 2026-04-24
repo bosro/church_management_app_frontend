@@ -104,6 +104,12 @@ export class RecordPayment implements OnInit, OnDestroy {
   }
 
   loadStudent(): void {
+    // ✅ FIX 1b: Reset everything when navigating between students
+    this.student = null;
+    this.fees = [];
+    this.feePayments = [];
+    this.errorMessage = '';
+
     this.schoolService
       .getStudentById(this.studentId)
       .pipe(takeUntil(this.destroy$))
@@ -121,18 +127,21 @@ export class RecordPayment implements OnInit, OnDestroy {
 
   loadFees(): void {
     this.loading = true;
+    // ✅ FIX 1: Clear immediately so stale data never shows
+    this.fees = [];
+    this.feePayments = [];
+
     this.schoolService
       .getStudentFees(this.studentId, this.selectedYear, this.selectedTerm)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (fees) => {
-          // Show ALL fees (paid, partial, unpaid) so user can see full picture
           this.fees = fees;
           this.feePayments = fees
-            .filter((f) => f.status !== 'paid') // only allow paying unpaid/partial
+            .filter((f) => f.status !== 'paid')
             .map((f) => ({
               fee: f,
-              amount: Number((f.amount_due - f.amount_paid).toFixed(2)), // default = full balance
+              amount: Number((f.amount_due - f.amount_paid).toFixed(2)),
               selected: true,
             }));
           this.loading = false;
@@ -151,6 +160,7 @@ export class RecordPayment implements OnInit, OnDestroy {
   // ── Computed ──────────────────────────────────────────
 
   get totalFeesDue(): number {
+    // This is the TOTAL BILLED (amount_due), not remaining
     return this.fees.reduce((s, f) => s + Number(f.amount_due), 0);
   }
 
@@ -381,5 +391,3 @@ export class RecordPayment implements OnInit, OnDestroy {
     }).format(amount || 0);
   }
 }
-
-

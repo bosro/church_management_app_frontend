@@ -21,6 +21,14 @@
               <i class="ri-download-line"></i>
               {{ exporting ? 'Exporting...' : 'Export' }}
             </button>
+
+            <!-- NEW: Registration Links button -->
+            <button class="btn-secondary" (click)="router.navigate(['main/reports/students/registration-links'])"
+              *ngIf="permissionService.school?.manage">
+              <i class="ri-links-line"></i>
+              Enrollment Links
+            </button>
+
             <button class="btn-secondary" routerLink="import" *ngIf="permissionService.school?.manage">
               <i class="ri-upload-2-line"></i>
               Import
@@ -61,7 +69,8 @@
         </div>
 
         <!-- Duplicate warning banner -->
-        <div *ngIf="permissionService.isAdmin && duplicateStats && duplicateStats.toDelete > 0" class="duplicate-notice">
+        <div *ngIf="permissionService.isAdmin && duplicateStats && duplicateStats.toDelete > 0"
+          class="duplicate-notice">
           <div class="notice-content">
             <div class="notice-icon">
               <i class="ri-user-unfollow-line"></i>
@@ -143,7 +152,8 @@
               </button>
             </div>
 
-            <button type="button" class="btn-clear" *ngIf="filterForm.dirty || sortOrder !== 'name_asc'" (click)="clearFilters()">
+            <button type="button" class="btn-clear" *ngIf="filterForm.dirty || sortOrder !== 'name_asc'"
+              (click)="clearFilters()">
               <i class="ri-close-line"></i> Clear
             </button>
           </form>
@@ -197,8 +207,7 @@
               </thead>
               <tbody>
                 <tr *ngFor="let student of students" class="table-row"
-                  [class.row-selected]="selectedStudentIds.has(student.id)"
-                  (click)="viewStudent(student.id)">
+                  [class.row-selected]="selectedStudentIds.has(student.id)" (click)="viewStudent(student.id)">
 
                   <!-- Checkbox -->
                   <td class="checkbox-col" *ngIf="permissionService.isAdmin" (click)="$event.stopPropagation()">
@@ -230,15 +239,18 @@
                   <td class="capitalize">{{ student.gender || '—' }}</td>
 
                   <td class="text-right fee-amount" *ngIf="permissionService.school.fees">
-                    {{ getStudentFeeData(student.id)?.totalDue != null ? formatCurrency(getStudentFeeData(student.id).totalDue) : '—' }}
+                    {{ getStudentFeeData(student.id)?.totalDue != null ?
+                    formatCurrency(getStudentFeeData(student.id).totalDue) : '—' }}
                   </td>
                   <td class="text-right fee-amount paid" *ngIf="permissionService.school.fees">
-                    {{ getStudentFeeData(student.id)?.totalPaid != null ? formatCurrency(getStudentFeeData(student.id).totalPaid) : '—' }}
+                    {{ getStudentFeeData(student.id)?.totalPaid != null ?
+                    formatCurrency(getStudentFeeData(student.id).totalPaid) : '—' }}
                   </td>
                   <td class="text-right fee-amount"
                     [class.outstanding]="(getStudentFeeData(student.id)?.totalBalance || 0) > 0"
                     *ngIf="permissionService.school.fees">
-                    {{ getStudentFeeData(student.id)?.totalBalance != null ? formatCurrency(getStudentFeeData(student.id).totalBalance) : '—' }}
+                    {{ getStudentFeeData(student.id)?.totalBalance != null ?
+                    formatCurrency(getStudentFeeData(student.id).totalBalance) : '—' }}
                   </td>
                   <td *ngIf="permissionService.school.fees">
                     <span *ngIf="getStudentFeeData(student.id) as fd" class="status-badge"
@@ -265,14 +277,17 @@
 
                 <!-- Empty state -->
                 <tr *ngIf="students.length === 0">
-                  <td [attr.colspan]="permissionService.isAdmin ? (permissionService.school.fees ? 10 : 5) : (permissionService.school.fees ? 9 : 4)">
+                  <td
+                    [attr.colspan]="permissionService.isAdmin ? (permissionService.school.fees ? 10 : 5) : (permissionService.school.fees ? 9 : 4)">
                     <div class="empty-state">
                       <div class="empty-icon"><i class="ri-user-line"></i></div>
                       <h3>No students found</h3>
-                      <p *ngIf="activeClassFilter">No students enrolled in <strong>{{ activeClassFilter.name }}</strong> yet.</p>
+                      <p *ngIf="activeClassFilter">No students enrolled in <strong>{{ activeClassFilter.name }}</strong>
+                        yet.</p>
                       <p *ngIf="!activeClassFilter">Try adjusting your filters or add your first student</p>
                       <div class="empty-state-actions">
-                        <button class="btn-primary-small" (click)="addStudent()" *ngIf="permissionService.school.manage">
+                        <button class="btn-primary-small" (click)="addStudent()"
+                          *ngIf="permissionService.school.manage">
                           <i class="ri-user-add-line"></i> Add Student
                         </button>
                         <button class="btn-secondary-small" (click)="clearClassFilter()" *ngIf="activeClassFilter">
@@ -338,7 +353,8 @@
       <i class="ri-delete-bin-line"></i>
     </div>
     <h3>Delete {{ selectedStudentIds.size }} Student{{ selectedStudentIds.size > 1 ? 's' : '' }}</h3>
-    <p>You are about to permanently delete {{ selectedStudentIds.size }} selected student{{ selectedStudentIds.size > 1 ? 's' : '' }}.</p>
+    <p>You are about to permanently delete {{ selectedStudentIds.size }} selected student{{ selectedStudentIds.size > 1
+      ? 's' : '' }}.</p>
     <p class="confirm-sub">All their fee records, payment history, and exam results will also be removed.</p>
     <div class="confirm-warning">
       <i class="ri-error-warning-line"></i>
@@ -347,7 +363,8 @@
     <div class="confirm-actions">
       <button class="btn-cancel" (click)="closeBulkDeleteConfirm()" [disabled]="bulkDeleting">Cancel</button>
       <button class="btn-confirm-delete" (click)="executeBulkDelete()" [disabled]="bulkDeleting">
-        <span *ngIf="!bulkDeleting"><i class="ri-delete-bin-line"></i> Delete {{ selectedStudentIds.size }} Student{{ selectedStudentIds.size > 1 ? 's' : '' }}</span>
+        <span *ngIf="!bulkDeleting"><i class="ri-delete-bin-line"></i> Delete {{ selectedStudentIds.size }} Student{{
+          selectedStudentIds.size > 1 ? 's' : '' }}</span>
         <span *ngIf="bulkDeleting"><i class="ri-loader-4-line spin"></i> Deleting...</span>
       </button>
     </div>
@@ -361,8 +378,11 @@
       <i class="ri-user-unfollow-line"></i>
     </div>
     <h3>Remove Duplicate Students</h3>
-    <p>Found <strong>{{ duplicateStats?.toDelete }}</strong> duplicate record{{ (duplicateStats?.toDelete || 0) > 1 ? 's' : '' }} across <strong>{{ duplicateStats?.groups }}</strong> group{{ (duplicateStats?.groups || 0) > 1 ? 's' : '' }}.</p>
-    <p class="confirm-sub">The <strong>oldest</strong> record in each group will be kept. All newer duplicates and their related data will be permanently deleted.</p>
+    <p>Found <strong>{{ duplicateStats?.toDelete }}</strong> duplicate record{{ (duplicateStats?.toDelete || 0) > 1 ?
+      's' : '' }} across <strong>{{ duplicateStats?.groups }}</strong> group{{ (duplicateStats?.groups || 0) > 1 ? 's' :
+      '' }}.</p>
+    <p class="confirm-sub">The <strong>oldest</strong> record in each group will be kept. All newer duplicates and their
+      related data will be permanently deleted.</p>
     <div class="confirm-warning warning">
       <i class="ri-information-line"></i>
       Make sure you have reviewed the duplicates before proceeding.
@@ -370,7 +390,8 @@
     <div class="confirm-actions">
       <button class="btn-cancel" (click)="closeDuplicateConfirm()" [disabled]="deduplicating">Cancel</button>
       <button class="btn-confirm-warning" (click)="executeDeduplication()" [disabled]="deduplicating">
-        <span *ngIf="!deduplicating"><i class="ri-delete-bin-line"></i> Delete {{ duplicateStats?.toDelete }} Duplicate{{ (duplicateStats?.toDelete || 0) > 1 ? 's' : '' }}</span>
+        <span *ngIf="!deduplicating"><i class="ri-delete-bin-line"></i> Delete {{ duplicateStats?.toDelete }}
+          Duplicate{{ (duplicateStats?.toDelete || 0) > 1 ? 's' : '' }}</span>
         <span *ngIf="deduplicating"><i class="ri-loader-4-line spin"></i> Removing...</span>
       </button>
     </div>
@@ -397,7 +418,13 @@
     </div>
     <table class="ps-table">
       <thead>
-        <tr><th>Fee</th><th>Due</th><th>Paid</th><th>Balance</th><th>Status</th></tr>
+        <tr>
+          <th>Fee</th>
+          <th>Due</th>
+          <th>Paid</th>
+          <th>Balance</th>
+          <th>Status</th>
+        </tr>
       </thead>
       <tbody>
         <tr *ngFor="let f of s.fees">

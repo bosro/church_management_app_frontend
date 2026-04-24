@@ -776,6 +776,7 @@ export class SchoolService {
 
   private groupPaymentsByReceipt(rows: any[]): FeePayment[] {
     const map: { [receipt: string]: FeePayment } = {};
+
     rows.forEach((row) => {
       const rn = row.receipt_number;
       if (!map[rn]) {
@@ -783,7 +784,7 @@ export class SchoolService {
           id: row.id,
           church_id: row.church_id,
           student_id: row.student_id,
-          student: row.student,
+          student: row.student, // set initially
           receipt_number: rn,
           amount: 0,
           payment_method: row.payment_method,
@@ -797,16 +798,32 @@ export class SchoolService {
           created_at: row.created_at,
         };
       }
+
+      // ✅ FIX 3: Always prefer the row that has full student data populated
+      // (Supabase join might return null student on some rows if fee_id is null)
+      if (!map[rn].student && row.student) {
+        map[rn].student = row.student;
+      }
+      // ✅ Also ensure student_id is never overwritten with a different student's id
+      // (guard against cross-contamination between receipts)
+      if (map[rn].student_id !== row.student_id) {
+        // This row belongs to a different student — skip (data integrity issue)
+        console.warn(
+          `Receipt ${rn} has rows from multiple students — skipping row`,
+        );
+        return;
+      }
+
       map[rn].amount += Number(row.amount);
       map[rn].fee_items.push({
         fee_name: row.student_fee?.fee_structure?.fee_name || 'Fee',
         amount: Number(row.amount),
-        // Carry balance info from student_fee for remaining balance display
         amount_due: Number(row.student_fee?.amount_due || 0),
         amount_paid_total: Number(row.student_fee?.amount_paid || 0),
         is_arrears: !row.student_fee_id,
       });
     });
+
     return Object.values(map);
   }
 
@@ -1927,3 +1944,5 @@ export class SchoolService {
     if (error) throw new Error(error.message);
   }
 }
+
+
