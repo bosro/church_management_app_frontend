@@ -24,6 +24,7 @@ import { StudentFees } from './components/fees/student-fees/student-fees';
 import { ImportStudents } from './components/add-student/import-students/import-students';
 import { FeedingAdmin } from './components/feeding/feeding-admin/feeding-admin';
 import { ReceiptsList } from './components/fees/receipts-list/receipts-list';
+import { StudentRegistrationLinks } from './components/students/student-registration-links/student-registration-links';
 
 const routes: Routes = [
   {
@@ -31,7 +32,7 @@ const routes: Routes = [
     component: ReportsOverview,
     canActivate: [PermissionGuard],
     data: {
-      roles: ['super_admin', 'church_admin', 'pastor', ],
+      roles: ['super_admin', 'church_admin', 'pastor'],
       permission: 'reports.view',
       requiresFeature: 'reports',
     },
@@ -42,7 +43,7 @@ const routes: Routes = [
     component: StudentsList,
     canActivate: [PermissionGuard],
     data: {
-      roles: ['super_admin', 'church_admin', 'pastor', ],
+      roles: ['super_admin', 'church_admin', 'pastor'],
       permission: 'school.view',
       requiresFeature: 'reports',
     },
@@ -52,7 +53,7 @@ const routes: Routes = [
     component: AddStudent,
     canActivate: [PermissionGuard],
     data: {
-      roles: ['super_admin', 'church_admin', ],
+      roles: ['super_admin', 'church_admin'],
       permission: 'school.manage',
       requiresFeature: 'reports',
     },
@@ -62,8 +63,18 @@ const routes: Routes = [
     component: ImportStudents,
     canActivate: [PermissionGuard],
     data: {
-      roles: ['super_admin', 'church_admin', ],
+      roles: ['super_admin', 'church_admin'],
       permission: 'school.manage',
+      requiresFeature: 'reports',
+    },
+  },
+  {
+    path: 'students/registration-links',
+    component: StudentRegistrationLinks,
+    canActivate: [PermissionGuard],
+    data: {
+      roles: ['super_admin', 'church_admin', 'pastor'],
+      permission: 'school.view',
       requiresFeature: 'reports',
     },
   },
@@ -72,7 +83,7 @@ const routes: Routes = [
     component: StudentDetail,
     canActivate: [PermissionGuard],
     data: {
-      roles: ['super_admin', 'church_admin', 'pastor', ],
+      roles: ['super_admin', 'church_admin', 'pastor'],
       permission: 'school.view',
       requiresFeature: 'reports',
     },
@@ -82,7 +93,7 @@ const routes: Routes = [
     component: EditStudent,
     canActivate: [PermissionGuard],
     data: {
-      roles: ['super_admin', 'church_admin', ],
+      roles: ['super_admin', 'church_admin'],
       permission: 'school.manage',
       requiresFeature: 'reports',
     },
@@ -93,18 +104,19 @@ const routes: Routes = [
     component: ClassesList,
     canActivate: [PermissionGuard],
     data: {
-      roles: ['super_admin', 'church_admin', 'pastor', ],
+      roles: ['super_admin', 'church_admin', 'pastor'],
       permission: 'school.view',
       requiresFeature: 'reports',
     },
   },
+
   // Fees
   {
     path: 'fees/structures',
     component: FeeStructures,
     canActivate: [PermissionGuard],
     data: {
-      roles: ['super_admin', 'church_admin', ],
+      roles: ['super_admin', 'church_admin'],
       permission: 'school.fees',
       requiresFeature: 'reports',
     },
@@ -114,7 +126,7 @@ const routes: Routes = [
     component: StudentFees,
     canActivate: [PermissionGuard],
     data: {
-      roles: ['super_admin', 'church_admin', ],
+      roles: ['super_admin', 'church_admin'],
       permission: 'school.fees',
       requiresFeature: 'reports',
     },
@@ -124,7 +136,7 @@ const routes: Routes = [
     component: RecordPayment,
     canActivate: [PermissionGuard],
     data: {
-      roles: ['super_admin', 'church_admin', ],
+      roles: ['super_admin', 'church_admin'],
       permission: 'school.fees',
       requiresFeature: 'reports',
     },
@@ -134,22 +146,22 @@ const routes: Routes = [
     component: FeeReport,
     canActivate: [PermissionGuard],
     data: {
-      roles: ['super_admin', 'church_admin', ],
+      roles: ['super_admin', 'church_admin'],
       permission: 'school.fees',
       requiresFeature: 'reports',
     },
   },
-   {
+  {
     path: 'fees/receipts',
     component: ReceiptsList,
     canActivate: [PermissionGuard],
     data: {
-      roles: ['super_admin', 'church_admin', ],
+      roles: ['super_admin', 'church_admin'],
       permission: 'school.fees',
       requiresFeature: 'reports',
     },
   },
-   {
+  {
     path: 'fees/feeding-admin',
     component: FeedingAdmin,
     canActivate: [PermissionGuard],
@@ -165,7 +177,7 @@ const routes: Routes = [
     component: ReceiptView,
     canActivate: [PermissionGuard],
     data: {
-      roles: ['super_admin', 'church_admin', ],
+      roles: ['super_admin', 'church_admin'],
       permission: 'school.receipts',
       requiresFeature: 'reports',
     },
@@ -176,7 +188,7 @@ const routes: Routes = [
     component: ExamsList,
     canActivate: [PermissionGuard],
     data: {
-      roles: ['super_admin', 'church_admin', 'pastor', ],
+      roles: ['super_admin', 'church_admin', 'pastor'],
       permission: 'school.exams',
       requiresFeature: 'reports',
     },
@@ -196,7 +208,7 @@ const routes: Routes = [
     component: EnterResults,
     canActivate: [PermissionGuard],
     data: {
-      roles: ['super_admin', 'church_admin', ],
+      roles: ['super_admin', 'church_admin'],
       permission: 'school.exams',
       requiresFeature: 'reports',
     },
@@ -206,7 +218,7 @@ const routes: Routes = [
     component: ResultsReport,
     canActivate: [PermissionGuard],
     data: {
-      roles: ['super_admin', 'church_admin', 'pastor', ],
+      roles: ['super_admin', 'church_admin', 'pastor'],
       permission: 'school.exams',
       requiresFeature: 'reports',
     },
@@ -239,6 +251,3 @@ const routes: Routes = [
   exports: [RouterModule, SharedModule],
 })
 export class ReportsRoutingModule {}
-
-
-

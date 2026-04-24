@@ -9,6 +9,7 @@ import { PaymentForm } from './components/payment-form/payment-form';
 import { ReactiveFormsModule } from '@angular/forms';
 import { SharedModule } from '../../shared/shared-module';
 import { GivingHistoryPage } from './pages/giving-history-page/giving-history-page';
+import { PaymentCallback } from './components/payment-callback/payment-callback';
 
 
 @NgModule({
@@ -17,7 +18,8 @@ import { GivingHistoryPage } from './pages/giving-history-page/giving-history-pa
     MakePayment,
     GivingHistory,
     PaymentForm,
-    GivingHistoryPage
+    GivingHistoryPage,
+    PaymentCallback
   ],
   imports: [
     CommonModule,

@@ -1,13 +1,17 @@
 // src/app/features/my-giving/components/payment-form/payment-form.component.ts
 import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { GivingCategory, CreateTransactionData, PaymentMethod } from '../../../../models/giving.model';
+import {
+  GivingCategory,
+  CreateTransactionData,
+  PaymentMethod,
+} from '../../../../models/giving.model';
 
 @Component({
   selector: 'app-payment-form',
   standalone: false,
   templateUrl: './payment-form.html',
-  styleUrl: './payment-form.scss'
+  styleUrl: './payment-form.scss',
 })
 export class PaymentForm implements OnInit {
   @Input() categories: GivingCategory[] = [];
@@ -18,12 +22,21 @@ export class PaymentForm implements OnInit {
   paymentForm!: FormGroup;
 
   paymentMethods = [
-    { value: 'mobile_money', label: 'Mobile Money', icon: 'ri-smartphone-line' },
+    {
+      value: 'paystack',
+      label: 'Pay Online (Card / MoMo)',
+      icon: 'ri-secure-payment-line',
+    },
+    {
+      value: 'mobile_money',
+      label: 'Mobile Money (Manual)',
+      icon: 'ri-smartphone-line',
+    },
     { value: 'cash', label: 'Cash', icon: 'ri-money-dollar-circle-line' },
     { value: 'bank_transfer', label: 'Bank Transfer', icon: 'ri-bank-line' },
-    { value: 'card', label: 'Debit/Credit Card', icon: 'ri-bank-card-line' },
-    { value: 'check', label: 'Check', icon: 'ri-file-list-line' },
-    { value: 'online', label: 'Online Payment', icon: 'ri-global-line' }
+    { value: 'card', label: 'Card (Manual)', icon: 'ri-bank-card-line' },
+    { value: 'cheque', label: 'Cheque', icon: 'ri-file-list-line' },
+    { value: 'online', label: 'Other Online', icon: 'ri-global-line' },
   ];
 
   selectedPaymentMethod: string = '';
@@ -43,11 +56,11 @@ export class PaymentForm implements OnInit {
       bank_name: [''],
       account_number: [''],
       card_number: [''],
-      notes: ['', Validators.maxLength(500)]
+      notes: ['', Validators.maxLength(500)],
     });
 
     // Watch payment method changes
-    this.paymentForm.get('payment_method')?.valueChanges.subscribe(method => {
+    this.paymentForm.get('payment_method')?.valueChanges.subscribe((method) => {
       this.selectedPaymentMethod = method;
       this.updatePaymentMethodValidators(method);
     });
@@ -63,14 +76,20 @@ export class PaymentForm implements OnInit {
     // Add validators based on payment method (optional - for better UX)
     switch (method) {
       case 'mobile_money':
-        this.paymentForm.get('mobile_number')?.setValidators([Validators.required]);
+        this.paymentForm
+          .get('mobile_number')
+          ?.setValidators([Validators.required]);
         break;
       case 'bank_transfer':
         this.paymentForm.get('bank_name')?.setValidators([Validators.required]);
-        this.paymentForm.get('account_number')?.setValidators([Validators.required]);
+        this.paymentForm
+          .get('account_number')
+          ?.setValidators([Validators.required]);
         break;
       case 'card':
-        this.paymentForm.get('card_number')?.setValidators([Validators.required]);
+        this.paymentForm
+          .get('card_number')
+          ?.setValidators([Validators.required]);
         break;
     }
 
@@ -128,7 +147,7 @@ export class PaymentForm implements OnInit {
   }
 
   private markFormGroupTouched(formGroup: FormGroup): void {
-    Object.keys(formGroup.controls).forEach(key => {
+    Object.keys(formGroup.controls).forEach((key) => {
       const control = formGroup.get(key);
       control?.markAsTouched();
 
@@ -138,6 +157,3 @@ export class PaymentForm implements OnInit {
     });
   }
 }
-
-
-

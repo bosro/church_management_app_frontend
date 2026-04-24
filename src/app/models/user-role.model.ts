@@ -249,3 +249,6 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
   ],
   member: [],
 };
+
+
+

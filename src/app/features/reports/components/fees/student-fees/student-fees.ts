@@ -1,7 +1,8 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
+import { FormControl } from '@angular/forms';
 import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { takeUntil, debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { SchoolService } from '../../../services/school.service';
 import { PermissionService } from '../../../../../core/services/permission.service';
 import {
@@ -22,7 +23,12 @@ import { PdfBrandingService } from '../../../../../core/services/pdf-branding.se
 export class StudentFees implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
+  // Full unfiltered list from the backend
+   allStudentSummaries: any[] = [];
+
+  // Displayed (filtered + sorted) list
   studentSummaries: any[] = [];
+
   classes: SchoolClass[] = [];
   loading = false;
   errorMessage = '';
@@ -32,6 +38,13 @@ export class StudentFees implements OnInit, OnDestroy {
   selectedClassId = '';
   terms = TERMS;
   academicYears: string[] = generateAcademicYears();
+
+  // ── Search ─────────────────────────────────────────────────
+  searchControl = new FormControl('');
+  searchTerm = '';
+
+  // ── Sort ───────────────────────────────────────────────────
+  sortOrder: 'name_asc' | 'name_desc' = 'name_asc';
 
   showExportModal = false;
   exporting = false;
@@ -46,6 +59,14 @@ export class StudentFees implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.loadClasses();
     this.loadFees();
+
+    // Debounce search input
+    this.searchControl.valueChanges
+      .pipe(debounceTime(300), distinctUntilChanged(), takeUntil(this.destroy$))
+      .subscribe((value) => {
+        this.searchTerm = (value || '').trim().toLowerCase();
+        this.applyFilterAndSort();
+      });
   }
 
   ngOnDestroy(): void {
@@ -93,7 +114,8 @@ export class StudentFees implements OnInit, OnDestroy {
               map[sid].status = 'partial';
           });
 
-          this.studentSummaries = Object.values(map);
+          this.allStudentSummaries = Object.values(map);
+          this.applyFilterAndSort();
           this.loading = false;
         },
         error: (err) => {
@@ -107,6 +129,52 @@ export class StudentFees implements OnInit, OnDestroy {
     this.loadFees();
   }
 
+  // ── Search + Sort ────────────────────────────────────────
+
+  setSortOrder(order: 'name_asc' | 'name_desc'): void {
+    this.sortOrder = order;
+    this.applyFilterAndSort();
+  }
+
+  clearSearch(): void {
+    this.searchControl.setValue('');
+  }
+
+  private applyFilterAndSort(): void {
+    let list = [...this.allStudentSummaries];
+
+    // Search by name or student number
+    if (this.searchTerm) {
+      list = list.filter((s) => {
+        const name = this.getStudentName(s.student).toLowerCase();
+        const number = (s.student?.student_number || '').toLowerCase();
+        return name.includes(this.searchTerm) || number.includes(this.searchTerm);
+      });
+    }
+
+    // Sort by first name (matches StudentsList behaviour)
+    list.sort((a, b) => {
+      const aName = (a.student?.first_name || '').toLowerCase();
+      const bName = (b.student?.first_name || '').toLowerCase();
+      const cmp = aName.localeCompare(bName);
+      return this.sortOrder === 'name_asc' ? cmp : -cmp;
+    });
+
+    this.studentSummaries = list;
+  }
+
+  get hasActiveFilters(): boolean {
+    return !!this.searchTerm || this.sortOrder !== 'name_asc';
+  }
+
+  clearAllFilters(): void {
+    this.searchControl.setValue('');
+    this.sortOrder = 'name_asc';
+    this.applyFilterAndSort();
+  }
+
+  // ── Navigation ───────────────────────────────────────────
+
   viewStudent(studentId: string): void {
     this.router.navigate(['main/reports/students', studentId]);
   }
@@ -114,6 +182,8 @@ export class StudentFees implements OnInit, OnDestroy {
   recordPayment(studentId: string): void {
     this.router.navigate(['main/reports/fees/record', studentId]);
   }
+
+  // ── Export (unchanged) ───────────────────────────────────
 
   openExport(): void {
     this.showExportModal = true;
@@ -368,6 +438,8 @@ export class StudentFees implements OnInit, OnDestroy {
     window.URL.revokeObjectURL(url);
   }
 
+  // ── Helpers ──────────────────────────────────────────────
+
   getStudentName(student: any): string {
     if (!student) return '—';
     return `${student.first_name} ${student.last_name}`.trim();
@@ -390,5 +462,3 @@ export class StudentFees implements OnInit, OnDestroy {
     return map[status] || '';
   }
 }
-
-

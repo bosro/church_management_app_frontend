@@ -546,3 +546,5 @@ export class StudentDetail implements OnInit, OnDestroy {
     this.router.navigate(['main/reports/fees/receipts']);
   }
 }
+
+

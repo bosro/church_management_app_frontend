@@ -26,13 +26,6 @@
       <button (click)="errorMessage = ''"><i class="ri-close-line"></i></button>
     </div>
 
-    <!-- No settings warning -->
-    <div *ngIf="settingsLoaded && dailyAmount === 0" class="feeding-alert warning">
-      <i class="ri-error-warning-line"></i>
-      Daily feeding fee amount has not been set by the admin for this term.
-      Payments cannot be recorded until the amount is configured.
-    </div>
-
     <!-- Filters Row -->
     <div class="feeding-filters">
       <div class="filter-item">
@@ -50,10 +43,6 @@
         <select [(ngModel)]="selectedYear" (change)="onTermYearChange()">
           <option *ngFor="let y of academicYears" [value]="y">{{ y }}</option>
         </select>
-      </div>
-      <div class="filter-item daily-rate-chip" *ngIf="dailyAmount > 0">
-        <i class="ri-money-dollar-circle-line"></i>
-        Daily Rate: <strong>{{ formatCurrency(dailyAmount) }}</strong>
       </div>
     </div>
 
@@ -73,23 +62,11 @@
           <p class="stat-label">Absent</p>
         </div>
       </div>
-      <div class="summary-stat expected">
+      <div class="summary-stat collected">
         <i class="ri-money-dollar-circle-line"></i>
         <div>
-          <p class="stat-value">{{ formatCurrency(dailySummary.expectedTotal) }}</p>
-          <p class="stat-label">Expected ({{ dailySummary.present }} × {{ formatCurrency(dailySummary.dailyAmount) }})</p>
-        </div>
-      </div>
-      <div class="summary-stat collected" [class.shortfall]="dailySummary.shortfall > 0">
-        <i class="ri-checkbox-circle-line"></i>
-        <div>
           <p class="stat-value">{{ formatCurrency(dailySummary.totalCollected) }}</p>
-          <p class="stat-label">
-            Collected
-            <span *ngIf="dailySummary.shortfall > 0" class="shortfall-badge">
-              {{ formatCurrency(dailySummary.shortfall) }} short
-            </span>
-          </p>
+          <p class="stat-label">Collected Today</p>
         </div>
       </div>
     </div>
@@ -137,17 +114,19 @@
             <tr>
               <th>Student</th>
               <th class="text-center">Attendance</th>
+              <th class="text-right">Daily Rate</th>
               <th class="text-right">Days Present</th>
               <th class="text-right">Total Owed</th>
               <th class="text-right">Total Paid</th>
               <th class="text-right">Balance</th>
               <th class="text-center">Status</th>
-              <th class="text-center">Action</th>
+              <th class="text-center">Actions</th>
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let student of students"
+            <tr *ngFor="let student of students; trackBy: trackByStudentId"
               [class.row-absent]="!studentStates[student.id]?.isPresent">
+
               <!-- Student -->
               <td>
                 <div class="student-cell">
@@ -176,8 +155,18 @@
                 </button>
               </td>
 
+              <!-- Daily rate chip -->
+              <td class="text-right">
+                <ng-container *ngIf="studentDailyRate(student.id) > 0; else noRate">
+                  <span class="rate-chip">{{ formatCurrency(studentDailyRate(student.id)) }}</span>
+                </ng-container>
+                <ng-template #noRate>
+                  <span class="no-rate-chip" title="No rate configured for this class">Not set</span>
+                </ng-template>
+              </td>
+
               <!-- Summary data -->
-              <ng-container *ngIf="studentStates[student.id]?.summary as summary">
+              <ng-container *ngIf="!studentStates[student.id]?.loadingSummary && studentStates[student.id]?.summary as summary">
                 <td class="text-right">{{ summary.presentDays }}</td>
                 <td class="text-right">{{ formatCurrency(summary.totalOwed) }}</td>
                 <td class="text-right paid-amount">{{ formatCurrency(summary.totalPaid) }}</td>
@@ -185,7 +174,13 @@
                   {{ formatCurrency(summary.balance) }}
                 </td>
               </ng-container>
-              <ng-container *ngIf="!studentStates[student.id]?.summary">
+              <ng-container *ngIf="studentStates[student.id]?.loadingSummary">
+                <td class="text-right"><span class="skeleton-cell"></span></td>
+                <td class="text-right"><span class="skeleton-cell"></span></td>
+                <td class="text-right"><span class="skeleton-cell"></span></td>
+                <td class="text-right"><span class="skeleton-cell"></span></td>
+              </ng-container>
+              <ng-container *ngIf="!studentStates[student.id]?.loadingSummary && !studentStates[student.id]?.summary">
                 <td class="text-right">—</td>
                 <td class="text-right">—</td>
                 <td class="text-right">—</td>
@@ -199,14 +194,23 @@
                 </span>
               </td>
 
-              <!-- Action -->
+              <!-- Actions -->
               <td class="text-center">
-                <button class="btn-record-payment"
-                  [disabled]="!studentStates[student.id]?.isPresent || dailyAmount === 0"
-                  (click)="openPaymentModal(student)">
-                  <i class="ri-money-dollar-circle-line"></i>
-                  Pay
-                </button>
+                <div class="action-btns">
+                  <button class="btn-record-payment"
+                    [disabled]="!studentStates[student.id]?.isPresent || studentStates[student.id]?.dailyRate === 0"
+                    (click)="openPaymentModal(student)"
+                    title="Record payment">
+                    <i class="ri-money-dollar-circle-line"></i>
+                    Pay
+                  </button>
+                  <button class="btn-edit-payment"
+                    [disabled]="!studentStates[student.id]?.summary?.hasPayment"
+                    (click)="openEditModal(student)"
+                    title="View / edit payments">
+                    <i class="ri-edit-line"></i>
+                  </button>
+                </div>
               </td>
             </tr>
           </tbody>
@@ -223,7 +227,7 @@
   </div>
 </div>
 
-<!-- Payment Modal -->
+<!-- ── Create Payment Modal ──────────────────────────────── -->
 <div class="modal-overlay" *ngIf="showPaymentModal" (click)="closePaymentModal()">
   <div class="payment-modal" (click)="$event.stopPropagation()">
     <div class="payment-modal-header">
@@ -259,22 +263,29 @@
         </div>
       </div>
 
+      <!-- Daily rate info -->
+      <div class="rate-info-row" *ngIf="paymentStudent">
+        <i class="ri-information-line"></i>
+        Daily rate for <strong>{{ paymentStudent?.class?.name }}</strong>:
+        <strong class="rate-value">{{ formatCurrency(studentDailyRate(paymentStudent?.id)) }}</strong>
+      </div>
+
       <!-- Amount input -->
       <div class="form-group">
         <label>Amount to Pay (GHS) *</label>
         <input type="number" [(ngModel)]="paymentAmount" min="0.01" step="0.01"
-          [placeholder]="'Daily rate: ' + formatCurrency(dailyAmount)" />
+          [placeholder]="'Daily rate: ' + formatCurrency(studentDailyRate(paymentStudent?.id))" />
 
         <!-- Payment breakdown -->
-        <div class="payment-breakdown" *ngIf="paymentAmount > 0 && dailyAmount > 0">
+        <div class="payment-breakdown" *ngIf="paymentAmount > 0 && studentDailyRate(paymentStudent?.id) > 0">
           <div *ngIf="paymentDaysCovered > 0">
             <i class="ri-calendar-check-line"></i>
             Covers <strong>{{ paymentDaysCovered }}</strong> day{{ paymentDaysCovered !== 1 ? 's' : '' }}
-            ({{ formatCurrency(dailyAmount) }} × {{ paymentDaysCovered }})
+            ({{ formatCurrency(studentDailyRate(paymentStudent?.id)) }} × {{ paymentDaysCovered }})
           </div>
           <div *ngIf="paymentIsPartial" class="partial-note">
             <i class="ri-error-warning-line"></i>
-            Partial payment — {{ formatCurrency(paymentAmount % dailyAmount) }} remainder for the day
+            Partial day — {{ formatCurrency(paymentAmount % studentDailyRate(paymentStudent?.id)) }} remainder
           </div>
         </div>
       </div>
@@ -305,4 +316,101 @@
   </div>
 </div>
 
+<!-- ── Edit / View Payments Modal ──────────────────────────── -->
+<div class="modal-overlay" *ngIf="showEditModal" (click)="closeEditModal()">
+  <div class="edit-modal" (click)="$event.stopPropagation()">
+    <div class="payment-modal-header">
+      <div>
+        <h3>Payment History</h3>
+        <p>{{ getStudentName(editingStudent) }}</p>
+      </div>
+      <button class="close-btn" (click)="closeEditModal()">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
 
+    <div class="edit-modal-body">
+
+      <!-- Loading -->
+      <div *ngIf="loadingStudentPayments" class="loading-state" style="padding: 32px;">
+        <div class="spinner"></div>
+        <p>Loading payments...</p>
+      </div>
+
+      <ng-container *ngIf="!loadingStudentPayments">
+
+        <!-- Payment list -->
+        <div class="payment-history-list" *ngIf="studentPayments.length > 0">
+          <p class="section-label">Select a payment to edit</p>
+          <div class="payment-history-item"
+            *ngFor="let p of studentPayments"
+            [class.selected]="editPayment?.id === p.id"
+            (click)="selectPaymentForEdit(p)">
+            <div class="phi-left">
+              <span class="phi-date">{{ p.payment_date | date:'MMM d, y' }}</span>
+              <span class="phi-note" *ngIf="p.notes">{{ p.notes }}</span>
+            </div>
+            <div class="phi-right">
+              <span class="phi-amount">{{ formatCurrency(p.amount_paid) }}</span>
+              <span class="phi-days">{{ p.days_covered }} day{{ p.days_covered !== 1 ? 's' : '' }}</span>
+            </div>
+            <button class="phi-delete" (click)="$event.stopPropagation(); deletePaymentRecord(p)"
+              title="Delete this payment">
+              <i class="ri-delete-bin-line"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- No payments -->
+        <div *ngIf="studentPayments.length === 0" class="empty-state" style="padding: 32px;">
+          <i class="ri-inbox-line"></i>
+          <p>No payments recorded for this term</p>
+        </div>
+
+        <!-- Edit form -->
+        <div class="edit-form" *ngIf="editPayment">
+          <p class="section-label">Edit selected payment</p>
+
+          <div class="rate-info-row" *ngIf="editingStudent">
+            <i class="ri-information-line"></i>
+            Daily rate: <strong class="rate-value">{{ formatCurrency(studentDailyRate(editingStudent?.id)) }}</strong>
+          </div>
+
+          <div class="form-group">
+            <label>Amount (GHS) *</label>
+            <input type="number" [(ngModel)]="editAmount" min="0.01" step="0.01" />
+            <div class="payment-breakdown" *ngIf="editAmount > 0 && studentDailyRate(editingStudent?.id) > 0">
+              <div>
+                <i class="ri-calendar-check-line"></i>
+                Covers <strong>{{ editDaysCovered }}</strong> day{{ editDaysCovered !== 1 ? 's' : '' }}
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Payment Date</label>
+            <input type="date" [(ngModel)]="editDate" [max]="today" />
+          </div>
+
+          <div class="form-group">
+            <label>Notes</label>
+            <input type="text" [(ngModel)]="editNotes" placeholder="Optional note" />
+          </div>
+        </div>
+
+      </ng-container>
+    </div>
+
+    <div class="payment-modal-footer" *ngIf="!loadingStudentPayments && editPayment">
+      <button class="btn-cancel" (click)="closeEditModal()" [disabled]="processingEdit">
+        Cancel
+      </button>
+      <button class="btn-submit-payment" (click)="submitEdit()"
+        [disabled]="!editAmount || editAmount <= 0 || processingEdit">
+        <i class="ri-loader-4-line spin" *ngIf="processingEdit"></i>
+        <i class="ri-save-line" *ngIf="!processingEdit"></i>
+        {{ processingEdit ? 'Saving...' : 'Save Changes' }}
+      </button>
+    </div>
+  </div>
+</div>

@@ -8,6 +8,7 @@ import { QrCodeModule } from 'ng-qrcode';
 import { LinkCheckin } from './link-checkin/link-checkin';
 import { MemberRegistration } from './member-registration/member-registration';
 import { FeedingRecord } from './feeding-record/feeding-record';
+import { PublicStudentRegistration } from './public-student-registration/public-student-registration';
 
 const routes: Routes = [
   {
@@ -22,10 +23,19 @@ const routes: Routes = [
     path: 'feeding-fees/:churchId', // ← was :token
     component: FeedingRecord,
   },
+  {
+    path: 'student-register/:token',
+    component: PublicStudentRegistration,
+  },
 ];
 
 @NgModule({
-  declarations: [LinkCheckin, MemberRegistration, FeedingRecord],
+  declarations: [
+    LinkCheckin,
+    MemberRegistration,
+    FeedingRecord,
+    PublicStudentRegistration,
+  ],
   imports: [
     CommonModule,
     FormsModule,

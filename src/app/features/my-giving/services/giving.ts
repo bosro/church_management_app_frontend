@@ -62,6 +62,7 @@ export class GivingService {
         .from('giving_categories')
         .select('*')
         .eq('is_active', true)
+        .eq('church_id', this.churchId) // ← ADD THIS
         .order('name', { ascending: true }),
     ).pipe(
       map((response) => {

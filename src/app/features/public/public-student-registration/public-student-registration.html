@@ -1,0 +1,159 @@
+<div class="public-wrapper">
+  <div class="public-container">
+
+    <!-- Validating -->
+    <div *ngIf="validating" class="status-state">
+      <div class="spinner"></div>
+      <h2>Validating link...</h2>
+      <p>Please wait</p>
+    </div>
+
+    <!-- Invalid -->
+    <div *ngIf="!validating && !valid" class="status-state status-error">
+      <div class="status-icon error">
+        <i class="ri-close-circle-line"></i>
+      </div>
+      <h2>Link Invalid</h2>
+      <p>{{ invalidReason }}</p>
+      <p class="hint">Please contact the school for a valid enrollment link.</p>
+    </div>
+
+    <!-- Success -->
+    <div *ngIf="submitted" class="status-state status-success">
+      <div class="status-icon success">
+        <i class="ri-checkbox-circle-line"></i>
+      </div>
+      <h2>Enrollment Submitted!</h2>
+      <p>Thank you. The student has been successfully registered.</p>
+      <div class="success-detail" *ngIf="createdStudentNumber">
+        <span class="label">Student Number</span>
+        <span class="value">{{ createdStudentNumber }}</span>
+      </div>
+      <p class="hint">Please keep this number for your records.</p>
+      <button class="btn-primary" (click)="registerAnother()">
+        <i class="ri-user-add-line"></i>
+        Register Another Child
+      </button>
+    </div>
+
+    <!-- Form -->
+    <div *ngIf="!validating && valid && !submitted" class="registration-card">
+
+      <!-- Header -->
+      <div class="reg-header">
+        <img *ngIf="churchLogo" [src]="churchLogo" [alt]="churchName" class="logo" />
+        <div class="logo-placeholder" *ngIf="!churchLogo">
+          <i class="ri-school-line"></i>
+        </div>
+        <h1>{{ churchName }}</h1>
+        <p class="subtitle">Student Enrollment Form</p>
+      </div>
+
+      <div *ngIf="errorMessage" class="error-alert">
+        <i class="ri-error-warning-line"></i>
+        <span>{{ errorMessage }}</span>
+      </div>
+
+      <form [formGroup]="form" (ngSubmit)="onSubmit()">
+
+        <!-- Student Info -->
+        <div class="form-section">
+          <h3><i class="ri-user-line"></i> Student Information</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label>First Name <span class="req">*</span></label>
+              <input type="text" formControlName="first_name" placeholder="e.g., Kwame"
+                [class.error]="form.get('first_name')?.invalid && form.get('first_name')?.touched" />
+              <span class="error-message">{{ getError('first_name') }}</span>
+            </div>
+            <div class="form-group">
+              <label>Middle Name</label>
+              <input type="text" formControlName="middle_name" placeholder="Optional" />
+            </div>
+            <div class="form-group">
+              <label>Last Name <span class="req">*</span></label>
+              <input type="text" formControlName="last_name" placeholder="e.g., Mensah"
+                [class.error]="form.get('last_name')?.invalid && form.get('last_name')?.touched" />
+              <span class="error-message">{{ getError('last_name') }}</span>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Date of Birth</label>
+              <input type="date" formControlName="date_of_birth" [max]="today" />
+            </div>
+            <div class="form-group">
+              <label>Gender</label>
+              <select formControlName="gender">
+                <option value="">Select</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Class <span class="req">*</span></label>
+              <select formControlName="class_id"
+                [class.error]="form.get('class_id')?.invalid && form.get('class_id')?.touched">
+                <option value="">Select class</option>
+                <option *ngFor="let c of classes" [value]="c.id">
+                  {{ c.name }} ({{ c.academic_year }})
+                </option>
+              </select>
+              <span class="error-message">{{ getError('class_id') }}</span>
+              <span *ngIf="preferredClassId" class="locked-hint">
+                <i class="ri-lock-line"></i> Class pre-selected by school
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Parent Info -->
+        <div class="form-section">
+          <h3><i class="ri-parent-line"></i> Parent / Guardian</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Parent/Guardian Name <span class="req">*</span></label>
+              <input type="text" formControlName="parent_name" placeholder="Full name"
+                [class.error]="form.get('parent_name')?.invalid && form.get('parent_name')?.touched" />
+              <span class="error-message">{{ getError('parent_name') }}</span>
+            </div>
+            <div class="form-group">
+              <label>Phone <span class="req">*</span></label>
+              <input type="tel" formControlName="parent_phone" placeholder="0XXXXXXXXX" maxlength="10"
+                [class.error]="form.get('parent_phone')?.invalid && form.get('parent_phone')?.touched" />
+              <span class="error-message">{{ getError('parent_phone') }}</span>
+            </div>
+            <div class="form-group">
+              <label>Email</label>
+              <input type="email" formControlName="parent_email" placeholder="parent@example.com"
+                [class.error]="form.get('parent_email')?.invalid && form.get('parent_email')?.touched" />
+              <span class="error-message">{{ getError('parent_email') }}</span>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group full">
+              <label>Home Address</label>
+              <input type="text" formControlName="address" placeholder="Optional" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Submit -->
+        <div class="form-actions">
+          <button type="submit" class="btn-primary btn-submit" [disabled]="submitting || form.invalid">
+            <i *ngIf="!submitting" class="ri-user-add-line"></i>
+            <i *ngIf="submitting" class="ri-loader-4-line spin"></i>
+            {{ submitting ? 'Submitting...' : 'Submit Enrollment' }}
+          </button>
+        </div>
+      </form>
+
+      <p class="privacy-note">
+        <i class="ri-shield-check-line"></i>
+        Your information is securely processed by {{ churchName }}.
+      </p>
+    </div>
+  </div>
+</div>

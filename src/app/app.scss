@@ -2,8 +2,10 @@
 :host {
   display: block;
   min-height: 100vh;
+  min-height: -webkit-fill-available;
+  width: 100%;
+  overflow-x: hidden;
 }
-
 
 // src/app/app.component.scss
 
@@ -238,6 +240,10 @@
   .pwa-update-banner,
   .offline-banner { display: none; }
 }
+
+
+
+
 
 
 

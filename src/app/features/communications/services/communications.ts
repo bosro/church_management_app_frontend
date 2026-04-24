@@ -1,4 +1,7 @@
 // src/app/features/communications/services/communications.service.ts
+// UPDATED: sendCommunication() now calls the real edge function
+// instead of simulating a send locally.
+
 import { Injectable } from '@angular/core';
 import { Observable, from, throwError } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
@@ -51,10 +54,7 @@ export class CommunicationsService {
   getCommunications(
     page: number = 1,
     pageSize: number = 20,
-    filters?: {
-      status?: CommunicationStatus;
-      type?: CommunicationType;
-    },
+    filters?: { status?: CommunicationStatus; type?: CommunicationType },
   ): Observable<{ data: Communication[]; count: number }> {
     const churchId = this.authService.getChurchId();
     const isBranchPastor = this.authService.isBranchPastor();
@@ -68,11 +68,7 @@ export class CommunicationsService {
           .select('*', { count: 'exact' })
           .eq('church_id', churchId);
 
-        // Branch pastor only sees their branch communications
-        if (isBranchPastor && branchId) {
-          query = query.eq('branch_id', branchId);
-        }
-
+        if (isBranchPastor && branchId) query = query.eq('branch_id', branchId);
         if (filters?.status) query = query.eq('status', filters.status);
         if (filters?.type) query = query.eq('communication_type', filters.type);
 
@@ -102,10 +98,7 @@ export class CommunicationsService {
         if (!data) throw new Error('Communication not found');
         return data as Communication;
       }),
-      catchError((err) => {
-        console.error('Error loading communication:', err);
-        return throwError(() => err);
-      }),
+      catchError((err) => throwError(() => err)),
     );
   }
 
@@ -118,12 +111,12 @@ export class CommunicationsService {
   }): Observable<Communication> {
     const churchId = this.authService.getChurchId();
     const userId = this.authService.getUserId();
-    const branchId = this.authService.getBranchId(); // auto-set branch
+    const branchId = this.authService.getBranchId();
 
     return from(
       this.supabase.insert<Communication>('communications', {
         church_id: churchId,
-        branch_id: branchId || null, // set if pastor
+        branch_id: branchId || null,
         title: communicationData.title.trim(),
         message: communicationData.message.trim(),
         communication_type: communicationData.communication_type,
@@ -151,7 +144,6 @@ export class CommunicationsService {
 
     return from(
       (async () => {
-        // Verify ownership
         const { data: existing } = await this.supabase.client
           .from('communications')
           .select('id, status')
@@ -159,24 +151,18 @@ export class CommunicationsService {
           .eq('church_id', churchId)
           .single();
 
-        if (!existing) {
+        if (!existing)
           throw new Error('Communication not found or access denied');
-        }
-
-        // Don't allow editing sent communications
-        if (existing.status === 'sent') {
+        if (existing.status === 'sent')
           throw new Error('Cannot edit a sent communication');
-        }
-
-        const updateData = {
-          ...communicationData,
-          updated_at: new Date().toISOString(),
-        };
 
         return this.supabase.update<Communication>(
           'communications',
           communicationId,
-          updateData,
+          {
+            ...communicationData,
+            updated_at: new Date().toISOString(),
+          },
         );
       })(),
     ).pipe(
@@ -186,10 +172,7 @@ export class CommunicationsService {
           throw new Error('Failed to update communication');
         return data[0];
       }),
-      catchError((err) => {
-        console.error('Error updating communication:', err);
-        return throwError(() => err);
-      }),
+      catchError((err) => throwError(() => err)),
     );
   }
 
@@ -198,7 +181,6 @@ export class CommunicationsService {
 
     return from(
       (async () => {
-        // Verify ownership and status
         const { data: existing } = await this.supabase.client
           .from('communications')
           .select('id, status')
@@ -206,14 +188,10 @@ export class CommunicationsService {
           .eq('church_id', churchId)
           .single();
 
-        if (!existing) {
+        if (!existing)
           throw new Error('Communication not found or access denied');
-        }
-
-        // Don't allow deleting sent communications
-        if (existing.status === 'sent') {
+        if (existing.status === 'sent')
           throw new Error('Cannot delete a sent communication');
-        }
 
         return this.supabase.delete('communications', communicationId);
       })(),
@@ -221,65 +199,71 @@ export class CommunicationsService {
       map(({ error }) => {
         if (error) throw new Error(error.message);
       }),
-      catchError((err) => {
-        console.error('Error deleting communication:', err);
-        return throwError(() => err);
-      }),
+      catchError((err) => throwError(() => err)),
     );
   }
 
-  // ==================== SEND COMMUNICATIONS ====================
+  // ==================== SEND (calls real Edge Function) ====================
 
   sendCommunication(communicationId: string): Observable<Communication> {
     const churchId = this.authService.getChurchId();
 
     return from(
       (async () => {
-        // Verify ownership and status
-        const { data: communication } = await this.supabase.client
-          .from('communications')
-          .select('*')
-          .eq('id', communicationId)
-          .eq('church_id', churchId)
-          .single();
+        // Verify record exists and is sendable before calling the edge function
+        const { data: communication, error: fetchErr } =
+          await this.supabase.client
+            .from('communications')
+            .select('*')
+            .eq('id', communicationId)
+            .eq('church_id', churchId)
+            .single();
 
-        if (!communication) {
+        if (fetchErr || !communication) {
           throw new Error('Communication not found or access denied');
         }
-
         if (communication.status === 'sent') {
           throw new Error('Communication already sent');
         }
+        if (communication.status === 'sending') {
+          throw new Error('Communication is already being sent');
+        }
 
-        // Update status to sending
-        await this.supabase.update<Communication>(
-          'communications',
-          communicationId,
-          { status: 'sending' },
-        );
+        // ── Call the Edge Function ────────────────────────────────────
+        const { data: fnData, error: fnErr } =
+          await this.supabase.client.functions.invoke('send-communication', {
+            body: { communicationId },
+          });
 
-        // In a real implementation, this would trigger the backend to send messages
-        // via an edge function or webhook
-        // For now, we'll simulate by updating status to sent
-        const { data, error } = await this.supabase.update<Communication>(
-          'communications',
-          communicationId,
-          {
-            status: 'sent',
-            sent_at: new Date().toISOString(),
-          },
-        );
+        if (fnErr) {
+          // Roll back to draft so the user can retry
+          await this.supabase.client
+            .from('communications')
+            .update({ status: 'draft' })
+            .eq('id', communicationId);
+          throw new Error(fnErr.message || 'Edge function failed');
+        }
 
-        if (error) throw new Error(error.message);
-        return data![0];
+        if (!fnData?.success) {
+          await this.supabase.client
+            .from('communications')
+            .update({ status: 'failed' })
+            .eq('id', communicationId);
+          throw new Error(fnData?.error || 'Send failed');
+        }
+
+        // Return the refreshed communication record
+        const { data: updated } = await this.supabase.client
+          .from('communications')
+          .select('*')
+          .eq('id', communicationId)
+          .single();
+
+        return updated as Communication;
       })(),
     ).pipe(
       catchError((err) => {
         console.error('Error sending communication:', err);
-        // Update status back to draft on error
-        this.updateCommunication(communicationId, {
-          status: 'draft',
-        }).subscribe();
         return throwError(() => err);
       }),
     );
@@ -290,10 +274,7 @@ export class CommunicationsService {
   getSmsLogs(
     page: number = 1,
     pageSize: number = 50,
-    filters?: {
-      status?: string;
-      communicationId?: string;
-    },
+    filters?: { status?: string; communicationId?: string },
   ): Observable<{ data: SmsLog[]; count: number }> {
     const churchId = this.authService.getChurchId();
     const offset = (page - 1) * pageSize;
@@ -303,36 +284,23 @@ export class CommunicationsService {
         let query = this.supabase.client
           .from('sms_logs')
           .select(
-            `
-            *,
-            member:members(id, first_name, last_name, phone_primary)
-          `,
+            `*, member:members(id, first_name, last_name, phone_primary)`,
             { count: 'exact' },
           )
           .eq('church_id', churchId);
 
-        // Apply filters
-        if (filters?.status) {
-          query = query.eq('status', filters.status);
-        }
-        if (filters?.communicationId) {
+        if (filters?.status) query = query.eq('status', filters.status);
+        if (filters?.communicationId)
           query = query.eq('communication_id', filters.communicationId);
-        }
 
         const { data, error, count } = await query
           .order('sent_at', { ascending: false })
           .range(offset, offset + pageSize - 1);
 
         if (error) throw new Error(error.message);
-
         return { data: data as SmsLog[], count: count || 0 };
       })(),
-    ).pipe(
-      catchError((err) => {
-        console.error('Error loading SMS logs:', err);
-        return throwError(() => err);
-      }),
-    );
+    ).pipe(catchError((err) => throwError(() => err)));
   }
 
   // ==================== EMAIL LOGS ====================
@@ -340,10 +308,7 @@ export class CommunicationsService {
   getEmailLogs(
     page: number = 1,
     pageSize: number = 50,
-    filters?: {
-      status?: string;
-      communicationId?: string;
-    },
+    filters?: { status?: string; communicationId?: string },
   ): Observable<{ data: EmailLog[]; count: number }> {
     const churchId = this.authService.getChurchId();
     const offset = (page - 1) * pageSize;
@@ -352,37 +317,23 @@ export class CommunicationsService {
       (async () => {
         let query = this.supabase.client
           .from('email_logs')
-          .select(
-            `
-            *,
-            member:members(id, first_name, last_name, email)
-          `,
-            { count: 'exact' },
-          )
+          .select(`*, member:members(id, first_name, last_name, email)`, {
+            count: 'exact',
+          })
           .eq('church_id', churchId);
 
-        // Apply filters
-        if (filters?.status) {
-          query = query.eq('status', filters.status);
-        }
-        if (filters?.communicationId) {
+        if (filters?.status) query = query.eq('status', filters.status);
+        if (filters?.communicationId)
           query = query.eq('communication_id', filters.communicationId);
-        }
 
         const { data, error, count } = await query
           .order('sent_at', { ascending: false })
           .range(offset, offset + pageSize - 1);
 
         if (error) throw new Error(error.message);
-
         return { data: data as EmailLog[], count: count || 0 };
       })(),
-    ).pipe(
-      catchError((err) => {
-        console.error('Error loading email logs:', err);
-        return throwError(() => err);
-      }),
-    );
+    ).pipe(catchError((err) => throwError(() => err)));
   }
 
   // ==================== STATISTICS ====================
@@ -426,13 +377,11 @@ export class CommunicationsService {
           .select('*', { count: 'exact', head: true })
           .eq('church_id', churchId)
           .eq('status', 'sent');
-
         let failedQuery = this.supabase.client
           .from('communications')
           .select('*', { count: 'exact', head: true })
           .eq('church_id', churchId)
           .eq('status', 'failed');
-
         let pendingQuery = this.supabase.client
           .from('communications')
           .select('*', { count: 'exact', head: true })
@@ -463,10 +412,9 @@ export class CommunicationsService {
     ).pipe(catchError((err) => throwError(() => err)));
   }
 
-  // ==================== HELPER METHODS ====================
+  // ==================== HELPERS ====================
 
   validatePhoneNumber(phone: string): boolean {
-    // Basic phone validation (customize based on your region)
     const phoneRegex = /^\+?[1-9]\d{1,14}$/;
     return phoneRegex.test(phone);
   }
@@ -480,6 +428,8 @@ export class CommunicationsService {
     const length = message.length;
     if (length === 0) return 0;
     if (length <= 160) return 1;
-    return Math.ceil(length / 153); // 153 chars per segment for multi-part SMS
+    return Math.ceil(length / 153);
   }
 }
+
+
