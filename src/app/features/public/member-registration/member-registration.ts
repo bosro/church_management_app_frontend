@@ -169,3 +169,5 @@ export class MemberRegistration implements OnInit, OnDestroy {
     return new Date().toISOString().split('T')[0];
   }
 }
+
+

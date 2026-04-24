@@ -75,16 +75,17 @@ export interface FeePayment {
   academic_year: string;
   term: string;
   received_by?: string;
-  received_by_name?: string;  // ← add this
+  received_by_name?: string; // ← add this
   amount_due?: string;
   notes?: string;
- fee_items: {
-  fee_name: string;
-  amount: number;
-  is_arrears?: boolean;
-  amount_due?: number;
-  amount_paid_total?: number;
-}[];
+  fee_items: {
+    fee_name: string;
+    amount: number;
+    is_arrears?: boolean;
+    amount_due?: number;
+    amount_paid_total?: number;
+    amount_paid_this_receipt?: number;
+  }[];
   created_at: string;
 }
 
@@ -196,8 +197,6 @@ export const PAYMENT_METHODS = [
   'Cheque',
 ];
 
-
-
 export function generateAcademicYears(currentYear?: number): string[] {
   const y = currentYear || new Date().getFullYear();
   return [
@@ -213,6 +212,3 @@ export function currentAcademicYear(): string {
   // If we're in the second half of the year, we're still in y/y+1
   return `${y}/${y + 1}`;
 }
-
-
-

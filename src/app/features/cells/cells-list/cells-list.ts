@@ -4,15 +4,13 @@ import { Router } from '@angular/router';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-
+import {
+  CellGroup,
+  CellGroupCreateInput,
+} from '../../../models/cell-group.model';
+import { CellGroupsService } from '../services/cell-groups.service';
 import { PermissionService } from '../../../core/services/permission.service';
 import { AuthService } from '../../../core/services/auth';
-import { CellGroup } from '../../../models/member.model';
-import { CellGroupsService } from '../services/cell-groups.service';
-import { CellGroupCreateInput } from '../../../models/cell-group.model';
-
-// NOTE: adjust the CellGroup and CellGroupCreateInput import paths above
-// if they differ in your project structure.
 
 @Component({
   selector: 'app-cells-list',
@@ -29,7 +27,6 @@ export class CellsList implements OnInit, OnDestroy {
   errorMessage = '';
   successMessage = '';
 
-  // Modals
   showCreateModal = false;
   showEditModal = false;
   showMembersModal = false;
@@ -47,11 +44,15 @@ export class CellsList implements OnInit, OnDestroy {
   currentUserId = '';
 
   meetingDays = [
-    'Monday', 'Tuesday', 'Wednesday', 'Thursday',
-    'Friday', 'Saturday', 'Sunday',
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+    'Sunday',
   ];
 
-  // Full management rights (create groups, deactivate, assign any leader)
   canManage = false;
 
   constructor(
@@ -66,14 +67,11 @@ export class CellsList implements OnInit, OnDestroy {
     const role = this.authService.getCurrentUserRole();
     this.currentUserId = this.authService.getUserId();
 
-
-    // Full management: admins, pastors, group leaders
-    // Cell leaders can only edit their own group (handled by canManageGroup())
     this.canManage =
-  this.permissionService.isAdmin ||
-  [
-    'pastor', 'senior_pastor', 'associate_pastor', 'group_leader',
-  ].includes(role);
+      this.permissionService.isAdmin ||
+      ['pastor', 'senior_pastor', 'associate_pastor', 'group_leader'].includes(
+        role,
+      );
 
     this.initForm();
     this.loadCellGroups();
@@ -89,7 +87,11 @@ export class CellsList implements OnInit, OnDestroy {
     this.cellForm = this.fb.group({
       name: [
         '',
-        [Validators.required, Validators.minLength(2), Validators.maxLength(100)],
+        [
+          Validators.required,
+          Validators.minLength(2),
+          Validators.maxLength(100),
+        ],
       ],
       description: ['', [Validators.maxLength(300)]],
       leader_id: [''],
@@ -99,13 +101,10 @@ export class CellsList implements OnInit, OnDestroy {
     });
   }
 
-  // A cell leader can manage (edit) the group they lead.
-  // Full admins/pastors/group leaders can manage any group.
   canManageGroup(group: CellGroup): boolean {
     if (this.canManage) return true;
     return group.leader_id === this.currentUserId;
   }
-
 
   private loadCellGroups(): void {
     this.loading = true;
@@ -293,7 +292,8 @@ export class CellsList implements OnInit, OnDestroy {
     return {
       name: v.name,
       description: v.description || undefined,
-      leader_id: v.leader_id || undefined,
+      // Send null explicitly when cleared — empty string must not be sent
+      leader_id: v.leader_id || null,
       meeting_day: v.meeting_day || undefined,
       meeting_time: v.meeting_time || undefined,
       meeting_location: v.meeting_location || undefined,

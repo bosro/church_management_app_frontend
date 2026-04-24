@@ -255,3 +255,6 @@ export class ReceiptView implements OnInit, OnDestroy {
     return Math.min(100, (this.getCumulativePaid() / billed) * 100);
   }
 }
+
+
+

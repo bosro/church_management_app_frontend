@@ -4,7 +4,7 @@
 // ══════════════════════════════════════════════════════════════════════
 
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil, debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { FormControl } from '@angular/forms';
@@ -16,6 +16,7 @@ import {
   generateAcademicYears,
   currentAcademicYear,
 } from '../../../../../models/school.model';
+import { Location } from '@angular/common';
 
 @Component({
   selector: 'app-receipts-list',
@@ -49,12 +50,18 @@ export class ReceiptsList implements OnInit, OnDestroy {
     private schoolService: SchoolService,
     public permissionService: PermissionService,
     public router: Router,
+    private location: Location,
+    private route: ActivatedRoute,
   ) {}
 
   ngOnInit(): void {
+    // Read query params first, fall back to defaults
+    const params = this.route.snapshot.queryParamMap;
+    this.selectedTerm = params.get('term') || TERMS[0];
+    this.selectedYear = params.get('year') || currentAcademicYear();
+
     this.loadPayments();
 
-    // Re-search when user types a receipt number or student name
     this.searchControl.valueChanges
       .pipe(debounceTime(400), distinctUntilChanged(), takeUntil(this.destroy$))
       .subscribe(() => {
@@ -144,5 +151,9 @@ export class ReceiptsList implements OnInit, OnDestroy {
       style: 'currency',
       currency: 'GHS',
     }).format(amount || 0);
+  }
+
+  back() {
+    this.location.back();
   }
 }

@@ -223,22 +223,24 @@
               <div class="form-card">
                 <h3>Cell Group</h3>
                 <div class="form-row">
-                  <!-- Cell Group — locked for cell leaders, free choice for admins/pastors -->
                   <div class="form-group">
                     <label>Cell Group</label>
 
-                    <!-- Cell leader sees a locked display showing their own group -->
-                    <div *ngIf="isCellLeader" class="locked-field">
-                      <i class="ri-group-2-line"></i>
-                      <span>{{ cellLeaderGroupName || 'Your Cell Group' }}</span>
-                      <span class="locked-badge">
-                        <i class="ri-lock-line"></i>
-                        Locked
-                      </span>
-                    </div>
+                    <!-- Cell leader: dropdown of only their own groups + unassign option -->
+                    <select *ngIf="isCellLeader" formControlName="cell_group_id">
+                      <option value="">None (remove from cell)</option>
+                      <option *ngFor="let group of cellGroups" [value]="group.id">
+                        {{ group.name }}
+                      </option>
+                    </select>
+                    <span *ngIf="isCellLeader" class="field-hint">
+                      <i class="ri-information-line"></i>
+                      You can only assign members to your own cell group(s).
+                      Select "None" to unassign a member.
+                    </span>
 
-                    <!-- Admin/pastor sees the full dropdown -->
-                    <select *ngIf="!isCellLeader" frormControlName="cell_group_id">
+                    <!-- Admin/pastor: full dropdown of all groups -->
+                    <select *ngIf="!isCellLeader" formControlName="cell_group_id">
                       <option value="">None (unassigned)</option>
                       <option *ngFor="let group of cellGroups" [value]="group.id">
                         {{ group.name }}

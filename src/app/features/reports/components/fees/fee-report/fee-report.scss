@@ -182,6 +182,7 @@
     display: flex;
     align-items: center;
     gap: 16px;
+    transition: all 0.2s;
 
     .card-icon {
       width: 48px;
@@ -212,6 +213,17 @@
       &.outstanding {
         color: #dc2626;
       }
+    }
+
+    &.card-active {
+      border-color: #4f46e5;
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+      transform: translateY(-2px);
+    }
+
+    &:hover {
+      border-color: #c7d2fe;
+      transform: translateY(-1px);
     }
   }
 }
@@ -605,8 +617,6 @@
   }
 }
 
-
-
 // ─── MOBILE RESPONSIVENESS ────────────────────────────────
 
 @media (max-width: 768px) {
@@ -621,8 +631,12 @@
     .header-left {
       min-width: 0;
       flex: 1;
-      h1 { font-size: 18px; }
-      .subtitle { font-size: 12px; }
+      h1 {
+        font-size: 18px;
+      }
+      .subtitle {
+        font-size: 12px;
+      }
     }
 
     .header-actions {
@@ -669,7 +683,9 @@
         height: 40px;
         min-width: 40px;
         border-radius: 10px;
-        i { font-size: 18px; }
+        i {
+          font-size: 18px;
+        }
       }
 
       .card-label {
@@ -690,24 +706,33 @@
 
   // ── Report table: hide less critical columns ────────────
   .report-table {
-    thead th, tbody td {
+    thead th,
+    tbody td {
       padding: 10px 10px;
       font-size: 12px;
     }
 
     // Hide: # , Student No, on mobile
     thead th:nth-child(1),
-    thead th:nth-child(3) { display: none; }
+    thead th:nth-child(3) {
+      display: none;
+    }
 
     tbody tr td:nth-child(1),
-    tbody tr td:nth-child(3) { display: none; }
+    tbody tr td:nth-child(3) {
+      display: none;
+    }
 
     // Grand total row — adjust colspan via CSS
     tfoot .grand-total-row {
-      td:nth-child(1) { display: none; }
+      td:nth-child(1) {
+        display: none;
+      }
     }
 
-    .balance-cell strong { font-size: 13px; }
+    .balance-cell strong {
+      font-size: 13px;
+    }
   }
 
   // ── Action buttons in table ────────────────────────────
@@ -734,8 +759,12 @@
     max-height: 85vh;
     overflow-y: auto;
 
-    .export-modal-header h3 { font-size: 1rem; }
-    .export-subtitle { margin-bottom: 1rem; }
+    .export-modal-header h3 {
+      font-size: 1rem;
+    }
+    .export-subtitle {
+      margin-bottom: 1rem;
+    }
   }
 
   .export-option {
@@ -745,12 +774,18 @@
     .export-icon {
       width: 38px;
       height: 38px;
-      i { font-size: 1.2rem; }
+      i {
+        font-size: 1.2rem;
+      }
     }
 
     .export-info {
-      strong { font-size: 0.875rem; }
-      span { font-size: 0.75rem; }
+      strong {
+        font-size: 0.875rem;
+      }
+      span {
+        font-size: 0.75rem;
+      }
     }
   }
 }
@@ -759,7 +794,9 @@
   // On very small screens also hide Class column
   .report-table {
     thead th:nth-child(4),
-    tbody tr td:nth-child(4) { display: none; }
+    tbody tr td:nth-child(4) {
+      display: none;
+    }
 
     // Amount cols: tighten
     thead th:nth-child(5),
@@ -777,14 +814,17 @@
   .summary-cards {
     grid-template-columns: repeat(2, 1fr);
 
-    .summary-card .card-value { font-size: 13px; }
+    .summary-card .card-value {
+      font-size: 13px;
+    }
   }
 
   .page-header .header-actions {
-    .btn-secondary:first-child { display: none; } // hide Print on tiny screens
+    .btn-secondary:first-child {
+      display: none;
+    } // hide Print on tiny screens
   }
 }
-
 
 // ─── Report Empty State ───────────────────────────────────
 .report-empty {
@@ -813,19 +853,22 @@
           width: 100px;
           height: 100px;
           background: #10b981;
-          top: 0; left: 0;
+          top: 0;
+          left: 0;
         }
         &.c2 {
           width: 72px;
           height: 72px;
           background: #4f46e5;
-          top: 14px; left: 14px;
+          top: 14px;
+          left: 14px;
         }
         &.c3 {
           width: 48px;
           height: 48px;
           background: #10b981;
-          top: 26px; left: 26px;
+          top: 26px;
+          left: 26px;
         }
       }
     }
@@ -885,25 +928,34 @@
     cursor: pointer;
     font-family: "Nunito Sans", sans-serif;
     transition: all 0.2s;
-    i { font-size: 15px; }
-    &:hover { background: #4338ca; }
+    i {
+      font-size: 15px;
+    }
+    &:hover {
+      background: #4338ca;
+    }
 
     &.secondary {
       background: white;
       color: #374151;
       border: 1px solid #e5e7eb;
-      &:hover { background: #f9fafb; }
+      &:hover {
+        background: #f9fafb;
+      }
     }
   }
 
   @media (max-width: 480px) {
     padding: 40px 16px 36px;
-    h3 { font-size: 17px; }
-    .empty-actions-row { flex-direction: column; align-items: stretch; }
-    .btn-empty-action { justify-content: center; }
+    h3 {
+      font-size: 17px;
+    }
+    .empty-actions-row {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .btn-empty-action {
+      justify-content: center;
+    }
   }
 }
-
-
-
-

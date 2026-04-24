@@ -122,15 +122,23 @@ export class AddMember implements OnInit, OnDestroy {
           this.cellGroups = groups;
           this.loadingCellGroups = false;
 
-          // Auto-assign cell leader to their own group and lock the field
           if (this.isCellLeader) {
             const userId = this.authService.getUserId();
-            const myGroup = groups.find((g) => g.leader_id === userId);
-            if (myGroup) {
-              this.cellLeaderGroupId = myGroup.id;
-              this.cellLeaderGroupName = myGroup.name;
-              this.memberForm.get('cell_group_id')?.setValue(myGroup.id);
+            const myGroups = groups.filter((g) => g.leader_id === userId);
+
+            if (myGroups.length === 1) {
+              // Single group — auto-assign and lock
+              this.cellLeaderGroupId = myGroups[0].id;
+              this.cellLeaderGroupName = myGroups[0].name;
+              this.memberForm.get('cell_group_id')?.setValue(myGroups[0].id);
               this.memberForm.get('cell_group_id')?.disable();
+            } else if (myGroups.length > 1) {
+              // Multiple groups — show only their groups in dropdown (not locked)
+              // Cell leader picks which group to add the member to
+              this.cellGroups = myGroups;
+              this.cellLeaderGroupId = myGroups[0].id;
+              this.cellLeaderGroupName = myGroups.map((g) => g.name).join(', ');
+              // Don't disable — let them choose which of their groups
             }
           }
         },
@@ -410,5 +418,3 @@ export class AddMember implements OnInit, OnDestroy {
     else return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
   }
 }
-
-

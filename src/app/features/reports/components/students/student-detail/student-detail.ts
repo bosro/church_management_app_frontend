@@ -543,8 +543,11 @@ export class StudentDetail implements OnInit, OnDestroy {
   }
 
   navigatToReceipts() {
-    this.router.navigate(['main/reports/fees/receipts']);
+    this.router.navigate(['main/reports/fees/receipts'], {
+      queryParams: {
+        term: this.currentTerm,
+        year: this.currentAcademicYear,
+      },
+    });
   }
 }
-
-
