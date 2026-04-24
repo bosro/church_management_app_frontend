@@ -717,6 +717,28 @@ export class SchoolService {
     );
   }
 
+  getAllStudentFees(academicYear: string, term: string): Observable<any[]> {
+    return from(
+      this.supabase.client
+        .from('student_fees')
+        .select(
+          '*, student:students(*, class:school_classes(*)), fee_structure:fee_structures(fee_name, amount)',
+        )
+        .eq('church_id', this.churchId)
+        .eq('academic_year', academicYear)
+        .eq('term', term)
+        .order('student_id'),
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw error;
+        return (data || []).map((f: any) => ({
+          ...f,
+          fee_name: f.fee_structure?.fee_name || 'Unknown Fee',
+        }));
+      }),
+    );
+  }
+
   // ─── FEE PAYMENTS ─────────────────────────────────────────
 
   getPayments(
@@ -817,7 +839,8 @@ export class SchoolService {
       map[rn].amount += Number(row.amount);
       map[rn].fee_items.push({
         fee_name: row.student_fee?.fee_structure?.fee_name || 'Fee',
-        amount: Number(row.amount),
+        amount: Number(row.student_fee?.amount_due || row.amount), // ← FIX: use amount_due (assigned fee)
+        amount_paid_this_receipt: Number(row.amount), // ← how much paid in THIS receipt
         amount_due: Number(row.student_fee?.amount_due || 0),
         amount_paid_total: Number(row.student_fee?.amount_paid || 0),
         is_arrears: !row.student_fee_id,
@@ -1944,5 +1967,3 @@ export class SchoolService {
     if (error) throw new Error(error.message);
   }
 }
-
-

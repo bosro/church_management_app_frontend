@@ -111,10 +111,22 @@ export class CellGroupsService {
     input: CellGroupUpdateInput,
   ): Observable<CellGroup> {
     const churchId = this.getChurchId();
+
+    // Build payload explicitly — Supabase silently drops undefined keys,
+    // so clearing leader_id to null would never save without this
+    const payload: Record<string, any> = {
+      updated_at: new Date().toISOString(),
+    };
+
+    Object.keys(input).forEach((key) => {
+      const val = (input as any)[key];
+      payload[key] = val === undefined ? null : val;
+    });
+
     return from(
       this.supabase.client
         .from('cell_groups')
-        .update({ ...input, updated_at: new Date().toISOString() })
+        .update(payload)
         .eq('id', id)
         .eq('church_id', churchId)
         .select()

@@ -74,7 +74,8 @@
             <div class="notice-icon"><i class="ri-cake-2-line"></i></div>
             <div class="notice-text">
               <p class="notice-title">Upcoming Birthdays</p>
-              <p class="notice-message">Showing {{ filteredMemberCount }} member(s) with birthdays in the next 30 days</p>
+              <p class="notice-message">Showing {{ filteredMemberCount }} member(s) with birthdays in the next 30 days
+              </p>
             </div>
           </div>
           <button class="notice-close" (click)="closeBirthdayNotice()"><i class="ri-close-line"></i></button>
@@ -142,7 +143,7 @@
                 <option *ngFor="let group of allCellGroups" [value]="group.id">{{ group.name }}</option>
               </select>
             </div>
-            <button type="button" class="btn-secondary btn-my-cell" *ngIf="isCellLeader && cellLeaderGroupId"
+            <button class="btn-secondary btn-my-cell" *ngIf="isCellLeader && cellLeaderGroupIds.length > 0"
               (click)="filterMyCellMembers()">
               <i class="ri-group-2-line"></i><span>My Cell</span>
             </button>
@@ -213,15 +214,13 @@
                 </tr>
               </thead>
               <tbody>
-                <tr *ngFor="let member of members" class="member-row"
-                  [class.row-selected]="isSelected(member.id)"
+                <tr *ngFor="let member of members" class="member-row" [class.row-selected]="isSelected(member.id)"
                   (click)="viewMember(member.id)">
 
                   <!-- Row checkbox -->
                   <td *ngIf="canDeleteMember" class="col-check" (click)="$event.stopPropagation()">
                     <label class="custom-checkbox">
-                      <input type="checkbox" [checked]="isSelected(member.id)"
-                        (change)="toggleSelect(member.id)" />
+                      <input type="checkbox" [checked]="isSelected(member.id)" (change)="toggleSelect(member.id)" />
                       <span class="checkmark"></span>
                     </label>
                   </td>
@@ -245,13 +244,15 @@
                   <td><span class="member-number">{{ member.member_number }}</span></td>
                   <td>
                     <div class="contact-info">
-                      <p *ngIf="member.email"><i class="ri-mail-line"></i><span class="desktop-only">{{ member.email }}</span></p>
+                      <p *ngIf="member.email"><i class="ri-mail-line"></i><span class="desktop-only">{{ member.email
+                          }}</span></p>
                       <p *ngIf="member.phone_primary"><i class="ri-phone-line"></i>{{ member.phone_primary }}</p>
                     </div>
                   </td>
                   <td class="desktop-only"><span class="capitalize">{{ member.gender || '-' }}</span></td>
                   <td class="desktop-only">
-                    <span *ngIf="calculateAge(member.date_of_birth) !== null">{{ calculateAge(member.date_of_birth) }} yrs</span>
+                    <span *ngIf="calculateAge(member.date_of_birth) !== null">{{ calculateAge(member.date_of_birth) }}
+                      yrs</span>
                     <span *ngIf="calculateAge(member.date_of_birth) === null">-</span>
                   </td>
                   <td class="desktop-only">{{ member.join_date | date:'MMM d, y' }}</td>
@@ -292,7 +293,8 @@
             <button class="pagination-btn" [disabled]="currentPage === 1" (click)="previousPage()">
               <i class="ri-arrow-left-s-line"></i><span class="desktop-only">Previous</span>
             </button>
-            <span class="page-info">Page {{ currentPage }} of {{ totalPages }} <span class="desktop-only">({{ totalMembers }} members)</span></span>
+            <span class="page-info">Page {{ currentPage }} of {{ totalPages }} <span class="desktop-only">({{
+                totalMembers }} members)</span></span>
             <button class="pagination-btn" [disabled]="currentPage === totalPages" (click)="nextPage()">
               <span class="desktop-only">Next</span><i class="ri-arrow-right-s-line"></i>
             </button>
@@ -301,8 +303,7 @@
 
         <!-- Grid View -->
         <div *ngIf="!loading && viewMode === 'grid'" class="members-grid">
-          <div *ngFor="let member of members" class="member-card"
-            [class.card-selected]="isSelected(member.id)"
+          <div *ngFor="let member of members" class="member-card" [class.card-selected]="isSelected(member.id)"
             (click)="viewMember(member.id)">
             <div class="card-header">
               <!-- Grid checkbox -->
@@ -330,14 +331,17 @@
               <div class="member-details">
                 <p *ngIf="member.email"><i class="ri-mail-line"></i><span>{{ member.email }}</span></p>
                 <p *ngIf="member.phone_primary"><i class="ri-phone-line"></i><span>{{ member.phone_primary }}</span></p>
-                <p *ngIf="member.date_of_birth"><i class="ri-calendar-line"></i><span>{{ calculateAge(member.date_of_birth) }} years old</span></p>
+                <p *ngIf="member.date_of_birth"><i class="ri-calendar-line"></i><span>{{
+                    calculateAge(member.date_of_birth) }} years old</span></p>
               </div>
             </div>
             <div class="card-footer" (click)="$event.stopPropagation()">
-              <button class="btn-card" (click)="editMember(member.id, $event)" *ngIf="canEditMember && isMyCell(member)">
+              <button class="btn-card" (click)="editMember(member.id, $event)"
+                *ngIf="canEditMember && isMyCell(member)">
                 <i class="ri-edit-line"></i> Edit
               </button>
-              <button class="btn-card btn-danger" (click)="deleteMember(member.id, $event)" *ngIf="canDeleteMember && isMyCell(member)">
+              <button class="btn-card btn-danger" (click)="deleteMember(member.id, $event)"
+                *ngIf="canDeleteMember && isMyCell(member)">
                 <i class="ri-delete-bin-line"></i> Delete
               </button>
             </div>
@@ -364,7 +368,8 @@
         <h3><i class="ri-download-2-line"></i> Export Members</h3>
         <button class="modal-close-btn" (click)="showExportModal = false"><i class="ri-close-line"></i></button>
       </div>
-      <p class="export-subtitle">{{ totalMembers }} member{{ totalMembers !== 1 ? 's' : '' }} will be exported based on your current filters</p>
+      <p class="export-subtitle">{{ totalMembers }} member{{ totalMembers !== 1 ? 's' : '' }} will be exported based on
+        your current filters</p>
       <div class="export-options">
         <button class="export-option" (click)="exportAs('csv')">
           <div class="export-icon csv"><i class="ri-file-text-line"></i></div>
@@ -373,12 +378,14 @@
         </button>
         <button class="export-option" (click)="exportAs('excel')">
           <div class="export-icon excel"><i class="ri-file-excel-2-line"></i></div>
-          <div class="export-info"><strong>Excel (.xlsx)</strong><span>Formatted workbook with a summary sheet</span></div>
+          <div class="export-info"><strong>Excel (.xlsx)</strong><span>Formatted workbook with a summary sheet</span>
+          </div>
           <i class="ri-arrow-right-s-line export-arrow"></i>
         </button>
         <button class="export-option" (click)="exportAs('pdf')">
           <div class="export-icon pdf"><i class="ri-file-pdf-2-line"></i></div>
-          <div class="export-info"><strong>PDF</strong><span>Branded report with stats, ready to print or share</span></div>
+          <div class="export-info"><strong>PDF</strong><span>Branded report with stats, ready to print or share</span>
+          </div>
           <i class="ri-arrow-right-s-line export-arrow"></i>
         </button>
       </div>
@@ -386,20 +393,11 @@
   </div>
 
   <!-- Confirm Modal (replaces all confirm() calls) -->
-  <app-confirm-modal
-    [show]="showConfirmModal"
-    [title]="confirmModalConfig.title"
-    [message]="confirmModalConfig.message"
-    [submessage]="confirmModalConfig.submessage"
-    [warningText]="confirmModalConfig.warningText"
-    [confirmLabel]="confirmModalConfig.confirmLabel"
-    [variant]="confirmModalConfig.variant"
-    [icon]="confirmModalConfig.icon"
-    [loading]="confirmModalConfig.loading"
-    (confirmed)="onModalConfirmed()"
+  <app-confirm-modal [show]="showConfirmModal" [title]="confirmModalConfig.title" [message]="confirmModalConfig.message"
+    [submessage]="confirmModalConfig.submessage" [warningText]="confirmModalConfig.warningText"
+    [confirmLabel]="confirmModalConfig.confirmLabel" [variant]="confirmModalConfig.variant"
+    [icon]="confirmModalConfig.icon" [loading]="confirmModalConfig.loading" (confirmed)="onModalConfirmed()"
     (cancelled)="onModalCancelled()">
   </app-confirm-modal>
 
 </div>
-
-

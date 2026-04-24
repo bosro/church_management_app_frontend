@@ -1,11 +1,3 @@
-// src/app/features/members/components/edit-member/edit-member.component.ts
-// KEY FIXES:
-// 1. Added isCellLeader, cellLeaderGroupId, cellLeaderGroupName properties
-// 2. loadCellGroups() now filters to only show cell leader's own group(s)
-//    and locks the cell_group_id field after member data loads
-// 3. prepareMemberData() uses getRawValue() instead of .value so disabled
-//    cell_group_id control is still included in the payload
-// 4. Cell leader safety net: always preserves their group on save
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -63,10 +55,12 @@ export class EditMember implements OnInit, OnDestroy {
   cellGroups: CellGroup[] = [];
   loadingCellGroups = false;
 
-  // FIX 1: Added cell leader state (was completely missing)
+  memberCurrentCellGroupId: string | null = null;
+
   isCellLeader = false;
-  cellLeaderGroupId: string | null = null;
-  cellLeaderGroupName: string | null = null;
+  // All cell groups this cell leader leads (a leader can lead multiple)
+  cellLeaderGroupIds: string[] = [];
+  cellLeaderGroupNames: string[] = [];
 
   canEditMember = false;
 
@@ -90,39 +84,6 @@ export class EditMember implements OnInit, OnDestroy {
     this.loadCellGroupsThenMember();
   }
 
-  // Add this method:
-  private loadCellGroupsThenMember(): void {
-    this.loadingCellGroups = true;
-    const role = this.authService.getCurrentUserRole();
-    this.isCellLeader = role === 'cell_leader';
-
-    this.memberService
-      .getCellGroups()
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (groups) => {
-          if (this.isCellLeader) {
-            const userId = this.authService.getUserId();
-            this.cellGroups = groups.filter((g) => g.leader_id === userId);
-            const myGroup = this.cellGroups[0] || null;
-            if (myGroup) {
-              this.cellLeaderGroupId = myGroup.id;
-              this.cellLeaderGroupName = myGroup.name;
-            }
-          } else {
-            this.cellGroups = groups;
-          }
-          this.loadingCellGroups = false;
-          // Only load member AFTER groups are known
-          this.loadMember();
-        },
-        error: () => {
-          this.loadingCellGroups = false;
-          this.loadMember(); // still load member even if groups fail
-        },
-      });
-  }
-
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
@@ -140,8 +101,7 @@ export class EditMember implements OnInit, OnDestroy {
     }
   }
 
-  // FIX 2: loadCellGroups now filters for cell leader
-  private loadCellGroups(): void {
+  private loadCellGroupsThenMember(): void {
     this.loadingCellGroups = true;
     const role = this.authService.getCurrentUserRole();
     this.isCellLeader = role === 'cell_leader';
@@ -153,20 +113,19 @@ export class EditMember implements OnInit, OnDestroy {
         next: (groups) => {
           if (this.isCellLeader) {
             const userId = this.authService.getUserId();
-            // Cell leader only sees their own group in the dropdown
-            this.cellGroups = groups.filter((g) => g.leader_id === userId);
-            const myGroup = this.cellGroups[0] || null;
-            if (myGroup) {
-              this.cellLeaderGroupId = myGroup.id;
-              this.cellLeaderGroupName = myGroup.name;
-            }
+            const myGroups = groups.filter((g) => g.leader_id === userId);
+            this.cellLeaderGroupIds = myGroups.map((g) => g.id);
+            this.cellLeaderGroupNames = myGroups.map((g) => g.name);
+            this.cellGroups = myGroups;
           } else {
             this.cellGroups = groups;
           }
           this.loadingCellGroups = false;
+          this.loadMember();
         },
         error: () => {
           this.loadingCellGroups = false;
+          this.loadMember();
         },
       });
   }
@@ -226,6 +185,9 @@ export class EditMember implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (member) => {
+          // Track the member's current cell group before populating form
+          this.memberCurrentCellGroupId = member.cell_group_id || null;
+
           this.populateForm(member);
           if (member.photo_url) {
             this.photoPreview = member.photo_url;
@@ -233,21 +195,27 @@ export class EditMember implements OnInit, OnDestroy {
           }
           this.loadingMember = false;
 
-          // ADD THIS BLOCK — prevent cell leader from editing members outside their cell
-          if (this.isCellLeader && this.cellLeaderGroupId) {
-            if (member.cell_group_id !== this.cellLeaderGroupId) {
+          // Cell leader restriction: only block if member explicitly belongs
+          // to a DIFFERENT leader's cell group (not null, not their own)
+          if (this.isCellLeader && this.cellLeaderGroupIds.length > 0) {
+            const memberInDifferentGroup =
+              member.cell_group_id !== null &&
+              member.cell_group_id !== undefined &&
+              !this.cellLeaderGroupIds.includes(member.cell_group_id);
+
+            if (memberInDifferentGroup) {
               this.errorMessage =
                 'You can only edit members in your own cell group.';
-              setTimeout(() => {
-                this.router.navigate(['main/members']);
-              }, 2000);
+              setTimeout(() => this.router.navigate(['main/members']), 2000);
               return;
             }
           }
 
-          // Lock the cell_group_id field for cell leaders (existing line)
+          // For cell leaders: enable the cell_group_id control so they can
+          // assign or unassign members from their own groups
           if (this.isCellLeader) {
-            this.memberForm.get('cell_group_id')?.disable();
+            // Do NOT disable — let them pick from their groups or remove
+            this.memberForm.get('cell_group_id')?.enable();
           }
         },
         error: (error) => {
@@ -285,10 +253,10 @@ export class EditMember implements OnInit, OnDestroy {
       cell_group_id: member.cell_group_id || '',
       notes: member.notes || '',
       spouse_name: member.spouse_name || '',
-children_names: member.children_names || '',
-father_name: member.father_name || '',
-mother_name: member.mother_name || '',
-parents_alive_status: member.parents_alive_status || '',
+      children_names: member.children_names || '',
+      father_name: member.father_name || '',
+      mother_name: member.mother_name || '',
+      parents_alive_status: member.parents_alive_status || '',
     });
   }
 
@@ -353,7 +321,6 @@ parents_alive_status: member.parents_alive_status || '',
       });
   }
 
-  // FIX 4: Uses getRawValue() (includes disabled controls) + cell leader safety net
   private prepareMemberData(): Partial<Member> {
     const formValue = this.memberForm.getRawValue();
     const memberData: any = {};
@@ -361,13 +328,9 @@ parents_alive_status: member.parents_alive_status || '',
     Object.keys(formValue).forEach((key) => {
       const value = formValue[key];
       if (key === 'cell_group_id') {
-        if (this.isCellLeader) {
-          // Safety net: always preserve cell leader's group ID even if form bypassed
-          memberData[key] = this.cellLeaderGroupId || value || null;
-        } else {
-          memberData[key] = value || null;
-        }
-      } else if (value !== '' && value !== null) {
+        // Always send null when empty so Supabase actually clears it
+        memberData[key] = value || null;
+      } else if (value !== '' && value !== null && value !== undefined) {
         memberData[key] = value;
       }
     });
@@ -446,6 +409,8 @@ parents_alive_status: member.parents_alive_status || '',
       return 'Please enter a valid 10-digit phone number (e.g., 0201234567)';
     return 'Invalid input';
   }
+
+
 
   private scrollToTop(): void {
     window.scrollTo({ top: 0, behavior: 'smooth' });

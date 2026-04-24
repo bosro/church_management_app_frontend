@@ -208,24 +208,32 @@
             </div>
 
             <!-- Cell Group -->
+            <!-- Cell Group -->
             <div class="form-card">
               <h3>Cell Group</h3>
               <div class="form-row">
-                <!-- Cell Group — locked for cell leaders, free choice for admins/pastors -->
                 <div class="form-group">
                   <label>Cell Group</label>
 
-                  <!-- Cell leader sees a locked display showing their own group -->
-                  <div *ngIf="isCellLeader" class="locked-field">
+                  <!-- Cell leader with ONE group: locked display -->
+                  <div *ngIf="isCellLeader && cellGroups.length === 1" class="locked-field">
                     <i class="ri-group-2-line"></i>
-                    <span>{{ cellLeaderGroupName || 'Your Cell Group' }}</span>
+                    <span>{{ cellLeaderGroupName }}</span>
                     <span class="locked-badge">
                       <i class="ri-lock-line"></i>
                       Locked
                     </span>
                   </div>
 
-                  <!-- Admin/pastor sees the full dropdown -->
+                  <!-- Cell leader with MULTIPLE groups: dropdown of their groups -->
+                  <select *ngIf="isCellLeader && cellGroups.length > 1" formControlName="cell_group_id">
+                    <option value="">Select your cell group</option>
+                    <option *ngFor="let group of cellGroups" [value]="group.id">
+                      {{ group.name }}
+                    </option>
+                  </select>
+
+                  <!-- Admin/pastor: full dropdown -->
                   <select *ngIf="!isCellLeader" formControlName="cell_group_id">
                     <option value="">None (unassigned)</option>
                     <option *ngFor="let group of cellGroups" [value]="group.id">

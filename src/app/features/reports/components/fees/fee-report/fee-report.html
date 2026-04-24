@@ -55,8 +55,10 @@
         </div>
 
         <!-- Summary Cards -->
+        <!-- REPLACE the entire summary-cards div with: -->
         <div *ngIf="!loading" class="summary-cards">
-          <div class="summary-card">
+          <div class="summary-card" (click)="setCardFilter('all')" [class.card-active]="activeCardFilter === 'all'"
+            style="cursor:pointer;">
             <div class="card-icon" style="background:#EEF2FF; color:#4F46E5;">
               <i class="ri-money-dollar-circle-line"></i>
             </div>
@@ -65,7 +67,9 @@
               <p class="card-value">{{ formatCurrency(grandTotalDue) }}</p>
             </div>
           </div>
-          <div class="summary-card">
+
+          <div class="summary-card" (click)="setCardFilter('paid')" [class.card-active]="activeCardFilter === 'paid'"
+            style="cursor:pointer;">
             <div class="card-icon" style="background:#D1FAE5; color:#059669;">
               <i class="ri-checkbox-circle-line"></i>
             </div>
@@ -74,7 +78,9 @@
               <p class="card-value paid">{{ formatCurrency(grandTotalPaid) }}</p>
             </div>
           </div>
-          <div class="summary-card">
+
+          <div class="summary-card" (click)="setCardFilter('outstanding')"
+            [class.card-active]="activeCardFilter === 'outstanding'" style="cursor:pointer;">
             <div class="card-icon" style="background:#FEE2E2; color:#DC2626;">
               <i class="ri-error-warning-line"></i>
             </div>
@@ -83,13 +89,14 @@
               <p class="card-value outstanding">{{ formatCurrency(grandTotalBalance) }}</p>
             </div>
           </div>
+
           <div class="summary-card">
             <div class="card-icon" style="background:#FEF3C7; color:#D97706;">
               <i class="ri-group-line"></i>
             </div>
             <div>
               <p class="card-label">Students with Balance</p>
-              <p class="card-value">{{ studentSummaries.length }}</p>
+              <p class="card-value">{{ studentsWithBalance }}</p>
             </div>
           </div>
         </div>

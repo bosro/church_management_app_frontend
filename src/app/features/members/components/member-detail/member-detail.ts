@@ -396,3 +396,7 @@ export class MemberDetail implements OnInit, OnDestroy {
     return map[method] ?? method;
   }
 }
+
+
+
+

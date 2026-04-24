@@ -405,42 +405,42 @@
     gap: 24px;
   }
 
-  .signature-section {
-    display: flex;
-    gap: 32px;
-    flex-wrap: wrap;
+  // .signature-section {
+  //   display: flex;
+  //   gap: 32px;
+  //   flex-wrap: wrap;
 
-    @media (max-width: 480px) {
-      gap: 24px;
-      justify-content: center;
-      width: 100%;
-    }
+  //   @media (max-width: 480px) {
+  //     gap: 24px;
+  //     justify-content: center;
+  //     width: 100%;
+  //   }
 
-    .signature-line {
-      text-align: center;
+  //   .signature-line {
+  //     text-align: center;
 
-      .line {
-        width: 120px;
-        height: 1px;
-        background: #374151;
-        margin-bottom: 6px;
+  //     .line {
+  //       width: 120px;
+  //       height: 1px;
+  //       background: #374151;
+  //       margin-bottom: 6px;
 
-        @media (max-width: 480px) {
-          width: 100px;
-        }
-      }
+  //       @media (max-width: 480px) {
+  //         width: 100px;
+  //       }
+  //     }
 
-      p {
-        font-size: 11px;
-        color: #6b7280;
-        margin: 0;
+  //     p {
+  //       font-size: 11px;
+  //       color: #6b7280;
+  //       margin: 0;
 
-        @media (max-width: 480px) {
-          font-size: 10px;
-        }
-      }
-    }
-  }
+  //       @media (max-width: 480px) {
+  //         font-size: 10px;
+  //       }
+  //     }
+  //   }
+  // }
 
   .receipt-stamp {
     flex-shrink: 0;
@@ -543,19 +543,40 @@
 
 .receipt-table {
   tfoot {
+    .total-billed-row td {
+      // REMOVE: background: #eef2ff; color: #4f46e5;
+      background: transparent;
+      color: #374151;
+      font-size: 12px;
+      font-weight: 600;
+      border-top: 1px solid #e5e7eb;  // subtle border instead of color fill
+      padding: 8px 12px;
+    }
+
+    .total-row td {
+      // REMOVE: background: #f0fdf4; color: #065f46;
+      background: transparent;
+      color: #111827;
+      font-size: 14px;
+      border-bottom: none;
+      border-top: 1px solid #e5e7eb;  // subtle border
+    }
+
     .balance-row td {
-      background: #fef2f2;
+      // REMOVE: background: #fef2f2; color: #dc2626;
+      background: transparent;
       color: #dc2626;
       font-size: 13px;
-      border-top: 1px dashed #fecaca;
+      border-top: 1px dashed #e5e7eb;  // dashed subtle border
       font-weight: 700;
     }
 
     .cleared-row td {
-      background: #f0fdf4;
+      // REMOVE: background: #f0fdf4; color: #059669;
+      background: transparent;
       color: #059669;
       font-size: 13px;
-      border-top: 1px dashed #bbf7d0;
+      border-top: 1px dashed #e5e7eb;
       font-weight: 600;
       padding: 8px 12px;
     }
@@ -785,5 +806,7 @@
     print-color-adjust: exact;
   }
 }
+
+
 
 
