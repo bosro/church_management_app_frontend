@@ -1,4 +1,4 @@
-@use '../../../reports-shared' as *;
+@use "../../../reports-shared" as *;
 
 .student-detail-container {
   padding: 24px;
@@ -45,7 +45,9 @@
   font-size: 18px;
   transition: all 0.2s;
   flex-shrink: 0;
-  &:hover { background: #f3f4f6; }
+  &:hover {
+    background: #f3f4f6;
+  }
 }
 
 // ─── Alerts ───────────────────────────────────────────────
@@ -93,8 +95,13 @@
   transition: all 0.2s;
   font-family: "Nunito Sans", sans-serif;
   white-space: nowrap;
-  i { font-size: 15px; }
-  &:hover { background: #f9fafb; border-color: #d1d5db; }
+  i {
+    font-size: 15px;
+  }
+  &:hover {
+    background: #f9fafb;
+    border-color: #d1d5db;
+  }
 
   @media (max-width: 400px) {
     padding: 7px 10px;
@@ -145,7 +152,11 @@
         min-width: 60px;
       }
 
-      img { width: 100%; height: 100%; object-fit: cover; }
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
 
       .avatar-large {
         width: 100%;
@@ -210,8 +221,14 @@
       }
 
       .status-badge {
-        &.active   { background: #d1fae5; color: #065f46; }
-        &.inactive { background: #f3f4f6; color: #6b7280; }
+        &.active {
+          background: #d1fae5;
+          color: #065f46;
+        }
+        &.inactive {
+          background: #f3f4f6;
+          color: #6b7280;
+        }
       }
     }
   }
@@ -248,7 +265,9 @@
         flex-shrink: 0;
       }
 
-      div { min-width: 0; }
+      div {
+        min-width: 0;
+      }
 
       .label {
         font-size: 10px;
@@ -287,7 +306,10 @@
     flex: 1;
     min-width: 120px;
     transition: all 0.2s;
-    &:focus { outline: none; border-color: #4f46e5; }
+    &:focus {
+      outline: none;
+      border-color: #4f46e5;
+    }
   }
 }
 
@@ -300,7 +322,9 @@
 
   // hide scrollbar but keep scroll
   scrollbar-width: none;
-  &::-webkit-scrollbar { display: none; }
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 .tabs {
@@ -322,7 +346,9 @@
     font-family: "Nunito Sans", sans-serif;
     white-space: nowrap;
 
-    &:hover { color: #4f46e5; }
+    &:hover {
+      color: #4f46e5;
+    }
 
     &.active {
       color: #4f46e5;
@@ -380,8 +406,12 @@
       }
     }
 
-    &.paid        .summary-value { color: #059669; }
-    &.outstanding .summary-value { color: #dc2626; }
+    &.paid .summary-value {
+      color: #059669;
+    }
+    &.outstanding .summary-value {
+      color: #dc2626;
+    }
   }
 }
 
@@ -420,7 +450,9 @@
     word-break: break-word;
   }
 
-  tr:last-child td { border-bottom: none; }
+  tr:last-child td {
+    border-bottom: none;
+  }
 
   // ── Mobile: horizontal scroll for tables ──
   @media (max-width: 600px) {
@@ -429,7 +461,8 @@
     -webkit-overflow-scrolling: touch;
     white-space: nowrap;
 
-    th, td {
+    th,
+    td {
       white-space: nowrap;
       padding: 9px 12px;
       font-size: 12px;
@@ -468,9 +501,18 @@
   white-space: nowrap;
 }
 
-.status-paid    { background: #d1fae5; color: #065f46; }
-.status-partial { background: #fef3c7; color: #92400e; }
-.status-unpaid  { background: #fee2e2; color: #991b1b; }
+.status-paid {
+  background: #d1fae5;
+  color: #065f46;
+}
+.status-partial {
+  background: #fef3c7;
+  color: #92400e;
+}
+.status-unpaid {
+  background: #fee2e2;
+  color: #991b1b;
+}
 
 // ─── Empty State ──────────────────────────────────────────
 .empty-state {
@@ -481,8 +523,14 @@
   color: #9ca3af;
   text-align: center;
 
-  i { font-size: 40px; margin-bottom: 10px; }
-  p { font-size: 14px; margin: 0; }
+  i {
+    font-size: 40px;
+    margin-bottom: 10px;
+  }
+  p {
+    font-size: 14px;
+    margin: 0;
+  }
 }
 
 // ─── Icon Button ──────────────────────────────────────────
@@ -497,8 +545,17 @@
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s;
-  i { font-size: 15px; color: #6b7280; }
-  &:hover { background: #eef2ff; border-color: #4f46e5; i { color: #4f46e5; } }
+  i {
+    font-size: 15px;
+    color: #6b7280;
+  }
+  &:hover {
+    background: #eef2ff;
+    border-color: #4f46e5;
+    i {
+      color: #4f46e5;
+    }
+  }
 }
 
 // ─── Loading ──────────────────────────────────────────────
@@ -522,11 +579,10 @@
 
 // ─── Animation ────────────────────────────────────────────
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
-
-
-
 
 /* ── Tab action bar (sits above the table card in Fees / Payments tab) ── */
 .tab-action-bar {
@@ -585,7 +641,9 @@
   font-family: "Nunito Sans", sans-serif;
   white-space: nowrap;
 
-  i { font-size: 15px; }
+  i {
+    font-size: 15px;
+  }
 
   &:hover:not(:disabled) {
     background: #4338ca;
@@ -610,10 +668,142 @@
 }
 
 @keyframes spin-detail {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
+// ADD at the end of the file:
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: fadeIn 0.2s ease;
+}
 
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
 
+.delete-fee-modal {
+  background: white;
+  border-radius: 16px;
+  padding: 2rem;
+  width: 100%;
+  max-width: 380px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.18);
+  text-align: center;
 
+  .delete-fee-icon {
+    width: 64px;
+    height: 64px;
+    background: #fee2e2;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+    i {
+      font-size: 28px;
+      color: #dc2626;
+    }
+  }
+
+  h3 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #111827;
+    margin: 0 0 8px;
+  }
+  p {
+    font-size: 14px;
+    color: #374151;
+    margin: 0 0 6px;
+    line-height: 1.5;
+  }
+
+  .delete-fee-warning {
+    font-size: 12px;
+    color: #9ca3af;
+    margin-bottom: 24px;
+  }
+
+  .delete-fee-actions {
+    display: flex;
+    gap: 10px;
+
+    .btn-cancel {
+      flex: 1;
+      padding: 10px;
+      background: white;
+      color: #374151;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: "Nunito Sans", sans-serif;
+      &:hover {
+        background: #f9fafb;
+      }
+      &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+    }
+
+    .btn-confirm-delete {
+      flex: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 10px;
+      background: #dc2626;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: "Nunito Sans", sans-serif;
+      i {
+        font-size: 15px;
+      }
+      &:hover {
+        background: #b91c1c;
+      }
+      &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+    }
+  }
+}
+
+.btn-remove-fee {
+  i {
+    color: #dc2626 !important;
+  }
+  &:hover:not(:disabled) {
+    background: #fee2e2 !important;
+    border-color: #fca5a5 !important;
+  }
+  &:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+}

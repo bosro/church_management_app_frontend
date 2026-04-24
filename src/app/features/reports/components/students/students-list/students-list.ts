@@ -5,12 +5,19 @@ import { Subject } from 'rxjs';
 import { takeUntil, debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { SchoolService } from '../../../services/school.service';
 import { PermissionService } from '../../../../../core/services/permission.service';
-import { Student, SchoolClass, currentAcademicYear, generateAcademicYears, TERMS } from '../../../../../models/school.model';
+import {
+  Student,
+  SchoolClass,
+  currentAcademicYear,
+  generateAcademicYears,
+  TERMS,
+} from '../../../../../models/school.model';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { PdfBrandingService } from '../../../../../core/services/pdf-branding.service';
 import { ClassFeeExportService } from '../../../services/class-fee-export.service';
+import { Location } from '@angular/common';
 
 @Component({
   selector: 'app-students-list',
@@ -31,7 +38,9 @@ export class StudentsList implements OnInit, OnDestroy {
   totalStudents = 0;
   currentPage = 1;
   pageSize = 20;
-  get totalPages() { return Math.ceil(this.totalStudents / this.pageSize); }
+  get totalPages() {
+    return Math.ceil(this.totalStudents / this.pageSize);
+  }
 
   filterForm!: FormGroup;
   terms = TERMS;
@@ -48,7 +57,10 @@ export class StudentsList implements OnInit, OnDestroy {
   // ── Bulk Selection ────────────────────────────────────────
   selectedStudentIds = new Set<string>();
   get allSelected(): boolean {
-    return this.students.length > 0 && this.students.every(s => this.selectedStudentIds.has(s.id));
+    return (
+      this.students.length > 0 &&
+      this.students.every((s) => this.selectedStudentIds.has(s.id))
+    );
   }
   get someSelected(): boolean {
     return this.selectedStudentIds.size > 0 && !this.allSelected;
@@ -81,6 +93,7 @@ export class StudentsList implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private classFeeExport: ClassFeeExportService,
     private pdfBranding: PdfBrandingService,
+    private location: Location,
   ) {}
 
   ngOnInit(): void {
@@ -101,9 +114,12 @@ export class StudentsList implements OnInit, OnDestroy {
 
     this.route.queryParams
       .pipe(takeUntil(this.destroy$))
-      .subscribe(params => {
+      .subscribe((params) => {
         if (params['classId']) {
-          this.filterForm.patchValue({ classId: params['classId'] }, { emitEvent: false });
+          this.filterForm.patchValue(
+            { classId: params['classId'] },
+            { emitEvent: false },
+          );
         }
         this.loadStudents();
       });
@@ -123,7 +139,8 @@ export class StudentsList implements OnInit, OnDestroy {
   }
 
   loadClasses(): void {
-    this.schoolService.getClasses()
+    this.schoolService
+      .getClasses()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (c) => {
@@ -136,7 +153,8 @@ export class StudentsList implements OnInit, OnDestroy {
   private resolveActiveClassLabel(): void {
     const classId = this.filterForm.value.classId;
     if (classId && this.classes.length) {
-      this.activeClassFilter = this.classes.find(c => c.id === classId) || null;
+      this.activeClassFilter =
+        this.classes.find((c) => c.id === classId) || null;
     } else {
       this.activeClassFilter = null;
     }
@@ -157,38 +175,39 @@ export class StudentsList implements OnInit, OnDestroy {
     this.resolveActiveClassLabel();
     const { search, classId, isActive } = this.filterForm.value;
 
-    this.schoolService.getStudents(
-      {
-        search: search || undefined,
-        classId: classId || undefined,
-        isActive: isActive === '' ? undefined : isActive === 'true',
-        sortBy: this.sortOrder,
-      },
-      this.currentPage,
-      this.pageSize,
-    )
-    .pipe(takeUntil(this.destroy$))
-    .subscribe({
-      next: ({ data, count }) => {
-        this.students = data;
-        this.totalStudents = count;
-        this.loading = false;
-        if (this.permissionService.school?.fees) {
-          this.loadFeeData();
-        }
-      },
-      error: (err) => {
-        this.errorMessage = err.message || 'Failed to load students';
-        this.loading = false;
-      },
-    });
+    this.schoolService
+      .getStudents(
+        {
+          search: search || undefined,
+          classId: classId || undefined,
+          isActive: isActive === '' ? undefined : isActive === 'true',
+          sortBy: this.sortOrder,
+        },
+        this.currentPage,
+        this.pageSize,
+      )
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: ({ data, count }) => {
+          this.students = data;
+          this.totalStudents = count;
+          this.loading = false;
+          if (this.permissionService.school?.fees) {
+            this.loadFeeData();
+          }
+        },
+        error: (err) => {
+          this.errorMessage = err.message || 'Failed to load students';
+          this.loading = false;
+        },
+      });
   }
 
   // ── Fee data ─────────────────────────────────────────────
 
   loadFeeData(): void {
     if (this.students.length === 0) return;
-    const studentIds = this.students.map(s => s.id);
+    const studentIds = this.students.map((s) => s.id);
 
     this.schoolService
       .getStudentFeesForMultiple(studentIds, this.feeYear, this.feeTerm)
@@ -200,7 +219,13 @@ export class StudentsList implements OnInit, OnDestroy {
           fees.forEach((fee: any) => {
             const sid = fee.student_id;
             if (!map[sid]) {
-              map[sid] = { totalDue: 0, totalPaid: 0, totalBalance: 0, status: 'paid', fees: [] };
+              map[sid] = {
+                totalDue: 0,
+                totalPaid: 0,
+                totalBalance: 0,
+                status: 'paid',
+                fees: [],
+              };
             }
             map[sid].totalDue += Number(fee.amount_due);
             map[sid].totalPaid += Number(fee.amount_paid);
@@ -220,7 +245,9 @@ export class StudentsList implements OnInit, OnDestroy {
             this.feeDataMap.set(sid, data);
           });
         },
-        error: () => { /* non-critical */ },
+        error: () => {
+          /* non-critical */
+        },
       });
   }
 
@@ -228,14 +255,17 @@ export class StudentsList implements OnInit, OnDestroy {
     return this.feeDataMap.get(studentId) || null;
   }
 
-  onFeeFilterChange(): void { this.loadFeeData(); }
+  onFeeFilterChange(): void {
+    this.loadFeeData();
+  }
 
   // ── Bulk Selection ────────────────────────────────────────
 
   toggleSelectAll(event: Event): void {
     const checked = (event.target as HTMLInputElement).checked;
-    if (checked) this.students.forEach(s => this.selectedStudentIds.add(s.id));
-    else this.students.forEach(s => this.selectedStudentIds.delete(s.id));
+    if (checked)
+      this.students.forEach((s) => this.selectedStudentIds.add(s.id));
+    else this.students.forEach((s) => this.selectedStudentIds.delete(s.id));
     this.selectedStudentIds = new Set(this.selectedStudentIds);
   }
 
@@ -251,7 +281,9 @@ export class StudentsList implements OnInit, OnDestroy {
     this.selectedStudentIds = new Set();
   }
 
-  get selectedCount(): number { return this.selectedStudentIds.size; }
+  get selectedCount(): number {
+    return this.selectedStudentIds.size;
+  }
 
   // ── Bulk Delete ───────────────────────────────────────────
 
@@ -286,7 +318,8 @@ export class StudentsList implements OnInit, OnDestroy {
         },
         error: (err) => {
           this.bulkDeleting = false;
-          this.errorMessage = 'Bulk delete failed: ' + (err.message || 'Unknown error');
+          this.errorMessage =
+            'Bulk delete failed: ' + (err.message || 'Unknown error');
         },
       });
   }
@@ -303,7 +336,9 @@ export class StudentsList implements OnInit, OnDestroy {
           this.duplicateStats = stats;
           this.loadingDuplicateStats = false;
         },
-        error: () => { this.loadingDuplicateStats = false; },
+        error: () => {
+          this.loadingDuplicateStats = false;
+        },
       });
   }
 
@@ -332,7 +367,8 @@ export class StudentsList implements OnInit, OnDestroy {
         },
         error: (err) => {
           this.deduplicating = false;
-          this.errorMessage = 'Failed to remove duplicates: ' + (err.message || 'Unknown error');
+          this.errorMessage =
+            'Failed to remove duplicates: ' + (err.message || 'Unknown error');
         },
       });
   }
@@ -344,13 +380,21 @@ export class StudentsList implements OnInit, OnDestroy {
     this.exporting = true;
     try {
       const branding = await this.pdfBranding.getBranding();
-      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+      });
       const pw = doc.internal.pageSize.getWidth();
-      const today = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+      const today = new Date().toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+      });
       let isFirst = true;
 
       for (const studentId of this.selectedStudentIds) {
-        const student = this.students.find(s => s.id === studentId);
+        const student = this.students.find((s) => s.id === studentId);
         const fd = this.feeDataMap.get(studentId);
         if (!student) continue;
 
@@ -360,12 +404,23 @@ export class StudentsList implements OnInit, OnDestroy {
         doc.setFillColor(79, 70, 229);
         doc.rect(0, 0, pw, 28, 'F');
         if (branding.logoBase64) {
-          try { doc.addImage(branding.logoBase64, branding.logoMimeType.replace('image/', '').toUpperCase(), 14, 4, 18, 18); } catch { }
+          try {
+            doc.addImage(
+              branding.logoBase64,
+              branding.logoMimeType.replace('image/', '').toUpperCase(),
+              14,
+              4,
+              18,
+              18,
+            );
+          } catch {}
         }
         doc.setTextColor(255, 255, 255);
-        doc.setFontSize(16); doc.setFont('helvetica', 'bold');
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
         doc.text(branding.name, 36, 13);
-        doc.setFontSize(10); doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
         doc.text('Student Fee Statement', 36, 21);
         doc.setFontSize(8);
         doc.text(today, pw - 14, 21, { align: 'right' });
@@ -373,69 +428,160 @@ export class StudentsList implements OnInit, OnDestroy {
         doc.setFillColor(248, 250, 252);
         doc.roundedRect(14, 34, pw - 28, 30, 3, 3, 'F');
         doc.setTextColor(17, 24, 39);
-        doc.setFontSize(13); doc.setFont('helvetica', 'bold');
+        doc.setFontSize(13);
+        doc.setFont('helvetica', 'bold');
         doc.text(this.getFullName(student), 20, 43);
-        doc.setFontSize(9); doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
         doc.setTextColor(107, 114, 128);
         doc.text(`Student No: ${student.student_number}`, 20, 50);
         doc.text(`Class: ${student.class?.name || '—'}`, 20, 56);
         doc.text(`${this.feeTerm}  |  ${this.feeYear}`, 20, 62);
 
         if (fd) {
-          const statusBg: Record<string, [number,number,number]> = { paid:[209,250,229], partial:[254,243,199], unpaid:[254,226,226] };
-          const statusColors: Record<string, [number,number,number]> = { paid:[6,95,70], partial:[146,64,14], unpaid:[153,27,27] };
+          const statusBg: Record<string, [number, number, number]> = {
+            paid: [209, 250, 229],
+            partial: [254, 243, 199],
+            unpaid: [254, 226, 226],
+          };
+          const statusColors: Record<string, [number, number, number]> = {
+            paid: [6, 95, 70],
+            partial: [146, 64, 14],
+            unpaid: [153, 27, 27],
+          };
           const st = fd.status || 'unpaid';
           doc.setFillColor(...(statusBg[st] || statusBg['unpaid']));
           doc.roundedRect(pw - 52, 36, 38, 12, 3, 3, 'F');
           doc.setTextColor(...(statusColors[st] || statusColors['unpaid']));
-          doc.setFontSize(9); doc.setFont('helvetica', 'bold');
-          doc.text(st.charAt(0).toUpperCase() + st.slice(1), pw - 33, 44, { align: 'center' });
+          doc.setFontSize(9);
+          doc.setFont('helvetica', 'bold');
+          doc.text(st.charAt(0).toUpperCase() + st.slice(1), pw - 33, 44, {
+            align: 'center',
+          });
 
           const boxes = [
-            { label: 'Total Due', value: this.fmtPDF(fd.totalDue), color: [238,242,255] as [number,number,number], text: [79,70,229] as [number,number,number] },
-            { label: 'Total Paid', value: this.fmtPDF(fd.totalPaid), color: [209,250,229] as [number,number,number], text: [6,95,70] as [number,number,number] },
-            { label: 'Balance', value: this.fmtPDF(fd.totalBalance), color: fd.totalBalance > 0 ? [254,226,226] as [number,number,number] : [209,250,229] as [number,number,number], text: fd.totalBalance > 0 ? [153,27,27] as [number,number,number] : [6,95,70] as [number,number,number] },
+            {
+              label: 'Total Due',
+              value: this.fmtPDF(fd.totalDue),
+              color: [238, 242, 255] as [number, number, number],
+              text: [79, 70, 229] as [number, number, number],
+            },
+            {
+              label: 'Total Paid',
+              value: this.fmtPDF(fd.totalPaid),
+              color: [209, 250, 229] as [number, number, number],
+              text: [6, 95, 70] as [number, number, number],
+            },
+            {
+              label: 'Balance',
+              value: this.fmtPDF(fd.totalBalance),
+              color:
+                fd.totalBalance > 0
+                  ? ([254, 226, 226] as [number, number, number])
+                  : ([209, 250, 229] as [number, number, number]),
+              text:
+                fd.totalBalance > 0
+                  ? ([153, 27, 27] as [number, number, number])
+                  : ([6, 95, 70] as [number, number, number]),
+            },
           ];
           const bw = (pw - 28 - 12) / 3;
           boxes.forEach((box, i) => {
             const x = 14 + i * (bw + 6);
-            doc.setFillColor(...box.color); doc.roundedRect(x, 70, bw, 22, 3, 3, 'F');
+            doc.setFillColor(...box.color);
+            doc.roundedRect(x, 70, bw, 22, 3, 3, 'F');
             doc.setTextColor(...box.text);
-            doc.setFontSize(8); doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8);
+            doc.setFont('helvetica', 'normal');
             doc.text(box.label, x + bw / 2, 78, { align: 'center' });
-            doc.setFontSize(12); doc.setFont('helvetica', 'bold');
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
             doc.text(box.value, x + bw / 2, 87, { align: 'center' });
           });
 
           autoTable(doc, {
             startY: 100,
-            head: [['Fee Item', 'Amount Due', 'Amount Paid', 'Balance', 'Status']],
-            body: fd.fees.length > 0
-              ? fd.fees.map((f: any) => [f.feeName, this.fmtPDF(f.amountDue), this.fmtPDF(f.amountPaid), this.fmtPDF(f.balance), f.status.charAt(0).toUpperCase() + f.status.slice(1)])
-              : [['No fees assigned', '', '', '', '']],
-            foot: fd.fees.length > 0 ? [['TOTAL', this.fmtPDF(fd.totalDue), this.fmtPDF(fd.totalPaid), this.fmtPDF(fd.totalBalance), '']] : undefined,
+            head: [
+              ['Fee Item', 'Amount Due', 'Amount Paid', 'Balance', 'Status'],
+            ],
+            body:
+              fd.fees.length > 0
+                ? fd.fees.map((f: any) => [
+                    f.feeName,
+                    this.fmtPDF(f.amountDue),
+                    this.fmtPDF(f.amountPaid),
+                    this.fmtPDF(f.balance),
+                    f.status.charAt(0).toUpperCase() + f.status.slice(1),
+                  ])
+                : [['No fees assigned', '', '', '', '']],
+            foot:
+              fd.fees.length > 0
+                ? [
+                    [
+                      'TOTAL',
+                      this.fmtPDF(fd.totalDue),
+                      this.fmtPDF(fd.totalPaid),
+                      this.fmtPDF(fd.totalBalance),
+                      '',
+                    ],
+                  ]
+                : undefined,
             styles: { fontSize: 9, cellPadding: 3.5 },
-            headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold' },
-            footStyles: { fillColor: [255, 247, 237], textColor: [146, 64, 14], fontStyle: 'bold' },
+            headStyles: {
+              fillColor: [79, 70, 229],
+              textColor: 255,
+              fontStyle: 'bold',
+            },
+            footStyles: {
+              fillColor: [255, 247, 237],
+              textColor: [146, 64, 14],
+              fontStyle: 'bold',
+            },
             alternateRowStyles: { fillColor: [249, 250, 251] },
-            columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right', textColor: [220,38,38] as [number,number,number] }, 4: { halign: 'center' } },
+            columnStyles: {
+              1: { halign: 'right' },
+              2: { halign: 'right' },
+              3: {
+                halign: 'right',
+                textColor: [220, 38, 38] as [number, number, number],
+              },
+              4: { halign: 'center' },
+            },
           });
         } else {
-          doc.setTextColor(156, 163, 175); doc.setFontSize(11);
-          doc.text('No fee data available for this term.', pw / 2, 85, { align: 'center' });
+          doc.setTextColor(156, 163, 175);
+          doc.setFontSize(11);
+          doc.text('No fee data available for this term.', pw / 2, 85, {
+            align: 'center',
+          });
         }
 
-        doc.setFontSize(7); doc.setTextColor(156, 163, 175); doc.setFont('helvetica', 'normal');
-        doc.text(`${branding.name}${branding.address ? '  •  ' + branding.address : ''}${branding.phone ? '  •  ' + branding.phone : ''}`, pw / 2, doc.internal.pageSize.getHeight() - 10, { align: 'center' });
-        doc.text('This is an official fee statement.', pw / 2, doc.internal.pageSize.getHeight() - 6, { align: 'center' });
+        doc.setFontSize(7);
+        doc.setTextColor(156, 163, 175);
+        doc.setFont('helvetica', 'normal');
+        doc.text(
+          `${branding.name}${branding.address ? '  •  ' + branding.address : ''}${branding.phone ? '  •  ' + branding.phone : ''}`,
+          pw / 2,
+          doc.internal.pageSize.getHeight() - 10,
+          { align: 'center' },
+        );
+        doc.text(
+          'This is an official fee statement.',
+          pw / 2,
+          doc.internal.pageSize.getHeight() - 6,
+          { align: 'center' },
+        );
       }
 
-      const blob = new Blob([doc.output('arraybuffer')], { type: 'application/pdf' });
+      const blob = new Blob([doc.output('arraybuffer')], {
+        type: 'application/pdf',
+      });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = `fee_statements_${this.feeTerm.replace(' ', '_')}_${this.feeYear.replace('/', '-')}.pdf`;
-      document.body.appendChild(a); a.click();
+      document.body.appendChild(a);
+      a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
     } catch (e: any) {
@@ -451,7 +597,7 @@ export class StudentsList implements OnInit, OnDestroy {
     this.printBrandingName = branding.name;
     this.printStatements = [];
     for (const studentId of this.selectedStudentIds) {
-      const student = this.students.find(s => s.id === studentId);
+      const student = this.students.find((s) => s.id === studentId);
       const fd = this.feeDataMap.get(studentId);
       if (!student) continue;
       this.printStatements.push({
@@ -471,7 +617,11 @@ export class StudentsList implements OnInit, OnDestroy {
   async exportStudentStatement(studentId: string, event: Event): Promise<void> {
     event.stopPropagation();
     try {
-      await this.classFeeExport.exportStudentPDF(studentId, this.feeYear, this.feeTerm);
+      await this.classFeeExport.exportStudentPDF(
+        studentId,
+        this.feeYear,
+        this.feeTerm,
+      );
     } catch (e: any) {
       this.errorMessage = 'Export failed: ' + e.message;
     }
@@ -479,9 +629,18 @@ export class StudentsList implements OnInit, OnDestroy {
 
   // ── Navigation ────────────────────────────────────────────
 
-  viewStudent(id: string): void { this.router.navigate(['main/reports/students', id]); }
+  viewStudent(id: string): void {
+    this.router.navigate(['main/reports/students', id], {
+      queryParams: {
+        term: this.feeTerm,
+        year: this.feeYear,
+      },
+    });
+  }
 
-  addStudent(): void { this.router.navigate(['main/reports/students/add']); }
+  addStudent(): void {
+    this.router.navigate(['main/reports/students/add']);
+  }
 
   editStudent(id: string, event: Event): void {
     event.stopPropagation();
@@ -493,8 +652,18 @@ export class StudentsList implements OnInit, OnDestroy {
     this.router.navigate(['main/reports/students']);
   }
 
-  previousPage(): void { if (this.currentPage > 1) { this.currentPage--; this.loadStudents(); } }
-  nextPage(): void { if (this.currentPage < this.totalPages) { this.currentPage++; this.loadStudents(); } }
+  previousPage(): void {
+    if (this.currentPage > 1) {
+      this.currentPage--;
+      this.loadStudents();
+    }
+  }
+  nextPage(): void {
+    if (this.currentPage < this.totalPages) {
+      this.currentPage++;
+      this.loadStudents();
+    }
+  }
 
   clearFilters(): void {
     this.filterForm.reset({ search: '', classId: '', isActive: 'true' });
@@ -502,7 +671,9 @@ export class StudentsList implements OnInit, OnDestroy {
     this.router.navigate(['main/reports/students']);
   }
 
-  openExport(): void { this.showExportModal = true; }
+  openExport(): void {
+    this.showExportModal = true;
+  }
 
   async exportAs(format: 'csv' | 'xlsx' | 'pdf'): Promise<void> {
     this.showExportModal = false;
@@ -519,13 +690,21 @@ export class StudentsList implements OnInit, OnDestroy {
   }
 
   formatCurrency(amount: number): string {
-    return new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS' }).format(amount || 0);
+    return new Intl.NumberFormat('en-GH', {
+      style: 'currency',
+      currency: 'GHS',
+    }).format(amount || 0);
   }
 
   private fmtPDF(amount: number): string {
-    return new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS', currencyDisplay: 'code' }).format(amount || 0);
+    return new Intl.NumberFormat('en-GH', {
+      style: 'currency',
+      currency: 'GHS',
+      currencyDisplay: 'code',
+    }).format(amount || 0);
+  }
+
+  back() {
+    this.location.back();
   }
 }
-
-
-

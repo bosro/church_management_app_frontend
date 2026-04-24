@@ -1,7 +1,4 @@
 // src/app/features/members/components/registration-links/registration-links.component.ts
-// KEY FIX: checkPermissions() now includes role-based fallback.
-// AuthService was already injected — no import change needed.
-// All other logic is unchanged from your original.
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
@@ -27,14 +24,26 @@ export class RegistrationLinks implements OnInit, OnDestroy {
   errorMessage = '';
   successMessage = '';
 
+  // ── Modals ────────────────────────────────────────────────
   showCreateModal = false;
+  showEditModal = false;
+  showDeleteConfirm = false;
   showQRModal = false;
+
+  // ── QR ────────────────────────────────────────────────────
   selectedLinkForQR: any = null;
   qrCodeValue = '';
   selectedLink: RegistrationLink | null = null;
 
+  // ── Shared form state ─────────────────────────────────────
+  editingLink: RegistrationLink | null = null;
+  deletingLink: RegistrationLink | null = null;
+  deleting = false;
+  saving = false;
+
   hasExpiry = false;
-  expiresInHours = 24;
+  expiresInHours = 24; // for CREATE (hours from now)
+  expiresAtDate: string | null = null; // for EDIT (absolute datetime, local)
   hasMaxUses = false;
   maxUses: number | null = null;
 
@@ -59,8 +68,6 @@ export class RegistrationLinks implements OnInit, OnDestroy {
 
   private checkPermissions(): void {
     const role = this.authService.getCurrentUserRole();
-
-    // Registration links are an admin/pastor-level feature — not for cell leaders
     const manageRoles = ['pastor', 'senior_pastor', 'associate_pastor'];
 
     this.canManageLinks =
@@ -93,6 +100,8 @@ export class RegistrationLinks implements OnInit, OnDestroy {
       });
   }
 
+  // ── CREATE ─────────────────────────────────────────────────
+
   openCreateModal(): void {
     this.showCreateModal = true;
     this.hasExpiry = false;
@@ -103,6 +112,7 @@ export class RegistrationLinks implements OnInit, OnDestroy {
   }
 
   closeCreateModal(): void {
+    if (this.saving) return;
     this.showCreateModal = false;
     this.errorMessage = '';
   }
@@ -117,7 +127,7 @@ export class RegistrationLinks implements OnInit, OnDestroy {
       return;
     }
 
-    this.loading = true;
+    this.saving = true;
     this.errorMessage = '';
 
     this.linkService
@@ -130,16 +140,134 @@ export class RegistrationLinks implements OnInit, OnDestroy {
         next: () => {
           this.successMessage = 'Registration link created successfully!';
           this.loadLinks();
-          this.closeCreateModal();
-          this.loading = false;
+          this.showCreateModal = false;
+          this.saving = false;
           setTimeout(() => (this.successMessage = ''), 3000);
         },
         error: (error) => {
           this.errorMessage = error.message || 'Failed to create link';
-          this.loading = false;
+          this.saving = false;
         },
       });
   }
+
+  // ── EDIT ───────────────────────────────────────────────────
+
+  openEditModal(link: RegistrationLink): void {
+    this.editingLink = link;
+    this.errorMessage = '';
+
+    // Expiry — convert ISO → local datetime-input format
+    this.hasExpiry = !!link.expires_at;
+    this.expiresAtDate = link.expires_at
+      ? this.toLocalDatetimeInput(link.expires_at)
+      : null;
+
+    // Max uses
+    this.hasMaxUses = link.max_uses !== null;
+    this.maxUses = link.max_uses;
+
+    this.showEditModal = true;
+  }
+
+  closeEditModal(): void {
+    if (this.saving) return;
+    this.showEditModal = false;
+    this.editingLink = null;
+    this.errorMessage = '';
+  }
+
+  saveEdit(): void {
+    if (!this.editingLink) return;
+
+    if (this.hasExpiry && !this.expiresAtDate) {
+      this.errorMessage = 'Please pick an expiration date';
+      return;
+    }
+    if (this.hasMaxUses && (!this.maxUses || this.maxUses < 1)) {
+      this.errorMessage = 'Please enter a valid max uses (at least 1)';
+      return;
+    }
+
+    // Don't let admin set max_uses below current_uses
+    if (
+      this.hasMaxUses &&
+      this.maxUses !== null &&
+      this.maxUses < this.editingLink.current_uses
+    ) {
+      this.errorMessage = `Max uses can't be less than current uses (${this.editingLink.current_uses})`;
+      return;
+    }
+
+    this.saving = true;
+    this.errorMessage = '';
+
+    const expiresAtISO =
+      this.hasExpiry && this.expiresAtDate
+        ? new Date(this.expiresAtDate).toISOString()
+        : null;
+
+    this.linkService
+      .updateLink(this.editingLink.id, {
+        expires_at: expiresAtISO,
+        max_uses: this.hasMaxUses ? this.maxUses : null,
+      })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.saving = false;
+          this.successMessage = 'Link updated successfully';
+          this.showEditModal = false;
+          this.editingLink = null;
+          this.loadLinks();
+          setTimeout(() => (this.successMessage = ''), 3000);
+        },
+        error: (err) => {
+          this.saving = false;
+          this.errorMessage = err.message || 'Failed to update link';
+        },
+      });
+  }
+
+  // ── DELETE (permanent) ─────────────────────────────────────
+
+  openDeleteConfirm(link: RegistrationLink): void {
+    this.deletingLink = link;
+    this.showDeleteConfirm = true;
+    this.errorMessage = '';
+  }
+
+  closeDeleteConfirm(): void {
+    if (this.deleting) return;
+    this.showDeleteConfirm = false;
+    this.deletingLink = null;
+  }
+
+  confirmDelete(): void {
+    if (!this.deletingLink) return;
+    this.deleting = true;
+
+    this.linkService
+      .deleteLink(this.deletingLink.id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.deleting = false;
+          this.showDeleteConfirm = false;
+          this.deletingLink = null;
+          this.successMessage = 'Link deleted permanently';
+          this.loadLinks();
+          setTimeout(() => (this.successMessage = ''), 3000);
+        },
+        error: (err) => {
+          this.deleting = false;
+          this.errorMessage = err.message || 'Failed to delete link';
+          this.showDeleteConfirm = false;
+        },
+      });
+  }
+
+  // ── COPY / QR / ACTIVATE ──────────────────────────────────
 
   copyToClipboard(text: string): void {
     navigator.clipboard
@@ -155,8 +283,7 @@ export class RegistrationLinks implements OnInit, OnDestroy {
   }
 
   showQRCode(link: any): void {
-    const fullUrl = `${window.location.origin}/public/register/${link.link_token}`;
-    this.qrCodeValue = fullUrl;
+    this.qrCodeValue = this.linkService.getRegistrationUrl(link.link_token);
     this.selectedLinkForQR = link;
     this.showQRModal = true;
   }
@@ -181,28 +308,12 @@ export class RegistrationLinks implements OnInit, OnDestroy {
   }
 
   copyLink(link: RegistrationLink): void {
-    const url = this.linkService.getRegistrationUrl(link.link_token);
-    navigator.clipboard
-      .writeText(url)
-      .then(() => {
-        this.successMessage = 'Link copied to clipboard!';
-        setTimeout(() => (this.successMessage = ''), 3000);
-      })
-      .catch(() => {
-        this.errorMessage = 'Failed to copy link';
-        setTimeout(() => (this.errorMessage = ''), 3000);
-      });
+    this.copyToClipboard(this.linkService.getRegistrationUrl(link.link_token));
   }
 
-  deactivateLink(linkId: string): void {
-    if (
-      !confirm(
-        'Are you sure you want to deactivate this link? You can reactivate it later.',
-      )
-    )
-      return;
+  deactivateLink(link: RegistrationLink): void {
     this.linkService
-      .deactivateLink(linkId)
+      .deactivateLink(link.id)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
@@ -216,9 +327,9 @@ export class RegistrationLinks implements OnInit, OnDestroy {
       });
   }
 
-  reactivateLink(linkId: string): void {
+  reactivateLink(link: RegistrationLink): void {
     this.linkService
-      .reactivateLink(linkId)
+      .reactivateLink(link.id)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
@@ -231,6 +342,8 @@ export class RegistrationLinks implements OnInit, OnDestroy {
         },
       });
   }
+
+  // ── Helpers ────────────────────────────────────────────────
 
   getRegistrationUrl(link: RegistrationLink): string {
     return this.linkService.getRegistrationUrl(link.link_token);
@@ -269,12 +382,14 @@ export class RegistrationLinks implements OnInit, OnDestroy {
     return new Date(expiresAt).toLocaleString();
   }
 
+  /** ISO → local "YYYY-MM-DDTHH:mm" for <input type="datetime-local"> */
+  private toLocalDatetimeInput(iso: string): string {
+    const d = new Date(iso);
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
   goBack(): void {
     this.router.navigate(['main/members']);
   }
 }
-
-
-
-
-

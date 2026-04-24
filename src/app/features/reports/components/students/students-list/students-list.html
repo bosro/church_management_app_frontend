@@ -8,7 +8,7 @@
         <!-- Page Header -->
         <div class="page-header">
           <div class="header-left">
-            <button class="back-btn" (click)="router.navigate(['main/reports'])">
+            <button class="back-btn" (click)="back()">
               <i class="ri-arrow-left-line"></i>
             </button>
             <div>
@@ -24,7 +24,7 @@
 
             <!-- NEW: Registration Links button -->
             <button class="btn-secondary" (click)="router.navigate(['main/reports/students/registration-links'])"
-              *ngIf="permissionService.school?.manage">
+              *ngIf="permissionService.school.manage">
               <i class="ri-links-line"></i>
               Enrollment Links
             </button>

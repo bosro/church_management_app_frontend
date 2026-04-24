@@ -947,3 +947,185 @@
     background: #faf5ff;
   }
 }
+
+
+// ── Edit button (amber) + datetime input + edit usage note ──────────────────
+.btn-action {
+  &.btn-edit {
+    background: #fef3c7;
+    color: #92400e;
+    border-color: #fcd34d;
+
+    &:hover:not(:disabled) {
+      background: #fde68a;
+      border-color: #f59e0b;
+    }
+  }
+
+  &.btn-warn {
+    background: #fff7ed;
+    color: #c2410c;
+    border-color: #fdba74;
+
+    &:hover:not(:disabled) {
+      background: #ffedd5;
+      border-color: #fb923c;
+    }
+  }
+}
+
+.datetime-input {
+  flex: 1;
+  padding: 0.875rem 1.125rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: 1rem;
+  background: white;
+  font-family: "Nunito Sans", sans-serif;
+  font-weight: 600;
+  color: #111827;
+
+  &:hover { border-color: #d1d5db; }
+  &:focus {
+    outline: none;
+    border-color: #5b21b6;
+    background: #faf5ff;
+  }
+}
+
+.edit-usage-note {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.875rem 1.125rem;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  color: #3730a3;
+  margin-bottom: 1.5rem;
+
+  i { font-size: 1.125rem; color: #4f46e5; flex-shrink: 0; }
+  strong { color: #1e1b4b; }
+}
+
+// ── Delete confirm modal ────────────────────────────────────────────────────
+.confirm-modal {
+  background: white;
+  border-radius: 16px;
+  padding: 2rem;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.18);
+  animation: slideUp 0.25s ease;
+  text-align: center;
+
+  @media (max-width: 480px) {
+    padding: 1.5rem;
+    border-radius: 16px 16px 12px 12px;
+  }
+
+  .confirm-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+    i { font-size: 28px; }
+
+    &.danger {
+      background: #fee2e2;
+      i { color: #dc2626; }
+    }
+  }
+
+  h3 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #111827;
+    margin: 0 0 10px;
+  }
+
+  p {
+    font-size: 14px;
+    color: #374151;
+    margin: 0 0 8px;
+    line-height: 1.5;
+  }
+
+  .confirm-sub {
+    font-size: 13px;
+    color: #6b7280;
+    margin-bottom: 16px;
+    line-height: 1.5;
+  }
+
+  .confirm-warning {
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 12px;
+    color: #991b1b;
+    text-align: left;
+    margin-bottom: 20px;
+
+    i { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+  }
+
+  .confirm-actions {
+    display: flex;
+    gap: 10px;
+
+    @media (max-width: 480px) { flex-direction: column-reverse; }
+
+    .btn-cancel {
+      flex: 1;
+      padding: 10px;
+      background: white;
+      color: #374151;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: "Nunito Sans", sans-serif;
+
+      &:hover { background: #f9fafb; }
+      &:disabled { opacity: 0.6; cursor: not-allowed; }
+    }
+
+    .btn-confirm-delete {
+      flex: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 10px;
+      background: #dc2626;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: "Nunito Sans", sans-serif;
+
+      i { font-size: 15px; }
+      &:hover:not(:disabled) { background: #b91c1c; }
+      &:disabled { opacity: 0.6; cursor: not-allowed; }
+
+      .spin { animation: spin 0.8s linear infinite; }
+    }
+  }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

@@ -78,25 +78,35 @@
               <button class="btn-action btn-copy" (click)="copyLink(link)"
                 [disabled]="!link.is_active || isExpired(link) || isMaxedOut(link)">
                 <i class="ri-file-copy-line"></i>
-                Copy Link
+                Copy
               </button>
               <button class="btn-action btn-qr" (click)="showQRCode(link)"
                 [disabled]="!link.is_active || isExpired(link) || isMaxedOut(link)">
                 <i class="ri-qr-code-line"></i>
-                QR Code
+                QR
               </button>
+              <button class="btn-action btn-edit" (click)="openEditModal(link)">
+                <i class="ri-edit-line"></i>
+                Edit
+              </button>
+
               <ng-container *ngIf="!isExpired(link) && !isMaxedOut(link)">
-                <button *ngIf="link.is_active" class="btn-action btn-danger"
-                  (click)="deactivateLink(link.id)">
-                  <i class="ri-close-line"></i>
+                <button *ngIf="link.is_active" class="btn-action btn-warn"
+                  (click)="deactivateLink(link)">
+                  <i class="ri-pause-circle-line"></i>
                   Deactivate
                 </button>
                 <button *ngIf="!link.is_active" class="btn-action btn-reactivate"
-                  (click)="reactivateLink(link.id)">
+                  (click)="reactivateLink(link)">
                   <i class="ri-restart-line"></i>
                   Reactivate
                 </button>
               </ng-container>
+
+              <button class="btn-action btn-danger" (click)="openDeleteConfirm(link)">
+                <i class="ri-delete-bin-line"></i>
+                Delete
+              </button>
             </div>
           </div>
 
@@ -115,7 +125,7 @@
   </div>
 </div>
 
-<!-- Create Link Modal -->
+<!-- ── Create Link Modal ────────────────────────────────────── -->
 <div *ngIf="showCreateModal" class="modal-overlay" (click)="closeCreateModal()">
   <div class="modal-content" (click)="$event.stopPropagation()">
     <div class="modal-header">
@@ -126,7 +136,6 @@
     </div>
 
     <div class="modal-body">
-
       <!-- Restrict to class -->
       <div class="form-group">
         <div class="toggle-label">
@@ -152,7 +161,7 @@
         </p>
       </div>
 
-      <!-- Expiry -->
+      <!-- Expiry (CREATE uses hours-from-now) -->
       <div class="form-group">
         <div class="toggle-label">
           <div>
@@ -166,7 +175,7 @@
         </div>
         <div *ngIf="hasExpiry" class="toggle-input">
           <input type="number" [(ngModel)]="expiresInHours" min="1" max="8760" placeholder="24" />
-          <span class="input-suffix">hours</span>
+          <span class="input-suffix">hours from now</span>
         </div>
         <p *ngIf="!hasExpiry" class="no-limit-note">
           <i class="ri-infinity-line"></i> This link will never expire
@@ -201,17 +210,154 @@
     </div>
 
     <div class="modal-footer">
-      <button class="btn-secondary" (click)="closeCreateModal()">Cancel</button>
-      <button class="btn-primary" (click)="createLink()" [disabled]="loading">
-        <i *ngIf="!loading" class="ri-add-line"></i>
-        <i *ngIf="loading" class="ri-loader-4-line spin"></i>
-        {{ loading ? 'Creating...' : 'Create Link' }}
+      <button class="btn-secondary" (click)="closeCreateModal()" [disabled]="saving">Cancel</button>
+      <button class="btn-primary" (click)="createLink()" [disabled]="saving">
+        <i *ngIf="!saving" class="ri-add-line"></i>
+        <i *ngIf="saving" class="ri-loader-4-line spin"></i>
+        {{ saving ? 'Creating...' : 'Create Link' }}
       </button>
     </div>
   </div>
 </div>
 
-<!-- QR Code Modal -->
+<!-- ── Edit Link Modal ──────────────────────────────────────── -->
+<div *ngIf="showEditModal && editingLink" class="modal-overlay" (click)="closeEditModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>Edit Registration Link</h2>
+      <button class="close-btn" (click)="closeEditModal()" [disabled]="saving">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <!-- Usage indicator (read-only) -->
+      <div class="edit-usage-note">
+        <i class="ri-user-add-line"></i>
+        <span>
+          This link has been used <strong>{{ editingLink.current_uses }}</strong>
+          time{{ editingLink.current_uses !== 1 ? 's' : '' }} so far
+        </span>
+      </div>
+
+      <!-- Restrict to class -->
+      <div class="form-group">
+        <div class="toggle-label">
+          <div>
+            <label>Restrict to a Class</label>
+            <p class="help-text">Change or remove the class restriction</p>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" [(ngModel)]="restrictToClass" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div *ngIf="restrictToClass" class="toggle-input">
+          <select [(ngModel)]="selectedClassId" class="class-select">
+            <option value="">Select class</option>
+            <option *ngFor="let c of classes" [value]="c.id">
+              {{ c.name }} ({{ c.academic_year }})
+            </option>
+          </select>
+        </div>
+        <p *ngIf="!restrictToClass" class="no-limit-note">
+          <i class="ri-check-line"></i> Parents pick the class themselves
+        </p>
+      </div>
+
+      <!-- Expiry (EDIT uses datetime-local picker) -->
+      <div class="form-group">
+        <div class="toggle-label">
+          <div>
+            <label>Link Expiration</label>
+            <p class="help-text">Pick the exact date & time this link stops working</p>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" [(ngModel)]="hasExpiry" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div *ngIf="hasExpiry" class="toggle-input">
+          <input type="datetime-local" [(ngModel)]="expiresAtDate" class="datetime-input" />
+        </div>
+        <p *ngIf="!hasExpiry" class="no-limit-note">
+          <i class="ri-infinity-line"></i> This link will never expire
+        </p>
+      </div>
+
+      <!-- Max uses -->
+      <div class="form-group">
+        <div class="toggle-label">
+          <div>
+            <label>Maximum Uses</label>
+            <p class="help-text">
+              Must be at least {{ editingLink.current_uses }} (already used)
+            </p>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" [(ngModel)]="hasMaxUses" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div *ngIf="hasMaxUses" class="toggle-input">
+          <input type="number" [(ngModel)]="maxUses"
+                 [min]="editingLink.current_uses || 1" placeholder="e.g. 50" />
+          <span class="input-suffix">students</span>
+        </div>
+        <p *ngIf="!hasMaxUses" class="no-limit-note">
+          <i class="ri-infinity-line"></i> Unlimited enrollments
+        </p>
+      </div>
+
+      <div *ngIf="errorMessage" class="error-message">
+        <i class="ri-error-warning-line"></i>
+        {{ errorMessage }}
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-secondary" (click)="closeEditModal()" [disabled]="saving">Cancel</button>
+      <button class="btn-primary" (click)="saveEdit()" [disabled]="saving">
+        <i *ngIf="!saving" class="ri-save-line"></i>
+        <i *ngIf="saving" class="ri-loader-4-line spin"></i>
+        {{ saving ? 'Saving...' : 'Save Changes' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Delete Confirm Modal ─────────────────────────────────── -->
+<div *ngIf="showDeleteConfirm && deletingLink" class="modal-overlay" (click)="closeDeleteConfirm()">
+  <div class="confirm-modal" (click)="$event.stopPropagation()">
+    <div class="confirm-icon danger">
+      <i class="ri-delete-bin-line"></i>
+    </div>
+    <h3>Delete Registration Link?</h3>
+    <p>
+      You are about to <strong>permanently delete</strong> this enrollment link.
+    </p>
+    <p class="confirm-sub">
+      The link will stop working immediately and be removed entirely.
+      <ng-container *ngIf="deletingLink.current_uses > 0">
+        {{ deletingLink.current_uses }} student{{ deletingLink.current_uses > 1 ? 's who' : ' who' }}
+        already registered through this link will <strong>not</strong> be affected.
+      </ng-container>
+    </p>
+    <div class="confirm-warning">
+      <i class="ri-error-warning-line"></i>
+      This action cannot be undone.
+    </div>
+    <div class="confirm-actions">
+      <button class="btn-cancel" (click)="closeDeleteConfirm()" [disabled]="deleting">Cancel</button>
+      <button class="btn-confirm-delete" (click)="confirmDelete()" [disabled]="deleting">
+        <span *ngIf="!deleting"><i class="ri-delete-bin-line"></i> Delete Permanently</span>
+        <span *ngIf="deleting"><i class="ri-loader-4-line spin"></i> Deleting...</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── QR Code Modal ────────────────────────────────────────── -->
 <div class="modal-overlay" *ngIf="showQRModal" (click)="closeQRModal()">
   <div class="modal-content" (click)="$event.stopPropagation()">
     <div class="modal-header">

@@ -9,7 +9,7 @@ export interface RegistrationLink {
   id: string;
   church_id: string;
   link_token: string;
-  expires_at: string | null; // nullable — no expiry means never expires
+  expires_at: string | null;
   max_uses: number | null;
   current_uses: number;
   is_active: boolean;
@@ -20,8 +20,13 @@ export interface RegistrationLink {
 }
 
 export interface CreateLinkInput {
-  expires_in_hours: number | null; // null = no expiry
-  max_uses: number | null; // null = unlimited
+  expires_in_hours: number | null;
+  max_uses: number | null;
+}
+
+export interface UpdateLinkInput {
+  expires_at?: string | null; // ISO string or null
+  max_uses?: number | null;
 }
 
 @Injectable({
@@ -44,7 +49,6 @@ export class RegistrationLinkService {
   }
 
   createLink(input: CreateLinkInput): Observable<RegistrationLink> {
-    // Calculate expiry only if user chose to set one
     let expiresAt: string | null = null;
     if (input.expires_in_hours !== null) {
       const d = new Date();
@@ -56,7 +60,7 @@ export class RegistrationLinkService {
       church_id: this.authService.getChurchId()!,
       created_by: this.authService.getUserId(),
       link_token: this.generateToken(),
-      expires_at: expiresAt, // null is fine now — column is nullable
+      expires_at: expiresAt,
       is_active: true,
       current_uses: 0,
     };
@@ -99,11 +103,40 @@ export class RegistrationLinkService {
     );
   }
 
+  // ── NEW: Update an existing link ───────────────────────────
+  updateLink(
+    linkId: string,
+    input: UpdateLinkInput,
+  ): Observable<RegistrationLink> {
+    const updateData: any = {
+      updated_at: new Date().toISOString(),
+    };
+
+    if (input.expires_at !== undefined) updateData.expires_at = input.expires_at;
+    if (input.max_uses !== undefined) updateData.max_uses = input.max_uses;
+
+    return from(
+      this.supabase.client
+        .from('registration_links')
+        .update(updateData)
+        .eq('id', linkId)
+        .eq('church_id', this.churchId)
+        .select('*')
+        .single(),
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw new Error(error.message);
+        if (!data) throw new Error('Failed to update link');
+        return data as RegistrationLink;
+      }),
+    );
+  }
+
   deactivateLink(linkId: string): Observable<void> {
     return from(
       this.supabase.client
         .from('registration_links')
-        .update({ is_active: false })
+        .update({ is_active: false, updated_at: new Date().toISOString() })
         .eq('id', linkId)
         .eq('church_id', this.churchId),
     ).pipe(
@@ -117,7 +150,22 @@ export class RegistrationLinkService {
     return from(
       this.supabase.client
         .from('registration_links')
-        .update({ is_active: true })
+        .update({ is_active: true, updated_at: new Date().toISOString() })
+        .eq('id', linkId)
+        .eq('church_id', this.churchId),
+    ).pipe(
+      map(({ error }) => {
+        if (error) throw new Error(error.message);
+      }),
+    );
+  }
+
+  // ── NEW: Permanent delete ─────────────────────────────────
+  deleteLink(linkId: string): Observable<void> {
+    return from(
+      this.supabase.client
+        .from('registration_links')
+        .delete()
         .eq('id', linkId)
         .eq('church_id', this.churchId),
     ).pipe(
@@ -144,8 +192,3 @@ export class RegistrationLinkService {
     return `${window.location.origin}/public/register/${token}`;
   }
 }
-
-
-
-
-

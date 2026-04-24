@@ -42,6 +42,10 @@ export class StudentDetail implements OnInit, OnDestroy {
 
   exportingStatement = false;
 
+  showDeleteFeeModal = false;
+  feeToDelete: StudentFee | null = null;
+  deletingFee = false;
+
   constructor(
     private schoolService: SchoolService,
     public permissionService: PermissionService,
@@ -52,6 +56,13 @@ export class StudentDetail implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.studentId = this.route.snapshot.paramMap.get('id') || '';
+
+    // Read term/year from query params if coming from students list
+    const term = this.route.snapshot.queryParamMap.get('term');
+    const year = this.route.snapshot.queryParamMap.get('year');
+    if (term) this.currentTerm = term;
+    if (year) this.currentAcademicYear = year;
+
     this.loadStudent();
   }
 
@@ -540,6 +551,44 @@ export class StudentDetail implements OnInit, OnDestroy {
 
   getTotalPaymentsAmount(): number {
     return this.payments.reduce((s, p) => s + Number(p.amount), 0);
+  }
+
+  // ADD these methods before getTotalPaymentsAmount():
+  confirmDeleteFee(fee: StudentFee, event: Event): void {
+    event.stopPropagation();
+    this.feeToDelete = fee;
+    this.showDeleteFeeModal = true;
+  }
+
+  closeDeleteFeeModal(): void {
+    if (!this.deletingFee) {
+      this.showDeleteFeeModal = false;
+      this.feeToDelete = null;
+    }
+  }
+
+  executeDeleteFee(): void {
+    if (!this.feeToDelete) return;
+    this.deletingFee = true;
+
+    this.schoolService
+      .removeFeeFromStudent(this.feeToDelete.id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.successMessage = `"${this.feeToDelete?.fee_name}" removed successfully.`;
+          this.deletingFee = false;
+          this.showDeleteFeeModal = false;
+          this.feeToDelete = null;
+          this.loadFees();
+          setTimeout(() => (this.successMessage = ''), 3000);
+        },
+        error: (err) => {
+          this.errorMessage = err.message || 'Failed to remove fee';
+          this.deletingFee = false;
+          this.showDeleteFeeModal = false;
+        },
+      });
   }
 
   navigatToReceipts() {

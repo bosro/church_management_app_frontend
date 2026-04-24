@@ -174,6 +174,7 @@
                     <th>Amount Paid</th>
                     <th>Balance</th>
                     <th>Status</th>
+                    <th *ngIf="permissionService.school.fees">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -188,9 +189,16 @@
                         {{ fee.status | titlecase }}
                       </span>
                     </td>
+                    <td>
+                      <button class="btn-icon-small btn-remove-fee" (click)="confirmDeleteFee(fee, $event)"
+                        [disabled]="fee.amount_paid > 0"
+                        [title]="fee.amount_paid > 0 ? 'Cannot remove — payments already recorded' : 'Remove fee from student'">
+                        <i class="ri-delete-bin-line"></i>
+                      </button>
+                    </td>
                   </tr>
                   <tr *ngIf="fees.length === 0">
-                    <td colspan="5">
+                    <td colspan="6">
                       <div class="empty-state">
                         <i class="ri-file-list-3-line"
                           style="font-size:36px; color:#d1d5db; display:block; margin-bottom:8px;"></i>
@@ -228,8 +236,7 @@
                 <i class="ri-loader-4-line spin-icon" *ngIf="exportingStatement"></i>
                 {{ exportingStatement ? 'Generating...' : 'Export Statement' }}
               </button>
-              <button class="btn-secondary" style="font-size:12px;"
-                (click)="navigatToReceipts()">
+              <button class="btn-secondary" style="font-size:12px;" (click)="navigatToReceipts()">
                 <i class="ri-receipt-line"></i>
                 All Receipts
               </button>
@@ -285,6 +292,29 @@
           </div>
 
         </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Delete Fee Modal -->
+  <div class="modal-overlay" *ngIf="showDeleteFeeModal" (click)="closeDeleteFeeModal()">
+    <div class="delete-fee-modal" (click)="$event.stopPropagation()">
+      <div class="delete-fee-icon">
+        <i class="ri-delete-bin-line"></i>
+      </div>
+      <h3>Remove Fee</h3>
+      <p>Remove <strong>"{{ feeToDelete?.fee_name }}"</strong> from this student?</p>
+      <p class="delete-fee-warning">This will delete the fee record. This action cannot be undone.</p>
+      <div class="delete-fee-actions">
+        <button class="btn-cancel" (click)="closeDeleteFeeModal()" [disabled]="deletingFee">
+          Cancel
+        </button>
+        <button class="btn-confirm-delete" (click)="executeDeleteFee()" [disabled]="deletingFee">
+          <i class="ri-delete-bin-line" *ngIf="!deletingFee"></i>
+          <i class="ri-loader-4-line spin-icon" *ngIf="deletingFee"></i>
+          {{ deletingFee ? 'Removing...' : 'Yes, Remove' }}
+        </button>
       </div>
     </div>
   </div>
