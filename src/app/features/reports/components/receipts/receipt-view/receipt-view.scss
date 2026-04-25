@@ -138,7 +138,7 @@
   background: white;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
-  padding: 40px;
+  padding: 40px 40px 20px;
   width: 100%;
   max-width: 700px;
 
@@ -486,8 +486,18 @@
   }
 
   @page {
-    margin: 0.8cm 1cm;
+    margin: 0.5cm 1cm;
     size: A4 portrait;
+  }
+
+  .receipt-card {
+    padding: 16px !important;
+    height: auto !important;
+  }
+
+  .receipt-note {
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
   }
 
   .no-print,
@@ -549,7 +559,7 @@
       color: #374151;
       font-size: 12px;
       font-weight: 600;
-      border-top: 1px solid #e5e7eb;  // subtle border instead of color fill
+      border-top: 1px solid #e5e7eb; // subtle border instead of color fill
       padding: 8px 12px;
     }
 
@@ -559,7 +569,7 @@
       color: #111827;
       font-size: 14px;
       border-bottom: none;
-      border-top: 1px solid #e5e7eb;  // subtle border
+      border-top: 1px solid #e5e7eb; // subtle border
     }
 
     .balance-row td {
@@ -567,7 +577,7 @@
       background: transparent;
       color: #dc2626;
       font-size: 13px;
-      border-top: 1px dashed #e5e7eb;  // dashed subtle border
+      border-top: 1px dashed #e5e7eb; // dashed subtle border
       font-weight: 700;
     }
 
@@ -633,7 +643,6 @@
     color: #374151;
   }
 }
-
 
 /* ── Section label ──────────────────────────────────────────────────── */
 .section-label {
@@ -705,13 +714,17 @@
     }
   }
 
-  tr:last-child td { border-bottom: none; }
+  tr:last-child td {
+    border-bottom: none;
+  }
 
   /* Highlight current payment row */
   .current-payment-row {
     background: #fefce8;
 
-    td { color: #78350f; }
+    td {
+      color: #78350f;
+    }
   }
 
   .history-total-row td {
@@ -806,7 +819,3 @@
     print-color-adjust: exact;
   }
 }
-
-
-
-

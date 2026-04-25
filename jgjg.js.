@@ -1,0 +1,186 @@
+// Cloudflare Worker — serves OG previews to social media bots
+// for /public/register/:token and /public/student-register/:token.
+// Everyone else hits your normal Angular app.
+
+const SUPABASE_URL = 'https://huiglhqqqtcowsvurqxu.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh1aWdsaHFxcXRjb3dzdnVycXh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5NjI2ODMsImV4cCI6MjA4NTUzODY4M30.yBmoQu06kGS-oAx3H0JisI6vkjEeEJchHfQMA9ZahOY';
+const APP_ORIGIN = 'https://web.churchmann.org';
+
+// Bot user agents we want to serve OG meta to
+const BOT_PATTERNS = [
+  /facebookexternalhit/i,
+  /facebot/i,
+  /twitterbot/i,
+  /linkedinbot/i,
+  /slackbot/i,
+  /discordbot/i,
+  /telegrambot/i,
+  /whatsapp/i,
+  /skypeuripreview/i,
+  /pinterest/i,
+  /redditbot/i,
+  /applebot/i,
+  /vkshare/i,
+  /googlebot/i, // optional — helps with Google search previews too
+];
+
+function isBot(userAgent) {
+  if (!userAgent) return false;
+  return BOT_PATTERNS.some((re) => re.test(userAgent));
+}
+
+function escapeHtml(s) {
+  if (!s) return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+async function lookupContext(linkType, token) {
+  // linkType is 'member' or 'student'
+  const table =
+    linkType === 'student' ? 'student_registration_links' : 'registration_links';
+
+  // Fetch link → church_id (one round trip via REST + select)
+  const linkResp = await fetch(
+    `${SUPABASE_URL}/rest/v1/${table}?link_token=eq.${encodeURIComponent(token)}&select=church_id,is_active,expires_at,max_uses,current_uses&limit=1`,
+    {
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+    }
+  );
+
+  if (!linkResp.ok) return null;
+  const linkRows = await linkResp.json();
+  if (!linkRows || linkRows.length === 0) return null;
+  const link = linkRows[0];
+
+  // Fetch church name + logo
+  const churchResp = await fetch(
+    `${SUPABASE_URL}/rest/v1/churches?id=eq.${link.church_id}&select=name,logo_url&limit=1`,
+    {
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+    }
+  );
+
+  if (!churchResp.ok) return null;
+  const churchRows = await churchResp.json();
+  if (!churchRows || churchRows.length === 0) return null;
+
+  return {
+    churchName: churchRows[0].name || 'Registration',
+    churchLogo: churchRows[0].logo_url || `${APP_ORIGIN}/assets/images/og-invite.png`,
+    linkType,
+  };
+}
+
+function buildOgHtml({ churchName, churchLogo, linkType, fullUrl }) {
+  const isStudent = linkType === 'student';
+  const safeName = escapeHtml(churchName);
+  const safeLogo = escapeHtml(churchLogo);
+  const safeUrl = escapeHtml(fullUrl);
+
+  const title = isStudent
+    ? `Enrol your child — ${safeName}`
+    : `Register — ${safeName}`;
+
+  const description = isStudent
+    ? `${safeName} invites you to enrol your child. Tap to fill the registration form.`
+    : `You've been invited to register with ${safeName}. Tap to complete the form.`;
+
+  // Tiny HTML page with OG tags. Humans (in case any slip through) get redirected.
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>${title}</title>
+<meta name="description" content="${description}">
+
+<!-- Open Graph -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="${safeUrl}">
+<meta property="og:title" content="${title}">
+<meta property="og:description" content="${description}">
+<meta property="og:image" content="${safeLogo}">
+<meta property="og:site_name" content="${safeName}">
+
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="${title}">
+<meta name="twitter:description" content="${description}">
+<meta name="twitter:image" content="${safeLogo}">
+
+<!-- Redirect humans (bots ignore this) -->
+<meta http-equiv="refresh" content="0; url=${safeUrl}">
+</head>
+<body>
+<p>Redirecting to <a href="${safeUrl}">${safeName} registration</a>…</p>
+</body>
+</html>`;
+}
+
+export default {
+  async fetch(request) {
+    const url = new URL(request.url);
+    const userAgent = request.headers.get('user-agent') || '';
+
+    // Match the two public registration routes
+    const memberMatch = url.pathname.match(/^\/public\/register\/([^/]+)\/?$/);
+    const studentMatch = url.pathname.match(/^\/public\/student-register\/([^/]+)\/?$/);
+
+    const match = memberMatch || studentMatch;
+    const isPublicRegRoute = !!match;
+    const isABot = isBot(userAgent);
+
+    // Only intercept for bots on these routes. Everyone else passes through.
+    if (!isPublicRegRoute || !isABot) {
+      return fetch(request); // Pass through to your origin (Hostinger)
+    }
+
+    const linkType = studentMatch ? 'student' : 'member';
+    const token = match[1];
+
+    try {
+      const context = await lookupContext(linkType, token);
+
+      if (!context) {
+        // Token not found — fall back to a generic invite preview
+        return new Response(
+          buildOgHtml({
+            churchName: 'Registration',
+            churchLogo: `${APP_ORIGIN}/assets/images/og-invite.png`,
+            linkType,
+            fullUrl: request.url,
+          }),
+          {
+            headers: {
+              'content-type': 'text/html;charset=UTF-8',
+              'cache-control': 'public, max-age=300',
+            },
+          }
+        );
+      }
+
+      return new Response(
+        buildOgHtml({ ...context, fullUrl: request.url }),
+        {
+          headers: {
+            'content-type': 'text/html;charset=UTF-8',
+            'cache-control': 'public, max-age=600', // bots can cache 10min
+          },
+        }
+      );
+    } catch (err) {
+      // On any error, just let the request pass through to Angular
+      return fetch(request);
+    }
+  },
+};

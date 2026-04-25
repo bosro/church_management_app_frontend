@@ -739,6 +739,19 @@ export class SchoolService {
     );
   }
 
+  removeFeeFromStudent(studentFeeId: string): Observable<void> {
+    return from(
+      this.supabase.client
+        .from('student_fees')
+        .delete()
+        .eq('id', studentFeeId)
+        .eq('church_id', this.churchId),
+    ).pipe(
+      map(({ error }) => {
+        if (error) throw new Error(error.message);
+      }),
+    );
+  }
   // ─── FEE PAYMENTS ─────────────────────────────────────────
 
   getPayments(

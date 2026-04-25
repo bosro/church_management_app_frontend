@@ -199,10 +199,10 @@
             </div>
 
             <!-- NEW: Received By -->
-            <div class="form-group">
+            <!-- <div class="form-group">
               <label>Received By *</label>
               <input type="text" [(ngModel)]="paymentForm.received_by" placeholder="Name of person receiving payment" />
-            </div>
+            </div> -->
 
             <div class="form-group">
               <label>Notes (Optional)</label>
@@ -314,9 +314,9 @@
           </div>
           <div class="history-item-right">
             <span class="history-receipt">{{ payment.receipt_number }}</span>
-            <div class="receipt-received-by" *ngIf="payment.received_by_name">
+            <!-- <div class="receipt-received-by" *ngIf="payment.received_by_name">
               <span>Received by: <strong>{{ payment.received_by_name }}</strong></span>
-            </div>
+            </div> -->
             <p class="history-notes" *ngIf="payment.notes">{{ payment.notes }}</p>
           </div>
         </div>

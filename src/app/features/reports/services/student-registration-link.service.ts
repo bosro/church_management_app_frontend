@@ -23,7 +23,13 @@ export interface StudentRegistrationLink {
 export interface CreateStudentLinkInput {
   expires_in_hours: number | null;
   max_uses: number | null;
-  class_id?: string | null; // Optional: restrict link to a specific class
+  class_id?: string | null;
+}
+
+export interface UpdateStudentLinkInput {
+  class_id?: string | null;
+  expires_at?: string | null; // ISO string or null
+  max_uses?: number | null;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -69,7 +75,7 @@ export class StudentRegistrationLinkService {
       this.supabase.client
         .from('student_registration_links')
         .insert(insertData)
-        .select('*, class:school_classes!student_registration_links_class_id_fkey(name, academic_year)')
+        .select('*, class:school_classes(name, academic_year)')
         .single(),
     ).pipe(
       map(({ data, error }) => {
@@ -105,6 +111,40 @@ export class StudentRegistrationLinkService {
     );
   }
 
+  // ── NEW: Update an existing link ───────────────────────────
+  updateLink(
+    linkId: string,
+    input: UpdateStudentLinkInput,
+  ): Observable<StudentRegistrationLink> {
+    const updateData: any = {
+      updated_at: new Date().toISOString(),
+    };
+
+    // Only include fields the caller wants to change
+    if (input.class_id !== undefined) updateData.class_id = input.class_id;
+    if (input.expires_at !== undefined) updateData.expires_at = input.expires_at;
+    if (input.max_uses !== undefined) updateData.max_uses = input.max_uses;
+
+    return from(
+      this.supabase.client
+        .from('student_registration_links')
+        .update(updateData)
+        .eq('id', linkId)
+        .eq('church_id', this.churchId)
+        .select('*, class:school_classes(name, academic_year)')
+        .single(),
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw new Error(error.message);
+        if (!data) throw new Error('Failed to update link');
+        return {
+          ...data,
+          class_name: (data as any).class?.name,
+        } as StudentRegistrationLink;
+      }),
+    );
+  }
+
   deactivateLink(linkId: string): Observable<void> {
     return from(
       this.supabase.client
@@ -133,6 +173,7 @@ export class StudentRegistrationLinkService {
     );
   }
 
+  // ── Permanent delete ──────────────────────────────────────
   deleteLink(linkId: string): Observable<void> {
     return from(
       this.supabase.client
@@ -147,7 +188,7 @@ export class StudentRegistrationLinkService {
     );
   }
 
-  // ── Public methods (no auth) ──────────────────────────────────────────────
+  // ── Public methods (no auth) ──────────────────────────────
 
   validateLink(token: string): Observable<any> {
     return from(
