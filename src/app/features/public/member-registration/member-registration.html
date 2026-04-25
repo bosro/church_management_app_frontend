@@ -1,105 +1,101 @@
-<!-- src/app/features/public/member-registration/member-registration.component.html -->
-<div class="registration-page">
-  <div class="registration-container">
-    <!-- Logo/Header -->
-    <div class="registration-header">
-      <div class="logo">
-        <i class="ri-church-line"></i>
-        <h1>Member Registration</h1>
-      </div>
-      <p class="subtitle">Please fill in your information to complete registration</p>
-    </div>
+<div class="public-wrapper">
+  <div class="public-container">
 
-    <!-- Validating Link -->
-    <div *ngIf="validatingLink" class="loading-container">
+    <!-- Validating -->
+    <div *ngIf="validating" class="status-state">
       <div class="spinner"></div>
-      <p>Validating registration link...</p>
+      <h2>Validating link...</h2>
+      <p>Please wait</p>
     </div>
 
-    <!-- Invalid Link -->
-    <div *ngIf="!validatingLink && !linkValid" class="error-container">
-      <i class="ri-error-warning-line"></i>
-      <h3>Invalid Registration Link</h3>
-      <p>{{ errorMessage }}</p>
-      <p class="help-text">Please contact your church administrator for a valid registration link.</p>
+    <!-- Invalid -->
+    <div *ngIf="!validating && !valid" class="status-state status-error">
+      <div class="status-icon error">
+        <i class="ri-close-circle-line"></i>
+      </div>
+      <h2>Link Invalid</h2>
+      <p>{{ invalidReason }}</p>
+      <p class="hint">Please contact your church administrator for a valid registration link.</p>
     </div>
 
-    <!-- Registration Form -->
-    <div *ngIf="!validatingLink && linkValid" class="registration-content">
-      <!-- Success Message -->
-      <div *ngIf="successMessage" class="success-alert">
+    <!-- Success -->
+    <div *ngIf="submitted" class="status-state status-success">
+      <div class="status-icon success">
         <i class="ri-checkbox-circle-line"></i>
-        <span>{{ successMessage }}</span>
+      </div>
+      <h2>Registration Submitted!</h2>
+      <p>Thank you for joining {{ churchName || 'us' }}. You've been successfully registered.</p>
+      <div class="success-detail" *ngIf="createdMemberNumber">
+        <span class="label">Member Number</span>
+        <span class="value">{{ createdMemberNumber }}</span>
+      </div>
+      <p class="hint">Please keep this number for your records.</p>
+      <button class="btn-primary" (click)="registerAnother()">
+        <i class="ri-user-add-line"></i>
+        Register Another Member
+      </button>
+    </div>
+
+    <!-- Form -->
+    <div *ngIf="!validating && valid && !submitted" class="registration-card">
+
+      <!-- Header -->
+      <div class="reg-header">
+        <img *ngIf="churchLogo" [src]="churchLogo" [alt]="churchName" class="logo" />
+        <div class="logo-placeholder" *ngIf="!churchLogo">
+          <i class="ri-church-line"></i>
+        </div>
+        <h1>{{ churchName || 'Member Registration' }}</h1>
+        <p class="subtitle">Member Registration Form</p>
       </div>
 
-      <!-- Error Message -->
       <div *ngIf="errorMessage" class="error-alert">
         <i class="ri-error-warning-line"></i>
         <span>{{ errorMessage }}</span>
       </div>
 
-      <form [formGroup]="registrationForm" (ngSubmit)="onSubmit()" class="registration-form">
+      <form [formGroup]="form" (ngSubmit)="onSubmit()">
+
         <!-- Basic Information -->
         <div class="form-section">
-          <h2>Basic Information</h2>
-
+          <h3><i class="ri-user-line"></i> Basic Information</h3>
           <div class="form-row">
             <div class="form-group">
-              <label for="first_name">First Name <span class="required">*</span></label>
-              <input
-                id="first_name"
-                type="text"
-                formControlName="first_name"
-                placeholder="Enter your first name"
-              />
+              <label>First Name <span class="req">*</span></label>
+              <input type="text" formControlName="first_name" placeholder="Enter first name"
+                [class.error]="form.get('first_name')?.invalid && form.get('first_name')?.touched" />
+              <span class="error-message">{{ getError('first_name') }}</span>
             </div>
-
             <div class="form-group">
-              <label for="middle_name">Middle Name</label>
-              <input
-                id="middle_name"
-                type="text"
-                formControlName="middle_name"
-                placeholder="Enter your middle name (optional)"
-              />
+              <label>Middle Name</label>
+              <input type="text" formControlName="middle_name" placeholder="Optional" />
             </div>
-
             <div class="form-group">
-              <label for="last_name">Last Name <span class="required">*</span></label>
-              <input
-                id="last_name"
-                type="text"
-                formControlName="last_name"
-                placeholder="Enter your last name"
-              />
+              <label>Last Name <span class="req">*</span></label>
+              <input type="text" formControlName="last_name" placeholder="Enter last name"
+                [class.error]="form.get('last_name')?.invalid && form.get('last_name')?.touched" />
+              <span class="error-message">{{ getError('last_name') }}</span>
             </div>
           </div>
 
           <div class="form-row">
             <div class="form-group">
-              <label for="date_of_birth">Date of Birth</label>
-              <input
-                id="date_of_birth"
-                type="date"
-                formControlName="date_of_birth"
-                [max]="today"
-              />
+              <label>Date of Birth</label>
+              <input type="date" formControlName="date_of_birth" [max]="today" />
             </div>
-
             <div class="form-group">
-              <label for="gender">Gender</label>
-              <select id="gender" formControlName="gender">
-                <option value="">Select gender</option>
+              <label>Gender</label>
+              <select formControlName="gender">
+                <option value="">Select</option>
                 <option *ngFor="let option of genderOptions" [value]="option.value">
                   {{ option.label }}
                 </option>
               </select>
             </div>
-
             <div class="form-group">
-              <label for="marital_status">Marital Status</label>
-              <select id="marital_status" formControlName="marital_status">
-                <option value="">Select status</option>
+              <label>Marital Status</label>
+              <select formControlName="marital_status">
+                <option value="">Select</option>
                 <option *ngFor="let option of maritalStatusOptions" [value]="option.value">
                   {{ option.label }}
                 </option>
@@ -110,133 +106,83 @@
 
         <!-- Contact Information -->
         <div class="form-section">
-          <h2>Contact Information</h2>
-
+          <h3><i class="ri-phone-line"></i> Contact Information</h3>
           <div class="form-row">
             <div class="form-group">
-              <label for="phone_primary">Primary Phone <span class="required">*</span></label>
-              <input
-                id="phone_primary"
-                type="tel"
-                formControlName="phone_primary"
-                placeholder="0XXXXXXXXX"
-                maxlength="10"
-              />
+              <label>Primary Phone <span class="req">*</span></label>
+              <input type="tel" formControlName="phone_primary" placeholder="0XXXXXXXXX" maxlength="10"
+                [class.error]="form.get('phone_primary')?.invalid && form.get('phone_primary')?.touched" />
+              <span class="error-message">{{ getError('phone_primary') }}</span>
             </div>
-
             <div class="form-group">
-              <label for="phone_secondary">Secondary Phone</label>
-              <input
-                id="phone_secondary"
-                type="tel"
-                formControlName="phone_secondary"
-                placeholder="0XXXXXXXXX (optional)"
-                maxlength="10"
-              />
+              <label>Secondary Phone</label>
+              <input type="tel" formControlName="phone_secondary" placeholder="Optional" maxlength="10"
+                [class.error]="form.get('phone_secondary')?.invalid && form.get('phone_secondary')?.touched" />
+              <span class="error-message">{{ getError('phone_secondary') }}</span>
             </div>
-
             <div class="form-group">
-              <label for="email">Email</label>
-              <input
-                id="email"
-                type="email"
-                formControlName="email"
-                placeholder="email@example.com"
-              />
+              <label>Email</label>
+              <input type="email" formControlName="email" placeholder="email@example.com"
+                [class.error]="form.get('email')?.invalid && form.get('email')?.touched" />
+              <span class="error-message">{{ getError('email') }}</span>
             </div>
           </div>
 
           <div class="form-row">
-            <div class="form-group full-width">
-              <label for="address">Address</label>
-              <input
-                id="address"
-                type="text"
-                formControlName="address"
-                placeholder="Enter your residential address"
-              />
+            <div class="form-group full">
+              <label>Address</label>
+              <input type="text" formControlName="address" placeholder="Residential address (optional)" />
             </div>
           </div>
 
           <div class="form-row">
             <div class="form-group">
-              <label for="city">City</label>
-              <input
-                id="city"
-                type="text"
-                formControlName="city"
-                placeholder="Enter your city"
-              />
+              <label>City</label>
+              <input type="text" formControlName="city" placeholder="Optional" />
             </div>
-
             <div class="form-group">
-              <label for="occupation">Occupation</label>
-              <input
-                id="occupation"
-                type="text"
-                formControlName="occupation"
-                placeholder="Enter your occupation"
-              />
+              <label>Occupation</label>
+              <input type="text" formControlName="occupation" placeholder="Optional" />
             </div>
           </div>
         </div>
 
         <!-- Emergency Contact -->
         <div class="form-section">
-          <h2>Emergency Contact</h2>
-
+          <h3><i class="ri-alarm-warning-line"></i> Emergency Contact</h3>
           <div class="form-row">
             <div class="form-group">
-              <label for="emergency_contact_name">Contact Name</label>
-              <input
-                id="emergency_contact_name"
-                type="text"
-                formControlName="emergency_contact_name"
-                placeholder="Enter emergency contact name"
-              />
+              <label>Contact Name</label>
+              <input type="text" formControlName="emergency_contact_name" placeholder="Full name (optional)" />
             </div>
-
             <div class="form-group">
-              <label for="emergency_contact_phone">Contact Phone</label>
-              <input
-                id="emergency_contact_phone"
-                type="tel"
-                formControlName="emergency_contact_phone"
-                placeholder="0XXXXXXXXX"
-                maxlength="10"
-              />
+              <label>Contact Phone</label>
+              <input type="tel" formControlName="emergency_contact_phone" placeholder="0XXXXXXXXX" maxlength="10"
+                [class.error]="form.get('emergency_contact_phone')?.invalid && form.get('emergency_contact_phone')?.touched" />
+              <span class="error-message">{{ getError('emergency_contact_phone') }}</span>
             </div>
-
             <div class="form-group">
-              <label for="emergency_contact_relationship">Relationship</label>
-              <input
-                id="emergency_contact_relationship"
-                type="text"
-                formControlName="emergency_contact_relationship"
-                placeholder="e.g., Spouse, Parent, Sibling"
-              />
+              <label>Relationship</label>
+              <input type="text" formControlName="emergency_contact_relationship"
+                placeholder="e.g. Spouse, Parent, Sibling" />
             </div>
           </div>
         </div>
 
         <!-- Submit -->
         <div class="form-actions">
-          <button
-            type="submit"
-            class="btn-submit"
-            [disabled]="loading || registrationForm.invalid"
-          >
-            <i *ngIf="!loading" class="ri-send-plane-fill"></i>
-            <i *ngIf="loading" class="ri-loader-4-line spin"></i>
-            {{ loading ? 'Submitting...' : 'Complete Registration' }}
+          <button type="submit" class="btn-primary btn-submit" [disabled]="submitting || form.invalid">
+            <i *ngIf="!submitting" class="ri-send-plane-fill"></i>
+            <i *ngIf="submitting" class="ri-loader-4-line spin"></i>
+            {{ submitting ? 'Submitting...' : 'Complete Registration' }}
           </button>
         </div>
-
-        <p class="form-note">
-          <i class="ri-information-line"></i>
-          Fields marked with <span class="required">*</span> are required
-        </p>
       </form>
+
+      <p class="privacy-note">
+        <i class="ri-shield-check-line"></i>
+        Your information is securely processed by {{ churchName || 'your church' }}.
+      </p>
     </div>
   </div>
 </div>

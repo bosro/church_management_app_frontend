@@ -89,10 +89,10 @@
                 <span class="info-label">Payment Method:</span>
                 <span class="info-value">{{ payment.payment_method }}</span>
               </div>
-              <div class="info-row" *ngIf="payment.received_by_name">
+              <!-- <div class="info-row" *ngIf="payment.received_by_name">
                 <span class="info-label">Received By:</span>
                 <span class="info-value"><strong>{{ payment.received_by_name }}</strong></span>
-              </div>
+              </div> -->
             </div>
 
             <div class="receipt-divider"></div>
@@ -182,7 +182,7 @@
                     <th>Date</th>
                     <th>Amount Paid</th>
                     <th>Method</th>
-                    <th>Received By</th>
+                    <!-- <th>Received By</th> -->
                   </tr>
                 </thead>
                 <tbody>
@@ -196,7 +196,7 @@
                     <td>{{ p.payment_date | date:'MMM d, y' }}</td>
                     <td style="text-align:right; font-weight:600; color:#059669;">{{ formatCurrency(p.amount) }}</td>
                     <td>{{ p.payment_method }}</td>
-                    <td>{{ p.received_by_name || '—' }}</td>
+                    <!-- <td>{{ p.received_by_name || '—' }}</td> -->
                   </tr>
                 </tbody>
                 <tfoot>

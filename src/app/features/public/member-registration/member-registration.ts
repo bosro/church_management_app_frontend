@@ -16,16 +16,25 @@ import { SupabaseService } from '../../../core/services/supabase';
 export class MemberRegistration implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
-  registrationForm!: FormGroup;
-  loading = false;
-  validatingLink = true;
-  linkValid = false;
-  errorMessage = '';
-  successMessage = '';
+  // ── Token / link state ────────────────────────────────────
+  token = '';
+  validating = true;
+  valid = false;
+  invalidReason = '';
 
-  linkToken = '';
+  // ── Church branding (fetched after validate) ──────────────
   churchId = '';
+  churchName = '';
+  churchLogo: string | null = null;
 
+  // ── Form state ────────────────────────────────────────────
+  form!: FormGroup;
+  submitting = false;
+  submitted = false;
+  errorMessage = '';
+  createdMemberNumber = '';
+
+  // ── Options ───────────────────────────────────────────────
   genderOptions = [
     { value: 'male', label: 'Male' },
     { value: 'female', label: 'Female' },
@@ -48,15 +57,15 @@ export class MemberRegistration implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    this.linkToken = this.route.snapshot.paramMap.get('token') || '';
+    this.token = this.route.snapshot.paramMap.get('token') || '';
+    this.initForm();
 
-    if (!this.linkToken) {
-      this.errorMessage = 'Invalid registration link';
-      this.validatingLink = false;
+    if (!this.token) {
+      this.validating = false;
+      this.invalidReason = 'Missing link token';
       return;
     }
 
-    this.initForm();
     this.validateLink();
   }
 
@@ -68,7 +77,7 @@ export class MemberRegistration implements OnInit, OnDestroy {
   private initForm(): void {
     const today = new Date().toISOString().split('T')[0];
 
-    this.registrationForm = this.fb.group({
+    this.form = this.fb.group({
       first_name: ['', [Validators.required, Validators.minLength(2)]],
       middle_name: [''],
       last_name: ['', [Validators.required, Validators.minLength(2)]],
@@ -92,82 +101,112 @@ export class MemberRegistration implements OnInit, OnDestroy {
   }
 
   private validateLink(): void {
-    this.validatingLink = true;
+    this.validating = true;
 
     this.linkService
-      .validateLink(this.linkToken)
+      .validateLink(this.token)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (result) => {
-          if (result.success) {
-            this.linkValid = true;
+          if (result?.success) {
+            this.valid = true;
             this.churchId = result.church_id;
-            this.validatingLink = false;
+            this.fetchChurchBranding(result.church_id);
           } else {
-            this.linkValid = false;
-            this.errorMessage =
-              result.error || 'Invalid or expired registration link';
-            this.validatingLink = false;
+            this.valid = false;
+            this.invalidReason =
+              result?.error || 'Invalid or expired registration link';
+            this.validating = false;
           }
         },
         error: (error) => {
-          this.linkValid = false;
-          this.errorMessage = 'Failed to validate registration link';
-          this.validatingLink = false;
+          this.valid = false;
+          this.invalidReason =
+            error?.message || 'Failed to validate registration link';
+          this.validating = false;
         },
       });
   }
 
+  /**
+   * Pull church name + logo so we can show them in the header.
+   * If anything fails we just keep generic copy — never blocks the form.
+   */
+  private async fetchChurchBranding(churchId: string): Promise<void> {
+    try {
+      const { data } = await this.supabase.client
+        .from('churches')
+        .select('name, logo_url')
+        .eq('id', churchId)
+        .maybeSingle();
+
+      if (data) {
+        this.churchName = data.name || '';
+        this.churchLogo = data.logo_url || null;
+      }
+    } catch {
+      /* non-critical, keep generic header */
+    } finally {
+      this.validating = false;
+    }
+  }
+
   async onSubmit(): Promise<void> {
-    if (this.registrationForm.invalid) {
-      this.markFormGroupTouched(this.registrationForm);
+    if (this.form.invalid) {
+      Object.values(this.form.controls).forEach((c) => c.markAsTouched());
       this.errorMessage = 'Please fill in all required fields correctly';
       return;
     }
 
-    this.loading = true;
+    this.submitting = true;
     this.errorMessage = '';
 
     try {
       const { data, error } = await this.supabase.client.rpc(
         'register_member_via_link',
         {
-          p_link_token: this.linkToken,
-          p_member_data: this.registrationForm.value,
+          p_link_token: this.token,
+          p_member_data: this.form.value,
         },
       );
 
       if (error) throw error;
 
-      if (!data.success) {
-        throw new Error(data.error || 'Registration failed');
+      if (!data?.success) {
+        throw new Error(data?.error || 'Registration failed');
       }
 
-      this.successMessage =
-        'Registration successful! Thank you for joining us.';
-      this.registrationForm.reset();
-
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 3000);
+      this.submitted = true;
+      this.createdMemberNumber = data.member_number || '';
     } catch (error: any) {
       this.errorMessage =
         error.message || 'Registration failed. Please try again.';
     } finally {
-      this.loading = false;
+      this.submitting = false;
     }
   }
 
-  private markFormGroupTouched(formGroup: FormGroup): void {
-    Object.keys(formGroup.controls).forEach((key) => {
-      const control = formGroup.get(key);
-      control?.markAsTouched();
-    });
+  registerAnother(): void {
+    this.submitted = false;
+    this.createdMemberNumber = '';
+    this.errorMessage = '';
+    const today = new Date().toISOString().split('T')[0];
+    this.form.reset({ join_date: today });
+  }
+
+  getError(field: string): string {
+    const control = this.form.get(field);
+    if (!control?.errors || !control.touched) return '';
+    if (control.hasError('required')) return 'This field is required';
+    if (control.hasError('minlength'))
+      return `Minimum ${control.getError('minlength').requiredLength} characters`;
+    if (control.hasError('email')) return 'Invalid email address';
+    if (control.hasError('pattern'))
+      return 'Invalid phone (must be 10 digits starting with 0)';
+    return 'Invalid input';
   }
 
   get today(): string {
     return new Date().toISOString().split('T')[0];
   }
 }
-
-

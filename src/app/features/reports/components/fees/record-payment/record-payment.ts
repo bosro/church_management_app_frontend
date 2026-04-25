@@ -47,7 +47,7 @@ export class RecordPayment implements OnInit, OnDestroy {
   paymentForm = {
     payment_date: new Date().toISOString().split('T')[0],
     payment_method: 'Cash',
-    received_by: '', // NEW: who is recording the payment
+    //received_by: '', // NEW: who is recording the payment
     notes: '',
   };
 
@@ -92,8 +92,8 @@ export class RecordPayment implements OnInit, OnDestroy {
     this.selectedYear = currentAcademicYear();
 
     // Pre-fill received_by with current user's name
-    this.paymentForm.received_by =
-      this.authService.currentProfile?.full_name || '';
+    // this.paymentForm.received_by =
+    //   this.authService.currentProfile?.full_name || '';
 
     this.loadStudent();
   }
@@ -295,7 +295,7 @@ export class RecordPayment implements OnInit, OnDestroy {
               term: this.selectedTerm,
               feeItems: this.selectedFeeItems,
               notes: this.paymentForm.notes,
-              receivedBy: this.paymentForm.received_by,
+              // receivedBy: this.paymentForm.received_by,
             },
             receiptNumber,
           )
@@ -391,5 +391,4 @@ export class RecordPayment implements OnInit, OnDestroy {
     }).format(amount || 0);
   }
 }
-
 
