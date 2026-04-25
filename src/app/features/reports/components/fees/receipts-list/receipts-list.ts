@@ -17,6 +17,7 @@ import {
   currentAcademicYear,
 } from '../../../../../models/school.model';
 import { Location } from '@angular/common';
+import { SchoolFilterService } from '../../../services/school-filter.service';
 
 @Component({
   selector: 'app-receipts-list',
@@ -33,8 +34,8 @@ export class ReceiptsList implements OnInit, OnDestroy {
 
   // Filters
   searchControl = new FormControl('');
-  selectedTerm = TERMS[0];
-  selectedYear = currentAcademicYear();
+  selectedTerm = '';
+  selectedYear = ''; 
   terms = TERMS;
   academicYears = generateAcademicYears();
 
@@ -52,13 +53,14 @@ export class ReceiptsList implements OnInit, OnDestroy {
     public router: Router,
     private location: Location,
     private route: ActivatedRoute,
+    private schoolFilter: SchoolFilterService,
   ) {}
 
   ngOnInit(): void {
     // Read query params first, fall back to defaults
     const params = this.route.snapshot.queryParamMap;
-    this.selectedTerm = params.get('term') || TERMS[0];
-    this.selectedYear = params.get('year') || currentAcademicYear();
+    this.selectedTerm = params.get('term') || this.schoolFilter.term;
+    this.selectedYear = params.get('year') || this.schoolFilter.year;
 
     this.loadPayments();
 
@@ -114,6 +116,7 @@ export class ReceiptsList implements OnInit, OnDestroy {
   }
 
   onFilterChange(): void {
+    this.schoolFilter.setBoth(this.selectedTerm, this.selectedYear);
     this.currentPage = 1;
     this.loadPayments();
   }

@@ -4,14 +4,11 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { SchoolService } from '../../services/school.service';
 import { PermissionService } from '../../../../core/services/permission.service';
-import {
-  TERMS,
-  generateAcademicYears,
-  currentAcademicYear,
-} from '../../../../models/school.model';
+import { TERMS, generateAcademicYears } from '../../../../models/school.model';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { PdfBrandingService } from '../../../../core/services/pdf-branding.service';
+import { SchoolFilterService } from '../../services/school-filter.service';
 
 @Component({
   selector: 'app-reports-overview',
@@ -26,18 +23,23 @@ export class ReportsOverview implements OnInit, OnDestroy {
   loading = true;
   errorMessage = '';
 
-  currentAcademicYear = currentAcademicYear();
-  currentTerm = TERMS[0];
   terms = TERMS;
   academicYears: string[] = generateAcademicYears();
-
   exporting = false;
+
+  // Delegate to service so template bindings work
+  get currentTerm(): string { return this.schoolFilter.term; }
+  set currentTerm(val: string) { this.schoolFilter.setTerm(val); }
+
+  get currentAcademicYear(): string { return this.schoolFilter.year; }
+  set currentAcademicYear(val: string) { this.schoolFilter.setYear(val); }
 
   constructor(
     private schoolService: SchoolService,
     public permissionService: PermissionService,
     public router: Router,
     private pdfBranding: PdfBrandingService,
+    public schoolFilter: SchoolFilterService,
   ) {}
 
   ngOnInit(): void {

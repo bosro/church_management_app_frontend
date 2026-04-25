@@ -16,6 +16,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { PdfBrandingService } from '../../../../../core/services/pdf-branding.service';
 import { ClassFeeExportService } from '../../../services/class-fee-export.service';
+import { SchoolFilterService } from '../../../services/school-filter.service';
 
 @Component({
   selector: 'app-fee-structures',
@@ -88,11 +89,13 @@ export class FeeStructures implements OnInit, OnDestroy {
     public router: Router,
     private pdfBranding: PdfBrandingService,
     private classFeeExport: ClassFeeExportService,
+    private schoolFilter: SchoolFilterService,
   ) {}
 
   ngOnInit(): void {
     this.academicYears = generateAcademicYears();
-    this.selectedYear = currentAcademicYear();
+    this.selectedTerm = this.schoolFilter.term;
+    this.selectedYear = this.schoolFilter.year;
     this.loadClasses();
     this.loadFeeStructures();
   }
@@ -130,6 +133,7 @@ export class FeeStructures implements OnInit, OnDestroy {
   }
 
   onFilterChange(): void {
+    this.schoolFilter.setBoth(this.selectedTerm, this.selectedYear);
     this.loadFeeStructures();
   }
 
@@ -859,6 +863,3 @@ export class FeeStructures implements OnInit, OnDestroy {
       });
   }
 }
-
-
-

@@ -29,12 +29,11 @@ export class ReceiptView implements OnInit, OnDestroy {
   successMessage = ''; // ← add
   showBrandingModal = false; // ← add
   allStudentPayments: any[] = [];
+  allStudentFees: any[] = [];
 
   constructor(
     private schoolService: SchoolService,
     public permissionService: PermissionService,
-    private authService: AuthService,
-    private supabase: SupabaseService,
     private pdfBranding: PdfBrandingService, // ← add
     private router: Router,
     private route: ActivatedRoute,
@@ -63,6 +62,34 @@ export class ReceiptView implements OnInit, OnDestroy {
     });
   }
 
+  get receiptFeeItemsWithZeros(): any[] {
+    if (!this.payment || !this.allStudentFees.length) {
+      return this.payment?.fee_items || [];
+    }
+
+    // Build a map of what was paid in this receipt
+    const paidMap = new Map<string, any>();
+    (this.payment.fee_items || []).forEach((item: any) => {
+      if (item.fee_name) paidMap.set(item.fee_name, item);
+    });
+
+    // Merge all assigned fees — show paid ones with amounts, unpaid ones with zero
+    return this.allStudentFees.map((fee: any) => {
+      const paid = paidMap.get(fee.fee_name);
+      if (paid) return paid; // already in receipt with amount
+      // Fee was assigned but not paid in this receipt — show as zero
+      return {
+        fee_name: fee.fee_name,
+        amount: fee.amount_due, // total assigned fee
+        amount_paid_this_receipt: 0, // nothing paid this time
+        amount_due: fee.amount_due,
+        amount_paid_total: fee.amount_paid,
+        is_arrears: false,
+        not_paid_this_receipt: true, // flag for styling
+      };
+    });
+  }
+
   loadPayment(): void {
     this.loading = true;
     this.schoolService
@@ -72,9 +99,14 @@ export class ReceiptView implements OnInit, OnDestroy {
         next: (payment) => {
           this.payment = payment;
           this.loading = false;
-          // After loading the receipt, fetch ALL payments for same student/term/year
           if (payment?.student_id) {
             this.loadAllStudentPayments(
+              payment.student_id,
+              payment.academic_year,
+              payment.term,
+            );
+            // ADD THIS:
+            this.loadAllStudentFeesForReceipt(
               payment.student_id,
               payment.academic_year,
               payment.term,
@@ -84,6 +116,24 @@ export class ReceiptView implements OnInit, OnDestroy {
         error: (err) => {
           this.errorMessage = err.message || 'Receipt not found';
           this.loading = false;
+        },
+      });
+  }
+
+  private loadAllStudentFeesForReceipt(
+    studentId: string,
+    academicYear: string,
+    term: string,
+  ): void {
+    this.schoolService
+      .getStudentFees(studentId, academicYear, term)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (fees) => {
+          this.allStudentFees = fees;
+        },
+        error: () => {
+          /* non-critical */
         },
       });
   }
@@ -255,6 +305,3 @@ export class ReceiptView implements OnInit, OnDestroy {
     return Math.min(100, (this.getCumulativePaid() / billed) * 100);
   }
 }
-
-
-

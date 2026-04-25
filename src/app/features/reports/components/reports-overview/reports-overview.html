@@ -12,14 +12,26 @@
             <p class="subtitle">Manage students, fees, and academic records</p>
           </div>
           <div class="header-right">
-            <div class="header-filters">
-              <select [(ngModel)]="currentTerm" (change)="onTermChange()" class="filter-select">
-                <option *ngFor="let term of terms" [value]="term">{{ term }}</option>
-              </select>
-              <select [(ngModel)]="currentAcademicYear" (change)="onYearChange()" class="filter-select">
-                <option *ngFor="let year of academicYears" [value]="year">{{ year }}</option>
-              </select>
+
+            <!-- Global term selector with save indicator -->
+            <div class="global-term-selector">
+              <div class="global-term-label">
+                <i class="ri-calendar-check-line"></i>
+                <span>Active Term</span>
+              </div>
+              <div class="global-term-controls">
+                <select [(ngModel)]="currentTerm" (change)="onTermChange()" class="filter-select">
+                  <option *ngFor="let term of terms" [value]="term">{{ term }}</option>
+                </select>
+                <select [(ngModel)]="currentAcademicYear" (change)="onYearChange()" class="filter-select">
+                  <option *ngFor="let year of academicYears" [value]="year">{{ year }}</option>
+                </select>
+                <span class="saved-badge" title="This term and year will be used across all fee pages">
+                  <i class="ri-save-line"></i> Saved globally
+                </span>
+              </div>
             </div>
+
             <button class="btn-export" (click)="exportSummaryPDF()" [disabled]="exporting || !statistics"
               *ngIf="statistics">
               <i class="ri-file-pdf-line"></i>

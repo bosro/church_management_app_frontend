@@ -19,6 +19,7 @@ import {
   currentAcademicYear,
   generateAcademicYears,
 } from '../../../../../models/school.model';
+import { SchoolFilterService } from '../../../services/school-filter.service';
 
 @Component({
   selector: 'app-record-payment',
@@ -37,8 +38,6 @@ export class RecordPayment implements OnInit, OnDestroy {
   errorMessage = '';
   successMessage = '';
 
-  selectedTerm = TERMS[0];
-  selectedYear = '';
   terms = TERMS;
   academicYears: string[] = [];
   paymentMethods = PAYMENT_METHODS;
@@ -72,12 +71,16 @@ export class RecordPayment implements OnInit, OnDestroy {
   assigningFee = false;
   selectedFeeStructureToAssign = '';
 
+  selectedTerm = '';
+  selectedYear = '';
+
   constructor(
     private schoolService: SchoolService,
     public permissionService: PermissionService,
     private authService: AuthService,
     private supabase: SupabaseService,
     public router: Router,
+    private schoolFilter: SchoolFilterService,
     private route: ActivatedRoute,
   ) {}
 
@@ -89,12 +92,11 @@ export class RecordPayment implements OnInit, OnDestroy {
 
     this.studentId = this.route.snapshot.paramMap.get('studentId') || '';
     this.academicYears = generateAcademicYears();
-    this.selectedYear = currentAcademicYear();
 
-    // Pre-fill received_by with current user's name
-    // this.paymentForm.received_by =
-    //   this.authService.currentProfile?.full_name || '';
+    this.selectedTerm = this.schoolFilter.term;
+    this.selectedYear = this.schoolFilter.year;
 
+    // this.paymentForm.received_by = this.authService.currentProfile?.full_name || '';
     this.loadStudent();
   }
 
@@ -154,6 +156,7 @@ export class RecordPayment implements OnInit, OnDestroy {
   }
 
   onTermChange(): void {
+    this.schoolFilter.setBoth(this.selectedTerm, this.selectedYear);
     this.loadFees();
   }
 
@@ -391,4 +394,3 @@ export class RecordPayment implements OnInit, OnDestroy {
     }).format(amount || 0);
   }
 }
-

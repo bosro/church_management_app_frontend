@@ -18,6 +18,7 @@ import autoTable from 'jspdf-autotable';
 import { PdfBrandingService } from '../../../../../core/services/pdf-branding.service';
 import { ClassFeeExportService } from '../../../services/class-fee-export.service';
 import { Location } from '@angular/common';
+import { SchoolFilterService } from '../../../services/school-filter.service';
 
 @Component({
   selector: 'app-students-list',
@@ -50,7 +51,7 @@ export class StudentsList implements OnInit, OnDestroy {
   sortOrder: 'name_asc' | 'name_desc' | 'created_at_desc' = 'name_asc';
 
   // Fee data per student
-  feeTerm = TERMS[0];
+  feeTerm = '';
   feeYear = currentAcademicYear();
   feeDataMap: Map<string, any> = new Map();
 
@@ -94,9 +95,13 @@ export class StudentsList implements OnInit, OnDestroy {
     private classFeeExport: ClassFeeExportService,
     private pdfBranding: PdfBrandingService,
     private location: Location,
+    private schoolFilter: SchoolFilterService,
   ) {}
 
   ngOnInit(): void {
+    this.feeTerm = this.schoolFilter.term;
+    this.feeYear = this.schoolFilter.year;
+
     this.filterForm = this.fb.group({
       search: [''],
       classId: [''],
@@ -256,6 +261,7 @@ export class StudentsList implements OnInit, OnDestroy {
   }
 
   onFeeFilterChange(): void {
+    this.schoolFilter.setBoth(this.feeTerm, this.feeYear);
     this.loadFeeData();
   }
 

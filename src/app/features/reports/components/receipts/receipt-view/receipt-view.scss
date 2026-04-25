@@ -628,6 +628,18 @@
   }
 }
 
+.not-paid-badge {
+  display: inline-flex;
+  padding: 1px 7px;
+  background: #f3f4f6;
+  color: #9ca3af;
+  border-radius: 100px;
+  font-size: 10px;
+  font-weight: 600;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
 // ── Received-by line on receipt ────────────────────────────────────────────
 .receipt-received-by {
   display: flex;
@@ -733,6 +745,27 @@
     font-weight: 700;
     border-top: 2px solid #bbf7d0;
     font-size: 12px;
+  }
+}
+
+.fee-breakdown-row {
+  td {
+    padding-top: 2px !important;
+    padding-bottom: 2px !important;
+    border-bottom: none !important;
+    background: #fafafa;
+    font-size: 11px;
+  }
+
+  &.current-payment-row td {
+    background: #fefdf0;
+  }
+}
+
+@media print {
+  .fee-breakdown-row td {
+    font-size: 9px;
+    padding: 2px 8px !important;
   }
 }
 

@@ -15,6 +15,7 @@ import {
 import { PdfBrandingService } from '../../../../../core/services/pdf-branding.service';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { SchoolFilterService } from '../../../services/school-filter.service';
 
 @Component({
   selector: 'app-student-detail',
@@ -35,8 +36,8 @@ export class StudentDetail implements OnInit, OnDestroy {
 
   activeTab: 'overview' | 'fees' | 'payments' = 'overview';
 
-  currentAcademicYear = currentAcademicYear();
-  currentTerm = TERMS[0];
+  currentAcademicYear = '';
+  currentTerm = '';
   terms = TERMS;
   academicYears: string[] = generateAcademicYears();
 
@@ -52,16 +53,21 @@ export class StudentDetail implements OnInit, OnDestroy {
     private router: Router,
     private route: ActivatedRoute,
     private pdfBranding: PdfBrandingService,
+    private schoolFilter: SchoolFilterService,
   ) {}
 
   ngOnInit(): void {
     this.studentId = this.route.snapshot.paramMap.get('id') || '';
 
-    // Read term/year from query params if coming from students list
     const term = this.route.snapshot.queryParamMap.get('term');
     const year = this.route.snapshot.queryParamMap.get('year');
-    if (term) this.currentTerm = term;
-    if (year) this.currentAcademicYear = year;
+
+    // Query params override service (coming from students list click)
+    this.currentTerm = term || this.schoolFilter.term;
+    this.currentAcademicYear = year || this.schoolFilter.year;
+
+    // Sync back to service so other pages stay in sync
+    this.schoolFilter.setBoth(this.currentTerm, this.currentAcademicYear);
 
     this.loadStudent();
   }
@@ -123,6 +129,7 @@ export class StudentDetail implements OnInit, OnDestroy {
   }
 
   onTermChange(): void {
+    this.schoolFilter.setBoth(this.currentTerm, this.currentAcademicYear);
     this.loadFees();
     this.loadPayments();
   }

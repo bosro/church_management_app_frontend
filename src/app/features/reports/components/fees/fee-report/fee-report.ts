@@ -14,6 +14,7 @@ import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { PdfBrandingService } from '../../../../../core/services/pdf-branding.service';
+import { SchoolFilterService } from '../../../services/school-filter.service';
 
 @Component({
   selector: 'app-fee-report',
@@ -29,7 +30,7 @@ export class FeeReport implements OnInit, OnDestroy {
   loading = false;
   errorMessage = '';
 
-  selectedTerm = TERMS[0];
+  selectedTerm = '';
   selectedYear = '';
   selectedClassId = '';
   terms = TERMS;
@@ -45,11 +46,13 @@ export class FeeReport implements OnInit, OnDestroy {
     public permissionService: PermissionService,
     public router: Router,
     private pdfBranding: PdfBrandingService,
+    private schoolFilter: SchoolFilterService,
   ) {}
 
   ngOnInit(): void {
     this.academicYears = generateAcademicYears();
-    this.selectedYear = currentAcademicYear();
+    this.selectedTerm = this.schoolFilter.term;
+    this.selectedYear = this.schoolFilter.year;
     this.loadClasses();
     this.loadReport();
   }
@@ -87,6 +90,7 @@ export class FeeReport implements OnInit, OnDestroy {
   }
 
   onFilterChange(): void {
+    this.schoolFilter.setBoth(this.selectedTerm, this.selectedYear);
     this.activeCardFilter = 'all';
     this.loadReport();
   }
