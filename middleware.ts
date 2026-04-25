@@ -11,9 +11,9 @@ export const config = {
   matcher: ['/public/register/:token*', '/public/student-register/:token*'],
 };
 
-const SUPABASE_URL = process.env['SUPABASE_URL'] || '';
-const SUPABASE_ANON_KEY = process.env['SUPABASE_ANON_KEY'] || '';
-const APP_ORIGIN = process.env['APP_ORIGIN'] || 'https://web.churchmann.org';
+const SUPABASE_URL = process.env['supabaseUrl'] || '';
+const SUPABASE_ANON_KEY = process.env['supabaseAnonKey'] || '';
+const APP_ORIGIN = process.env['APP_ORIGIN'] || 'https://church-management-app-frontend.vercel.app/';
 
 const BOT_PATTERNS = [
   /facebookexternalhit/i,
