@@ -471,11 +471,22 @@
 // ─── Receipt Note ─────────────────────────────────────────
 .receipt-note {
   text-align: center;
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 600;
   color: #374151;
   margin: 16px 0 0;
   font-style: italic;
+}
+
+.receipt-note--warning {
+  font-size: 14px;
+  font-weight: 800;
+  color: #962222;
+  // background: #fef2f2;
+  // border: 1px solid #fecaca;
+  border-radius: 6px;
+  padding: 2px 14px;
+  margin-bottom: 5px;
 }
 
 // ─── Print Styles ─────────────────────────────────────────

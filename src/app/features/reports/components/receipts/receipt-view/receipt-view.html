@@ -111,19 +111,18 @@
                 </tr>
               </thead>
               <tbody>
-                <tr *ngFor="let item of receiptFeeItemsWithZeros"
-                  [style.opacity]="item.not_paid_this_receipt ? '0.6' : '1'">
+                <tr *ngFor="let item of receiptFeeItemsWithZeros">
                   <td>
                     {{ item.fee_name }}
                     <span *ngIf="item.is_arrears" class="arrears-badge">Arrears</span>
                     <span *ngIf="item.not_paid_this_receipt" class="not-paid-badge">Not paid this receipt</span>
                   </td>
                   <td class="amount-col">{{ formatCurrency(item.amount) }}</td>
-                  <td class="amount-col" [style.color]="item.not_paid_this_receipt ? '#9ca3af' : '#059669'"
-                    style="font-weight:600;">
+                  <td class="amount-col" style="font-weight:600; color:#059669;">
                     {{ formatCurrency(item.amount_paid_this_receipt ?? 0) }}
                   </td>
                 </tr>
+
               </tbody>
               <tfoot>
                 <!-- Total fees billed -->
@@ -268,9 +267,11 @@
                 </div>
               </div>
             </div> -->
-
+            <p class="receipt-note receipt-note--warning">
+              Fees Paid are non-refundable.
+            </p>
             <p class="receipt-note">
-              This is an official receipt. Please keep it for your records. Fees are non-refundable.
+              This is an official receipt. Please keep it for your records.
             </p>
 
           </div>

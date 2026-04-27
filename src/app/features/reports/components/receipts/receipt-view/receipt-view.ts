@@ -269,24 +269,43 @@ export class ReceiptView implements OnInit, OnDestroy {
   }
 
   getTotalBilled(): number {
-    if (!this.payment?.fee_items) return 0;
-    return this.payment.fee_items
-      .filter((i: any) => !i.is_arrears)
-      .reduce((sum: number, i: any) => sum + Number(i.amount_due || 0), 0);
+    if (!this.allStudentFees.length) {
+      // Fallback to fee_items if allStudentFees not loaded yet
+      return (this.payment?.fee_items || []).reduce(
+        (sum: number, i: any) => sum + Number(i.amount || 0),
+        0,
+      );
+    }
+    // Sum all assigned fees (including ones not paid this receipt)
+    return this.allStudentFees.reduce(
+      (sum: number, f: any) => sum + Number(f.amount_due || 0),
+      0,
+    );
   }
 
   /** Remaining balance across all fees on this receipt */
   getTotalBalance(): number {
-    if (!this.payment?.fee_items) return 0;
-    const totalDue = this.payment.fee_items
-      .filter((i: any) => !i.is_arrears)
-      .reduce((sum: number, i: any) => sum + Number(i.amount_due || 0), 0);
-    const totalPaid = this.payment.fee_items
-      .filter((i: any) => !i.is_arrears)
-      .reduce(
+    if (!this.allStudentFees.length) {
+      // Fallback
+      const totalDue = (this.payment?.fee_items || []).reduce(
+        (sum: number, i: any) => sum + Number(i.amount_due || 0),
+        0,
+      );
+      const totalPaid = (this.payment?.fee_items || []).reduce(
         (sum: number, i: any) => sum + Number(i.amount_paid_total || 0),
         0,
       );
+      return Math.max(0, totalDue - totalPaid);
+    }
+    // Use allStudentFees for accurate total balance across all assigned fees
+    const totalDue = this.allStudentFees.reduce(
+      (sum: number, f: any) => sum + Number(f.amount_due || 0),
+      0,
+    );
+    const totalPaid = this.allStudentFees.reduce(
+      (sum: number, f: any) => sum + Number(f.amount_paid || 0),
+      0,
+    );
     return Math.max(0, totalDue - totalPaid);
   }
 
