@@ -8,6 +8,7 @@ import {
   TERMS,
 } from '../../../models/school.model';
 import { FeedingService } from '../../reports/services/feeding.service';
+import { FeedingFilterService } from '../../reports/services/feeding-filter.service';
 
 @Component({
   selector: 'app-feeding-record',
@@ -24,8 +25,8 @@ export class FeedingRecord implements OnInit, OnDestroy {
 
   // Filters
   selectedDate = new Date().toISOString().split('T')[0];
-  selectedTerm = TERMS[0];
-  selectedYear = currentAcademicYear();
+  selectedTerm = '';
+  selectedYear = '';
   terms = TERMS;
   academicYears = generateAcademicYears();
 
@@ -69,6 +70,7 @@ export class FeedingRecord implements OnInit, OnDestroy {
   editNotes = '';
   editDate = '';
   processingEdit = false;
+  editError = ''; // error shown inside edit modal
   // Full list of payments for a student (fetched on edit open)
   studentPayments: any[] = [];
   loadingStudentPayments = false;
@@ -77,6 +79,7 @@ export class FeedingRecord implements OnInit, OnDestroy {
     private feedingService: FeedingService,
     private route: ActivatedRoute,
     private cdr: ChangeDetectorRef,
+    private feedingFilter: FeedingFilterService,
   ) {}
 
   ngOnInit(): void {
@@ -85,6 +88,11 @@ export class FeedingRecord implements OnInit, OnDestroy {
       this.errorMessage = 'Invalid page link — school ID is missing.';
       return;
     }
+
+    // Load persisted term/year
+    this.selectedTerm = this.feedingFilter.term;
+    this.selectedYear = this.feedingFilter.year;
+
     this.loadSchoolInfo();
     this.loadClasses();
     this.loadDailySummary();
@@ -333,6 +341,7 @@ export class FeedingRecord implements OnInit, OnDestroy {
   }
 
   onTermYearChange(): void {
+    this.feedingFilter.setBoth(this.selectedTerm, this.selectedYear);
     const ids = this.students.map((s) => s.id);
     ids.forEach((sid) => {
       if (this.studentStates[sid]) {
@@ -448,17 +457,32 @@ export class FeedingRecord implements OnInit, OnDestroy {
 
   getPaymentStatus(
     studentId: string,
-  ): 'paid' | 'partial' | 'unpaid' | 'absent' {
+  ): 'paid' | 'prepaid' | 'partial' | 'unpaid' | 'absent' {
     const state = this.studentStates[studentId];
     if (!state) return 'unpaid';
     if (!state.isPresent) return 'absent';
     if (state.loadingSummary) return 'unpaid';
     const summary = state.summary;
     if (!summary) return 'unpaid';
-    // Must have at least one explicit payment to be 'paid'
+    // Pre-paid: student has advance days already paid for
+    if (summary.prepaidDaysRemaining > 0) return 'prepaid';
+    // Fully paid for all days attended
     if (summary.hasPayment && summary.balance <= 0) return 'paid';
+    // Partial payment made
     if (summary.hasPayment && summary.totalPaid > 0) return 'partial';
     return 'unpaid';
+  }
+
+  isPrepaidToday(studentId: string): boolean {
+    return this.getPaymentStatus(studentId) === 'prepaid';
+  }
+
+  getPrepaidDaysRemaining(studentId: string): number {
+    return this.studentStates[studentId]?.summary?.prepaidDaysRemaining ?? 0;
+  }
+
+  get hasPrepaidStudents(): boolean {
+    return this.students.some((s) => this.isPrepaidToday(s.id));
   }
 
   // ── Create payment modal ──────────────────────────────────
@@ -614,6 +638,7 @@ export class FeedingRecord implements OnInit, OnDestroy {
     this.editAmount = 0;
     this.editNotes = '';
     this.editDate = '';
+    this.editError = '';
     this.studentPayments = [];
   }
 
@@ -626,10 +651,16 @@ export class FeedingRecord implements OnInit, OnDestroy {
   submitEdit(): void {
     if (!this.editPayment || !this.editAmount || this.editAmount <= 0) return;
     this.processingEdit = true;
+    this.editError = ''; // clear any previous modal-level error
+    this.cdr.markForCheck();
 
     const rate = this.studentDailyRate(this.editingStudent?.id);
     const daysCovered =
       rate > 0 ? Math.max(1, Math.floor(this.editAmount / rate)) : 1;
+    // Capture before closing
+    const studentRef = this.students.find(
+      (s) => s.id === this.editingStudent?.id,
+    );
 
     this.feedingService
       .updatePayment(this.editPayment.id, {
@@ -642,23 +673,16 @@ export class FeedingRecord implements OnInit, OnDestroy {
       .subscribe({
         next: (updated) => {
           this.processingEdit = false;
-          // Update local list
-          const idx = this.studentPayments.findIndex(
-            (p) => p.id === updated.id,
-          );
-          if (idx >= 0) this.studentPayments[idx] = updated;
-          this.successMessage = `Payment updated successfully`;
+          this.closeEditModal(); // close first, then refresh
+          this.successMessage = 'Payment updated successfully';
           setTimeout(() => (this.successMessage = ''), 3000);
-          const student = this.students.find(
-            (s) => s.id === this.editingStudent?.id,
-          );
-          if (student) this.refreshStudents([student]);
-          this.closeEditModal();
+          if (studentRef) this.refreshStudents([studentRef]);
           this.cdr.markForCheck();
         },
         error: (err) => {
           this.processingEdit = false;
-          this.errorMessage = err.message || 'Failed to update payment';
+          // Show error INSIDE the modal so the user sees it
+          this.editError = err.message || 'Failed to update payment';
           this.cdr.markForCheck();
         },
       });
@@ -734,6 +758,8 @@ interface StudentState {
     totalOwed: number;
     balance: number;
     hasPayment: boolean;
+    totalDaysCovered: number;
+    prepaidDaysRemaining: number;
   } | null;
   loadingSummary: boolean;
   error: string;

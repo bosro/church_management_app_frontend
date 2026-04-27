@@ -26,6 +26,12 @@
       <button (click)="errorMessage = ''"><i class="ri-close-line"></i></button>
     </div>
 
+    <!-- Pre-paid students alert — shown when any student has advance days -->
+    <div class="feeding-alert warning prepaid-notice" *ngIf="hasPrepaidStudents">
+      <i class="ri-calendar-check-line"></i>
+      <span>Some students have advance payments covering today — their <strong>Pay</strong> button is disabled. Use the edit (pencil) button to view or adjust their payment history.</span>
+    </div>
+
     <!-- Filters Row -->
     <div class="feeding-filters">
       <div class="filter-item">
@@ -189,20 +195,29 @@
 
               <!-- Status -->
               <td class="text-center">
-                <span class="status-chip" [ngClass]="'status-' + getPaymentStatus(student.id)">
-                  {{ getPaymentStatus(student.id) | titlecase }}
-                </span>
+                <ng-container *ngIf="getPaymentStatus(student.id) === 'prepaid'; else normalChip">
+                  <span class="status-chip status-prepaid"
+                    [title]="getPrepaidDaysRemaining(student.id) + ' advance day(s) already paid'">
+                    Pre-paid
+                    <span class="prepaid-days-badge">{{ getPrepaidDaysRemaining(student.id) }}d</span>
+                  </span>
+                </ng-container>
+                <ng-template #normalChip>
+                  <span class="status-chip" [ngClass]="'status-' + getPaymentStatus(student.id)">
+                    {{ getPaymentStatus(student.id) | titlecase }}
+                  </span>
+                </ng-template>
               </td>
 
               <!-- Actions -->
               <td class="text-center">
                 <div class="action-btns">
                   <button class="btn-record-payment"
-                    [disabled]="!studentStates[student.id]?.isPresent || studentStates[student.id]?.dailyRate === 0"
+                    [disabled]="!studentStates[student.id]?.isPresent || studentStates[student.id]?.dailyRate === 0 || isPrepaidToday(student.id)"
                     (click)="openPaymentModal(student)"
-                    title="Record payment">
+                    [title]="isPrepaidToday(student.id) ? 'Already covered by advance payment' : 'Record payment'">
                     <i class="ri-money-dollar-circle-line"></i>
-                    Pay
+                    {{ isPrepaidToday(student.id) ? 'Covered' : 'Pay' }}
                   </button>
                   <button class="btn-edit-payment"
                     [disabled]="!studentStates[student.id]?.summary?.hasPayment"
@@ -369,6 +384,10 @@
 
         <!-- Edit form -->
         <div class="edit-form" *ngIf="editPayment">
+          <!-- In-modal error -->
+          <div *ngIf="editError" class="modal-error-banner">
+            <i class="ri-error-warning-line"></i>{{ editError }}
+          </div>
           <p class="section-label">Edit selected payment</p>
 
           <div class="rate-info-row" *ngIf="editingStudent">
@@ -414,3 +433,5 @@
     </div>
   </div>
 </div>
+
+

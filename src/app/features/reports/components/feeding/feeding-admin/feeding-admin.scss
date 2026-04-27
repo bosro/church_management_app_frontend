@@ -1,35 +1,4 @@
 // feeding-admin.scss
-.dashboard-layout {
-  display: flex;
-  min-height: 100vh;
-  background: #f9fafb;
-}
-
-.dashboard-content {
-  /* Offset content so it starts AFTER the fixed sidebar */
-  margin-left: 280px;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-width: 0; /* prevents flex children from overflowing */
-  width: calc(100% - 280px);
-
-  @media (max-width: 768px) {
-    /* On mobile the sidebar slides off-screen, so no offset needed */
-    margin-left: 0;
-    width: 100%;
-  }
-}
-
-.dashboard-body {
-  flex: 1;
-  padding: 2rem;
-  overflow-y: auto;
-
-  @media (max-width: 768px) {
-    padding: 1rem;
-  }
-}
 
 .feeding-admin-container {
   padding: 24px;
@@ -887,6 +856,205 @@
 
   i { color: #4f46e5; font-size: 15px; flex-shrink: 0; }
   .rate-value { color: #4f46e5; font-weight: 800; }
+}
+
+// ─── Clickable student name ──────────────────────────────
+.rec-name-link {
+  cursor: pointer;
+  transition: color 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+
+  &:hover { color: #4f46e5; text-decoration: underline; }
+}
+
+// ─── Student detail modal ─────────────────────────────────
+.student-detail-modal {
+  background: white;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 760px;
+  max-height: 88vh;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  animation: slideUp 0.25s ease;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
+  @media (max-width: 600px) {
+    border-radius: 16px 16px 0 0;
+    max-height: 92vh;
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 18px 20px;
+    border-bottom: 1px solid #e5e7eb;
+    flex-shrink: 0;
+
+    h3 { font-size: 16px; font-weight: 700; color: #111827; margin: 0 0 4px; }
+    p { font-size: 13px; color: #6b7280; margin: 0; }
+
+    .close-btn {
+      width: 32px; height: 32px;
+      background: #f3f4f6; border: none; border-radius: 6px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      i { font-size: 18px; color: #6b7280; }
+      &:hover { background: #e5e7eb; }
+    }
+  }
+}
+
+// ─── Detail summary bar ───────────────────────────────────
+.detail-summary-bar {
+  display: flex;
+  flex-wrap: wrap;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f9fafb;
+  flex-shrink: 0;
+
+  .dsb-item {
+    flex: 1;
+    min-width: 90px;
+    padding: 12px 14px;
+    border-right: 1px solid #e5e7eb;
+    text-align: center;
+    &:last-child { border-right: none; }
+
+    span {
+      display: block;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: #9ca3af;
+      margin-bottom: 4px;
+    }
+
+    strong {
+      font-size: 15px;
+      font-weight: 800;
+      color: #111827;
+      display: block;
+    }
+
+    .covered { color: #7c3aed; }
+    .paid { color: #059669; }
+    .prepaid { color: #6d28d9; }
+  }
+
+  .highlight-balance { background: #fef2f2; }
+}
+
+// ─── Prepaid notice ───────────────────────────────────────
+.detail-prepaid-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #ede9fe;
+  border-bottom: 1px solid #c4b5fd;
+  font-size: 13px;
+  color: #5b21b6;
+  flex-shrink: 0;
+
+  i { font-size: 15px; color: #7c3aed; flex-shrink: 0; margin-top: 1px; }
+}
+
+// ─── Detail timeline table ────────────────────────────────
+.detail-timeline-wrap {
+  overflow-y: auto;
+  flex: 1;
+}
+
+.detail-timeline-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 540px;
+
+  thead {
+    background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    th {
+      padding: 9px 12px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #374151;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      text-align: left;
+      white-space: nowrap;
+    }
+  }
+
+  tbody tr {
+    border-bottom: 1px solid #f3f4f6;
+    &:last-child { border-bottom: none; }
+
+    &.row-paid { background: #f0fdf4; }
+    &.row-covered { background: #faf5ff; }
+    &.row-absent { background: #fef2f2; opacity: 0.8; }
+
+    td {
+      padding: 10px 12px;
+      font-size: 13px;
+      color: #374151;
+      vertical-align: middle;
+    }
+  }
+
+  .text-center { text-align: center; }
+  .text-right { text-align: right; }
+
+  .day-date { font-weight: 600; color: #111827; white-space: nowrap; }
+  .day-amount { font-weight: 700; color: #059669; }
+  .day-notes { font-size: 12px; color: #6b7280; max-width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .balance-positive { color: #059669; font-weight: 700; }
+  .balance-negative { color: #dc2626; font-weight: 700; }
+}
+
+// ─── Attendance badges ────────────────────────────────────
+.att-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 100px;
+  font-size: 11px;
+  font-weight: 700;
+  i { font-size: 12px; }
+
+  &.present { background: #d1fae5; color: #065f46; }
+  &.absent { background: #fee2e2; color: #991b1b; }
+  &.unknown { background: #f3f4f6; color: #9ca3af; }
+}
+
+.advance-tag {
+  display: inline-flex;
+  padding: 2px 7px;
+  background: #ede9fe;
+  color: #6d28d9;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.days-badge {
+  display: inline-flex;
+  padding: 2px 7px;
+  background: #e0e7ff;
+  color: #3730a3;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
 }
 
 // ─── Animations ───────────────────────────────────────────

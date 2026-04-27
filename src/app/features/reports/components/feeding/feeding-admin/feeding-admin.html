@@ -24,8 +24,7 @@
         </div>
         <div *ngIf="errorMessage" class="error-alert">
           <i class="ri-error-warning-line"></i>{{ errorMessage }}
-          <button (click)="errorMessage = ''"
-            style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:16px;">
+          <button (click)="errorMessage = ''" style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:16px;">
             <i class="ri-close-line"></i>
           </button>
         </div>
@@ -69,8 +68,7 @@
 
                   <!-- Tier rows -->
                   <div class="settings-rows">
-                    <div class="setting-row"
-                      *ngFor="let row of settingRows | settingScope:'tier'; trackBy: trackByRowLabel">
+                    <div class="setting-row" *ngFor="let row of settingRows | settingScope:'tier'; trackBy: trackByRowLabel">
                       <div class="setting-row-label">
                         <span class="tier-badge" [ngClass]="row.tier">{{ getTierLabel(row.tier) }}</span>
                       </div>
@@ -85,8 +83,8 @@
                       <div class="setting-row-edit" *ngIf="row.editing">
                         <div class="amount-input-wrap compact">
                           <span class="currency-prefix">GH₵</span>
-                          <input type="number" [(ngModel)]="row.editingAmount" min="0" step="0.01" placeholder="0.00"
-                            (keydown.enter)="saveSetting(row)" />
+                          <input type="number" [(ngModel)]="row.editingAmount" min="0" step="0.01"
+                            placeholder="0.00" (keydown.enter)="saveSetting(row)" />
                         </div>
                         <button class="btn-save-inline" (click)="saveSetting(row)"
                           [disabled]="row.saving || row.editingAmount <= 0">
@@ -101,8 +99,7 @@
                   </div>
 
                   <!-- Class override rows -->
-                  <div class="override-section"
-                    *ngIf="(settingRows | settingScope:'class').length > 0 || showAddOverride">
+                  <div class="override-section" *ngIf="(settingRows | settingScope:'class').length > 0 || showAddOverride">
                     <div class="override-header">
                       <i class="ri-git-branch-line"></i>
                       <span>Class Overrides</span>
@@ -132,8 +129,8 @@
                         <div class="setting-row-edit" *ngIf="row.editing">
                           <div class="amount-input-wrap compact">
                             <span class="currency-prefix">GH₵</span>
-                            <input type="number" [(ngModel)]="row.editingAmount" min="0" step="0.01" placeholder="0.00"
-                              (keydown.enter)="saveSetting(row)" />
+                            <input type="number" [(ngModel)]="row.editingAmount" min="0" step="0.01"
+                              placeholder="0.00" (keydown.enter)="saveSetting(row)" />
                           </div>
                           <button class="btn-save-inline" (click)="saveSetting(row)"
                             [disabled]="row.saving || row.editingAmount <= 0">
@@ -165,12 +162,10 @@
                       </select>
                       <div class="amount-input-wrap compact" style="margin-top: 8px;">
                         <span class="currency-prefix">GH₵</span>
-                        <input type="number" [(ngModel)]="addOverrideAmount" min="0" step="0.01"
-                          placeholder="Daily amount" />
+                        <input type="number" [(ngModel)]="addOverrideAmount" min="0" step="0.01" placeholder="Daily amount" />
                       </div>
                       <div class="add-override-actions">
-                        <button class="btn-cancel-inline"
-                          (click)="showAddOverride = false; addOverrideClassId = ''; addOverrideAmount = 0">
+                        <button class="btn-cancel-inline" (click)="showAddOverride = false; addOverrideClassId = ''; addOverrideAmount = 0">
                           Cancel
                         </button>
                         <button class="btn-save-settings"
@@ -266,7 +261,11 @@
                 <tbody>
                   <tr *ngFor="let p of payments; trackBy: trackByPaymentId">
                     <td data-label="Student">
-                      <p class="rec-name">{{ getStudentName(p.student) }}</p>
+                      <p class="rec-name rec-name-link" (click)="openStudentDetail(p)"
+                        title="View feeding history">
+                        {{ getStudentName(p.student) }}
+                        <i class="ri-external-link-line" style="font-size:11px;opacity:0.5;margin-left:3px;"></i>
+                      </p>
                       <p class="rec-num">{{ p.student?.student_number }}</p>
                     </td>
                     <td data-label="Class">{{ p.student?.class?.name || '—' }}</td>
@@ -320,6 +319,125 @@
   </div>
 </div>
 
+<!-- ── Student Detail Modal ───────────────────────────────── -->
+<div class="modal-overlay" *ngIf="showStudentDetailModal" (click)="closeStudentDetailModal()">
+  <div class="student-detail-modal" (click)="$event.stopPropagation()">
+
+    <div class="modal-header">
+      <div *ngIf="studentDetail">
+        <h3>{{ studentDetail.student?.first_name }} {{ studentDetail.student?.last_name }}</h3>
+        <p>{{ studentDetail.student?.student_number }} · {{ studentDetail.student?.class?.name }} · {{ selectedTerm }} {{ selectedYear }}</p>
+      </div>
+      <div *ngIf="!studentDetail && studentDetailLoading">
+        <h3>Loading...</h3>
+      </div>
+      <button class="close-btn" (click)="closeStudentDetailModal()">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+
+    <!-- Loading -->
+    <div *ngIf="studentDetailLoading" class="loading-state" style="padding:32px;">
+      <div class="spinner"></div>
+      <p>Loading feeding history...</p>
+    </div>
+
+    <ng-container *ngIf="!studentDetailLoading && studentDetail">
+
+      <!-- Summary bar -->
+      <div class="detail-summary-bar">
+        <div class="dsb-item">
+          <span>Days Present</span>
+          <strong>{{ studentDetail.presentDays }}</strong>
+        </div>
+        <div class="dsb-item">
+          <span>Days Covered</span>
+          <strong class="covered">{{ studentDetail.totalDaysCovered }}</strong>
+        </div>
+        <div class="dsb-item">
+          <span>Total Paid</span>
+          <strong class="paid">{{ formatCurrency(studentDetail.totalPaid) }}</strong>
+        </div>
+        <div class="dsb-item">
+          <span>Total Owed</span>
+          <strong>{{ formatCurrency(studentDetail.totalOwed) }}</strong>
+        </div>
+        <div class="dsb-item" [class.highlight-balance]="studentDetail.balance > 0">
+          <span>Balance Due</span>
+          <strong [style.color]="studentDetail.balance > 0 ? '#dc2626' : '#059669'">
+            {{ formatCurrency(studentDetail.balance) }}
+          </strong>
+        </div>
+        <div class="dsb-item" *ngIf="studentDetail.prepaidDaysRemaining > 0">
+          <span>Advance Days</span>
+          <strong class="prepaid">{{ studentDetail.prepaidDaysRemaining }} day(s)</strong>
+        </div>
+      </div>
+
+      <!-- Prepaid notice -->
+      <div class="detail-prepaid-notice" *ngIf="studentDetail.prepaidDaysRemaining > 0">
+        <i class="ri-information-line"></i>
+        This student has <strong>{{ studentDetail.prepaidDaysRemaining }} advance day(s)</strong> already paid for and will not need payment for the next {{ studentDetail.prepaidDaysRemaining }} school day(s).
+      </div>
+
+      <!-- Day-by-day timeline -->
+      <div class="detail-timeline-wrap">
+        <table class="detail-timeline-table" *ngIf="studentDetail.timeline?.length > 0">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th class="text-center">Attendance</th>
+              <th class="text-right">Paid</th>
+              <th class="text-center">Days Covered</th>
+              <th class="text-right">Running Balance</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let day of studentDetail.timeline"
+              [class.row-covered]="day.coveredByAdvance"
+              [class.row-absent]="day.isPresent === false"
+              [class.row-paid]="day.amountPaid > 0">
+              <td class="day-date">{{ day.date | date:'EEE, MMM d' }}</td>
+              <td class="text-center">
+                <span *ngIf="day.isPresent === true" class="att-badge present">
+                  <i class="ri-user-follow-line"></i> Present
+                </span>
+                <span *ngIf="day.isPresent === false" class="att-badge absent">
+                  <i class="ri-user-unfollow-line"></i> Absent
+                </span>
+                <span *ngIf="day.isPresent === null" class="att-badge unknown">—</span>
+              </td>
+              <td class="text-right">
+                <span *ngIf="day.amountPaid > 0" class="day-amount">
+                  {{ formatCurrency(day.amountPaid) }}
+                </span>
+                <span *ngIf="day.coveredByAdvance" class="advance-tag">Advance</span>
+                <span *ngIf="!day.amountPaid && !day.coveredByAdvance">—</span>
+              </td>
+              <td class="text-center">
+                <span *ngIf="day.daysCovered > 0" class="days-badge">{{ day.daysCovered }}d</span>
+                <span *ngIf="!day.daysCovered">—</span>
+              </td>
+              <td class="text-right" [class.balance-positive]="day.runningBalance > 0"
+                [class.balance-negative]="day.runningBalance < 0">
+                {{ formatCurrency(day.runningBalance) }}
+              </td>
+              <td class="day-notes">{{ day.notes || '—' }}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div *ngIf="!studentDetail.timeline?.length" class="empty-records" style="padding:32px;">
+          <i class="ri-calendar-line"></i>
+          <p>No records found for this term</p>
+        </div>
+      </div>
+
+    </ng-container>
+  </div>
+</div>
+
 <!-- ── Edit Payment Modal (admin) ──────────────────────────── -->
 <div class="modal-overlay" *ngIf="showEditPaymentModal" (click)="closeEditPaymentModal()">
   <div class="edit-payment-modal" (click)="$event.stopPropagation()">
@@ -338,8 +456,7 @@
         <i class="ri-information-line"></i>
         Daily rate for this class:
         <strong class="rate-value">
-          {{ formatCurrency(resolveRateForDisplay(editingPayment?.student?.class?.id,
-          editingPayment?.student?.class?.tier)) }}
+          {{ formatCurrency(resolveRateForDisplay(editingPayment?.student?.class?.id, editingPayment?.student?.class?.tier)) }}
         </strong>
       </div>
 

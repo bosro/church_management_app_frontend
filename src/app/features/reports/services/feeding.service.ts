@@ -4,11 +4,7 @@ import { map } from 'rxjs/operators';
 import { SupabaseService } from '../../../core/services/supabase';
 import { AuthService } from '../../../core/services/auth';
 
-export type FeedingTier =
-  | 'creche_kg'
-  | 'lower_primary'
-  | 'upper_primary'
-  | 'jhs_shs';
+export type FeedingTier = 'creche_kg' | 'lower_primary' | 'upper_primary' | 'jhs_shs';
 
 export const TIER_LABELS: Record<FeedingTier, string> = {
   creche_kg: 'Creche / Nursery / KG',
@@ -104,15 +100,7 @@ export class FeedingService {
     classId?: string,
   ): Observable<any> {
     return from(
-      this.upsertSettingManually(
-        churchId,
-        academicYear,
-        term,
-        dailyAmount,
-        scope,
-        tier,
-        classId,
-      ),
+      this.upsertSettingManually(churchId, academicYear, term, dailyAmount, scope, tier, classId),
     );
   }
 
@@ -147,10 +135,7 @@ export class FeedingService {
       // UPDATE existing row
       const { data, error } = await this.supabase.client
         .from('feeding_fee_settings')
-        .update({
-          daily_amount: dailyAmount,
-          updated_at: new Date().toISOString(),
-        })
+        .update({ daily_amount: dailyAmount, updated_at: new Date().toISOString() })
         .eq('id', existing.id)
         .select()
         .single();
@@ -364,8 +349,7 @@ export class FeedingService {
       .select();
 
     if (error) throw new Error(error.message);
-    if (!data || data.length === 0)
-      throw new Error('Payment not found or could not be updated');
+    if (!data || data.length === 0) throw new Error('Payment not found or could not be updated');
     return data[0];
   }
 
@@ -416,6 +400,8 @@ export class FeedingService {
     totalOwed: number;
     balance: number;
     hasPayment: boolean;
+    totalDaysCovered: number;
+    prepaidDaysRemaining: number;
   }> {
     return from(
       this.getStudentFeedingSummaryPromise(
@@ -440,11 +426,13 @@ export class FeedingService {
     totalOwed: number;
     balance: number;
     hasPayment: boolean;
+    totalDaysCovered: number;
+    prepaidDaysRemaining: number;
   }> {
     const [paymentsRes, attendanceRes] = await Promise.all([
       this.supabase.client
         .from('feeding_payments')
-        .select('amount_paid')
+        .select('amount_paid, days_covered')
         .eq('church_id', churchId)
         .eq('student_id', studentId)
         .eq('academic_year', academicYear)
@@ -463,14 +451,23 @@ export class FeedingService {
       (s: number, p: any) => s + Number(p.amount_paid),
       0,
     );
+    // Total days covered by all payments (sum of days_covered field)
+    const totalDaysCovered = (paymentsRes.data || []).reduce(
+      (s: number, p: any) => s + Number(p.days_covered || 0),
+      0,
+    );
     const presentDays = (attendanceRes.data || []).length;
     const totalOwed = presentDays * dailyRate;
+    // Pre-paid days remaining = days already paid for minus days already attended
+    const prepaidDaysRemaining = Math.max(0, totalDaysCovered - presentDays);
     return {
       totalPaid,
       presentDays,
       totalOwed,
       balance: Math.max(0, totalOwed - totalPaid),
       hasPayment: (paymentsRes.data || []).length > 0,
+      totalDaysCovered,
+      prepaidDaysRemaining,
     };
   }
 
@@ -537,10 +534,7 @@ export class FeedingService {
     churchId: string,
     academicYear: string,
     term: string,
-    students: Array<{
-      id: string;
-      class?: { id: string; tier: string | null } | null;
-    }>,
+    students: Array<{ id: string; class?: { id: string; tier: string | null } | null }>,
   ): Promise<Record<string, number>> {
     // Fetch all settings for this church/year/term at once
     const { data: settings } = await this.supabase.client
@@ -558,9 +552,7 @@ export class FeedingService {
         if (match) return Number(match.daily_amount);
       }
       if (classTier) {
-        const match = rows.find(
-          (r: any) => r.tier === classTier && !r.class_id,
-        );
+        const match = rows.find((r: any) => r.tier === classTier && !r.class_id);
         if (match) return Number(match.daily_amount);
       }
       const fallback = rows.find((r: any) => !r.tier && !r.class_id);
@@ -573,4 +565,121 @@ export class FeedingService {
     }
     return result;
   }
+
+  // ── Student term detail (for admin panel) ────────────────
+  // Returns full payment + attendance history for a student in a term,
+  // merged into a day-by-day timeline with running balance.
+
+  async getStudentTermDetail(
+    churchId: string,
+    studentId: string,
+    academicYear: string,
+    term: string,
+    dailyRate: number,
+  ): Promise<{
+    student: any;
+    payments: any[];
+    attendance: any[];
+    timeline: DayEntry[];
+    totalPaid: number;
+    totalDaysCovered: number;
+    presentDays: number;
+    totalOwed: number;
+    prepaidDaysRemaining: number;
+    balance: number;
+  }> {
+    const [studentRes, paymentsRes, attendanceRes] = await Promise.all([
+      this.supabase.client
+        .from('students')
+        .select('id, first_name, last_name, middle_name, student_number, class:school_classes(name, tier)')
+        .eq('id', studentId)
+        .single(),
+      this.supabase.client
+        .from('feeding_payments')
+        .select('id, payment_date, amount_paid, days_covered, notes, created_at')
+        .eq('church_id', churchId)
+        .eq('student_id', studentId)
+        .eq('academic_year', academicYear)
+        .eq('term', term)
+        .order('payment_date', { ascending: true }),
+      this.supabase.client
+        .from('feeding_attendance')
+        .select('id, attendance_date, is_present')
+        .eq('church_id', churchId)
+        .eq('student_id', studentId)
+        .eq('academic_year', academicYear)
+        .eq('term', term)
+        .order('attendance_date', { ascending: true }),
+    ]);
+
+    const payments = paymentsRes.data || [];
+    const attendance = attendanceRes.data || [];
+
+    // Build a map of date → payment and date → attendance
+    const paymentMap: Record<string, any> = {};
+    payments.forEach((p: any) => { paymentMap[p.payment_date] = p; });
+    const attendanceMap: Record<string, any> = {};
+    attendance.forEach((a: any) => { attendanceMap[a.attendance_date] = a; });
+
+    // Collect all unique dates
+    const allDates = Array.from(new Set([
+      ...payments.map((p: any) => p.payment_date),
+      ...attendance.map((a: any) => a.attendance_date),
+    ])).sort();
+
+    // Build timeline with running carry-forward balance
+    const totalPaid = payments.reduce((s: number, p: any) => s + Number(p.amount_paid), 0);
+    const totalDaysCovered = payments.reduce((s: number, p: any) => s + Number(p.days_covered || 0), 0);
+    const presentDays = attendance.filter((a: any) => a.is_present).length;
+    const totalOwed = presentDays * dailyRate;
+    const prepaidDaysRemaining = Math.max(0, totalDaysCovered - presentDays);
+
+    // Running balance: starts at 0, adds payment, subtracts daily rate on present days
+    let runningBalance = 0;
+    const timeline: DayEntry[] = allDates.map((date) => {
+      const payment = paymentMap[date];
+      const att = attendanceMap[date];
+      const amountPaid = payment ? Number(payment.amount_paid) : 0;
+      const isPresent = att ? att.is_present : null;
+
+      if (amountPaid > 0) runningBalance += amountPaid;
+      if (isPresent && dailyRate > 0) runningBalance -= dailyRate;
+
+      return {
+        date,
+        isPresent,
+        amountPaid,
+        daysCovered: payment ? Number(payment.days_covered) : 0,
+        notes: payment?.notes || null,
+        paymentId: payment?.id || null,
+        runningBalance,
+        coveredByAdvance: !payment && isPresent && runningBalance >= 0,
+      };
+    });
+
+    return {
+      student: studentRes.data,
+      payments,
+      attendance,
+      timeline,
+      totalPaid,
+      totalDaysCovered,
+      presentDays,
+      totalOwed,
+      prepaidDaysRemaining,
+      balance: Math.max(0, totalOwed - totalPaid),
+    };
+  }
+}
+
+// ── Supporting types ──────────────────────────────────────
+export interface DayEntry {
+  date: string;
+  isPresent: boolean | null;
+  amountPaid: number;
+  daysCovered: number;
+  notes: string | null;
+  paymentId: string | null;
+  runningBalance: number;
+  coveredByAdvance: boolean;
 }

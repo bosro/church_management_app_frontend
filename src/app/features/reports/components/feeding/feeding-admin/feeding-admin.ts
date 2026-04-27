@@ -2,9 +2,20 @@ import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { FeedingService, ALL_TIERS, TIER_LABELS, FeedingTier } from '../../../services/feeding.service';
+import {
+  FeedingService,
+  ALL_TIERS,
+  TIER_LABELS,
+  FeedingTier,
+  DayEntry,
+} from '../../../services/feeding.service';
 import { AuthService } from '../../../../../core/services/auth';
-import { TERMS, generateAcademicYears, currentAcademicYear } from '../../../../../models/school.model';
+import {
+  TERMS,
+  generateAcademicYears,
+  currentAcademicYear,
+} from '../../../../../models/school.model';
+import { FeedingFilterService } from '../../../services/feeding-filter.service';
 
 interface SettingRow {
   id?: string;
@@ -30,8 +41,8 @@ export class FeedingAdmin implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   churchId = '';
-  selectedTerm = TERMS[0];
-  selectedYear = currentAcademicYear();
+  selectedTerm = '';
+  selectedYear = '';
   terms = TERMS;
   academicYears = generateAcademicYears();
 
@@ -64,6 +75,11 @@ export class FeedingAdmin implements OnInit, OnDestroy {
   editPaymentDate = '';
   processingPaymentEdit = false;
 
+  // Student detail modal
+  showStudentDetailModal = false;
+  studentDetailLoading = false;
+  studentDetail: any = null; // result of getStudentTermDetail
+
   // Public link
   publicLink = '';
   linkCopied = false;
@@ -79,11 +95,17 @@ export class FeedingAdmin implements OnInit, OnDestroy {
     private authService: AuthService,
     private cdr: ChangeDetectorRef,
     public router: Router,
+    private feedingFilter: FeedingFilterService,
   ) {}
 
   ngOnInit(): void {
     this.churchId = this.authService.getChurchId() || '';
     this.publicLink = `${window.location.origin}/public/feeding-fees/${this.churchId}`;
+
+    // Load persisted term/year
+    this.selectedTerm = this.feedingFilter.term;
+    this.selectedYear = this.feedingFilter.year;
+
     this.loadClasses();
     this.loadSettings();
     this.loadPayments();
@@ -98,16 +120,23 @@ export class FeedingAdmin implements OnInit, OnDestroy {
   // ── Classes ───────────────────────────────────────────────
 
   loadClasses(): void {
-    this.feedingService.getClasses(this.churchId)
+    this.feedingService
+      .getClasses(this.churchId)
       .pipe(takeUntil(this.destroy$))
-      .subscribe({ next: (c) => { this.classes = c; this.cdr.markForCheck(); } });
+      .subscribe({
+        next: (c) => {
+          this.classes = c;
+          this.cdr.markForCheck();
+        },
+      });
   }
 
   // ── Settings ──────────────────────────────────────────────
 
   loadSettings(): void {
     this.loadingSettings = true;
-    this.feedingService.getAllSettings(this.churchId, this.selectedYear, this.selectedTerm)
+    this.feedingService
+      .getAllSettings(this.churchId, this.selectedYear, this.selectedTerm)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (rows) => {
@@ -191,15 +220,17 @@ export class FeedingAdmin implements OnInit, OnDestroy {
     if (!row.editingAmount || row.editingAmount <= 0) return;
     row.saving = true;
 
-    this.feedingService.saveSetting(
-      this.churchId,
-      this.selectedYear,
-      this.selectedTerm,
-      row.editingAmount,
-      row.scope,
-      row.tier,
-      row.classId,
-    ).pipe(takeUntil(this.destroy$))
+    this.feedingService
+      .saveSetting(
+        this.churchId,
+        this.selectedYear,
+        this.selectedTerm,
+        row.editingAmount,
+        row.scope,
+        row.tier,
+        row.classId,
+      )
+      .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (saved) => {
           row.id = saved?.id || row.id;
@@ -219,9 +250,15 @@ export class FeedingAdmin implements OnInit, OnDestroy {
 
   deleteOverride(row: SettingRow): void {
     if (!row.id) return;
-    if (!confirm(`Remove override for ${row.label}? It will fall back to its tier rate.`)) return;
+    if (
+      !confirm(
+        `Remove override for ${row.label}? It will fall back to its tier rate.`,
+      )
+    )
+      return;
 
-    this.feedingService.deleteSetting(row.id)
+    this.feedingService
+      .deleteSetting(row.id)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
@@ -246,20 +283,29 @@ export class FeedingAdmin implements OnInit, OnDestroy {
   }
 
   addClassOverride(): void {
-    if (!this.addOverrideClassId || !this.addOverrideAmount || this.addOverrideAmount <= 0) return;
+    if (
+      !this.addOverrideClassId ||
+      !this.addOverrideAmount ||
+      this.addOverrideAmount <= 0
+    )
+      return;
     this.addingOverride = true;
 
-    const selectedClass = this.classes.find((c) => c.id === this.addOverrideClassId);
+    const selectedClass = this.classes.find(
+      (c) => c.id === this.addOverrideClassId,
+    );
 
-    this.feedingService.saveSetting(
-      this.churchId,
-      this.selectedYear,
-      this.selectedTerm,
-      this.addOverrideAmount,
-      'class',
-      undefined,
-      this.addOverrideClassId,
-    ).pipe(takeUntil(this.destroy$))
+    this.feedingService
+      .saveSetting(
+        this.churchId,
+        this.selectedYear,
+        this.selectedTerm,
+        this.addOverrideAmount,
+        'class',
+        undefined,
+        this.addOverrideClassId,
+      )
+      .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (saved) => {
           this.settingRows.push({
@@ -292,6 +338,7 @@ export class FeedingAdmin implements OnInit, OnDestroy {
   // ── Records ───────────────────────────────────────────────
 
   onFilterChange(): void {
+    this.feedingFilter.setBoth(this.selectedTerm, this.selectedYear);
     this.loadSettings();
     this.loadPayments();
     this.loadDailySummary();
@@ -304,7 +351,13 @@ export class FeedingAdmin implements OnInit, OnDestroy {
 
   loadPayments(): void {
     this.loadingPayments = true;
-    this.feedingService.getPayments(this.churchId, this.selectedYear, this.selectedTerm, this.selectedDate || undefined)
+    this.feedingService
+      .getPayments(
+        this.churchId,
+        this.selectedYear,
+        this.selectedTerm,
+        this.selectedDate || undefined,
+      )
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (p) => {
@@ -321,9 +374,20 @@ export class FeedingAdmin implements OnInit, OnDestroy {
 
   loadDailySummary(): void {
     if (!this.selectedDate) return;
-    this.feedingService.getDailySummary(this.churchId, this.selectedDate, this.selectedYear, this.selectedTerm)
+    this.feedingService
+      .getDailySummary(
+        this.churchId,
+        this.selectedDate,
+        this.selectedYear,
+        this.selectedTerm,
+      )
       .pipe(takeUntil(this.destroy$))
-      .subscribe({ next: (s) => { this.dailySummary = s; this.cdr.markForCheck(); } });
+      .subscribe({
+        next: (s) => {
+          this.dailySummary = s;
+          this.cdr.markForCheck();
+        },
+      });
   }
 
   // ── Edit payment (admin) ──────────────────────────────────
@@ -346,20 +410,33 @@ export class FeedingAdmin implements OnInit, OnDestroy {
   }
 
   submitPaymentEdit(): void {
-    if (!this.editingPayment || !this.editPaymentAmount || this.editPaymentAmount <= 0) return;
+    if (
+      !this.editingPayment ||
+      !this.editPaymentAmount ||
+      this.editPaymentAmount <= 0
+    )
+      return;
     this.processingPaymentEdit = true;
 
     // Resolve days covered from the student's class rate
     const studentClass = this.editingPayment.student?.class;
-    const rate = this.resolveRateForDisplay(studentClass?.id, studentClass?.tier);
-    const daysCovered = rate > 0 ? Math.max(1, Math.floor(this.editPaymentAmount / rate)) : this.editingPayment.days_covered;
+    const rate = this.resolveRateForDisplay(
+      studentClass?.id,
+      studentClass?.tier,
+    );
+    const daysCovered =
+      rate > 0
+        ? Math.max(1, Math.floor(this.editPaymentAmount / rate))
+        : this.editingPayment.days_covered;
 
-    this.feedingService.updatePayment(this.editingPayment.id, {
-      amount_paid: this.editPaymentAmount,
-      days_covered: daysCovered,
-      notes: this.editPaymentNotes || undefined,
-      payment_date: this.editPaymentDate,
-    }).pipe(takeUntil(this.destroy$))
+    this.feedingService
+      .updatePayment(this.editingPayment.id, {
+        amount_paid: this.editPaymentAmount,
+        days_covered: daysCovered,
+        notes: this.editPaymentNotes || undefined,
+        payment_date: this.editPaymentDate,
+      })
+      .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (updated) => {
           const idx = this.payments.findIndex((p) => p.id === updated.id);
@@ -380,8 +457,14 @@ export class FeedingAdmin implements OnInit, OnDestroy {
   }
 
   deletePayment(payment: any): void {
-    if (!confirm(`Delete this payment of ${this.formatCurrency(payment.amount_paid)}? This cannot be undone.`)) return;
-    this.feedingService.deletePayment(payment.id)
+    if (
+      !confirm(
+        `Delete this payment of ${this.formatCurrency(payment.amount_paid)}? This cannot be undone.`,
+      )
+    )
+      return;
+    this.feedingService
+      .deletePayment(payment.id)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
@@ -389,8 +472,46 @@ export class FeedingAdmin implements OnInit, OnDestroy {
           this.showSuccess('Payment deleted');
           this.cdr.markForCheck();
         },
-        error: (err) => { this.errorMessage = err.message || 'Failed to delete payment'; this.cdr.markForCheck(); },
+        error: (err) => {
+          this.errorMessage = err.message || 'Failed to delete payment';
+          this.cdr.markForCheck();
+        },
       });
+  }
+
+  // ── Student detail modal ─────────────────────────────────
+
+  async openStudentDetail(payment: any): Promise<void> {
+    const student = payment.student;
+    if (!student) return;
+    this.studentDetailLoading = true;
+    this.showStudentDetailModal = true;
+    this.studentDetail = null;
+    this.cdr.markForCheck();
+
+    try {
+      const classId = student.class?.id;
+      const classTier = student.class?.tier;
+      const rate = this.resolveRateForDisplay(classId, classTier);
+
+      this.studentDetail = await this.feedingService.getStudentTermDetail(
+        this.churchId,
+        student.id,
+        this.selectedYear,
+        this.selectedTerm,
+        rate,
+      );
+    } catch (err: any) {
+      this.errorMessage = err.message || 'Failed to load student details';
+    } finally {
+      this.studentDetailLoading = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  closeStudentDetailModal(): void {
+    this.showStudentDetailModal = false;
+    this.studentDetail = null;
   }
 
   // ── Helpers ───────────────────────────────────────────────
@@ -398,11 +519,15 @@ export class FeedingAdmin implements OnInit, OnDestroy {
   /** Quick lookup of resolved rate from already-loaded settingRows (no DB call) */
   resolveRateForDisplay(classId?: string, classTier?: string): number {
     if (classId) {
-      const row = this.settingRows.find((r) => r.scope === 'class' && r.classId === classId);
+      const row = this.settingRows.find(
+        (r) => r.scope === 'class' && r.classId === classId,
+      );
       if (row) return row.dailyAmount;
     }
     if (classTier) {
-      const row = this.settingRows.find((r) => r.scope === 'tier' && r.tier === classTier);
+      const row = this.settingRows.find(
+        (r) => r.scope === 'tier' && r.tier === classTier,
+      );
       if (row) return row.dailyAmount;
     }
     const fallback = this.settingRows.find((r) => r.scope === 'school');
@@ -417,7 +542,10 @@ export class FeedingAdmin implements OnInit, OnDestroy {
     navigator.clipboard.writeText(this.publicLink).then(() => {
       this.linkCopied = true;
       this.cdr.markForCheck();
-      setTimeout(() => { this.linkCopied = false; this.cdr.markForCheck(); }, 2500);
+      setTimeout(() => {
+        this.linkCopied = false;
+        this.cdr.markForCheck();
+      }, 2500);
     });
   }
 
@@ -426,7 +554,10 @@ export class FeedingAdmin implements OnInit, OnDestroy {
   }
 
   formatCurrency(amount: number): string {
-    return new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS' }).format(amount || 0);
+    return new Intl.NumberFormat('en-GH', {
+      style: 'currency',
+      currency: 'GHS',
+    }).format(amount || 0);
   }
 
   getStudentName(s: any): string {
@@ -434,12 +565,19 @@ export class FeedingAdmin implements OnInit, OnDestroy {
     return `${s.first_name} ${s.last_name}`.trim();
   }
 
-  trackByPaymentId(_: number, p: any): string { return p.id; }
-  trackByRowLabel(_: number, r: SettingRow): string { return r.classId || r.tier || 'school'; }
+  trackByPaymentId(_: number, p: any): string {
+    return p.id;
+  }
+  trackByRowLabel(_: number, r: SettingRow): string {
+    return r.classId || r.tier || 'school';
+  }
 
   private showSuccess(msg: string): void {
     this.successMessage = msg;
-    setTimeout(() => { this.successMessage = ''; this.cdr.markForCheck(); }, 3000);
+    setTimeout(() => {
+      this.successMessage = '';
+      this.cdr.markForCheck();
+    }, 3000);
   }
 
   get today(): string {

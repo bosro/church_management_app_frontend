@@ -521,6 +521,32 @@
     background: #f3f4f6;
     color: #6b7280;
   }
+  &.status-prepaid {
+    background: #ede9fe;
+    color: #6d28d9;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+}
+
+.prepaid-days-badge {
+  background: #6d28d9;
+  color: white;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 100px;
+  line-height: 1.4;
+}
+
+.prepaid-notice {
+  background: #ede9fe !important;
+  border-color: #c4b5fd !important;
+  color: #5b21b6 !important;
+  i {
+    color: #7c3aed !important;
+  }
 }
 
 // ─── Action buttons ───────────────────────────────────────
@@ -968,6 +994,24 @@
 .edit-form {
   border-top: 1px solid #e5e7eb;
   padding-top: 16px;
+}
+
+.modal-error-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #dc2626;
+  margin-bottom: 14px;
+  i {
+    font-size: 15px;
+    flex-shrink: 0;
+  }
 }
 
 // ─── Animations ───────────────────────────────────────────
