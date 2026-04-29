@@ -512,6 +512,77 @@
   }
 }
 
+
+// ─── class-fee-header — buttons overflow on mobile ────────────
+.class-fee-card {
+  .class-fee-header {
+    .class-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-shrink: 0;
+      flex-wrap: wrap; // ← ADD: buttons wrap instead of overflow
+
+      @media (max-width: 480px) {
+        width: 100%;
+        justify-content: flex-end;
+        // Stack assign buttons on very small screens
+        .btn-assign {
+          flex: 1;
+          justify-content: center;
+        }
+      }
+    }
+  }
+}
+
+// ─── btn-assign — too wide on mobile ──────────────────────────
+.btn-assign {
+  // ADD to existing:
+  @media (max-width: 600px) {
+    font-size: 12px;
+    padding: 6px 8px;
+    gap: 4px;
+  }
+
+  @media (max-width: 400px) {
+    // Show icon only on very tiny screens
+    span { display: none; }
+  }
+}
+
+// ─── fee-table action column — inline assign buttons overflow ──
+.fee-table {
+  // ADD inside the @media (max-width: 600px) block:
+  @media (max-width: 600px) {
+    // Actions cell — stack vertically
+    tbody tr td:nth-child(4) {
+      .action-buttons {
+        flex-wrap: wrap;  // ← ADD
+        gap: 4px;
+
+        .btn-assign-inline {
+          font-size: 10px;
+          padding: 3px 6px;
+        }
+      }
+    }
+  }
+}
+
+// ─── modal-content — the grid inside assign modal overflows ───
+.modal-content {
+  // The inline grid for Term + Year inside the modal:
+  // Replace the inline style="display:grid; grid-template-columns:1fr 1fr"
+  // with a class, OR add this override:
+  [style*="grid-template-columns:1fr 1fr"],
+  [style*="grid-template-columns: 1fr 1fr"] {
+    @media (max-width: 400px) {
+      grid-template-columns: 1fr !important; // stack on tiny screens
+    }
+  }
+}
+
 // ─── Empty State ──────────────────────────────────────────
 .empty-state {
   display: flex;

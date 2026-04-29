@@ -13,6 +13,7 @@ import { AuthService } from '../../../core/services/auth';
 import { SidebarService } from '../../../core/services/sidebar.service';
 import { UserRolesService } from '../../../features/user-roles/services/user-roles';
 import { SubscriptionService } from '../../../core/services/subscription.service';
+import { combineLatest } from 'rxjs';
 
 interface MenuItem {
   icon: string;
@@ -280,7 +281,7 @@ export class Sidebar implements OnInit {
           roles: ['church_admin', 'finance_officer'],
           permission: 'school.fees',
         },
-         {
+        {
           icon: 'ri-restaurant-line',
           label: 'Feeding fees',
           route: '/main/reports/fees/feeding-admin',
@@ -356,9 +357,18 @@ export class Sidebar implements OnInit {
     this.bannerDismissed =
       sessionStorage.getItem('upgrade-banner-dismissed') === 'true';
 
-    // Wait for subscription status to load before showing banner
     this.subscriptionService.status$.subscribe((status) => {
       this.subscriptionLoaded = status !== null;
+    });
+
+    // ✅ Wait for BOTH profile AND church features before filtering
+    combineLatest([
+      this.authService.currentProfile$,
+      this.authService.churchFeatures$,
+    ]).subscribe(([profile, _features]) => {
+      this.currentUser = profile;
+      this.isSuperAdmin = profile?.role === 'super_admin';
+      this.filterMenuByRole();
     });
 
     this.authService.currentProfile$.subscribe((profile) => {
@@ -539,5 +549,3 @@ export class Sidebar implements OnInit {
     await this.authService.signOut();
   }
 }
-
-

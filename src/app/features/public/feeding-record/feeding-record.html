@@ -29,7 +29,8 @@
     <!-- Pre-paid students alert — shown when any student has advance days -->
     <div class="feeding-alert warning prepaid-notice" *ngIf="hasPrepaidStudents">
       <i class="ri-calendar-check-line"></i>
-      <span>Some students have advance payments covering today — their <strong>Pay</strong> button is disabled. Use the edit (pencil) button to view or adjust their payment history.</span>
+      <span>Some students have advance payments covering today — their <strong>Pay</strong> button is disabled. Use the
+        edit (pencil) button to view or adjust their payment history.</span>
     </div>
 
     <!-- Filters Row -->
@@ -49,6 +50,13 @@
         <select [(ngModel)]="selectedYear" (change)="onTermYearChange()">
           <option *ngFor="let y of academicYears" [value]="y">{{ y }}</option>
         </select>
+      </div>
+
+      <div class="filter-item" *ngIf="!feedingFilter.isConfirmed">
+        <label>&nbsp;</label>
+        <button class="tcb-confirm-small" (click)="confirmTermYear()">
+          <i class="ri-check-line"></i> Confirm Term & Year
+        </button>
       </div>
     </div>
 
@@ -88,11 +96,9 @@
       <div class="student-search-wrap">
         <i class="ri-search-line"></i>
         <input type="text" [(ngModel)]="searchQuery" (input)="onSearchInput()"
-          placeholder="Search student by name or number..."
-          autocomplete="off" />
+          placeholder="Search student by name or number..." autocomplete="off" />
         <div *ngIf="showSearchResults && searchResults.length > 0" class="search-dropdown">
-          <div *ngFor="let s of searchResults" class="search-result-item"
-            (click)="selectStudentFromSearch(s)">
+          <div *ngFor="let s of searchResults" class="search-result-item" (click)="selectStudentFromSearch(s)">
             <div class="search-avatar">{{ s.first_name[0] }}{{ s.last_name[0] }}</div>
             <div>
               <p class="search-name">{{ getStudentName(s) }}</p>
@@ -104,6 +110,15 @@
           <i class="ri-loader-4-line spin"></i>
         </div>
       </div>
+    </div>
+
+    <div class="active-students-banner" *ngIf="isShowingActiveStudents && !selectedClassId">
+      <i class="ri-history-line"></i>
+      Showing students with activity today — select a class to view all
+    </div>
+    <div class="active-students-banner all-mode" *ngIf="!isShowingActiveStudents && !selectedClassId">
+      <i class="ri-team-line"></i>
+      Showing all students (no activity recorded yet today)
     </div>
 
     <!-- Students Table -->
@@ -148,15 +163,15 @@
 
               <!-- Attendance toggle -->
               <td class="text-center">
-                <button class="attendance-btn"
-                  [class.present]="studentStates[student.id]?.isPresent"
-                  [class.absent]="!studentStates[student.id]?.isPresent"
-                  [disabled]="studentStates[student.id]?.saving"
+                <button class="attendance-btn" [class.present]="studentStates[student.id]?.isPresent"
+                  [class.absent]="!studentStates[student.id]?.isPresent" [disabled]="studentStates[student.id]?.saving"
                   (click)="toggleAttendance(student.id)"
                   [title]="studentStates[student.id]?.isPresent ? 'Mark Absent' : 'Mark Present'">
                   <i class="ri-loader-4-line spin" *ngIf="studentStates[student.id]?.saving"></i>
-                  <i class="ri-user-follow-line" *ngIf="!studentStates[student.id]?.saving && studentStates[student.id]?.isPresent"></i>
-                  <i class="ri-user-unfollow-line" *ngIf="!studentStates[student.id]?.saving && !studentStates[student.id]?.isPresent"></i>
+                  <i class="ri-user-follow-line"
+                    *ngIf="!studentStates[student.id]?.saving && studentStates[student.id]?.isPresent"></i>
+                  <i class="ri-user-unfollow-line"
+                    *ngIf="!studentStates[student.id]?.saving && !studentStates[student.id]?.isPresent"></i>
                   {{ studentStates[student.id]?.isPresent ? 'Present' : 'Absent' }}
                 </button>
               </td>
@@ -172,7 +187,8 @@
               </td>
 
               <!-- Summary data -->
-              <ng-container *ngIf="!studentStates[student.id]?.loadingSummary && studentStates[student.id]?.summary as summary">
+              <ng-container
+                *ngIf="!studentStates[student.id]?.loadingSummary && studentStates[student.id]?.summary as summary">
                 <td class="text-right">{{ summary.presentDays }}</td>
                 <td class="text-right">{{ formatCurrency(summary.totalOwed) }}</td>
                 <td class="text-right paid-amount">{{ formatCurrency(summary.totalPaid) }}</td>
@@ -219,10 +235,8 @@
                     <i class="ri-money-dollar-circle-line"></i>
                     {{ isPrepaidToday(student.id) ? 'Covered' : 'Pay' }}
                   </button>
-                  <button class="btn-edit-payment"
-                    [disabled]="!studentStates[student.id]?.summary?.hasPayment"
-                    (click)="openEditModal(student)"
-                    title="View / edit payments">
+                  <button class="btn-edit-payment" [disabled]="!studentStates[student.id]?.summary?.hasPayment"
+                    (click)="openEditModal(student)" title="View / edit payments">
                     <i class="ri-edit-line"></i>
                   </button>
                 </div>
@@ -231,6 +245,16 @@
           </tbody>
         </table>
       </div>
+    </div>
+
+    <div class="pagination-bar" *ngIf="!selectedClassId && !isShowingActiveStudents && totalPages > 1">
+      <button [disabled]="currentPage === 1" (click)="goToPage(currentPage - 1)">
+        <i class="ri-arrow-left-s-line"></i>
+      </button>
+      <span>Page {{ currentPage }} of {{ totalPages }}</span>
+      <button [disabled]="currentPage === totalPages" (click)="goToPage(currentPage + 1)">
+        <i class="ri-arrow-right-s-line"></i>
+      </button>
     </div>
 
     <!-- Empty state -->
@@ -307,8 +331,7 @@
 
       <div class="form-group">
         <label>Notes (Optional)</label>
-        <input type="text" [(ngModel)]="paymentNotes"
-          placeholder="e.g. Bulk payment for the week" />
+        <input type="text" [(ngModel)]="paymentNotes" placeholder="e.g. Bulk payment for the week" />
       </div>
 
       <div class="form-group">
@@ -357,10 +380,8 @@
         <!-- Payment list -->
         <div class="payment-history-list" *ngIf="studentPayments.length > 0">
           <p class="section-label">Select a payment to edit</p>
-          <div class="payment-history-item"
-            *ngFor="let p of studentPayments"
-            [class.selected]="editPayment?.id === p.id"
-            (click)="selectPaymentForEdit(p)">
+          <div class="payment-history-item" *ngFor="let p of studentPayments"
+            [class.selected]="editPayment?.id === p.id" (click)="selectPaymentForEdit(p)">
             <div class="phi-left">
               <span class="phi-date">{{ p.payment_date | date:'MMM d, y' }}</span>
               <span class="phi-note" *ngIf="p.notes">{{ p.notes }}</span>
@@ -433,5 +454,3 @@
     </div>
   </div>
 </div>
-
-

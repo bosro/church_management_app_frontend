@@ -32,7 +32,9 @@
       color: #111827;
       margin: 0;
 
-      @media (max-width: 768px) { font-size: 18px; }
+      @media (max-width: 768px) {
+        font-size: 18px;
+      }
     }
 
     .subtitle {
@@ -40,7 +42,9 @@
       font-size: 14px;
       margin: 4px 0 0;
 
-      @media (max-width: 768px) { font-size: 12px; }
+      @media (max-width: 768px) {
+        font-size: 12px;
+      }
     }
   }
 }
@@ -60,7 +64,9 @@
   font-size: 18px;
   transition: all 0.2s;
   flex-shrink: 0;
-  &:hover { background: #f3f4f6; }
+  &:hover {
+    background: #f3f4f6;
+  }
 }
 
 // ─── Error ────────────────────────────────────────────────
@@ -125,7 +131,9 @@
         box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.08);
       }
 
-      &::placeholder { color: #9ca3af; }
+      &::placeholder {
+        color: #9ca3af;
+      }
     }
 
     .search-clear {
@@ -141,7 +149,9 @@
       display: flex;
       align-items: center;
       padding: 0;
-      &:hover { color: #374151; }
+      &:hover {
+        color: #374151;
+      }
     }
   }
 
@@ -228,11 +238,11 @@
 // ─── Receipts Grid ────────────────────────────────────────
 .receipts-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 14px;
 
-  @media (max-width: 480px) {
-    grid-template-columns: 1fr;
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr; // ← CHANGE: single column sooner
     gap: 10px;
   }
 }
@@ -397,9 +407,13 @@
         color: #6b7280;
         white-space: nowrap;
 
-        i { font-size: 12px; }
+        i {
+          font-size: 12px;
+        }
 
-        @media (max-width: 400px) { display: none; }
+        @media (max-width: 400px) {
+          display: none;
+        }
       }
 
       .btn-reprint {
@@ -418,10 +432,54 @@
         white-space: nowrap;
         transition: background 0.2s;
 
-        i { font-size: 14px; }
+        i {
+          font-size: 14px;
+        }
 
-        &:hover { background: #4338ca; }
+        &:hover {
+          background: #4338ca;
+        }
       }
+    }
+  }
+}
+
+.receipt-card {
+  .receipt-card-top {
+    .receipt-amount {
+      font-size: 16px;
+      font-weight: 800;
+      color: #059669;
+      white-space: nowrap;
+      flex-shrink: 0;
+
+      @media (max-width: 360px) {
+        font-size: 14px; // ← ADD: shrink on tiny screens
+      }
+    }
+  }
+
+  // ─── receipt-card-bottom — actions overflow ────────────────
+  .receipt-card-bottom {
+    .receipt-card-actions {
+      .btn-reprint {
+        @media (max-width: 360px) {
+          padding: 5px 8px;
+          font-size: 11px;
+        }
+      }
+    }
+  }
+}
+
+// ─── search-filter-bar — selects overflow on narrow screens ───
+.search-filter-bar {
+  .filter-select {
+    min-width: 0; // ← CHANGE from min-width: 120px
+    flex: 1 1 100px; // ← ADD
+
+    @media (max-width: 480px) {
+      flex: 1;
     }
   }
 }
@@ -438,8 +496,15 @@
     flex-wrap: wrap;
     justify-content: center;
 
-    .page-info { width: 100%; text-align: center; order: -1; }
-    .pagination-btn { flex: 1; justify-content: center; }
+    .page-info {
+      width: 100%;
+      text-align: center;
+      order: -1;
+    }
+    .pagination-btn {
+      flex: 1;
+      justify-content: center;
+    }
   }
 
   .pagination-btn {
@@ -463,7 +528,10 @@
       color: #4f46e5;
     }
 
-    &:disabled { opacity: 0.5; cursor: not-allowed; }
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
   }
 
   .page-info {
@@ -474,10 +542,7 @@
 
 // ─── Animation ────────────────────────────────────────────
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
-
-
-
-
-

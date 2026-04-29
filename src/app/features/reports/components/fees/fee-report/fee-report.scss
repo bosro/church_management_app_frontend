@@ -12,18 +12,25 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 24px;
-  flex-wrap: wrap;
+  flex-wrap: wrap;   // ← ADD: was missing
   gap: 16px;
 
   .header-left {
     display: flex;
     align-items: center;
     gap: 12px;
+    min-width: 0;    // ← ADD
+    flex: 1;         // ← ADD: allows shrinking
+
     h1 {
       font-size: 24px;
       font-weight: 700;
       color: #111827;
       margin: 0;
+      // ADD these:
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .subtitle {
       color: #6b7280;
@@ -35,6 +42,8 @@
   .header-actions {
     display: flex;
     gap: 10px;
+    flex-shrink: 0;  // ← ADD: prevent buttons from squishing
+    flex-wrap: wrap; // ← ADD
   }
 }
 
@@ -123,7 +132,7 @@
 .filters-card {
   display: flex;
   gap: 12px;
-  flex-wrap: wrap;
+  flex-wrap: wrap;   // ← already set, confirm it's there
   background: white;
   border: 1px solid #f3f4f6;
   border-radius: 12px;
@@ -138,15 +147,16 @@
     background: #f9fafb;
     cursor: pointer;
     font-family: "Nunito Sans", sans-serif;
-    min-width: 160px;
+    min-width: 0;    // ← ADD (was min-width: 160px which forces overflow)
+    // ← REMOVE: min-width: 160px  ← this was the overflow culprit
+    flex: 1 1 140px; // ← ADD: grow/shrink with a reasonable base
+    max-width: 100%; // ← ADD
     transition: all 0.2s;
-    &:focus {
-      outline: none;
-      border-color: #4f46e5;
-      background: white;
-    }
+    &:focus { outline: none; border-color: #4f46e5; background: white; }
   }
 }
+
+
 
 // ─── Loading ──────────────────────────────────────────────
 .loading-container {
@@ -174,6 +184,12 @@
   gap: 16px;
   margin-bottom: 24px;
 
+  // ← ADD this entire block:
+  @media (max-width: 640px) {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
   .summary-card {
     background: white;
     border: 1px solid #e5e7eb;
@@ -183,6 +199,15 @@
     align-items: center;
     gap: 16px;
     transition: all 0.2s;
+    min-width: 0;    // ← ADD
+
+    // ← ADD this block:
+    @media (max-width: 640px) {
+      padding: 12px;
+      gap: 10px;
+      align-items: flex-start;
+      flex-direction: column; // stack icon above text on tiny screens
+    }
 
     .card-icon {
       width: 48px;
@@ -191,28 +216,41 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      flex-shrink: 0;
-      i {
-        font-size: 22px;
-      }
+      flex-shrink: 0;  // ← ADD
+      i { font-size: 22px; }
+    }
+
+    // ← ADD this block:
+    > div {
+      min-width: 0;
+      flex: 1;
     }
 
     .card-label {
       font-size: 13px;
       color: #6b7280;
       margin: 0 0 4px;
+      // ← ADD:
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
+
     .card-value {
       font-size: 22px;
       font-weight: 700;
       color: #111827;
       margin: 0;
-      &.paid {
-        color: #059669;
+      // ← ADD:
+      word-break: break-word;
+
+      // ← ADD:
+      @media (max-width: 640px) {
+        font-size: 16px;
       }
-      &.outstanding {
-        color: #dc2626;
-      }
+
+      &.paid { color: #059669; }
+      &.outstanding { color: #dc2626; }
     }
 
     &.card-active {
@@ -229,6 +267,7 @@
 }
 
 // ─── Report Card ──────────────────────────────────────────
+// ─── Report Card / Table wrapper ──────────────────────────
 .report-card {
   background: white;
   border: 1px solid #e5e7eb;
@@ -236,17 +275,10 @@
   overflow: hidden;
 
   .table-wrapper {
-    overflow-x: auto;
-    &::-webkit-scrollbar {
-      height: 6px;
-    }
-    &::-webkit-scrollbar-track {
-      background: #f3f4f6;
-    }
-    &::-webkit-scrollbar-thumb {
-      background: #d1d5db;
-      border-radius: 3px;
-    }
+    overflow-x: auto;              // ← confirm present
+    -webkit-overflow-scrolling: touch; // ← ADD for iOS momentum scroll
+    width: 100%;                   // ← ADD
+    display: block;                // ← ADD
   }
 }
 
@@ -959,3 +991,5 @@
     }
   }
 }
+
+

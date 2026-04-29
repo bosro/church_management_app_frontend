@@ -683,3 +683,5 @@ export interface DayEntry {
   runningBalance: number;
   coveredByAdvance: boolean;
 }
+
+

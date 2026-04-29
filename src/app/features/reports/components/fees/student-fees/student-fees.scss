@@ -716,6 +716,25 @@
     }
   }
 
+  .filters-card {
+    .filter-select {
+      min-width: 0; // ← CHANGE from 160px
+      flex: 1 1 130px; // ← ADD
+
+      @media (max-width: 480px) {
+        flex: 1 1 100%;
+      }
+    }
+  }
+
+  // ─── page-header — header-left needs min-width: 0 ─────────────
+  .page-header {
+    .header-left {
+      min-width: 0; // ← ADD
+      flex: 1; // ← ADD
+    }
+  }
+
   .table-card {
     border-radius: 10px;
   }
@@ -831,6 +850,3 @@
     }
   }
 }
-
-
-

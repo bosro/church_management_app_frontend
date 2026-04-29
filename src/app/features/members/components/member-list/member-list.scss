@@ -59,7 +59,20 @@
 
   .header-actions {
     display: flex;
-    gap: 0.75rem;
+    flex-wrap: wrap; /* ADD THIS — critical */
+    gap: 0.5rem;
+
+    @media (max-width: 768px) {
+      width: 100%;
+
+      button {
+        flex: 1 1 auto; /* grow/shrink freely */
+        min-width: 0; /* allow shrinking */
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+    }
 
     button {
       display: flex;
@@ -153,6 +166,26 @@
         font-weight: 800;
         color: #111827;
         margin: 0;
+      }
+    }
+  }
+}
+
+/* Stats grid — fix for real mobile */
+.stats-grid,
+.summary-cards {
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr 1fr; /* 2-col */
+
+    .stat-card,
+    .summary-card {
+      min-width: 0;
+      overflow: hidden;
+
+      .stat-value,
+      .card-value {
+        font-size: 1.25rem; /* shrink number on tiny screens */
+        word-break: break-word;
       }
     }
   }
@@ -290,11 +323,34 @@
   }
 }
 
+/* Filters card — ensure wrapping */
+.filters-form,
+.filters-card {
+  flex-wrap: wrap; /* ensure this is set */
+
+  .filter-group,
+  .filter-select {
+    min-width: 0; /* allow shrinking */
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+}
+
 // Loading State
 .loading-container {
   display: flex;
   justify-content: center;
   padding: 4rem 0;
+}
+
+.table-wrapper {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+
+  /* Prevent the table from pushing the wrapper */
+  display: block;
 }
 
 // Members Table
@@ -1149,41 +1205,44 @@
   }
 }
 
-
-
 .cell-badge {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  background: #DDD6FE;
-  color: #7C3AED;
+  background: #ddd6fe;
+  color: #7c3aed;
   font-size: 10px;
   font-weight: 600;
   padding: 2px 7px;
   border-radius: 10px;
   margin-top: 2px;
 
-  i { font-size: 10px; }
+  i {
+    font-size: 10px;
+  }
 }
 
 .btn-my-cell {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: #F5F3FF;
-  border: 1px solid #C4B5FD;
-  color: #7C3AED;
+  background: #f5f3ff;
+  border: 1px solid #c4b5fd;
+  color: #7c3aed;
   font-size: 13px;
   padding: 8px 14px;
   border-radius: 8px;
   cursor: pointer;
   white-space: nowrap;
 
-  &:hover { background: #EDE9FE; }
+  &:hover {
+    background: #ede9fe;
+  }
 
-  i { font-size: 15px; }
+  i {
+    font-size: 15px;
+  }
 }
-
 
 .sort-group {
   display: flex;
@@ -1196,39 +1255,40 @@
   gap: 5px;
   padding: 8px 12px;
   background: white;
-  border: 1px solid #E5E7EB;
+  border: 1px solid #e5e7eb;
   border-radius: 8px;
   font-size: 13px;
   font-weight: 600;
-  color: #6B7280;
+  color: #6b7280;
   cursor: pointer;
   transition: all 0.2s;
-  font-family: 'Nunito Sans', sans-serif;
+  font-family: "Nunito Sans", sans-serif;
 
-  i { font-size: 15px; }
+  i {
+    font-size: 15px;
+  }
 
   &:hover {
-    background: #F9FAFB;
-    border-color: #5B21B6;
-    color: #5B21B6;
+    background: #f9fafb;
+    border-color: #5b21b6;
+    color: #5b21b6;
   }
 
   &.active {
-    background: #F5F3FF;
-    border-color: #7C3AED;
-    color: #7C3AED;
+    background: #f5f3ff;
+    border-color: #7c3aed;
+    color: #7c3aed;
   }
 }
 
 .btn-my-cell {
   // ADD active state:
   &.active {
-    background: #EDE9FE;
-    border-color: #7C3AED;
+    background: #ede9fe;
+    border-color: #7c3aed;
     font-weight: 700;
   }
 }
-
 
 // ── Custom checkbox ───────────────────────────────────────────────────────────
 .custom-checkbox {
@@ -1260,7 +1320,7 @@
     flex-shrink: 0;
 
     &::after {
-      content: '';
+      content: "";
       width: 5px;
       height: 9px;
       border: 2px solid white;
@@ -1369,9 +1429,11 @@
       font-weight: 600;
       cursor: pointer;
       transition: all 0.2s;
-      font-family: 'Nunito Sans', sans-serif;
+      font-family: "Nunito Sans", sans-serif;
 
-      i { font-size: 1rem; }
+      i {
+        font-size: 1rem;
+      }
 
       @media (max-width: 640px) {
         flex: 1;
@@ -1471,9 +1533,11 @@
     cursor: pointer;
     transition: all 0.2s;
     white-space: nowrap;
-    font-family: 'Nunito Sans', sans-serif;
+    font-family: "Nunito Sans", sans-serif;
 
-    i { font-size: 1rem; }
+    i {
+      font-size: 1rem;
+    }
 
     &:hover {
       background: #c2410c;
@@ -1517,14 +1581,10 @@
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
-
-
-
-
-
-
-
-

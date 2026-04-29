@@ -495,3 +495,213 @@
     }
   }
 }
+
+// ─── global-term-selector — overflows on mobile ───────────────
+.global-term-selector {
+  .global-term-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap; // ← ADD
+
+    .filter-select {
+      min-width: 0;       // ← ADD
+      flex: 1 1 100px;    // ← ADD
+      max-width: 150px;   // ← ADD: cap width
+
+      @media (max-width: 480px) {
+        max-width: 100%;
+        flex: 1;
+      }
+    }
+  }
+}
+
+// ─── header-right — stacks the term selector + export button ──
+.page-header {
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap; // ← confirm present
+
+    @media (max-width: 768px) {
+      width: 100%;
+      flex-direction: column;
+      align-items: stretch;
+    }
+  }
+}
+
+// ─── btn-export — was width: 100% always, causes weird layout ─
+.btn-export {
+  // REMOVE: width: 100% from the base style
+  // Only apply full-width on mobile:
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 16px;
+  background: #4f46e5;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  font-family: "Nunito Sans", sans-serif;
+  // ← REMOVE width: 100% from here
+
+  @media (max-width: 768px) {
+    width: 100%; // ← only full-width on mobile
+  }
+
+  &:hover:not(:disabled) { background: #4338ca; }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+}
+
+// ─── term-confirm-banner — overflows on very small screens ────
+.term-confirm-banner {
+  .tcb-controls {
+    .tcb-select {
+      min-width: 0;     // ← ADD
+      flex: 1 1 110px;  // ← ADD
+
+      @media (max-width: 480px) {
+        width: 100%;
+        flex: 1 1 100%;
+      }
+    }
+
+    .tcb-confirm-btn {
+      @media (max-width: 480px) {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+  }
+}
+
+// ─── Saved badge variants ─────────────────────────────────
+.saved-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  i { font-size: 12px; }
+
+  &.confirmed {
+    color: #059669;
+  }
+
+  &.unconfirmed {
+    color: #d97706;
+  }
+}
+
+// ─── Term confirmation banner ─────────────────────────────
+.term-confirm-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  border: 2px solid #f59e0b;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  animation: slideDown 0.3s ease;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .tcb-left {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    flex: 1;
+  }
+
+  .tcb-icon {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    background: white;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    i { font-size: 20px; color: #d97706; }
+  }
+
+  .tcb-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #92400e;
+    margin: 0 0 3px;
+  }
+
+  .tcb-sub {
+    font-size: 13px;
+    color: #b45309;
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  .tcb-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+
+    @media (max-width: 768px) { width: 100%; }
+  }
+
+  .tcb-select {
+    padding: 8px 10px;
+    border: 1px solid #fcd34d;
+    border-radius: 8px;
+    font-size: 13px;
+    background: white;
+    font-family: "Nunito Sans", sans-serif;
+    font-weight: 600;
+    color: #374151;
+    cursor: pointer;
+    &:focus { outline: none; border-color: #f59e0b; }
+  }
+
+  .tcb-confirm-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: #f59e0b;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: "Nunito Sans", sans-serif;
+    white-space: nowrap;
+    transition: background 0.2s;
+    i { font-size: 15px; }
+    &:hover { background: #d97706; }
+  }
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+
+
+

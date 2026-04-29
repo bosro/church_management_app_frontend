@@ -28,11 +28,19 @@ export class ReportsOverview implements OnInit, OnDestroy {
   exporting = false;
 
   // Delegate to service so template bindings work
-  get currentTerm(): string { return this.schoolFilter.term; }
-  set currentTerm(val: string) { this.schoolFilter.setTerm(val); }
+  get currentTerm(): string {
+    return this.schoolFilter.term;
+  }
+  set currentTerm(val: string) {
+    this.schoolFilter.setTerm(val);
+  }
 
-  get currentAcademicYear(): string { return this.schoolFilter.year; }
-  set currentAcademicYear(val: string) { this.schoolFilter.setYear(val); }
+  get currentAcademicYear(): string {
+    return this.schoolFilter.year;
+  }
+  set currentAcademicYear(val: string) {
+    this.schoolFilter.setYear(val);
+  }
 
   constructor(
     private schoolService: SchoolService,
@@ -358,5 +366,9 @@ export class ReportsOverview implements OnInit, OnDestroy {
       this.exporting = false;
     }
   }
-}
 
+  confirmTermYear(): void {
+    this.schoolFilter.setBoth(this.currentTerm, this.currentAcademicYear);
+    this.loadStatistics();
+  }
+}

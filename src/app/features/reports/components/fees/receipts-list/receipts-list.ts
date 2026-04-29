@@ -35,7 +35,7 @@ export class ReceiptsList implements OnInit, OnDestroy {
   // Filters
   searchControl = new FormControl('');
   selectedTerm = '';
-  selectedYear = ''; 
+  selectedYear = '';
   terms = TERMS;
   academicYears = generateAcademicYears();
 
@@ -160,3 +160,5 @@ export class ReceiptsList implements OnInit, OnDestroy {
     this.location.back();
   }
 }
+
+

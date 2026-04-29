@@ -148,3 +148,41 @@ button:hover {
 
 
 
+
+
+
+
+/* ── Real-device mobile overflow containment ────────────── */
+
+/*
+  On real iOS Safari/Chrome, overflow-x: hidden on body
+  alone is not enough. This combination is required.
+*/
+html {
+  overflow-x: clip; // stronger than hidden on real devices
+}
+
+/*
+  The single most impactful rule: flex/grid children
+  default to min-width: auto which blocks shrinking.
+  Setting min-width: 0 globally allows proper shrinking.
+*/
+*, *::before, *::after {
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/*
+  Exceptions — elements that should not be constrained
+*/
+img, video, canvas, svg, input, select, textarea, button {
+  max-width: 100%;
+}
+
+/* Fixed/absolute overlays should not be width-constrained */
+.modal-overlay,
+.pwa-update-banner,
+.offline-banner {
+  min-width: unset;
+  max-width: none;
+}
