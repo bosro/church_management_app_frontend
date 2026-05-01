@@ -12,15 +12,15 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 24px;
-  flex-wrap: wrap;   // ← ADD: was missing
+  flex-wrap: wrap; // ← ADD: was missing
   gap: 16px;
 
   .header-left {
     display: flex;
     align-items: center;
     gap: 12px;
-    min-width: 0;    // ← ADD
-    flex: 1;         // ← ADD: allows shrinking
+    min-width: 0; // ← ADD
+    flex: 1; // ← ADD: allows shrinking
 
     h1 {
       font-size: 24px;
@@ -42,7 +42,7 @@
   .header-actions {
     display: flex;
     gap: 10px;
-    flex-shrink: 0;  // ← ADD: prevent buttons from squishing
+    flex-shrink: 0; // ← ADD: prevent buttons from squishing
     flex-wrap: wrap; // ← ADD
   }
 }
@@ -132,7 +132,7 @@
 .filters-card {
   display: flex;
   gap: 12px;
-  flex-wrap: wrap;   // ← already set, confirm it's there
+  flex-wrap: wrap; // ← already set, confirm it's there
   background: white;
   border: 1px solid #f3f4f6;
   border-radius: 12px;
@@ -147,16 +147,18 @@
     background: #f9fafb;
     cursor: pointer;
     font-family: "Nunito Sans", sans-serif;
-    min-width: 0;    // ← ADD (was min-width: 160px which forces overflow)
+    min-width: 0; // ← ADD (was min-width: 160px which forces overflow)
     // ← REMOVE: min-width: 160px  ← this was the overflow culprit
     flex: 1 1 140px; // ← ADD: grow/shrink with a reasonable base
     max-width: 100%; // ← ADD
     transition: all 0.2s;
-    &:focus { outline: none; border-color: #4f46e5; background: white; }
+    &:focus {
+      outline: none;
+      border-color: #4f46e5;
+      background: white;
+    }
   }
 }
-
-
 
 // ─── Loading ──────────────────────────────────────────────
 .loading-container {
@@ -199,7 +201,7 @@
     align-items: center;
     gap: 16px;
     transition: all 0.2s;
-    min-width: 0;    // ← ADD
+    min-width: 0; // ← ADD
 
     // ← ADD this block:
     @media (max-width: 640px) {
@@ -216,8 +218,10 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      flex-shrink: 0;  // ← ADD
-      i { font-size: 22px; }
+      flex-shrink: 0; // ← ADD
+      i {
+        font-size: 22px;
+      }
     }
 
     // ← ADD this block:
@@ -249,8 +253,12 @@
         font-size: 16px;
       }
 
-      &.paid { color: #059669; }
-      &.outstanding { color: #dc2626; }
+      &.paid {
+        color: #059669;
+      }
+      &.outstanding {
+        color: #dc2626;
+      }
     }
 
     &.card-active {
@@ -275,10 +283,10 @@
   overflow: hidden;
 
   .table-wrapper {
-    overflow-x: auto;              // ← confirm present
+    overflow-x: auto; // ← confirm present
     -webkit-overflow-scrolling: touch; // ← ADD for iOS momentum scroll
-    width: 100%;                   // ← ADD
-    display: block;                // ← ADD
+    width: 100%; // ← ADD
+    display: block; // ← ADD
   }
 }
 
@@ -345,6 +353,10 @@
 
   .balance-cell strong {
     color: #dc2626;
+  }
+
+  .balance-cell.balance-cleared strong {
+    color: #059669;
   }
 
   .grand-total-row td {
@@ -991,5 +1003,3 @@
     }
   }
 }
-
-

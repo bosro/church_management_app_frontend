@@ -163,7 +163,7 @@
                   <td>{{ summary.student?.class?.name || '—' }}</td>
                   <td class="text-right">{{ formatCurrency(summary.totalDue) }}</td>
                   <td class="text-right">{{ formatCurrency(summary.totalPaid) }}</td>
-                  <td class="text-right balance-cell">
+                  <td class="text-right balance-cell" [class.balance-cleared]="summary.totalBalance === 0">
                     <strong>{{ formatCurrency(summary.totalBalance) }}</strong>
                   </td>
                   <td class="no-print">
@@ -231,6 +231,3 @@
     </div>
   </div>
 </div>
-
-
-

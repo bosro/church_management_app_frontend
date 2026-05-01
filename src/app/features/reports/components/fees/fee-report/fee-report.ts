@@ -584,3 +584,5 @@ export class FeeReport implements OnInit, OnDestroy {
     }).format(amount || 0);
   }
 }
+
+
