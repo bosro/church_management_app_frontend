@@ -80,3 +80,5 @@ export class PaymentCallback implements OnInit, OnDestroy {
   goHome(): void  { this.router.navigate(['/main/my-giving']); }
   tryAgain(): void { this.router.navigate(['/main/my-giving/make-payment']); }
 }
+
+

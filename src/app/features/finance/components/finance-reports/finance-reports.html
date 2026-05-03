@@ -1,20 +1,15 @@
 <!-- src/app/features/finance/components/finance-reports/finance-reports.component.html -->
 <div class="dashboard-layout">
   <app-sidebar></app-sidebar>
-
   <div class="dashboard-content">
     <app-header></app-header>
-
     <div class="dashboard-body">
       <div class="reports-container">
 
-        <!-- Back Button -->
         <button class="btn-back" (click)="goBack()">
-          <i class="ri-arrow-left-line"></i>
-          <span>Back</span>
+          <i class="ri-arrow-left-line"></i><span>Back</span>
         </button>
 
-        <!-- Page Header -->
         <div class="page-header">
           <div class="header-left">
             <h1>Financial Reports</h1>
@@ -28,17 +23,13 @@
           </div>
         </div>
 
-        <!-- Alerts -->
         <div *ngIf="successMessage" class="success-alert">
-          <i class="ri-checkbox-circle-line"></i>
-          <span>{{ successMessage }}</span>
+          <i class="ri-checkbox-circle-line"></i><span>{{ successMessage }}</span>
         </div>
         <div *ngIf="errorMessage" class="error-alert">
-          <i class="ri-error-warning-line"></i>
-          <span>{{ errorMessage }}</span>
+          <i class="ri-error-warning-line"></i><span>{{ errorMessage }}</span>
         </div>
 
-        <!-- Loading -->
         <div *ngIf="loading" class="loading-container">
           <app-loading-spinner message="Loading reports..."></app-loading-spinner>
         </div>
@@ -51,60 +42,102 @@
           <div class="reports-section">
             <div class="section-title">
               <h2>Year Overview — {{ selectedYear }}</h2>
+              <p class="section-subtitle" *ngIf="combinedStats">
+                Includes individual transactions and bulk giving records
+              </p>
             </div>
+
             <div class="stats-grid">
-              <div class="stat-card">
+              <!-- Total Giving (individual + bulk combined) -->
+              <div class="stat-card stat-card-primary">
                 <div class="stat-icon" style="background:#D1FAE5;color:#059669;">
                   <i class="ri-money-dollar-circle-line"></i>
                 </div>
                 <div class="stat-info">
                   <p class="stat-label">Total Giving</p>
-                  <h3 class="stat-value">{{ formatCurrency(statistics?.total_giving || 0) }}</h3>
+                  <h3 class="stat-value">{{ formatCurrency(overviewTotalGiving) }}</h3>
+                  <p class="stat-meta">Individual + Bulk records</p>
                 </div>
               </div>
+
               <div class="stat-card">
                 <div class="stat-icon" style="background:#DBEAFE;color:#2563EB;">
                   <i class="ri-wallet-line"></i>
                 </div>
                 <div class="stat-info">
                   <p class="stat-label">Total Tithes</p>
-                  <h3 class="stat-value">{{ formatCurrency(statistics?.total_tithes || 0) }}</h3>
+                  <h3 class="stat-value">{{ formatCurrency(overviewTithes) }}</h3>
+                  <p class="stat-meta">Individual records</p>
                 </div>
               </div>
+
               <div class="stat-card">
                 <div class="stat-icon" style="background:#DDD6FE;color:#7C3AED;">
                   <i class="ri-hand-heart-line"></i>
                 </div>
                 <div class="stat-info">
                   <p class="stat-label">Total Offerings</p>
-                  <h3 class="stat-value">{{ formatCurrency(statistics?.total_offerings || 0) }}</h3>
+                  <h3 class="stat-value">{{ formatCurrency(overviewOfferings) }}</h3>
+                  <p class="stat-meta">Individual records</p>
                 </div>
               </div>
+
               <div class="stat-card">
                 <div class="stat-icon" style="background:#FED7AA;color:#EA580C;">
                   <i class="ri-exchange-dollar-line"></i>
                 </div>
                 <div class="stat-info">
-                  <p class="stat-label">Transactions</p>
-                  <h3 class="stat-value">{{ statistics?.total_transactions || 0 }}</h3>
+                  <p class="stat-label">Total Records</p>
+                  <h3 class="stat-value">{{ overviewTransactions }}</h3>
+                  <p class="stat-meta">Individual + Bulk</p>
                 </div>
               </div>
+
               <div class="stat-card">
                 <div class="stat-icon" style="background:#FEF3C7;color:#F59E0B;">
                   <i class="ri-bar-chart-line"></i>
                 </div>
                 <div class="stat-info">
                   <p class="stat-label">Average Giving</p>
-                  <h3 class="stat-value">{{ formatCurrency(statistics?.avg_giving || 0) }}</h3>
+                  <h3 class="stat-value">{{ formatCurrency(overviewAvg) }}</h3>
+                  <p class="stat-meta">Per individual transaction</p>
                 </div>
               </div>
+
               <div class="stat-card">
                 <div class="stat-icon" style="background:#FCE7F3;color:#DB2777;">
                   <i class="ri-arrow-up-line"></i>
                 </div>
                 <div class="stat-info">
                   <p class="stat-label">Highest Transaction</p>
-                  <h3 class="stat-value">{{ formatCurrency(statistics?.highest_giving || 0) }}</h3>
+                  <h3 class="stat-value">{{ formatCurrency(overviewHighest) }}</h3>
+                  <p class="stat-meta">Single individual record</p>
+                </div>
+              </div>
+
+              <!-- Bulk Giving — only shown when > 0 -->
+              <div class="stat-card" *ngIf="overviewBulkTotal > 0">
+                <div class="stat-icon" style="background:#EFF6FF;color:#2563EB;">
+                  <i class="ri-group-line"></i>
+                </div>
+                <div class="stat-info">
+                  <p class="stat-label">Bulk Giving Totals</p>
+                  <h3 class="stat-value">{{ formatCurrency(overviewBulkTotal) }}</h3>
+                  <p class="stat-meta">Service / event totals</p>
+                </div>
+              </div>
+
+              <!-- Net Balance — only shown when expenses > 0 -->
+              <div class="stat-card stat-card-net" *ngIf="overviewExpenses > 0">
+                <div class="stat-icon" style="background:#ECFDF5;color:#059669;">
+                  <i class="ri-scales-line"></i>
+                </div>
+                <div class="stat-info">
+                  <p class="stat-label">Net Balance</p>
+                  <h3 class="stat-value">{{ formatCurrency(overviewNetBalance) }}</h3>
+                  <p class="stat-meta expense-meta">
+                    After {{ formatCurrency(overviewExpenses) }} expenses
+                  </p>
                 </div>
               </div>
             </div>
@@ -137,68 +170,53 @@
               </button>
             </div>
 
-            <!-- Category cards loading -->
             <div *ngIf="loadingCategoryStats" class="loading-container">
               <app-loading-spinner message="Loading category data..."></app-loading-spinner>
             </div>
 
-            <!-- Category cards grid -->
             <div *ngIf="!loadingCategoryStats" class="category-cards-grid">
-              <div *ngFor="let stat of categoryStats; let i = index" class="category-stat-card"
-                [class.active]="selectedCategory?.category_id === stat.category_id" (click)="selectCategory(stat)"
-                role="button" tabindex="0">
-                <!-- Percentage pill -->
+              <div *ngFor="let stat of categoryStats; let i = index"
+                class="category-stat-card"
+                [class.active]="selectedCategory?.category_id === stat.category_id"
+                (click)="selectCategory(stat)" role="button" tabindex="0">
+
                 <div class="category-pct-pill">{{ stat.percentage_of_total }}%</div>
 
-                <!-- Icon -->
-                <div class="category-card-icon" [style.background]="getCategoryIconBg(i)"
+                <div class="category-card-icon"
+                  [style.background]="getCategoryIconBg(i)"
                   [style.color]="getCategoryIconColor(i)">
                   <i [class]="getCategoryIcon(i)"></i>
                 </div>
 
                 <h4 class="category-card-name">{{ stat.category_name }}</h4>
-
-                <div class="category-card-amount">
-                  {{ formatCurrency(stat.total_amount) }}
-                </div>
+                <div class="category-card-amount">{{ formatCurrency(stat.total_amount) }}</div>
 
                 <div class="category-card-meta">
-                  <span>
-                    <i class="ri-exchange-line"></i>
-                    {{ stat.transaction_count }} txn{{ stat.transaction_count !== 1 ? 's' : '' }}
-                  </span>
-                  <span>
-                    <i class="ri-user-line"></i>
-                    {{ stat.unique_givers }} giver{{ stat.unique_givers !== 1 ? 's' : '' }}
-                  </span>
+                  <span><i class="ri-exchange-line"></i> {{ stat.transaction_count }} txns</span>
+                  <span><i class="ri-user-line"></i> {{ stat.unique_givers }} givers</span>
                 </div>
+                <div class="category-card-avg">Avg: {{ formatCurrency(stat.avg_amount) }}</div>
 
-                <div class="category-card-avg">
-                  Avg: {{ formatCurrency(stat.avg_amount) }}
-                </div>
-
-                <!-- Progress bar (percentage of total) -->
                 <div class="category-progress-track">
-                  <div class="category-progress-fill" [style.width.%]="stat.percentage_of_total"
+                  <div class="category-progress-fill"
+                    [style.width.%]="stat.percentage_of_total"
                     [style.background]="getCategoryIconColor(i)">
                   </div>
                 </div>
 
                 <div class="category-card-cta">
                   <span>{{ selectedCategory?.category_id === stat.category_id ? 'Hide givers' : 'View givers' }}</span>
-                  <i
-                    [class]="selectedCategory?.category_id === stat.category_id ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'"></i>
+                  <i [class]="selectedCategory?.category_id === stat.category_id ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'"></i>
                 </div>
               </div>
 
-              <!-- Empty state -->
               <div *ngIf="categoryStats.length === 0" class="category-empty">
                 <i class="ri-folder-open-line"></i>
                 <p>No category data found for the selected period</p>
               </div>
             </div>
 
-            <!-- ── Drill-down: Givers for selected category ── -->
+            <!-- Drill-down: givers for selected category -->
             <div *ngIf="selectedCategory" class="givers-drilldown" #giversSection>
               <div class="givers-drilldown-header">
                 <div class="givers-drilldown-title">
@@ -206,24 +224,16 @@
                   <h3>Givers — {{ selectedCategory.category_name }}</h3>
                 </div>
                 <div class="givers-drilldown-summary">
-                  <span class="ds-pill green">
-                    {{ formatCurrency(selectedCategory.total_amount) }} total
-                  </span>
-                  <span class="ds-pill blue">
-                    {{ selectedCategory.transaction_count }} transactions
-                  </span>
-                  <span class="ds-pill purple">
-                    {{ selectedCategory.unique_givers }} unique givers
-                  </span>
+                  <span class="ds-pill green">{{ formatCurrency(selectedCategory.total_amount) }} total</span>
+                  <span class="ds-pill blue">{{ selectedCategory.transaction_count }} transactions</span>
+                  <span class="ds-pill purple">{{ selectedCategory.unique_givers }} unique givers</span>
                 </div>
               </div>
 
-              <!-- Loading givers -->
               <div *ngIf="loadingGivers" class="loading-container">
                 <app-loading-spinner message="Loading givers..."></app-loading-spinner>
               </div>
 
-              <!-- Givers table -->
               <div *ngIf="!loadingGivers" class="givers-table-wrapper">
                 <table class="givers-table">
                   <thead>
@@ -258,7 +268,6 @@
                       <td class="amount-cell">{{ formatCurrency(giver.total_amount) }}</td>
                       <td class="date-cell">{{ giver.last_giving_date | date:'MMM d, y' }}</td>
                     </tr>
-
                     <tr *ngIf="categoryGivers.length === 0" class="empty-row">
                       <td colspan="6">
                         <div class="table-empty">
@@ -281,11 +290,12 @@
               <h2>Export Reports</h2>
             </div>
             <div class="export-grid">
-              <!-- Giving Report -->
+
+              <!-- Giving Transactions -->
               <div class="export-card">
                 <div class="export-icon"><i class="ri-file-chart-line"></i></div>
                 <h3>Giving Transactions</h3>
-                <p>Export all giving transactions with filters</p>
+                <p>Export individual giving records. Excel format includes a separate sheet for bulk giving records.</p>
                 <div class="date-filters">
                   <div class="filter-group">
                     <label>Start Date</label>
@@ -303,11 +313,11 @@
                 </button>
               </div>
 
-              <!-- Pledges Report -->
+              <!-- Pledges -->
               <div class="export-card">
                 <div class="export-icon"><i class="ri-hand-heart-line"></i></div>
                 <h3>Pledges Report</h3>
-                <p>Export all pledges with payment status</p>
+                <p>Export all pledges with payment status and outstanding balances.</p>
                 <div class="spacer"></div>
                 <button class="btn-export" (click)="exportPledgesReport()" [disabled]="exporting"
                   *ngIf="permissionService.isAdmin || permissionService.finance.reports">
@@ -315,6 +325,20 @@
                   {{ exporting ? 'Exporting...' : 'Export Report' }}
                 </button>
               </div>
+
+              <!-- Expenses (NEW) -->
+              <div class="export-card export-card-expenses">
+                <div class="export-icon expenses-icon"><i class="ri-receipt-line"></i></div>
+                <h3>Expenses Report</h3>
+                <p>Export category expense records — track how funds have been spent.</p>
+                <div class="spacer"></div>
+                <button class="btn-export btn-export-expenses" (click)="exportExpensesReport()" [disabled]="exporting"
+                  *ngIf="permissionService.isAdmin || permissionService.finance.reports">
+                  <i class="ri-download-line"></i>
+                  {{ exporting ? 'Exporting...' : 'Export Report' }}
+                </button>
+              </div>
+
             </div>
           </div>
 
@@ -333,9 +357,7 @@
                   </div>
                   <div class="giver-info">
                     <p class="giver-name">{{ giver.member_name }}</p>
-                    <p class="giver-count">
-                      {{ giver.transaction_count }} transaction{{ giver.transaction_count > 1 ? 's' : '' }}
-                    </p>
+                    <p class="giver-count">{{ giver.transaction_count }} transaction{{ giver.transaction_count > 1 ? 's' : '' }}</p>
                   </div>
                   <div class="giver-amount">
                     <p class="amount">{{ formatCurrency(giver.total_amount) }}</p>
@@ -359,37 +381,26 @@
     <div class="export-modal" (click)="$event.stopPropagation()">
       <div class="export-modal-header">
         <h3><i class="ri-file-chart-line"></i> Export Giving Report</h3>
-        <button class="modal-close-btn" (click)="showGivingExportModal = false">
-          <i class="ri-close-line"></i>
-        </button>
+        <button class="modal-close-btn" (click)="showGivingExportModal = false"><i class="ri-close-line"></i></button>
       </div>
       <p class="export-subtitle">
-        Choose format for giving transactions
-        ({{ startDateControl.value }} → {{ endDateControl.value }})
+        Giving transactions {{ startDateControl.value }} → {{ endDateControl.value }}.<br>
+        <small>Excel format includes a Bulk Records sheet.</small>
       </p>
       <div class="export-options">
         <button class="export-option" (click)="exportGivingAs('csv')">
           <div class="export-icon csv"><i class="ri-file-text-line"></i></div>
-          <div class="export-info">
-            <strong>CSV</strong>
-            <span>Plain text, works with any spreadsheet app</span>
-          </div>
+          <div class="export-info"><strong>CSV</strong><span>Plain text, works with any spreadsheet app</span></div>
           <i class="ri-arrow-right-s-line export-arrow"></i>
         </button>
         <button class="export-option" (click)="exportGivingAs('excel')">
           <div class="export-icon excel"><i class="ri-file-excel-2-line"></i></div>
-          <div class="export-info">
-            <strong>Excel (.xlsx)</strong>
-            <span>Formatted workbook with summary sheet</span>
-          </div>
+          <div class="export-info"><strong>Excel (.xlsx)</strong><span>3 sheets: Individual, Bulk Records, Summary</span></div>
           <i class="ri-arrow-right-s-line export-arrow"></i>
         </button>
         <button class="export-option" (click)="exportGivingAs('pdf')">
           <div class="export-icon pdf"><i class="ri-file-pdf-2-line"></i></div>
-          <div class="export-info">
-            <strong>PDF</strong>
-            <span>Branded report ready to print or share</span>
-          </div>
+          <div class="export-info"><strong>PDF</strong><span>Branded report ready to print or share</span></div>
           <i class="ri-arrow-right-s-line export-arrow"></i>
         </button>
       </div>
@@ -401,34 +412,55 @@
     <div class="export-modal" (click)="$event.stopPropagation()">
       <div class="export-modal-header">
         <h3><i class="ri-hand-heart-line"></i> Export Pledges Report</h3>
-        <button class="modal-close-btn" (click)="showPledgesExportModal = false">
-          <i class="ri-close-line"></i>
-        </button>
+        <button class="modal-close-btn" (click)="showPledgesExportModal = false"><i class="ri-close-line"></i></button>
       </div>
-      <p class="export-subtitle">Choose format for all pledges with payment status</p>
+      <p class="export-subtitle">All pledges with payment status</p>
       <div class="export-options">
         <button class="export-option" (click)="exportPledgesAs('csv')">
           <div class="export-icon csv"><i class="ri-file-text-line"></i></div>
-          <div class="export-info">
-            <strong>CSV</strong><span>Plain text, works with any spreadsheet app</span>
-          </div>
+          <div class="export-info"><strong>CSV</strong><span>Plain text, works with any spreadsheet app</span></div>
           <i class="ri-arrow-right-s-line export-arrow"></i>
         </button>
         <button class="export-option" (click)="exportPledgesAs('excel')">
           <div class="export-icon excel"><i class="ri-file-excel-2-line"></i></div>
-          <div class="export-info">
-            <strong>Excel (.xlsx)</strong><span>Formatted workbook with summary sheet</span>
-          </div>
+          <div class="export-info"><strong>Excel (.xlsx)</strong><span>Formatted workbook with summary sheet</span></div>
           <i class="ri-arrow-right-s-line export-arrow"></i>
         </button>
         <button class="export-option" (click)="exportPledgesAs('pdf')">
           <div class="export-icon pdf"><i class="ri-file-pdf-2-line"></i></div>
-          <div class="export-info">
-            <strong>PDF</strong><span>Branded report ready to print or share</span>
-          </div>
+          <div class="export-info"><strong>PDF</strong><span>Branded report ready to print or share</span></div>
           <i class="ri-arrow-right-s-line export-arrow"></i>
         </button>
       </div>
     </div>
   </div>
+
+  <!-- ── Expenses Export Modal (NEW) ── -->
+  <div class="modal-overlay" *ngIf="showExpensesExportModal" (click)="showExpensesExportModal = false">
+    <div class="export-modal" (click)="$event.stopPropagation()">
+      <div class="export-modal-header">
+        <h3><i class="ri-receipt-line" style="color:#DC2626;"></i> Export Expenses Report</h3>
+        <button class="modal-close-btn" (click)="showExpensesExportModal = false"><i class="ri-close-line"></i></button>
+      </div>
+      <p class="export-subtitle">All category expense records</p>
+      <div class="export-options">
+        <button class="export-option" (click)="exportExpensesAs('csv')">
+          <div class="export-icon csv"><i class="ri-file-text-line"></i></div>
+          <div class="export-info"><strong>CSV</strong><span>Plain text, works with any spreadsheet app</span></div>
+          <i class="ri-arrow-right-s-line export-arrow"></i>
+        </button>
+        <button class="export-option" (click)="exportExpensesAs('excel')">
+          <div class="export-icon excel"><i class="ri-file-excel-2-line"></i></div>
+          <div class="export-info"><strong>Excel (.xlsx)</strong><span>Formatted workbook with summary sheet</span></div>
+          <i class="ri-arrow-right-s-line export-arrow"></i>
+        </button>
+        <button class="export-option" (click)="exportExpensesAs('pdf')">
+          <div class="export-icon pdf"><i class="ri-file-pdf-2-line"></i></div>
+          <div class="export-info"><strong>PDF</strong><span>Red-branded expense report</span></div>
+          <i class="ri-arrow-right-s-line export-arrow"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
 </div>

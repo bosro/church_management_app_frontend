@@ -1,7 +1,4 @@
 // src/app/features/finance/services/finance.service.ts
-// KEY FIX: exportPledgesReport() now handles visitor pledges safely
-// (was crashing with pledge.member.first_name when member was null for visitor pledges)
-// Everything else is unchanged from your original.
 import { Injectable } from '@angular/core';
 import { Observable, from, throwError } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
@@ -12,6 +9,9 @@ import {
   PaymentMethod,
   CategoryGiver,
   CategoryGivingStat,
+  CategorySummary,
+  BulkGivingRecord,
+  CategoryExpense,
 } from '../../../models/giving.model';
 import { SupabaseService } from '../../../core/services/supabase';
 import { AuthService } from '../../../core/services/auth';
@@ -23,6 +23,20 @@ export interface GivingStatistics {
   total_transactions: number;
   avg_giving: number;
   highest_giving: number;
+}
+
+export interface CombinedGivingStats {
+  individual_total: number;
+  individual_tithes: number;
+  individual_offerings: number;
+  individual_transactions: number;
+  individual_avg: number;
+  individual_highest: number;
+  bulk_total: number;
+  bulk_records_count: number;
+  combined_total: number;
+  total_expenses: number;
+  net_total: number;
 }
 
 export interface TopGiver {
@@ -38,9 +52,7 @@ export interface GivingTrend {
   transaction_count: number;
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Injectable({ providedIn: 'root' })
 export class FinanceService {
   constructor(
     private supabase: SupabaseService,
@@ -153,6 +165,51 @@ export class FinanceService {
     );
   }
 
+  // ==================== CATEGORY SUMMARY CARDS ====================
+
+  getCategorySummary(
+    fiscalYear?: number,
+    startDate?: string,
+    endDate?: string,
+  ): Observable<CategorySummary[]> {
+    const churchId = this.getChurchId();
+    return from(
+      this.supabase.client.rpc('get_category_summary', {
+        church_uuid: churchId,
+        p_fiscal_year: fiscalYear ?? null,
+        p_start_date: startDate ?? null,
+        p_end_date: endDate ?? null,
+      }),
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw new Error(error.message);
+        return (data || []) as CategorySummary[];
+      }),
+      catchError((err) => throwError(() => err)),
+    );
+  }
+
+  getCombinedGivingStats(
+    fiscalYear?: number,
+  ): Observable<CombinedGivingStats | null> {
+    const churchId = this.getChurchId();
+    const year = fiscalYear || new Date().getFullYear();
+    return from(
+      this.supabase.client.rpc('get_combined_giving_stats', {
+        church_uuid: churchId,
+        fiscal_year: year,
+      }),
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw new Error(error.message);
+        if (Array.isArray(data) && data.length > 0)
+          return data[0] as CombinedGivingStats;
+        return data as CombinedGivingStats;
+      }),
+      catchError((err) => throwError(() => err)),
+    );
+  }
+
   // ==================== GIVING TRANSACTIONS ====================
 
   getGivingTransactions(
@@ -214,8 +271,7 @@ export class FinanceService {
       this.supabase.client
         .from('giving_transactions')
         .select(
-          `*, category:giving_categories(id, name),
-           member:members(id, first_name, last_name, member_number, photo_url)`,
+          `*, category:giving_categories(id, name), member:members(id, first_name, last_name, member_number, photo_url)`,
         )
         .eq('id', transactionId)
         .eq('church_id', churchId)
@@ -313,6 +369,268 @@ export class FinanceService {
     );
   }
 
+  // ==================== BULK GIVING RECORDS ====================
+
+  getBulkGivingRecords(
+    page: number = 1,
+    pageSize: number = 20,
+    filters?: { categoryId?: string; startDate?: string; endDate?: string },
+  ): Observable<{ data: BulkGivingRecord[]; count: number }> {
+    return from(this.fetchBulkGivingRecords(page, pageSize, filters));
+  }
+
+  private async fetchBulkGivingRecords(
+    page: number,
+    pageSize: number,
+    filters?: any,
+  ): Promise<{ data: BulkGivingRecord[]; count: number }> {
+    const churchId = this.getChurchId();
+    const offset = (page - 1) * pageSize;
+
+    let query = this.supabase.client
+      .from('bulk_giving_records')
+      .select(`*, category:giving_categories(id, name)`, { count: 'exact' })
+      .eq('church_id', churchId);
+
+    if (filters?.categoryId)
+      query = query.eq('category_id', filters.categoryId);
+    if (filters?.startDate) query = query.gte('record_date', filters.startDate);
+    if (filters?.endDate) query = query.lte('record_date', filters.endDate);
+
+    const { data, error, count } = await query
+      .order('record_date', { ascending: false })
+      .order('created_at', { ascending: false })
+      .range(offset, offset + pageSize - 1);
+
+    if (error) throw new Error(error.message);
+    return {
+      data: (data || []).map((r: any) => ({
+        ...r,
+        category_name: r.category?.name,
+      })),
+      count: count || 0,
+    };
+  }
+
+  createBulkGivingRecord(recordData: {
+    category_id: string;
+    total_amount: number;
+    currency: string;
+    payment_method: string;
+    record_date: string;
+    attendee_count?: number;
+    description?: string;
+    notes?: string;
+  }): Observable<BulkGivingRecord> {
+    const churchId = this.getChurchId();
+    const currentUserId = this.getCurrentUserId();
+    const branchId = this.getBranchId();
+
+    return from(
+      this.supabase.client
+        .from('bulk_giving_records')
+        .insert({
+          church_id: churchId,
+          branch_id: branchId || null,
+          category_id: recordData.category_id,
+          total_amount: recordData.total_amount,
+          currency: recordData.currency,
+          payment_method: recordData.payment_method,
+          record_date: recordData.record_date,
+          attendee_count: recordData.attendee_count || null,
+          description: recordData.description || null,
+          notes: recordData.notes || null,
+          recorded_by: currentUserId,
+        })
+        .select()
+        .single(),
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw new Error(error.message);
+        return data as BulkGivingRecord;
+      }),
+      catchError((err) => throwError(() => err)),
+    );
+  }
+
+  updateBulkGivingRecord(
+    recordId: string,
+    recordData: Partial<BulkGivingRecord>,
+  ): Observable<BulkGivingRecord> {
+    const churchId = this.getChurchId();
+    return from(
+      this.supabase.client
+        .from('bulk_giving_records')
+        .update({
+          category_id: recordData.category_id,
+          total_amount: recordData.total_amount,
+          currency: recordData.currency,
+          payment_method: recordData.payment_method,
+          record_date: recordData.record_date,
+          attendee_count: recordData.attendee_count,
+          description: recordData.description,
+          notes: recordData.notes,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', recordId)
+        .eq('church_id', churchId)
+        .select()
+        .single(),
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw new Error(error.message);
+        return data as BulkGivingRecord;
+      }),
+      catchError((err) => throwError(() => err)),
+    );
+  }
+
+  deleteBulkGivingRecord(recordId: string): Observable<void> {
+    const churchId = this.getChurchId();
+    return from(
+      this.supabase.client
+        .from('bulk_giving_records')
+        .delete()
+        .eq('id', recordId)
+        .eq('church_id', churchId),
+    ).pipe(
+      map(({ error }) => {
+        if (error) throw new Error(error.message);
+      }),
+      catchError((err) => throwError(() => err)),
+    );
+  }
+
+  // ==================== CATEGORY EXPENSES ====================
+
+  getCategoryExpenses(
+    page: number = 1,
+    pageSize: number = 20,
+    filters?: { categoryId?: string; startDate?: string; endDate?: string },
+  ): Observable<{ data: CategoryExpense[]; count: number }> {
+    return from(this.fetchCategoryExpenses(page, pageSize, filters));
+  }
+
+  private async fetchCategoryExpenses(
+    page: number,
+    pageSize: number,
+    filters?: any,
+  ): Promise<{ data: CategoryExpense[]; count: number }> {
+    const churchId = this.getChurchId();
+    const offset = (page - 1) * pageSize;
+
+    let query = this.supabase.client
+      .from('category_expenses')
+      .select(`*, category:giving_categories(id, name)`, { count: 'exact' })
+      .eq('church_id', churchId);
+
+    if (filters?.categoryId)
+      query = query.eq('category_id', filters.categoryId);
+    if (filters?.startDate)
+      query = query.gte('expense_date', filters.startDate);
+    if (filters?.endDate) query = query.lte('expense_date', filters.endDate);
+
+    const { data, error, count } = await query
+      .order('expense_date', { ascending: false })
+      .order('created_at', { ascending: false })
+      .range(offset, offset + pageSize - 1);
+
+    if (error) throw new Error(error.message);
+    return {
+      data: (data || []).map((r: any) => ({
+        ...r,
+        category_name: r.category?.name,
+      })),
+      count: count || 0,
+    };
+  }
+
+  createCategoryExpense(expenseData: {
+    category_id: string;
+    amount: number;
+    currency: string;
+    expense_date: string;
+    title: string;
+    description?: string;
+    receipt_reference?: string;
+  }): Observable<CategoryExpense> {
+    const churchId = this.getChurchId();
+    const currentUserId = this.getCurrentUserId();
+    const branchId = this.getBranchId();
+
+    return from(
+      this.supabase.client
+        .from('category_expenses')
+        .insert({
+          church_id: churchId,
+          branch_id: branchId || null,
+          category_id: expenseData.category_id,
+          amount: expenseData.amount,
+          currency: expenseData.currency,
+          expense_date: expenseData.expense_date,
+          title: expenseData.title,
+          description: expenseData.description || null,
+          receipt_reference: expenseData.receipt_reference || null,
+          recorded_by: currentUserId,
+        })
+        .select()
+        .single(),
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw new Error(error.message);
+        return data as CategoryExpense;
+      }),
+      catchError((err) => throwError(() => err)),
+    );
+  }
+
+  updateCategoryExpense(
+    expenseId: string,
+    expenseData: Partial<CategoryExpense>,
+  ): Observable<CategoryExpense> {
+    const churchId = this.getChurchId();
+    return from(
+      this.supabase.client
+        .from('category_expenses')
+        .update({
+          category_id: expenseData.category_id,
+          amount: expenseData.amount,
+          currency: expenseData.currency,
+          expense_date: expenseData.expense_date,
+          title: expenseData.title,
+          description: expenseData.description,
+          receipt_reference: expenseData.receipt_reference,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', expenseId)
+        .eq('church_id', churchId)
+        .select()
+        .single(),
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw new Error(error.message);
+        return data as CategoryExpense;
+      }),
+      catchError((err) => throwError(() => err)),
+    );
+  }
+
+  deleteCategoryExpense(expenseId: string): Observable<void> {
+    const churchId = this.getChurchId();
+    return from(
+      this.supabase.client
+        .from('category_expenses')
+        .delete()
+        .eq('id', expenseId)
+        .eq('church_id', churchId),
+    ).pipe(
+      map(({ error }) => {
+        if (error) throw new Error(error.message);
+      }),
+      catchError((err) => throwError(() => err)),
+    );
+  }
+
   // ==================== PLEDGES ====================
 
   getPledges(
@@ -334,8 +652,7 @@ export class FinanceService {
     let query = this.supabase.client
       .from('pledges')
       .select(
-        `*, category:giving_categories(id, name),
-         member:members(id, first_name, last_name, member_number, photo_url)`,
+        `*, category:giving_categories(id, name), member:members(id, first_name, last_name, member_number, photo_url)`,
         { count: 'exact' },
       )
       .eq('church_id', churchId);
@@ -349,7 +666,6 @@ export class FinanceService {
     const { data, error, count } = await query
       .order('pledge_date', { ascending: false })
       .range(offset, offset + pageSize - 1);
-
     if (error) throw new Error(error.message);
     return { data: data || [], count: count || 0 };
   }
@@ -360,8 +676,7 @@ export class FinanceService {
       this.supabase.client
         .from('pledges')
         .select(
-          `*, category:giving_categories(id, name),
-           member:members(id, first_name, last_name, member_number, photo_url)`,
+          `*, category:giving_categories(id, name), member:members(id, first_name, last_name, member_number, photo_url)`,
         )
         .eq('id', pledgeId)
         .eq('church_id', churchId)
@@ -377,7 +692,6 @@ export class FinanceService {
 
   createPledge(pledgeData: any): Observable<Pledge> {
     const churchId = this.getChurchId();
-
     const insertData: any = {
       church_id: churchId,
       category_id: pledgeData.category_id || null,
@@ -389,7 +703,6 @@ export class FinanceService {
       is_fulfilled: false,
       notes: pledgeData.notes || null,
     };
-
     if (pledgeData.member_id) {
       insertData.member_id = pledgeData.member_id;
     } else {
@@ -398,7 +711,6 @@ export class FinanceService {
       insertData.visitor_phone = pledgeData.visitor_phone || null;
       insertData.visitor_email = pledgeData.visitor_email || null;
     }
-
     return from(
       this.supabase.client.from('pledges').insert(insertData).select().single(),
     ).pipe(
@@ -474,17 +786,7 @@ export class FinanceService {
     );
   }
 
-  recordPledgePayment(
-    pledgeId: string,
-    paymentData: {
-      amount: number;
-      currency: string;
-      payment_date: string;
-      payment_method: PaymentMethod;
-      transaction_reference?: string;
-      notes?: string;
-    },
-  ): Observable<any> {
+  recordPledgePayment(pledgeId: string, paymentData: any): Observable<any> {
     return from(this.processPledgePayment(pledgeId, paymentData));
   }
 
@@ -501,16 +803,14 @@ export class FinanceService {
       .eq('id', pledgeId)
       .eq('church_id', churchId)
       .single();
-
     if (fetchError) throw new Error(fetchError.message);
     if (!pledge) throw new Error('Pledge not found');
 
     const remainingBalance = pledge.pledge_amount - pledge.amount_paid;
-    if (paymentData.amount > remainingBalance) {
+    if (paymentData.amount > remainingBalance)
       throw new Error(
         `Payment amount cannot exceed remaining balance of ${remainingBalance}`,
       );
-    }
 
     const { data: payment, error: paymentError } = await this.supabase.client
       .from('pledge_payments')
@@ -527,7 +827,6 @@ export class FinanceService {
       })
       .select()
       .single();
-
     if (paymentError) throw new Error(paymentError.message);
 
     const newAmountPaid = pledge.amount_paid + paymentData.amount;
@@ -545,7 +844,6 @@ export class FinanceService {
         .eq('church_id', churchId)
         .select()
         .single();
-
     if (updateError) throw new Error(updateError.message);
     return { payment, pledge: updatedPledge };
   }
@@ -559,14 +857,12 @@ export class FinanceService {
     pledgeId: string,
   ): Promise<void> {
     const churchId = this.getChurchId();
-
     const { data: payment, error: fetchError } = await this.supabase.client
       .from('pledge_payments')
       .select('amount')
       .eq('id', paymentId)
       .eq('church_id', churchId)
       .single();
-
     if (fetchError) throw new Error(fetchError.message);
 
     const { error: deleteError } = await this.supabase.client
@@ -574,7 +870,6 @@ export class FinanceService {
       .delete()
       .eq('id', paymentId)
       .eq('church_id', churchId);
-
     if (deleteError) throw new Error(deleteError.message);
 
     const { data: pledge, error: pledgeError } = await this.supabase.client
@@ -583,12 +878,10 @@ export class FinanceService {
       .eq('id', pledgeId)
       .eq('church_id', churchId)
       .single();
-
     if (pledgeError) throw new Error(pledgeError.message);
 
     const newAmountPaid = Math.max(0, pledge.amount_paid - payment.amount);
     const isFulfilled = newAmountPaid >= pledge.pledge_amount;
-
     await this.supabase.client
       .from('pledges')
       .update({
@@ -608,9 +901,8 @@ export class FinanceService {
     const branchId = this.getBranchId();
     const year = fiscalYear || new Date().getFullYear();
 
-    if (isBranchPastor && branchId) {
+    if (isBranchPastor && branchId)
       return from(this.fetchBranchGivingStats(churchId, branchId, year));
-    }
 
     return from(
       this.supabase.client.rpc('get_giving_stats', {
@@ -639,11 +931,9 @@ export class FinanceService {
       .eq('church_id', churchId)
       .eq('branch_id', branchId)
       .eq('fiscal_year', year);
-
     const transactions = data || [];
     const amounts = transactions.map((t) => t.amount);
     const total = amounts.reduce((sum, a) => sum + a, 0);
-
     return {
       total_giving: total,
       total_tithes: 0,
@@ -734,26 +1024,23 @@ export class FinanceService {
           'Reference',
           'Notes',
         ];
-
-        const rows = data.map((transaction: any) => [
-          transaction.transaction_date,
-          transaction.member
-            ? `${transaction.member.first_name} ${transaction.member.last_name}`
+        const rows = data.map((t: any) => [
+          t.transaction_date,
+          t.member
+            ? `${t.member.first_name} ${t.member.last_name}`
             : 'Anonymous',
-          transaction.member?.member_number || 'N/A',
-          transaction.category?.name || 'General',
-          transaction.amount,
-          transaction.currency,
-          transaction.payment_method,
-          transaction.transaction_reference || '',
-          transaction.notes || '',
+          t.member?.member_number || 'N/A',
+          t.category?.name || 'General',
+          t.amount,
+          t.currency,
+          t.payment_method,
+          t.transaction_reference || '',
+          t.notes || '',
         ]);
-
         const csv = [
           headers.join(','),
           ...rows.map((row) => row.map((cell) => `"${cell}"`).join(',')),
         ].join('\n');
-
         return new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       }),
     );
@@ -773,14 +1060,11 @@ export class FinanceService {
           'Due Date',
           'Status',
         ];
-
         const rows = data.map((pledge: any) => {
-          // FIX: Handle both member pledges and visitor pledges safely
           const pledgerName = pledge.member
             ? `${pledge.member.first_name} ${pledge.member.last_name}`
             : `${pledge.visitor_first_name || ''} ${pledge.visitor_last_name || ''}`.trim() ||
               'Visitor';
-
           const balance = pledge.pledge_amount - pledge.amount_paid;
           return [
             pledgerName,
@@ -794,12 +1078,10 @@ export class FinanceService {
             pledge.is_fulfilled ? 'Fulfilled' : 'Pending',
           ];
         });
-
         const csv = [
           headers.join(','),
           ...rows.map((row) => row.map((cell) => `"${cell}"`).join(',')),
         ].join('\n');
-
         return new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       }),
     );
@@ -822,8 +1104,6 @@ export class FinanceService {
       catchError((err) => throwError(() => err)),
     );
   }
-
-  // ==================== CATEGORY BREAKDOWN ====================
 
   getCategoryGivingStats(
     fiscalYear?: number,

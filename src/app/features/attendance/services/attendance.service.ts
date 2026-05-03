@@ -17,6 +17,7 @@ import {
   BulkCheckInResult,
   VisitorCheckInData,
   CheckInMethod,
+  RecurrenceFrequency,
 } from '../../../models/attendance.model';
 import { UserRolesService } from '../../user-roles/services/user-roles';
 
@@ -126,7 +127,8 @@ export class AttendanceService {
     notes?: string;
     is_recurring?: boolean;
     recurrence_frequency?: string;
-    recurrence_day_of_week?: number;
+    recurrence_days_of_week?: number[]; // ← array
+    recurrence_end_date?: string | null; // ← new
   }): Observable<AttendanceEvent> {
     const churchId = this.authService.getChurchId();
     const userId = this.authService.getUserId();
@@ -150,8 +152,11 @@ export class AttendanceService {
         recurrence_frequency: eventData.is_recurring
           ? eventData.recurrence_frequency || null
           : null,
-        recurrence_day_of_week: eventData.is_recurring
-          ? (eventData.recurrence_day_of_week ?? null)
+        recurrence_days_of_week: eventData.is_recurring
+          ? eventData.recurrence_days_of_week || null
+          : null,
+        recurrence_end_date: eventData.is_recurring
+          ? eventData.recurrence_end_date || null
           : null,
         recurrence_group_id: groupId,
         created_by: userId,
@@ -167,7 +172,7 @@ export class AttendanceService {
     );
   }
 
-  // ── Spawn next occurrence of a recurring event ─────────────────
+  // ── Spawn next occurrence ──────────────────────────────────────
   spawnNextOccurrence(event: AttendanceEvent): Observable<AttendanceEvent> {
     if (!event.is_recurring || !event.recurrence_frequency) {
       return throwError(() => new Error('Not a recurring event'));
@@ -175,9 +180,14 @@ export class AttendanceService {
 
     const nextDate = this.calculateNextOccurrence(
       event.event_date,
-      event.recurrence_frequency as any,
-      event.recurrence_day_of_week,
+      event.recurrence_frequency,
+      event.recurrence_days_of_week,
     );
+
+    // Respect end date
+    if (event.recurrence_end_date && nextDate > event.recurrence_end_date) {
+      return throwError(() => new Error('Recurrence has reached its end date'));
+    }
 
     const churchId = this.authService.getChurchId();
     const userId = this.authService.getUserId();
@@ -197,7 +207,8 @@ export class AttendanceService {
         total_absent: 0,
         is_recurring: true,
         recurrence_frequency: event.recurrence_frequency,
-        recurrence_day_of_week: event.recurrence_day_of_week,
+        recurrence_days_of_week: event.recurrence_days_of_week || null,
+        recurrence_end_date: event.recurrence_end_date || null,
         recurrence_group_id: event.recurrence_group_id,
         parent_event_id: event.id,
         created_by: userId,
@@ -214,13 +225,25 @@ export class AttendanceService {
   }
 
   // Check if a next occurrence already exists for this recurring event
+  // ── Check if next occurrence already exists ────────────────────
   hasNextOccurrence(event: AttendanceEvent): Observable<boolean> {
     if (!event.recurrence_group_id) return from(Promise.resolve(false));
 
+    // If we're past the end date, there can be no next occurrence
+    if (event.recurrence_end_date) {
+      const nextDate = this.calculateNextOccurrence(
+        event.event_date,
+        event.recurrence_frequency!,
+        event.recurrence_days_of_week,
+      );
+      if (nextDate > event.recurrence_end_date)
+        return from(Promise.resolve(true));
+    }
+
     const nextDate = this.calculateNextOccurrence(
       event.event_date,
-      event.recurrence_frequency as any,
-      event.recurrence_day_of_week,
+      event.recurrence_frequency!,
+      event.recurrence_days_of_week,
     );
 
     return from(
@@ -235,21 +258,52 @@ export class AttendanceService {
     );
   }
 
+  // ── Calculate next occurrence date ────────────────────────────
   private calculateNextOccurrence(
     fromDate: string,
-    frequency: 'weekly' | 'biweekly' | 'monthly',
-    dayOfWeek?: number,
+    frequency: RecurrenceFrequency,
+    daysOfWeek?: number[],
   ): string {
     const date = new Date(fromDate);
 
-    if (frequency === 'weekly') {
-      date.setDate(date.getDate() + 7);
-    } else if (frequency === 'biweekly') {
-      date.setDate(date.getDate() + 14);
-    } else if (frequency === 'monthly') {
-      date.setMonth(date.getMonth() + 1);
+    if (frequency === 'daily') {
+      date.setDate(date.getDate() + 1);
+      return date.toISOString().split('T')[0];
     }
 
+    if (frequency === 'weekly' || frequency === 'biweekly') {
+      const increment = frequency === 'weekly' ? 7 : 14;
+
+      if (daysOfWeek && daysOfWeek.length > 1) {
+        // Multi-day: find the next scheduled day after fromDate
+        const sortedDays = [...daysOfWeek].sort((a, b) => a - b);
+        const currentDay = date.getDay();
+
+        // Find next day in the same week
+        const nextDayThisWeek = sortedDays.find((d) => d > currentDay);
+
+        if (nextDayThisWeek !== undefined) {
+          date.setDate(date.getDate() + (nextDayThisWeek - currentDay));
+        } else {
+          // Wrap to next week's first scheduled day
+          const firstDay = sortedDays[0];
+          const daysUntilNext = 7 - currentDay + firstDay;
+          date.setDate(date.getDate() + daysUntilNext);
+        }
+      } else {
+        date.setDate(date.getDate() + increment);
+      }
+
+      return date.toISOString().split('T')[0];
+    }
+
+    if (frequency === 'monthly') {
+      date.setMonth(date.getMonth() + 1);
+      return date.toISOString().split('T')[0];
+    }
+
+    // Fallback
+    date.setDate(date.getDate() + 7);
     return date.toISOString().split('T')[0];
   }
 

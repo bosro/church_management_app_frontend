@@ -1,0 +1,209 @@
+<!-- src/app/features/finance/components/payment-links/payment-links.component.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+  <div class="dashboard-content">
+    <app-header></app-header>
+    <div class="dashboard-body">
+      <div class="links-container">
+
+        <button class="btn-back" (click)="goBack()"><i class="ri-arrow-left-line"></i><span>Back</span></button>
+
+        <div class="page-header">
+          <div class="header-left">
+            <h1>Payment Links</h1>
+            <p class="subtitle">Create shareable links for harvests, events, and fundraising — anyone can pay, no account needed</p>
+          </div>
+          <button class="btn-primary" (click)="openCreateModal()" *ngIf="canManage">
+            <i class="ri-link-m"></i><span>Create Link</span>
+          </button>
+        </div>
+
+        <div *ngIf="successMessage" class="success-alert">
+          <i class="ri-checkbox-circle-line"></i><span>{{ successMessage }}</span>
+        </div>
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i><span>{{ errorMessage }}</span>
+        </div>
+
+        <!-- Info banner -->
+        <div class="info-banner">
+          <i class="ri-information-line"></i>
+          <div>
+            <strong>How payment links work</strong>
+            <p>Each link opens a Paystack-hosted payment page. Share it via WhatsApp, email, or SMS. Anyone — members or non-members — can pay. All payments are automatically recorded under the selected category.</p>
+          </div>
+        </div>
+
+        <!-- Loading -->
+        <div *ngIf="loading" class="loading-container">
+          <app-loading-spinner message="Loading payment links..."></app-loading-spinner>
+        </div>
+
+        <!-- Links grid -->
+        <div *ngIf="!loading" class="links-grid">
+          <div *ngFor="let link of paymentLinks" class="link-card" [class.link-inactive]="!link.is_active" [class.link-expired]="isExpired(link)">
+
+            <!-- Status badge -->
+            <div class="link-status-row">
+              <span class="status-badge" [class.active]="link.is_active && !isExpired(link)" [class.inactive]="!link.is_active" [class.expired]="isExpired(link)">
+                <i class="ri-circle-fill"></i>
+                {{ isExpired(link) ? 'Expired' : link.is_active ? 'Active' : 'Inactive' }}
+              </span>
+              <span class="category-pill">{{ link.category_name || '—' }}</span>
+            </div>
+
+            <!-- Name + description -->
+            <h3 class="link-name">{{ link.name }}</h3>
+            <p class="link-desc" *ngIf="link.description">{{ link.description }}</p>
+
+            <!-- Amount -->
+            <div class="link-amount">
+              <span *ngIf="link.fixed_amount">
+                <i class="ri-lock-line"></i> Fixed: {{ formatCurrency(link.fixed_amount, link.currency) }}
+              </span>
+              <span *ngIf="!link.fixed_amount" class="open-amount">
+                <i class="ri-scales-line"></i> Open amount — payer decides
+              </span>
+            </div>
+
+            <!-- Expiry -->
+            <div class="link-expiry" *ngIf="link.expiry_date">
+              <i class="ri-calendar-close-line"></i>
+              Expires {{ link.expiry_date | date:'MMM d, y' }}
+            </div>
+
+            <!-- URL display -->
+            <div class="link-url">
+              <i class="ri-links-line"></i>
+              <span>{{ link.payment_url }}</span>
+            </div>
+
+            <!-- Actions -->
+            <div class="link-actions">
+              <button class="btn-action btn-copy" (click)="copyLink(link)" [class.copied]="copiedLinkId === link.id">
+                <i [class]="copiedLinkId === link.id ? 'ri-check-line' : 'ri-file-copy-line'"></i>
+                {{ copiedLinkId === link.id ? 'Copied!' : 'Copy link' }}
+              </button>
+
+              <button class="btn-action btn-share" (click)="shareLink(link)">
+                <i class="ri-share-line"></i> Share
+              </button>
+
+              <a class="btn-action btn-open" [href]="link.payment_url" target="_blank" rel="noopener">
+                <i class="ri-external-link-line"></i> Open
+              </a>
+
+              <button class="btn-action btn-toggle" (click)="toggleActive(link)" *ngIf="canManage">
+                <i [class]="link.is_active ? 'ri-pause-line' : 'ri-play-line'"></i>
+                {{ link.is_active ? 'Deactivate' : 'Activate' }}
+              </button>
+
+              <button class="btn-action btn-delete" (click)="deleteLink(link)" *ngIf="canManage">
+                <i class="ri-delete-bin-line"></i>
+              </button>
+            </div>
+          </div>
+
+          <div *ngIf="paymentLinks.length === 0" class="empty-state">
+            <div class="empty-icon"><i class="ri-link-m"></i></div>
+            <h3>No payment links yet</h3>
+            <p>Create a link to start collecting payments for a harvest, event, or building fund.</p>
+            <button class="btn-primary" (click)="openCreateModal()" *ngIf="canManage">
+              <i class="ri-add-line"></i> Create your first link
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Create Payment Link Modal ── -->
+<div *ngIf="showCreateModal" class="modal-overlay" (click)="closeCreateModal()">
+  <div class="create-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3><i class="ri-link-m"></i> Create Payment Link</h3>
+      <button class="modal-close-btn" (click)="closeCreateModal()"><i class="ri-close-line"></i></button>
+    </div>
+
+    <form [formGroup]="createForm" (ngSubmit)="createLink()">
+      <div class="modal-body">
+
+        <div class="form-group">
+          <label>Link Title *</label>
+          <input type="text" formControlName="name" placeholder="e.g. 2025 Harvest Sunday Offering"
+            [class.error]="createForm.get('name')?.invalid && createForm.get('name')?.touched" />
+          <span class="error-message" *ngIf="createForm.get('name')?.invalid && createForm.get('name')?.touched">
+            {{ getErrorMsg('name') }}
+          </span>
+        </div>
+
+        <div class="form-group">
+          <label>Description (optional)</label>
+          <textarea formControlName="description" rows="2"
+            placeholder="Briefly describe what this payment is for..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Category *</label>
+          <select formControlName="category_id"
+            [class.error]="createForm.get('category_id')?.invalid && createForm.get('category_id')?.touched">
+            <option value="">Select category</option>
+            <option *ngFor="let cat of categories" [value]="cat.id">{{ cat.name }}</option>
+          </select>
+          <span class="error-message" *ngIf="createForm.get('category_id')?.invalid && createForm.get('category_id')?.touched">
+            {{ getErrorMsg('category_id') }}
+          </span>
+        </div>
+
+        <!-- Amount mode -->
+        <div class="form-group">
+          <label>Amount</label>
+          <div class="amount-mode-toggle">
+            <label class="radio-option" [class.selected]="createForm.get('allow_any_amount')?.value === true">
+              <input type="radio" formControlName="allow_any_amount" [value]="true" />
+              <div class="radio-content">
+                <i class="ri-scales-line"></i>
+                <span>Open amount</span>
+                <small>Payer enters their own amount</small>
+              </div>
+            </label>
+            <label class="radio-option" [class.selected]="createForm.get('allow_any_amount')?.value === false">
+              <input type="radio" formControlName="allow_any_amount" [value]="false" />
+              <div class="radio-content">
+                <i class="ri-lock-line"></i>
+                <span>Fixed amount</span>
+                <small>Set a specific amount to collect</small>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group" *ngIf="!allowAnyAmount">
+          <label>Fixed Amount (GHS) *</label>
+          <input type="number" formControlName="amount" min="1" step="0.01" placeholder="e.g. 100"
+            [class.error]="createForm.get('amount')?.invalid && createForm.get('amount')?.touched" />
+          <span class="error-message" *ngIf="createForm.get('amount')?.invalid && createForm.get('amount')?.touched">
+            {{ getErrorMsg('amount') }}
+          </span>
+        </div>
+
+        <div class="form-group">
+          <label>Expiry Date (optional)</label>
+          <input type="date" formControlName="expiry_date" />
+          <small class="field-hint">Leave empty for no expiry</small>
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" (click)="closeCreateModal()" [disabled]="creating">Cancel</button>
+        <button type="submit" class="btn-primary" [disabled]="creating || createForm.invalid">
+          <span *ngIf="!creating"><i class="ri-link-m"></i> Create Link</span>
+          <span *ngIf="creating"><i class="ri-loader-4-line spin"></i> Creating...</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

@@ -202,3 +202,5 @@ export class QrCheckin implements OnInit, OnDestroy {
 
 
 
+
+

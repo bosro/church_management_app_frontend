@@ -1,4 +1,5 @@
 // src/app/models/attendance.model.ts
+
 export type AttendanceEventType =
   | 'sunday_service'
   | 'midweek_service'
@@ -8,7 +9,7 @@ export type AttendanceEventType =
 
 export type CheckInMethod = 'manual' | 'qr_code' | 'bulk' | 'self_service';
 export type AttendanceStatus = 'present' | 'absent';
-export type RecurrenceFrequency = 'weekly' | 'biweekly' | 'monthly';
+export type RecurrenceFrequency = 'daily' | 'weekly' | 'biweekly' | 'monthly';
 
 export interface AttendanceEvent {
   id: string;
@@ -27,7 +28,8 @@ export interface AttendanceEvent {
   // Recurrence
   is_recurring: boolean;
   recurrence_frequency?: RecurrenceFrequency;
-  recurrence_day_of_week?: number;
+  recurrence_days_of_week?: number[]; // ← array now (replaces recurrence_day_of_week)
+  recurrence_end_date?: string; // ← new: YYYY-MM-DD, null = never ends
   parent_event_id?: string;
   recurrence_group_id?: string;
   created_by?: string;
@@ -47,9 +49,7 @@ export interface AttendanceRecord {
   absence_reason?: string;
   notes?: string;
   cell_group_id?: string;
-  checked_in_by_profile?: {
-    full_name?: string
-  };
+  checked_in_by_profile?: { full_name?: string };
   member?: {
     id: string;
     first_name: string;

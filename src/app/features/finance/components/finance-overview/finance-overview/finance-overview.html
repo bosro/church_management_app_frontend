@@ -1,12 +1,11 @@
 <!-- src/app/features/finance/components/finance-overview/finance-overview.component.html -->
 <div class="dashboard-layout">
   <app-sidebar></app-sidebar>
-
   <div class="dashboard-content">
     <app-header></app-header>
-
     <div class="dashboard-body">
       <div class="finance-container">
+
         <!-- Page Header -->
         <div class="page-header">
           <div class="header-left">
@@ -21,45 +20,44 @@
               <i class="ri-arrow-down-s-line"></i>
             </div>
             <button class="btn-secondary" (click)="manageCategories()">
-              <i class="ri-settings-3-line"></i>
-              <span>Categories</span>
+              <i class="ri-settings-3-line"></i><span>Categories</span>
             </button>
             <button class="btn-secondary" (click)="viewReports()"
               *ngIf="permissionService.isAdmin || permissionService.finance.reports">
-              <i class="ri-file-chart-line"></i>
-              <span>Reports</span>
+              <i class="ri-file-chart-line"></i><span>Reports</span>
             </button>
             <button class="btn-primary" (click)="recordGiving()">
-              <i class="ri-add-line"></i>
-              <span>Record Giving</span>
+              <i class="ri-add-line"></i><span>Record Giving</span>
             </button>
           </div>
         </div>
 
         <!-- Error Message -->
         <div *ngIf="errorMessage" class="error-alert">
-          <i class="ri-error-warning-line"></i>
-          <span>{{ errorMessage }}</span>
+          <i class="ri-error-warning-line"></i><span>{{ errorMessage }}</span>
         </div>
-
 
         <!-- Loading State -->
         <div *ngIf="loading" class="loading-container">
           <app-loading-spinner message="Loading financial data..."></app-loading-spinner>
         </div>
 
-        <!-- Dashboard Content -->
         <div *ngIf="!loading" class="finance-grid">
-          <!-- Statistics Cards -->
+
+          <!-- ── Top Stats ────────────────────────────────────── -->
+          <!-- These numbers include both individual records AND bulk giving records.
+               Tithes/Offerings are individual-only since bulk records aren't broken down that way. -->
           <div class="stats-section">
-            <div class="stat-card">
+            <div class="stat-card stat-card-primary">
               <div class="stat-icon" style="background: #D1FAE5; color: #059669;">
                 <i class="ri-money-dollar-circle-line"></i>
               </div>
               <div class="stat-info">
                 <p class="stat-label">Total Giving</p>
-                <h3 class="stat-value">{{ formatCurrency(statistics?.total_giving || 0) }}</h3>
-                <p class="stat-meta">{{ selectedYear }}</p>
+                <h3 class="stat-value">{{ formatCurrency(totalGiving) }}</h3>
+                <p class="stat-meta">
+                  Individual + Bulk · {{ selectedYear }}
+                </p>
               </div>
             </div>
 
@@ -69,8 +67,8 @@
               </div>
               <div class="stat-info">
                 <p class="stat-label">Tithes</p>
-                <h3 class="stat-value">{{ formatCurrency(statistics?.total_tithes || 0) }}</h3>
-                <p class="stat-meta">{{ selectedYear }}</p>
+                <h3 class="stat-value">{{ formatCurrency(totalTithes) }}</h3>
+                <p class="stat-meta">Individual records · {{ selectedYear }}</p>
               </div>
             </div>
 
@@ -80,8 +78,8 @@
               </div>
               <div class="stat-info">
                 <p class="stat-label">Offerings</p>
-                <h3 class="stat-value">{{ formatCurrency(statistics?.total_offerings || 0) }}</h3>
-                <p class="stat-meta">{{ selectedYear }}</p>
+                <h3 class="stat-value">{{ formatCurrency(totalOfferings) }}</h3>
+                <p class="stat-meta">Individual records · {{ selectedYear }}</p>
               </div>
             </div>
 
@@ -90,31 +88,119 @@
                 <i class="ri-exchange-dollar-line"></i>
               </div>
               <div class="stat-info">
-                <p class="stat-label">Transactions</p>
-                <h3 class="stat-value">{{ statistics?.total_transactions || 0 }}</h3>
-                <p class="stat-meta">{{ selectedYear }}</p>
+                <p class="stat-label">Records</p>
+                <h3 class="stat-value">{{ totalTransactions }}</h3>
+                <p class="stat-meta">Individual + Bulk · {{ selectedYear }}</p>
               </div>
             </div>
           </div>
 
+          <!-- Bulk giving + Expenses summary strip — only shown when relevant -->
+          <div class="summary-strip" *ngIf="hasBulkOrExpenses">
+            <div class="strip-item" *ngIf="bulkTotal > 0">
+              <i class="ri-group-line"></i>
+              <span class="strip-label">Bulk Giving Totals</span>
+              <span class="strip-value">{{ formatCurrency(bulkTotal) }}</span>
+            </div>
+            <div class="strip-divider" *ngIf="bulkTotal > 0 && totalExpenses > 0"></div>
+            <div class="strip-item strip-expense" *ngIf="totalExpenses > 0">
+              <i class="ri-receipt-line"></i>
+              <span class="strip-label">Category Expenses</span>
+              <span class="strip-value expense">{{ formatCurrency(totalExpenses) }}</span>
+            </div>
+            <div class="strip-divider" *ngIf="totalExpenses > 0"></div>
+            <div class="strip-item strip-net" *ngIf="totalExpenses > 0">
+              <i class="ri-scales-line"></i>
+              <span class="strip-label">Net Balance</span>
+              <span class="strip-value net">{{ formatCurrency(netTotal) }}</span>
+            </div>
+          </div>
+
+          <!-- ── Category Breakdown ─────────────────────────── -->
+          <div class="section-header">
+            <h2>Category Breakdown</h2>
+            <p class="section-sub">Click a card to view its transactions</p>
+          </div>
+
+          <div *ngIf="loadingCategories" class="loading-container" style="padding: 2rem 0;">
+            <app-loading-spinner message="Loading categories..."></app-loading-spinner>
+          </div>
+
+          <div *ngIf="!loadingCategories" class="category-cards-row">
+            <div *ngFor="let summary of categorySummaries; let i = index" class="cat-card"
+              (click)="viewCategoryTransactions(summary.category_id)" role="button" tabindex="0">
+
+              <div class="cat-card-top">
+                <div class="cat-icon" [style.background]="getCategoryIconBg(i)" [style.color]="getCategoryIconColor(i)">
+                  <i [class]="getCategoryIcon(i)"></i>
+                </div>
+                <div class="cat-name">{{ summary.category_name }}</div>
+              </div>
+
+              <!-- Combined giving total (individual + bulk) -->
+              <div class="cat-amount">{{ formatCurrency(getCategoryTotal(summary)) }}</div>
+
+              <div class="cat-meta-row">
+                <span *ngIf="summary.transaction_count > 0">
+                  <i class="ri-user-line"></i> {{ summary.transaction_count }} individual
+                </span>
+                <span *ngIf="summary.bulk_record_count > 0" class="cat-bulk-badge">
+                  <i class="ri-group-line"></i> {{ summary.bulk_record_count }} bulk
+                </span>
+              </div>
+
+              <!-- Expenses deduction — shown only when this category has expenses -->
+              <div class="cat-expense-row" *ngIf="summary.total_expenses > 0">
+                <span class="cat-expense-label">
+                  <i class="ri-arrow-up-line"></i> Spent: {{ formatCurrency(summary.total_expenses) }}
+                </span>
+                <span class="cat-net-label">Net: {{ formatCurrency(summary.net_balance) }}</span>
+              </div>
+
+              <div class="cat-cta">
+                <span>View transactions</span>
+                <i class="ri-arrow-right-line"></i>
+              </div>
+            </div>
+
+            <!-- Expenses shortcut card -->
+            <div class="cat-card cat-card-expenses" (click)="viewExpenses()" role="button" tabindex="0"
+              *ngIf="permissionService.isAdmin || permissionService.finance.view">
+              <div class="cat-card-top">
+                <div class="cat-icon" style="background: #FEE2E2; color: #DC2626;">
+                  <i class="ri-receipt-line"></i>
+                </div>
+                <div class="cat-name">All Expenses</div>
+              </div>
+              <p class="cat-expenses-hint">Track how category funds have been used</p>
+              <div class="cat-cta expenses-cta">
+                <span>View expenses</span>
+                <i class="ri-arrow-right-line"></i>
+              </div>
+            </div>
+
+            <div *ngIf="categorySummaries.length === 0" class="cat-empty">
+              <i class="ri-folder-open-line"></i>
+              <p>No categories with data yet</p>
+            </div>
+          </div>
+
+          <!-- Chart -->
           <div class="chart-section">
             <app-finance-revenue-chart [chartData]="chartData"></app-finance-revenue-chart>
           </div>
 
           <!-- Main Content Grid -->
           <div class="content-grid">
-            <!-- Left Column -->
+            <!-- Left: Recent Transactions -->
             <div class="left-column">
-              <!-- Recent Transactions -->
               <div class="content-card">
                 <div class="card-header">
                   <h3>Recent Transactions</h3>
                   <button class="btn-text" (click)="viewAllGiving()">
-                    View All
-                    <i class="ri-arrow-right-line"></i>
+                    View All <i class="ri-arrow-right-line"></i>
                   </button>
                 </div>
-
                 <div class="transactions-list">
                   <div *ngFor="let transaction of recentTransactions" class="transaction-item">
                     <div class="transaction-info">
@@ -139,20 +225,16 @@
                       <p class="payment-method">{{ transaction.payment_method }}</p>
                     </div>
                   </div>
-
                   <div *ngIf="recentTransactions.length === 0" class="empty-state-small">
                     <i class="ri-money-dollar-circle-line"></i>
                     <p>No transactions recorded yet</p>
                   </div>
                 </div>
               </div>
-
-
             </div>
 
-            <!-- Right Column -->
+            <!-- Right: Quick Actions + Top Givers -->
             <div class="right-column">
-              <!-- Quick Actions -->
               <div class="content-card">
                 <h3>Quick Actions</h3>
                 <div class="quick-actions-grid">
@@ -161,31 +243,40 @@
                     <i class="ri-money-dollar-circle-line"></i>
                     <span>Record Giving</span>
                   </button>
-
-                  <!-- Pledges — view permission -->
                   <button class="action-btn action-blue" (click)="viewPledges()"
                     *ngIf="permissionService.isAdmin || permissionService.finance.view">
                     <i class="ri-hand-heart-line"></i>
                     <span>Pledges</span>
                   </button>
-
-                  <!-- Reports — reports permission -->
                   <button class="action-btn action-purple" (click)="viewReports()"
                     *ngIf="permissionService.isAdmin || permissionService.finance.reports">
                     <i class="ri-file-chart-line"></i>
                     <span>Reports</span>
                   </button>
-
-                  <!-- Categories — manage permission -->
                   <button class="action-btn action-orange" (click)="manageCategories()"
                     *ngIf="permissionService.isAdmin || permissionService.finance.manage">
                     <i class="ri-settings-3-line"></i>
                     <span>Categories</span>
                   </button>
+                  <button class="action-btn action-red" (click)="viewExpenses()"
+                    *ngIf="permissionService.isAdmin || permissionService.finance.view">
+                    <i class="ri-receipt-line"></i>
+                    <span>Expenses</span>
+                  </button>
+
+                  <button class="action-btn action-indigo" (click)="viewPaymentLinks()"
+                    *ngIf="permissionService.isAdmin || permissionService.finance.manage">
+                    <i class="ri-link-m"></i>
+                    <span>Payment Links</span>
+                  </button>
+                  <button class="action-btn action-teal" (click)="viewAllGiving()"
+                    *ngIf="permissionService.isAdmin || permissionService.finance.view">
+                    <i class="ri-list-check"></i>
+                    <span>All Giving</span>
+                  </button>
                 </div>
               </div>
 
-              <!-- Top Givers -->
               <div class="content-card">
                 <h3>Top Givers</h3>
                 <div class="top-givers-list">
@@ -196,7 +287,6 @@
                       <p class="giver-amount">{{ formatCurrency(giver.total_amount) }}</p>
                     </div>
                   </div>
-
                   <div *ngIf="topGivers.length === 0" class="empty-state-small">
                     <i class="ri-user-star-line"></i>
                     <p>No data available</p>
@@ -205,6 +295,7 @@
               </div>
             </div>
           </div>
+
         </div>
       </div>
     </div>

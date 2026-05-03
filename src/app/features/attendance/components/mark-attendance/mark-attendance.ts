@@ -506,8 +506,15 @@ export class MarkAttendance implements OnInit, OnDestroy {
         },
         error: (error) => {
           this.spawningNext = false;
-          this.errorMessage =
-            error.message || 'Failed to create next occurrence';
+          // Friendly message when series has ended
+          if (error.message?.includes('end date')) {
+            this.successMessage =
+              'This recurring series has reached its end date.';
+            this.hasNextOccurrence = true; // hide button
+          } else {
+            this.errorMessage =
+              error.message || 'Failed to create next occurrence';
+          }
         },
       });
   }

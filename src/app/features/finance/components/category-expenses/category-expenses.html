@@ -1,0 +1,191 @@
+<!-- src/app/features/finance/components/category-expenses/category-expenses.component.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+  <div class="dashboard-content">
+    <app-header></app-header>
+    <div class="dashboard-body">
+      <div class="expenses-container">
+
+        <button class="btn-back" (click)="goBack()"><i class="ri-arrow-left-line"></i><span>Back</span></button>
+
+        <div class="page-header">
+          <div class="header-left">
+            <h1>Category Expenses</h1>
+            <p class="subtitle">Track how category funds have been used
+              <span *ngIf="preselectedCategoryName"> — {{ preselectedCategoryName }}</span>
+            </p>
+          </div>
+          <button class="btn-primary" (click)="openCreateModal()" *ngIf="canManageFinance">
+            <i class="ri-add-line"></i><span>Record Expense</span>
+          </button>
+        </div>
+
+        <div *ngIf="successMessage" class="success-alert"><i class="ri-checkbox-circle-line"></i><span>{{ successMessage
+            }}</span></div>
+        <div *ngIf="errorMessage" class="error-alert"><i class="ri-error-warning-line"></i><span>{{ errorMessage
+            }}</span></div>
+
+        <!-- Filters -->
+        <div class="filters-card">
+          <div class="filters-row">
+            <div class="filter-group">
+              <label>Start Date</label>
+              <input type="date" [formControl]="startDateControl" class="filter-input" />
+            </div>
+            <div class="filter-group">
+              <label>End Date</label>
+              <input type="date" [formControl]="endDateControl" class="filter-input" />
+            </div>
+            <div class="filter-group">
+              <label>Category</label>
+              <select [formControl]="categoryFilterControl" class="filter-select">
+                <option value="">All Categories</option>
+                <option *ngFor="let cat of categories" [value]="cat.id">{{ cat.name }}</option>
+              </select>
+            </div>
+            <div class="filter-actions">
+              <button class="btn-clear-filters" (click)="clearFilters()"><i class="ri-close-circle-line"></i>
+                Clear</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Loading -->
+        <div *ngIf="loading" class="loading-container">
+          <app-loading-spinner message="Loading expenses..."></app-loading-spinner>
+        </div>
+
+        <!-- Table -->
+        <div *ngIf="!loading" class="expenses-card">
+          <div class="table-wrapper">
+            <table class="expenses-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Title</th>
+                  <th>Category</th>
+                  <th>Amount</th>
+                  <th>Receipt Ref</th>
+                  <th *ngIf="canManageFinance">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let expense of expenses">
+                  <td class="date-cell">{{ expense.expense_date | date:'MMM d, y' }}</td>
+                  <td>
+                    <div class="title-cell">
+                      <span class="expense-title">{{ expense.title }}</span>
+                      <span class="expense-desc" *ngIf="expense.description">{{ expense.description }}</span>
+                    </div>
+                  </td>
+                  <td><span class="category-badge">{{ expense.category_name || '—' }}</span></td>
+                  <td><span class="expense-amount">{{ formatCurrency(expense.amount, expense.currency) }}</span></td>
+                  <td><span class="reference">{{ expense.receipt_reference || '—' }}</span></td>
+                  <td *ngIf="canManageFinance">
+                    <div class="action-btns">
+                      <button class="btn-action btn-edit" (click)="openEditModal(expense, $event)" title="Edit"><i
+                          class="ri-edit-line"></i></button>
+                      <button class="btn-action btn-delete" (click)="deleteExpense(expense.id, $event)"
+                        title="Delete"><i class="ri-delete-bin-line"></i></button>
+                    </div>
+                  </td>
+                </tr>
+                <tr *ngIf="expenses.length === 0">
+                  <td [attr.colspan]="canManageFinance ? 6 : 5">
+                    <div class="empty-state-table">
+                      <i class="ri-receipt-line"></i>
+                      <p>No expenses recorded yet</p>
+                      <button class="btn-primary-sm" (click)="openCreateModal()" *ngIf="canManageFinance"><i
+                          class="ri-add-line"></i> Record First Expense</button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination" *ngIf="totalPages > 1 && !loading">
+          <button class="pagination-btn" [disabled]="currentPage === 1" (click)="previousPage()"><i
+              class="ri-arrow-left-s-line"></i> Previous</button>
+          <span class="page-info">Page {{ currentPage }} of {{ totalPages }}</span>
+          <button class="pagination-btn" [disabled]="currentPage === totalPages" (click)="nextPage()">Next <i
+              class="ri-arrow-right-s-line"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Expense Modal -->
+<div *ngIf="showModal" class="modal-overlay" (click)="closeModal()">
+  <div class="expense-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3><i class="ri-receipt-line"></i> {{ editingExpense ? 'Edit Expense' : 'Record Expense' }}</h3>
+      <button class="modal-close-btn" (click)="closeModal()"><i class="ri-close-line"></i></button>
+    </div>
+    <form [formGroup]="expenseForm" (ngSubmit)="saveExpense()">
+      <div class="modal-body">
+        <div class="modal-form-grid">
+          <div class="form-group full-width">
+            <label>Title *</label>
+            <input type="text" formControlName="title" placeholder="e.g. Bought cement for building"
+              [class.error]="expenseForm.get('title')?.invalid && expenseForm.get('title')?.touched" />
+            <span class="error-message"
+              *ngIf="expenseForm.get('title')?.invalid && expenseForm.get('title')?.touched">{{ getErrorMessage('title')
+              }}</span>
+          </div>
+          <div class="form-group">
+            <label>Category *</label>
+            <select formControlName="category_id"
+              [class.error]="expenseForm.get('category_id')?.invalid && expenseForm.get('category_id')?.touched">
+              <option value="">Select category</option>
+              <option *ngFor="let cat of categories" [value]="cat.id">{{ cat.name }}</option>
+            </select>
+            <span class="error-message"
+              *ngIf="expenseForm.get('category_id')?.invalid && expenseForm.get('category_id')?.touched">{{
+              getErrorMessage('category_id') }}</span>
+          </div>
+          <div class="form-group">
+            <label>Date *</label>
+            <input type="date" formControlName="expense_date"
+              [class.error]="expenseForm.get('expense_date')?.invalid && expenseForm.get('expense_date')?.touched" />
+            <span class="error-message"
+              *ngIf="expenseForm.get('expense_date')?.invalid && expenseForm.get('expense_date')?.touched">{{
+              getErrorMessage('expense_date') }}</span>
+          </div>
+          <div class="form-group">
+            <label>Amount *</label>
+            <input type="number" formControlName="amount" step="0.01" min="0" placeholder="0.00"
+              [class.error]="expenseForm.get('amount')?.invalid && expenseForm.get('amount')?.touched" />
+            <span class="error-message"
+              *ngIf="expenseForm.get('amount')?.invalid && expenseForm.get('amount')?.touched">{{
+              getErrorMessage('amount') }}</span>
+          </div>
+          <div class="form-group">
+            <label>Currency</label>
+            <select formControlName="currency">
+              <option *ngFor="let curr of currencies" [value]="curr">{{ curr }}</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Receipt / Invoice Ref</label>
+            <input type="text" formControlName="receipt_reference" placeholder="Optional reference number" />
+          </div>
+          <div class="form-group full-width">
+            <label>Description</label>
+            <textarea formControlName="description" rows="3" placeholder="Additional details..."></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" (click)="closeModal()" [disabled]="saving">Cancel</button>
+        <button type="submit" class="btn-primary" [disabled]="saving || expenseForm.invalid">
+          <span *ngIf="!saving">{{ editingExpense ? 'Update Expense' : 'Save Expense' }}</span>
+          <span *ngIf="saving"><i class="ri-loader-4-line spin"></i> Saving...</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

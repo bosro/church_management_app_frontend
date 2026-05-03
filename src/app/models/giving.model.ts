@@ -1,6 +1,3 @@
-
-
-
 // src/app/models/giving.model.ts
 export type PaymentMethod =
   | 'cash'
@@ -31,9 +28,9 @@ export interface GivingTransaction {
   currency: string;
   payment_method: PaymentMethod;
   transaction_reference?: string;
-  paystack_reference?: string;         // ← new
-  payment_status?: 'pending' | 'completed' | 'failed' | 'abandoned';  // ← new
-  payment_channel?: string;            // ← new
+  paystack_reference?: string;
+  payment_status?: 'pending' | 'completed' | 'failed' | 'abandoned';
+  payment_channel?: string;
   transaction_date: string;
   fiscal_year?: number;
   notes?: string;
@@ -89,8 +86,8 @@ export interface GivingSummary {
   total_offerings: number;
   total_seeds: number;
   total_transactions: number;
-  avg_transaction?: number;    // ← RPC returns this
-  last_giving_date?: string;   // ← RPC returns this
+  avg_transaction?: number;
+  last_giving_date?: string;
   currency: string;
 }
 
@@ -100,14 +97,11 @@ export interface CreateTransactionData {
   payment_method: PaymentMethod;
   transaction_date?: string;
   notes?: string;
-  // Payment details to be added to notes
   mobile_number?: string;
   bank_name?: string;
   account_number?: string;
   card_number?: string;
 }
-
-
 
 export interface CategoryGivingStat {
   category_id: string;
@@ -129,4 +123,54 @@ export interface CategoryGiver {
   transaction_count: number;
   last_giving_date: string;
   is_visitor: boolean;
+}
+
+// ── NEW: added for category summary cards, bulk giving, and expenses ──
+
+export interface CategorySummary {
+  category_id: string;
+  category_name: string;
+  category_description?: string;
+  total_giving: number;
+  total_bulk_giving: number;
+  total_expenses: number;
+  net_balance: number;
+  transaction_count: number;
+  bulk_record_count: number;
+  expense_count: number;
+  last_transaction_date?: string;
+}
+
+export interface BulkGivingRecord {
+  id: string;
+  church_id: string;
+  branch_id?: string;
+  category_id: string;
+  category_name?: string;
+  total_amount: number;
+  currency: string;
+  payment_method: string;
+  record_date: string;
+  attendee_count?: number;
+  description?: string;
+  notes?: string;
+  recorded_by: string;
+  created_at?: string;
+}
+
+export interface CategoryExpense {
+  id: string;
+  church_id: string;
+  branch_id?: string;
+  category_id: string;
+  category_name?: string;
+  amount: number;
+  currency: string;
+  expense_date: string;
+  title: string;
+  description?: string;
+  receipt_reference?: string;
+  approved_by?: string;
+  recorded_by: string;
+  created_at?: string;
 }

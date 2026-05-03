@@ -1,13 +1,14 @@
 <!-- src/app/features/finance/components/giving-list/giving-list.component.html -->
 <div class="dashboard-layout">
   <app-sidebar></app-sidebar>
-
   <div class="dashboard-content">
     <app-header></app-header>
-
     <div class="dashboard-body">
       <div class="giving-list-container">
-
+        <button class="btn-back" (click)="goBack()">
+          <i class="ri-arrow-left-line"></i>
+          <span>Back</span>
+        </button>
         <!-- Page Header -->
         <div class="page-header">
           <div class="header-left">
@@ -17,29 +18,70 @@
           <div class="header-actions">
             <button class="btn-secondary" (click)="exportReport()"
               *ngIf="permissionService.isAdmin || permissionService.finance.reports">
-              <i class="ri-download-line"></i>
-              <span>Export</span>
+              <i class="ri-download-line"></i><span>Export</span>
             </button>
-            <button
-              class="btn-primary"
-              (click)="recordGiving()"
-              *ngIf="permissionService.isAdmin ||
-                     permissionService.finance.record ||
-                     permissionService.finance.manage">
-              <i class="ri-add-circle-fill"></i>
-              <span>Record Giving</span>
+            <button class="btn-primary" (click)="recordGiving()"
+              *ngIf="permissionService.isAdmin || permissionService.finance.record || permissionService.finance.manage">
+              <i class="ri-add-circle-fill"></i><span>Record Giving</span>
             </button>
           </div>
         </div>
 
         <!-- Alerts -->
         <div *ngIf="successMessage" class="success-alert">
-          <i class="ri-checkbox-circle-line"></i>
-          <span>{{ successMessage }}</span>
+          <i class="ri-checkbox-circle-line"></i><span>{{ successMessage }}</span>
         </div>
         <div *ngIf="errorMessage" class="error-alert">
-          <i class="ri-error-warning-line"></i>
-          <span>{{ errorMessage }}</span>
+          <i class="ri-error-warning-line"></i><span>{{ errorMessage }}</span>
+        </div>
+
+        <!-- ── Category Summary Cards ───────────────────────────── -->
+        <div class="section-label">
+          <span>Category Totals</span>
+          <span class="section-hint">Click a card to filter transactions</span>
+        </div>
+
+        <div *ngIf="loadingSummaries" class="summary-loading">
+          <app-loading-spinner message="Loading summaries..."></app-loading-spinner>
+        </div>
+
+        <div *ngIf="!loadingSummaries && categorySummaries.length > 0" class="category-summary-grid">
+          <div *ngFor="let summary of categorySummaries; let i = index" class="category-summary-card"
+            [class.active]="activeCategoryId === summary.category_id" (click)="selectCategoryCard(summary)"
+            role="button" tabindex="0">
+
+            <div class="cscard-icon" [style.background]="getCategoryIconBg(i)" [style.color]="getCategoryIconColor(i)">
+              <i [class]="getCategoryIcon(i)"></i>
+            </div>
+
+            <div class="cscard-body">
+              <p class="cscard-name">{{ summary.category_name }}</p>
+              <p class="cscard-amount">{{ formatCurrency(summary.total_giving + summary.total_bulk_giving) }}</p>
+              <div class="cscard-meta">
+                <span><i class="ri-exchange-line"></i> {{ summary.transaction_count + summary.bulk_record_count }}
+                  records</span>
+                <span *ngIf="summary.total_expenses > 0" class="expense-hint">
+                  <i class="ri-arrow-up-line"></i> {{ formatCurrency(summary.total_expenses) }} spent
+                </span>
+              </div>
+              <div class="cscard-net" *ngIf="summary.total_expenses > 0">
+                Net: {{ formatCurrency(summary.net_balance) }}
+              </div>
+            </div>
+
+            <div class="cscard-active-indicator" *ngIf="activeCategoryId === summary.category_id">
+              <i class="ri-checkbox-circle-fill"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- Active filter banner -->
+        <div *ngIf="activeCategoryId" class="active-filter-banner">
+          <i class="ri-filter-3-line"></i>
+          <span>Filtered by <strong>{{ activeCategoryName }}</strong></span>
+          <button class="btn-clear-active" (click)="clearCategoryFilter()">
+            <i class="ri-close-line"></i> Clear filter
+          </button>
         </div>
 
         <!-- Filters Card -->
@@ -57,38 +99,39 @@
               <label>Category</label>
               <select [formControl]="categoryControl" class="filter-select">
                 <option value="">All Categories</option>
-                <option *ngFor="let category of categories" [value]="category.id">
-                  {{ category.name }}
-                </option>
+                <option *ngFor="let category of categories" [value]="category.id">{{ category.name }}</option>
               </select>
             </div>
             <div class="filter-group">
               <label>Payment Method</label>
               <select [formControl]="paymentMethodControl" class="filter-select">
-                <option *ngFor="let method of paymentMethods" [value]="method.value">
-                  {{ method.label }}
-                </option>
+                <option *ngFor="let method of paymentMethods" [value]="method.value">{{ method.label }}</option>
               </select>
             </div>
             <div class="filter-actions">
               <button class="btn-clear-filters" (click)="clearFilters()">
-                <i class="ri-close-circle-line"></i>
-                Clear
+                <i class="ri-close-circle-line"></i> Clear
               </button>
             </div>
           </div>
         </div>
 
-        <!-- Summary Strip (shows when filters active or always) -->
+        <!-- Summary Strip -->
         <div class="summary-strip" *ngIf="!loading && transactions.length > 0">
           <div class="summary-item">
             <span class="summary-label">Showing</span>
-            <span class="summary-value">{{ totalTransactions }} transaction{{ totalTransactions !== 1 ? 's' : '' }}</span>
+            <span class="summary-value">{{ totalTransactions }} transaction{{ totalTransactions !== 1 ? 's' : ''
+              }}</span>
           </div>
           <div class="summary-divider"></div>
           <div class="summary-item">
             <span class="summary-label">Page</span>
             <span class="summary-value">{{ currentPage }} of {{ totalPages || 1 }}</span>
+          </div>
+          <div class="summary-divider" *ngIf="activeCategoryName"></div>
+          <div class="summary-item" *ngIf="activeCategoryName">
+            <span class="summary-label">Category</span>
+            <span class="summary-value">{{ activeCategoryName }}</span>
           </div>
         </div>
 
@@ -109,9 +152,7 @@
                   <th>Amount</th>
                   <th>Payment Method</th>
                   <th>Reference</th>
-                  <th *ngIf="permissionService.isAdmin || permissionService.finance.manage">
-                    Actions
-                  </th>
+                  <th *ngIf="permissionService.isAdmin || permissionService.finance.manage">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -120,64 +161,50 @@
                   <td>
                     <div class="member-cell">
                       <div class="member-avatar-small">
-                        <img *ngIf="transaction.member?.photo_url"
-                          [src]="transaction.member.photo_url"
+                        <img *ngIf="transaction.member?.photo_url" [src]="transaction.member.photo_url"
                           [alt]="getMemberName(transaction)" />
-                        <div *ngIf="!transaction.member?.photo_url" class="avatar-placeholder-small">
-                          {{ getMemberInitials(transaction) }}
-                        </div>
+                        <div *ngIf="!transaction.member?.photo_url" class="avatar-placeholder-small">{{
+                          getMemberInitials(transaction) }}</div>
                       </div>
                       <div class="member-info">
                         <span class="member-name">{{ getMemberName(transaction) }}</span>
-                        <span class="member-number" *ngIf="transaction.member">
-                          {{ transaction.member.member_number }}
-                        </span>
+                        <span class="member-number" *ngIf="transaction.member">{{ transaction.member.member_number
+                          }}</span>
                       </div>
                     </div>
                   </td>
                   <td>
-                    <span class="category-badge">
-                      {{ transaction.category?.name || 'General' }}
-                    </span>
+                    <span class="category-badge">{{ transaction.category?.name || 'General' }}</span>
                   </td>
-                  <td>
-                    <span class="amount">
-                      {{ formatCurrency(transaction.amount, transaction.currency) }}
-                    </span>
-                  </td>
+                  <td><span class="amount">{{ formatCurrency(transaction.amount, transaction.currency) }}</span></td>
                   <td>
                     <span class="payment-method-badge" [attr.data-method]="transaction.payment_method">
                       {{ transaction.payment_method | titlecase }}
                     </span>
                   </td>
-                  <td>
-                    <span class="reference">
-                      {{ transaction.transaction_reference || '—' }}
-                    </span>
-                  </td>
+                  <td><span class="reference">{{ transaction.transaction_reference || '—' }}</span></td>
                   <td *ngIf="permissionService.isAdmin || permissionService.finance.manage">
-                    <button class="btn-delete"
-                      (click)="deleteTransaction(transaction.id, $event)"
-                      title="Delete transaction">
-                      <i class="ri-delete-bin-line"></i>
-                    </button>
+                    <div class="action-btns">
+                      <button class="btn-action btn-edit" (click)="openEditModal(transaction, $event)"
+                        title="Edit transaction">
+                        <i class="ri-edit-line"></i>
+                      </button>
+                      <button class="btn-action btn-delete" (click)="deleteTransaction(transaction.id, $event)"
+                        title="Delete transaction">
+                        <i class="ri-delete-bin-line"></i>
+                      </button>
+                    </div>
                   </td>
                 </tr>
 
-                <!-- Empty state -->
                 <tr *ngIf="transactions.length === 0">
                   <td [attr.colspan]="(permissionService.isAdmin || permissionService.finance.manage) ? 7 : 6">
                     <div class="empty-state-table">
                       <i class="ri-money-dollar-circle-line"></i>
                       <p>No transactions found</p>
-                      <button
-                        class="btn-primary-sm"
-                        (click)="recordGiving()"
-                        *ngIf="permissionService.isAdmin ||
-                               permissionService.finance.record ||
-                               permissionService.finance.manage">
-                        <i class="ri-add-line"></i>
-                        Record First Giving
+                      <button class="btn-primary-sm" (click)="recordGiving()"
+                        *ngIf="permissionService.isAdmin || permissionService.finance.record || permissionService.finance.manage">
+                        <i class="ri-add-line"></i> Record First Giving
                       </button>
                     </div>
                   </td>
@@ -190,33 +217,134 @@
         <!-- Pagination -->
         <div class="pagination" *ngIf="totalPages > 1 && !loading">
           <button class="pagination-btn" [disabled]="currentPage === 1" (click)="previousPage()">
-            <i class="ri-arrow-left-s-line"></i>
-            Previous
+            <i class="ri-arrow-left-s-line"></i> Previous
           </button>
           <div class="pagination-pages">
-            <span class="page-info">
-              Page {{ currentPage }} of {{ totalPages }}
-              <span class="total-count">({{ totalTransactions }} total)</span>
-            </span>
+            <span class="page-info">Page {{ currentPage }} of {{ totalPages }} <span class="total-count">({{
+                totalTransactions }} total)</span></span>
           </div>
           <button class="pagination-btn" [disabled]="currentPage === totalPages" (click)="nextPage()">
-            Next
-            <i class="ri-arrow-right-s-line"></i>
+            Next <i class="ri-arrow-right-s-line"></i>
           </button>
         </div>
-
       </div>
     </div>
   </div>
 </div>
 
-<!-- Floating Action Button (mobile) -->
-<button
-  class="fab"
-  (click)="recordGiving()"
-  *ngIf="permissionService.isAdmin ||
-         permissionService.finance.record ||
-         permissionService.finance.manage"
+<!-- FAB mobile -->
+<button class="fab" (click)="recordGiving()"
+  *ngIf="permissionService.isAdmin || permissionService.finance.record || permissionService.finance.manage"
   title="Record Giving">
   <i class="ri-add-line"></i>
 </button>
+
+<!-- ── Edit Transaction Modal ─────────────────────────────────── -->
+<div *ngIf="showEditModal" class="modal-overlay" (click)="closeEditModal()">
+  <div class="edit-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3><i class="ri-edit-line"></i> Edit Transaction</h3>
+      <button class="modal-close-btn" (click)="closeEditModal()"><i class="ri-close-line"></i></button>
+    </div>
+
+    <form [formGroup]="editForm" (ngSubmit)="saveEdit()">
+      <div class="modal-body">
+
+        <!-- Member search -->
+        <div class="form-group">
+          <label>Member (optional)</label>
+          <div *ngIf="!editSelectedMember" class="member-search-wrap">
+            <div class="search-input-wrapper">
+              <i class="ri-search-line search-icon"></i>
+              <input type="text" [formControl]="editSearchControl" placeholder="Search member..."
+                class="search-input" />
+              <i *ngIf="editSearching" class="ri-loader-4-line spin"></i>
+            </div>
+            <div class="search-results" *ngIf="editSearchResults.length > 0">
+              <div *ngFor="let m of editSearchResults" class="search-result-item" (click)="selectEditMember(m)">
+                <div class="member-avatar-small">
+                  <img *ngIf="m.photo_url" [src]="m.photo_url" [alt]="getMemberFullName(m)" />
+                  <div *ngIf="!m.photo_url" class="avatar-placeholder-small">{{ getMemberInitialsFromMember(m) }}</div>
+                </div>
+                <div class="member-info-small">
+                  <p class="member-name-small">{{ getMemberFullName(m) }}</p>
+                  <p class="member-meta-small">{{ m.member_number }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div *ngIf="editSelectedMember" class="selected-member-pill">
+            <div class="avatar-placeholder-small">{{ getMemberInitialsFromMember(editSelectedMember) }}</div>
+            <span>{{ getMemberFullName(editSelectedMember) }}</span>
+            <button type="button" class="btn-remove-member" (click)="removeEditMember()"><i
+                class="ri-close-line"></i></button>
+          </div>
+        </div>
+
+        <div class="modal-form-grid">
+          <div class="form-group">
+            <label>Date *</label>
+            <input type="date" formControlName="transaction_date"
+              [class.error]="editForm.get('transaction_date')?.invalid && editForm.get('transaction_date')?.touched" />
+            <span class="error-message"
+              *ngIf="editForm.get('transaction_date')?.invalid && editForm.get('transaction_date')?.touched">{{
+              getEditErrorMessage('transaction_date') }}</span>
+          </div>
+          <div class="form-group">
+            <label>Amount *</label>
+            <input type="number" formControlName="amount" step="0.01" min="0" placeholder="0.00"
+              [class.error]="editForm.get('amount')?.invalid && editForm.get('amount')?.touched" />
+            <span class="error-message" *ngIf="editForm.get('amount')?.invalid && editForm.get('amount')?.touched">{{
+              getEditErrorMessage('amount') }}</span>
+          </div>
+          <div class="form-group">
+            <label>Currency *</label>
+            <select formControlName="currency">
+              <option value="GHS">GHS</option>
+              <option value="USD">USD</option>
+              <option value="EUR">EUR</option>
+              <option value="GBP">GBP</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Category *</label>
+            <select formControlName="category_id"
+              [class.error]="editForm.get('category_id')?.invalid && editForm.get('category_id')?.touched">
+              <option value="">Select category</option>
+              <option *ngFor="let cat of categories" [value]="cat.id">{{ cat.name }}</option>
+            </select>
+            <span class="error-message"
+              *ngIf="editForm.get('category_id')?.invalid && editForm.get('category_id')?.touched">{{
+              getEditErrorMessage('category_id') }}</span>
+          </div>
+          <div class="form-group">
+            <label>Payment Method *</label>
+            <select formControlName="payment_method">
+              <option value="cash">Cash</option>
+              <option value="mobile_money">Mobile Money</option>
+              <option value="bank_transfer">Bank Transfer</option>
+              <option value="card">Card</option>
+              <option value="cheque">Cheque</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Reference</label>
+            <input type="text" formControlName="transaction_reference" placeholder="Optional" />
+          </div>
+          <div class="form-group full-width">
+            <label>Notes</label>
+            <textarea formControlName="notes" rows="2" placeholder="Optional notes"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" (click)="closeEditModal()" [disabled]="saving">Cancel</button>
+        <button type="submit" class="btn-primary" [disabled]="saving || editForm.invalid">
+          <span *ngIf="!saving">Save Changes</span>
+          <span *ngIf="saving"><i class="ri-loader-4-line spin"></i> Saving...</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

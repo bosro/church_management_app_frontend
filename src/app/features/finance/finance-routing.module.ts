@@ -1,9 +1,4 @@
 // src/app/features/finance/finance-routing.module.ts
-// KEY FIXES:
-// 1. PermissionGuard added to all routes
-// 2. PledgeDetails import path corrected (was './pledge-details/pledge-details',
-//    should be './components/pledge-details/pledge-details')
-// 3. Route order preserved: 'pledges/create' before 'pledges/:id' (already correct)
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { PermissionGuard } from '../../core/guards/permission.guard';
@@ -15,19 +10,19 @@ import { FinanceOverview } from './components/finance-overview/finance-overview/
 import { RecordGiving } from './components/record-giving/record-giving';
 import { Pledges } from './components/pledges/pledges';
 import { PledgeDetails } from './pledge-details/pledge-details';
-
-// NOTE: If your PledgeDetails component is at a different path
-// (e.g. directly under finance/ not finance/components/), adjust the import above.
+import { CategoryExpenses } from './components/category-expenses/category-expenses';
+import { PaymentLinks } from './components/payment-links/payment-links';
 
 const FINANCE_VIEW_ROLES = [
-  'super_admin', 'church_admin',
-  'pastor', 'senior_pastor', 'associate_pastor',
+  'super_admin',
+  'church_admin',
+  'pastor',
+  'senior_pastor',
+  'associate_pastor',
   'finance_officer',
 ];
 
-const FINANCE_MANAGE_ROLES = [
-  'super_admin', 'church_admin', 'finance_officer',
-];
+const FINANCE_MANAGE_ROLES = ['super_admin', 'church_admin', 'finance_officer'];
 
 const routes: Routes = [
   {
@@ -70,8 +65,16 @@ const routes: Routes = [
       roles: FINANCE_VIEW_ROLES,
     },
   },
-  // IMPORTANT: 'pledges/create' must come BEFORE 'pledges/:id'
-  // so Angular doesn't match 'create' as an :id param
+  {
+    path: 'payment-links',
+    component: PaymentLinks,
+    canActivate: [PermissionGuard],
+    data: {
+      title: 'Payment Links',
+      permission: 'finance.view',
+      roles: FINANCE_VIEW_ROLES,
+    },
+  },
   {
     path: 'pledges/create',
     component: CreatePledge,
@@ -110,6 +113,17 @@ const routes: Routes = [
       title: 'Giving Categories',
       permission: 'finance.manage',
       roles: FINANCE_MANAGE_ROLES,
+    },
+  },
+  // ── NEW ─────────────────────────────────────────────────────
+  {
+    path: 'expenses',
+    component: CategoryExpenses,
+    canActivate: [PermissionGuard],
+    data: {
+      title: 'Category Expenses',
+      permission: 'finance.view',
+      roles: FINANCE_VIEW_ROLES,
     },
   },
 ];

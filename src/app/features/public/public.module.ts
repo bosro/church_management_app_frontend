@@ -9,8 +9,14 @@ import { LinkCheckin } from './link-checkin/link-checkin';
 import { MemberRegistration } from './member-registration/member-registration';
 import { FeedingRecord } from './feeding-record/feeding-record';
 import { PublicStudentRegistration } from './public-student-registration/public-student-registration';
+import { GivingThankYouPage } from './giving-thank-you/giving-thank-you';
 
 const routes: Routes = [
+  {
+    path: 'giving/thank-you',
+    component: GivingThankYouPage,
+    // No canActivate — anyone who paid via a payment link lands here
+  },
   {
     path: 'link-checkin/:token',
     component: LinkCheckin,
@@ -35,6 +41,7 @@ const routes: Routes = [
     MemberRegistration,
     FeedingRecord,
     PublicStudentRegistration,
+    GivingThankYouPage
   ],
   imports: [
     CommonModule,

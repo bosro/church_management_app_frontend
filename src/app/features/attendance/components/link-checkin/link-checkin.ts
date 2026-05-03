@@ -287,3 +287,5 @@ export class LinkCheckin implements OnInit, OnDestroy {
     return `${hour % 12 || 12}:${m} ${hour >= 12 ? 'PM' : 'AM'}`;
   }
 }
+
+

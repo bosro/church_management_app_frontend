@@ -1,0 +1,73 @@
+<!-- src/app/features/public/giving-thank-you/giving-thank-you.component.html -->
+<div class="public-wrapper">
+  <div class="public-container">
+    <div class="status-state">
+
+      <!-- Animated success icon -->
+      <div class="status-icon success">
+        <i class="ri-checkbox-circle-fill"></i>
+      </div>
+
+      <h2>Payment Received!</h2>
+
+      <p>
+        Thank you for your generous contribution{{ categoryName ? ' to <strong>' + categoryName + '</strong>' : '' }}.
+        Your giving has been recorded and is greatly appreciated.
+      </p>
+
+      <!-- Reference number pill — shown when Paystack passes it back -->
+      <div class="success-detail" *ngIf="reference">
+        <span class="label">Transaction Reference</span>
+        <span class="value">{{ reference }}</span>
+      </div>
+
+      <p class="hint" *ngIf="reference">
+        Keep this reference for your records. It confirms your payment was processed successfully.
+      </p>
+
+      <p class="hint" *ngIf="!reference">
+        If you don't receive a confirmation shortly, please contact the church office with your payment details.
+      </p>
+
+      <!-- Divider -->
+      <div class="divider"></div>
+
+      <!-- What happens next -->
+      <div class="next-steps">
+        <div class="step">
+          <div class="step-icon"><i class="ri-shield-check-line"></i></div>
+          <div class="step-text">
+            <strong>Secure & verified</strong>
+            <span>Processed by Paystack — your card details are never stored</span>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-icon"><i class="ri-file-list-3-line"></i></div>
+          <div class="step-text">
+            <strong>Automatically recorded</strong>
+            <span>Your giving is logged in the church's finance records</span>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-icon"><i class="ri-mail-check-line"></i></div>
+          <div class="step-text">
+            <strong>Confirmation email</strong>
+            <span>Paystack will send a receipt to your email address</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <button class="btn-primary" (click)="makeAnother()">
+        <i class="ri-add-line"></i>
+        Make Another Payment
+      </button>
+
+      <p class="privacy-note">
+        <i class="ri-shield-check-line"></i>
+        Powered by <strong>Churchman</strong> &amp; <strong>Paystack</strong> — secured and encrypted
+      </p>
+
+    </div>
+  </div>
+</div>
