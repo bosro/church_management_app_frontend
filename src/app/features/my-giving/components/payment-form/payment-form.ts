@@ -26,32 +26,47 @@ export class PaymentForm implements OnInit {
       value: 'paystack',
       label: 'Pay Online (Card / MoMo)',
       icon: 'ri-secure-payment-line',
+      isOnline: true,
     },
     {
       value: 'mobile_money',
       label: 'Mobile Money (Manual)',
       icon: 'ri-smartphone-line',
+      isOnline: false,
     },
-    { value: 'cash', label: 'Cash', icon: 'ri-money-dollar-circle-line' },
-    { value: 'bank_transfer', label: 'Bank Transfer', icon: 'ri-bank-line' },
-    { value: 'card', label: 'Card (Manual)', icon: 'ri-bank-card-line' },
-    { value: 'cheque', label: 'Cheque', icon: 'ri-file-list-line' },
-    { value: 'online', label: 'Other Online', icon: 'ri-global-line' },
+    {
+      value: 'cash',
+      label: 'Cash',
+      icon: 'ri-money-dollar-circle-line',
+      isOnline: false,
+    },
+    {
+      value: 'bank_transfer',
+      label: 'Bank Transfer',
+      icon: 'ri-bank-line',
+      isOnline: false,
+    },
+    {
+      value: 'card',
+      label: 'Card (Manual)',
+      icon: 'ri-bank-card-line',
+      isOnline: false,
+    },
+    {
+      value: 'cheque',
+      label: 'Cheque',
+      icon: 'ri-file-list-line',
+      isOnline: false,
+    },
   ];
-
-  selectedPaymentMethod: string = '';
 
   constructor(private fb: FormBuilder) {}
 
   ngOnInit(): void {
-    this.initForm();
-  }
-
-  private initForm(): void {
     this.paymentForm = this.fb.group({
       category_id: ['', Validators.required],
       amount: ['', [Validators.required, Validators.min(1)]],
-      payment_method: ['', Validators.required],
+      payment_method: ['', Validators.required], // starts empty — nothing pre-selected
       mobile_number: [''],
       bank_name: [''],
       account_number: [''],
@@ -59,21 +74,44 @@ export class PaymentForm implements OnInit {
       notes: ['', Validators.maxLength(500)],
     });
 
-    // Watch payment method changes
-    this.paymentForm.get('payment_method')?.valueChanges.subscribe((method) => {
-      this.selectedPaymentMethod = method;
-      this.updatePaymentMethodValidators(method);
+    // Update conditional validators whenever payment method changes
+    this.paymentForm.get('payment_method')!.valueChanges.subscribe((method) => {
+      this.updateConditionalValidators(method);
     });
   }
 
-  private updatePaymentMethodValidators(method: string): void {
-    // Clear all payment detail validators first
-    this.paymentForm.get('mobile_number')?.clearValidators();
-    this.paymentForm.get('bank_name')?.clearValidators();
-    this.paymentForm.get('account_number')?.clearValidators();
-    this.paymentForm.get('card_number')?.clearValidators();
+  // ── Getters ──────────────────────────────────────────────────
+  get selectedMethod(): string {
+    return this.paymentForm.get('payment_method')?.value || '';
+  }
 
-    // Add validators based on payment method (optional - for better UX)
+  isSelected(value: string): boolean {
+    return this.selectedMethod === value;
+  }
+
+  // ── Method card click ────────────────────────────────────────
+  selectMethod(value: string): void {
+    this.paymentForm.patchValue({ payment_method: value });
+    // Mark as touched so validation shows and submit enables
+    this.paymentForm.get('payment_method')!.markAsTouched();
+    this.paymentForm.get('payment_method')!.markAsDirty();
+  }
+
+  // ── Conditional field validators ─────────────────────────────
+  private updateConditionalValidators(method: string): void {
+    const fields = [
+      'mobile_number',
+      'bank_name',
+      'account_number',
+      'card_number',
+    ];
+    // Clear all
+    fields.forEach((f) => {
+      this.paymentForm.get(f)?.clearValidators();
+      this.paymentForm.get(f)?.updateValueAndValidity();
+    });
+
+    // Add for current method
     switch (method) {
       case 'mobile_money':
         this.paymentForm
@@ -93,29 +131,26 @@ export class PaymentForm implements OnInit {
         break;
     }
 
-    // Update validity
-    this.paymentForm.get('mobile_number')?.updateValueAndValidity();
-    this.paymentForm.get('bank_name')?.updateValueAndValidity();
-    this.paymentForm.get('account_number')?.updateValueAndValidity();
-    this.paymentForm.get('card_number')?.updateValueAndValidity();
+    fields.forEach((f) => this.paymentForm.get(f)?.updateValueAndValidity());
   }
 
+  // ── Submit ────────────────────────────────────────────────────
   onSubmit(): void {
     if (this.paymentForm.invalid) {
-      this.markFormGroupTouched(this.paymentForm);
+      this.markAllTouched(this.paymentForm);
       return;
     }
 
-    const formValue = this.paymentForm.value;
+    const v = this.paymentForm.value;
     const paymentData: CreateTransactionData = {
-      category_id: formValue.category_id,
-      amount: parseFloat(formValue.amount),
-      payment_method: formValue.payment_method as PaymentMethod,
-      notes: formValue.notes,
-      mobile_number: formValue.mobile_number,
-      bank_name: formValue.bank_name,
-      account_number: formValue.account_number,
-      card_number: formValue.card_number,
+      category_id: v.category_id,
+      amount: parseFloat(v.amount),
+      payment_method: v.payment_method as PaymentMethod,
+      notes: v.notes || undefined,
+      mobile_number: v.mobile_number || undefined,
+      bank_name: v.bank_name || undefined,
+      account_number: v.account_number || undefined,
+      card_number: v.card_number || undefined,
     };
 
     this.formSubmit.emit(paymentData);
@@ -127,35 +162,19 @@ export class PaymentForm implements OnInit {
 
   getErrorMessage(fieldName: string): string {
     const control = this.paymentForm.get(fieldName);
-
-    if (!control || !control.errors || !control.touched) {
-      return '';
-    }
-
-    if (control.hasError('required')) {
-      return 'This field is required';
-    }
-    if (control.hasError('min')) {
-      return 'Amount must be greater than 0';
-    }
-    if (control.hasError('maxlength')) {
-      const maxLength = control.getError('maxlength').requiredLength;
-      return `Maximum ${maxLength} characters allowed`;
-    }
-
+    if (!control?.errors || !control.touched) return '';
+    if (control.hasError('required')) return 'This field is required';
+    if (control.hasError('min')) return 'Amount must be greater than 0';
+    if (control.hasError('maxlength'))
+      return `Maximum ${control.getError('maxlength').requiredLength} characters`;
     return 'Invalid input';
   }
 
-  private markFormGroupTouched(formGroup: FormGroup): void {
+  private markAllTouched(formGroup: FormGroup): void {
     Object.keys(formGroup.controls).forEach((key) => {
       const control = formGroup.get(key);
       control?.markAsTouched();
-
-      if (control instanceof FormGroup) {
-        this.markFormGroupTouched(control);
-      }
+      if (control instanceof FormGroup) this.markAllTouched(control);
     });
   }
 }
-
-

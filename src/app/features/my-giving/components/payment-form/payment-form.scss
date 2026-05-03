@@ -5,7 +5,6 @@
 
 .form-group {
   margin-bottom: 1.5rem;
-
   &:last-child {
     margin-bottom: 0;
   }
@@ -19,12 +18,10 @@
   font-weight: 600;
   color: #374151;
   margin-bottom: 0.5rem;
-
   i {
     font-size: 1.125rem;
     color: #5b21b6;
   }
-
   .required {
     color: #ef4444;
   }
@@ -40,35 +37,27 @@
   border-radius: 8px;
   font-family: inherit;
   transition: all 0.2s;
-
   &:focus {
     outline: none;
     border-color: #5b21b6;
     box-shadow: 0 0 0 3px rgba(91, 33, 182, 0.1);
   }
-
   &.error {
     border-color: #ef4444;
-
-    &:focus {
-      box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
-    }
   }
-
   &::placeholder {
     color: #9ca3af;
   }
-
   &:disabled {
     background: #f3f4f6;
     cursor: not-allowed;
+    opacity: 0.7;
   }
 }
 
 select.form-control {
   cursor: pointer;
 }
-
 textarea.form-control {
   resize: vertical;
   min-height: 80px;
@@ -80,7 +69,6 @@ textarea.form-control {
   font-size: 0.8125rem;
   color: #ef4444;
 }
-
 .char-count {
   display: block;
   margin-top: 0.5rem;
@@ -89,6 +77,7 @@ textarea.form-control {
   text-align: right;
 }
 
+// ── Payment method cards ──────────────────────────────────────
 .payment-methods {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -98,7 +87,6 @@ textarea.form-control {
   @media (max-width: 768px) {
     grid-template-columns: repeat(2, 1fr);
   }
-
   @media (max-width: 480px) {
     grid-template-columns: 1fr;
   }
@@ -116,13 +104,14 @@ textarea.form-control {
   border-radius: 12px;
   cursor: pointer;
   transition: all 0.2s;
+  position: relative;
+  user-select: none;
 
   i {
     font-size: 2rem;
     color: #6b7280;
     transition: all 0.2s;
   }
-
   span {
     font-size: 0.875rem;
     font-weight: 500;
@@ -133,72 +122,76 @@ textarea.form-control {
   &:hover {
     border-color: #5b21b6;
     background: rgba(91, 33, 182, 0.02);
-
     i {
       color: #5b21b6;
     }
   }
 
+  // ── Selected state — driven by [class.selected] binding ──────
   &.selected {
     border-color: #5b21b6;
     background: linear-gradient(
       135deg,
-      rgba(91, 33, 182, 0.05) 0%,
-      rgba(124, 58, 237, 0.05) 100%
+      rgba(91, 33, 182, 0.06) 0%,
+      rgba(124, 58, 237, 0.06) 100%
     );
+    i {
+      color: #5b21b6;
+    }
+    span {
+      color: #5b21b6;
+      font-weight: 700;
+    }
+  }
 
+  // ── Online/Paystack card — only styling, no forced selection ─
+  &.online-card {
+    // Slightly accented but NOT selected unless .selected is also applied
+    border-color: #c4b5fd;
+    background: rgba(91, 33, 182, 0.02);
     i {
       color: #5b21b6;
     }
 
-    span {
-      color: #5b21b6;
+    &.selected {
+      border-color: #5b21b6;
+      background: linear-gradient(
+        135deg,
+        rgba(91, 33, 182, 0.08) 0%,
+        rgba(124, 58, 237, 0.08) 100%
+      );
     }
+  }
+
+  .online-badge {
+    font-size: 0.5625rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    background: #5b21b6;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-top: -4px;
   }
 
   @media (max-width: 480px) {
     padding: 1rem;
-
     i {
       font-size: 1.75rem;
     }
-
     span {
       font-size: 0.8125rem;
     }
   }
-
-  &.paystack-card {
-    border-color: #5b21b6;
-    background: linear-gradient(
-      135deg,
-      rgba(91, 33, 182, 0.04) 0%,
-      rgba(124, 58, 237, 0.06) 100%
-    );
-
-    i {
-      color: #5b21b6;
-    }
-
-    .paystack-badge {
-      font-size: 0.625rem;
-      font-weight: 700;
-      background: #5b21b6;
-      color: white;
-      padding: 2px 6px;
-      border-radius: 4px;
-      margin-top: -2px;
-    }
-  }
 }
 
+// ── Form actions ──────────────────────────────────────────────
 .form-actions {
   display: flex;
   gap: 1rem;
   margin-top: 2rem;
   padding-top: 1.5rem;
   border-top: 1px solid #e5e7eb;
-
   @media (max-width: 576px) {
     flex-direction: column-reverse;
   }
@@ -218,11 +211,9 @@ textarea.form-control {
   cursor: pointer;
   transition: all 0.2s;
   font-family: inherit;
-
   i {
     font-size: 1.125rem;
   }
-
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
@@ -233,7 +224,6 @@ textarea.form-control {
 .btn-secondary {
   background: #e5e7eb;
   color: #374151;
-
   &:hover:not(:disabled) {
     background: #d1d5db;
   }
@@ -242,7 +232,6 @@ textarea.form-control {
 .btn-primary {
   background: #5b21b6;
   color: white;
-
   &:hover:not(:disabled) {
     background: #6d28d9;
     transform: translateY(-2px);
@@ -264,24 +253,3 @@ textarea.form-control {
     transform: rotate(360deg);
   }
 }
-
-
-.paystack-card {
-  border-color: #5B21B6 !important;
-  background: linear-gradient(135deg, rgba(91,33,182,0.04), rgba(124,58,237,0.06)) !important;
-
-  i, span { color: #5B21B6 !important; }
-
-  .paystack-badge {
-    font-size: 0.5625rem;
-    font-weight: 800;
-    letter-spacing: 0.06em;
-    background: #5B21B6;
-    color: white;
-    padding: 2px 6px;
-    border-radius: 4px;
-    margin-top: -4px;
-  }
-}
-
-
