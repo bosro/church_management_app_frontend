@@ -10,10 +10,7 @@
 
       <h2>Payment Received!</h2>
 
-      <p>
-        Thank you for your generous contribution{{ categoryName ? ' to <strong>' + categoryName + '</strong>' : '' }}.
-        Your giving has been recorded and is greatly appreciated.
-      </p>
+      <p [innerHTML]="contributionText"></p>
 
       <!-- Reference number pill — shown when Paystack passes it back -->
       <div class="success-detail" *ngIf="reference">

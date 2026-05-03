@@ -1,4 +1,3 @@
-
 // src/app/features/public/giving-thank-you/giving-thank-you.component.ts
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -27,7 +26,8 @@ export class GivingThankYouPage implements OnInit {
 
     // Paystack doesn't pass category back in query params, but if you ever
     // embed it in the redirect_url as ?category=Offering it'll show here
-    this.categoryName = this.route.snapshot.queryParamMap.get('category') || null;
+    this.categoryName =
+      this.route.snapshot.queryParamMap.get('category') || null;
   }
 
   makeAnother(): void {
@@ -36,5 +36,11 @@ export class GivingThankYouPage implements OnInit {
     this.router.navigate(['/main/my-giving/make-payment']).catch(() => {
       window.location.href = '/';
     });
+  }
+
+  get contributionText(): string {
+    return this.categoryName
+      ? `Thank you for your generous contribution to <strong>${this.categoryName}</strong>. Your giving has been recorded and is greatly appreciated.`
+      : 'Thank you for your generous contribution. Your giving has been recorded and is greatly appreciated.';
   }
 }
