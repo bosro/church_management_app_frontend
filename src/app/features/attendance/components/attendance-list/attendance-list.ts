@@ -51,16 +51,22 @@ export class AttendanceList implements OnInit, OnDestroy {
   canMarkAttendance = false;
 
   allCellGroups: { id: string; name: string }[] = [];
-selectedCellGroup = '';
-cellGroupStatsMap: Record<string, { present: number; absent: number }> = {};
-loadingCellStats = false;
+  selectedCellGroup = '';
+  cellGroupStatsMap: Record<string, { present: number; absent: number }> = {};
+  loadingCellStats = false;
+
+  showDeleteModal = false;
+  deleteTargetId = '';
+  deleteTargetName = '';
+  deleteTargetCount = 0;
+  deleting = false;
 
   constructor(
     private attendanceService: AttendanceService,
     private router: Router,
     public permissionService: PermissionService,
     private authService: AuthService,
-    private memberService: MemberService
+    private memberService: MemberService,
   ) {}
 
   ngOnInit(): void {
@@ -132,47 +138,54 @@ loadingCellStats = false;
       markRoles.includes(role);
   }
 
-
   private loadCellGroups(): void {
-  // Reuse memberService.getCellGroups() — already available
-  // Or inject CellGroupsService if preferred
-  this.memberService.getCellGroups()
-    .pipe(takeUntil(this.destroy$))
-    .subscribe(groups => { this.allCellGroups = groups; });
-}
-
-
-onCellGroupFilterChange(): void {
-  if (!this.selectedCellGroup) {
-    // Clear cell group stats — show normal event totals
-    this.cellGroupStatsMap = {};
-    return;
+    // Reuse memberService.getCellGroups() — already available
+    // Or inject CellGroupsService if preferred
+    this.memberService
+      .getCellGroups()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((groups) => {
+        this.allCellGroups = groups;
+      });
   }
 
-  // Load attendance stats scoped to this cell group
-  this.loadingCellStats = true;
-  this.attendanceService
-    .getAttendanceRecordsByCellGroup(this.selectedCellGroup)
-    .pipe(takeUntil(this.destroy$))
-    .subscribe({
-      next: (statsMap) => {
-        this.cellGroupStatsMap = statsMap;
-        this.loadingCellStats = false;
-      },
-      error: () => { this.loadingCellStats = false; },
-    });
-}
+  onCellGroupFilterChange(): void {
+    if (!this.selectedCellGroup) {
+      // Clear cell group stats — show normal event totals
+      this.cellGroupStatsMap = {};
+      return;
+    }
 
-// Helper for the template — returns scoped stats if a cell group is selected
-getCellScopedStats(eventId: string): { present: number; absent: number } | null {
-  if (!this.selectedCellGroup) return null;
-  return this.cellGroupStatsMap[eventId] || { present: 0, absent: 0 };
-}
+    // Load attendance stats scoped to this cell group
+    this.loadingCellStats = true;
+    this.attendanceService
+      .getAttendanceRecordsByCellGroup(this.selectedCellGroup)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (statsMap) => {
+          this.cellGroupStatsMap = statsMap;
+          this.loadingCellStats = false;
+        },
+        error: () => {
+          this.loadingCellStats = false;
+        },
+      });
+  }
 
-getSelectedCellGroupName(): string {
-  const group = this.allCellGroups.find(g => g.id === this.selectedCellGroup);
-  return group?.name || '';
-}
+  // Helper for the template — returns scoped stats if a cell group is selected
+  getCellScopedStats(
+    eventId: string,
+  ): { present: number; absent: number } | null {
+    if (!this.selectedCellGroup) return null;
+    return this.cellGroupStatsMap[eventId] || { present: 0, absent: 0 };
+  }
+
+  getSelectedCellGroupName(): string {
+    const group = this.allCellGroups.find(
+      (g) => g.id === this.selectedCellGroup,
+    );
+    return group?.name || '';
+  }
 
   loadEvents(): void {
     console.log('kjnjnk');
@@ -253,37 +266,45 @@ getSelectedCellGroupName(): string {
 
   deleteEvent(eventId: string, event: MouseEvent): void {
     event.stopPropagation();
-
     if (!this.canManageAttendance) {
       this.errorMessage = 'You do not have permission to delete events';
       return;
     }
-
     const attendanceEvent = this.events.find((e) => e.id === eventId);
     if (!attendanceEvent) return;
 
-    const confirmMessage =
-      attendanceEvent.total_attendance > 0
-        ? `This event has ${attendanceEvent.total_attendance} attendance records. Are you sure you want to delete it?`
-        : 'Are you sure you want to delete this event?';
+    this.deleteTargetId = eventId;
+    this.deleteTargetName = attendanceEvent.event_name;
+    this.deleteTargetCount = attendanceEvent.total_attendance;
+    this.showDeleteModal = true;
+  }
 
-    if (!confirm(confirmMessage)) {
-      return;
-    }
+  confirmDelete(): void {
+    if (!this.deleteTargetId) return;
+    this.deleting = true;
 
     this.attendanceService
-      .deleteAttendanceEvent(eventId)
+      .deleteAttendanceEvent(this.deleteTargetId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
+          this.deleting = false;
+          this.showDeleteModal = false;
           this.loadEvents();
           this.loadStatistics();
         },
         error: (error) => {
+          this.deleting = false;
           this.errorMessage = error.message || 'Failed to delete event';
-          console.error('Delete error:', error);
         },
       });
+  }
+
+  closeDeleteModal(): void {
+    this.showDeleteModal = false;
+    this.deleteTargetId = '';
+    this.deleteTargetName = '';
+    this.deleteTargetCount = 0;
   }
 
   // Pagination
@@ -339,9 +360,3 @@ getSelectedCellGroupName(): string {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }
-
-
-
-
-
-

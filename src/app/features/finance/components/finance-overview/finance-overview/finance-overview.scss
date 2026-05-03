@@ -659,7 +659,7 @@ button:disabled {
   padding: 1rem 1.5rem;
   background: white;
   border-radius: 10px;
-  border-left: 4px solid #5b21b6;
+  border-left: 2px solid #5b21b6;
 
   .strip-item {
     display: flex;
@@ -789,5 +789,5 @@ button:disabled {
 
 // ── Stat card primary accent ──────────────────────────────────
 .stat-card-primary {
-  border-left: 3px solid #059669;
+  // border-left: 3px solid #059669;
 }

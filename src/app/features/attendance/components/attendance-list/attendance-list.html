@@ -76,25 +76,28 @@
         </div>
 
         <!-- Filters -->
+        <!-- Filters -->
         <div class="filters-card">
-          <div class="filter-group">
-            <label for="eventType">Event Type</label>
-            <select id="eventType" [(ngModel)]="selectedEventType" (change)="onEventTypeChange()" class="filter-select">
-              <option *ngFor="let type of eventTypes" [value]="type.value">
-                {{ type.label }}
-              </option>
-            </select>
-          </div>
+          <div class="filters-row">
+            <div class="filter-group">
+              <label for="eventType">Event Type</label>
+              <select id="eventType" [(ngModel)]="selectedEventType" (change)="onEventTypeChange()"
+                class="filter-select">
+                <option *ngFor="let type of eventTypes" [value]="type.value">
+                  {{ type.label }}
+                </option>
+              </select>
+            </div>
 
-          <!-- Cell Group Filter — separate sibling, NOT inside the select above -->
-          <div class="filter-group" *ngIf="allCellGroups.length > 0">
-            <label>Cell Group</label>
-            <select [(ngModel)]="selectedCellGroup" (change)="onCellGroupFilterChange()" class="filter-select">
-              <option value="">All Cell Groups</option>
-              <option *ngFor="let group of allCellGroups" [value]="group.id">
-                {{ group.name }}
-              </option>
-            </select>
+            <div class="filter-group" *ngIf="allCellGroups.length > 0">
+              <label>Cell Group</label>
+              <select [(ngModel)]="selectedCellGroup" (change)="onCellGroupFilterChange()" class="filter-select">
+                <option value="">All Cell Groups</option>
+                <option *ngFor="let group of allCellGroups" [value]="group.id">
+                  {{ group.name }}
+                </option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -234,4 +237,49 @@
       </div>
     </div>
   </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div *ngIf="showDeleteModal" class="modal-overlay" (click)="closeDeleteModal()">
+    <div class="delete-modal" (click)="$event.stopPropagation()">
+
+      <div class="delete-modal__header">
+        <div class="delete-modal__icon">
+          <i class="ri-delete-bin-line"></i>
+        </div>
+        <button class="delete-modal__close" (click)="closeDeleteModal()">
+          <i class="ri-close-line"></i>
+        </button>
+      </div>
+
+      <div class="delete-modal__body">
+        <h3>Delete Event</h3>
+        <p>
+          Are you sure you want to delete
+          <strong>{{ deleteTargetName }}</strong>?
+        </p>
+        <div *ngIf="deleteTargetCount > 0" class="delete-modal__warning">
+          <i class="ri-alert-line"></i>
+          <span>
+            This event has <strong>{{ deleteTargetCount }}</strong>
+            attendance record{{ deleteTargetCount !== 1 ? 's' : '' }} that will
+            also be permanently deleted.
+          </span>
+        </div>
+        <p class="delete-modal__hint">This action cannot be undone.</p>
+      </div>
+
+      <div class="delete-modal__footer">
+        <button class="dm-btn dm-btn--cancel" (click)="closeDeleteModal()" [disabled]="deleting">
+          Cancel
+        </button>
+        <button class="dm-btn dm-btn--delete" (click)="confirmDelete()" [disabled]="deleting">
+          <i class="ri-loader-4-line spin" *ngIf="deleting"></i>
+          <i class="ri-delete-bin-line" *ngIf="!deleting"></i>
+          {{ deleting ? 'Deleting...' : 'Delete Event' }}
+        </button>
+      </div>
+
+    </div>
+  </div>
+
 </div>
