@@ -1,8 +1,10 @@
 // src/app/features/my-giving/services/giving.service.ts
+// CHANGE: getMyGivingHistory() now filters to payment_status IN ('completed', null)
+// so pending/failed Paystack transactions don't show in member history.
+// Everything else is unchanged.
 import { Injectable } from '@angular/core';
 import { Observable, from, throwError, of } from 'rxjs';
 import { map, catchError, switchMap } from 'rxjs/operators';
-
 import {
   GivingCategory,
   GivingTransaction,
@@ -12,9 +14,7 @@ import {
 import { SupabaseService } from '../../../core/services/supabase';
 import { AuthService } from '../../../core/services/auth';
 
-@Injectable({
-  providedIn: 'root',
-})
+@Injectable({ providedIn: 'root' })
 export class GivingService {
   private userId?: string;
   private memberId?: string;
@@ -30,9 +30,7 @@ export class GivingService {
   }
 
   private getMemberId(): Observable<string> {
-    if (this.memberId) {
-      return of(this.memberId);
-    }
+    if (this.memberId) return of(this.memberId);
     return from(
       this.supabase.client
         .from('members')
@@ -62,7 +60,7 @@ export class GivingService {
         .from('giving_categories')
         .select('*')
         .eq('is_active', true)
-        .eq('church_id', this.churchId) // ← ADD THIS
+        .eq('church_id', this.churchId)
         .order('name', { ascending: true }),
     ).pipe(
       map((response) => {
@@ -75,12 +73,11 @@ export class GivingService {
 
   getMyGivingSummary(fiscalYear?: number): Observable<GivingSummary> {
     const year = fiscalYear || new Date().getFullYear();
-
     return this.getMemberId().pipe(
       switchMap((memberId) =>
         from(
           this.supabase.client.rpc('get_member_giving_summary', {
-            member_uuid: memberId, // ✅ members.id not users.id
+            member_uuid: memberId,
             fiscal_year: year,
           }),
         ),
@@ -115,8 +112,15 @@ export class GivingService {
           this.supabase.client
             .from('giving_transactions')
             .select(`*, category:giving_categories!category_id(name)`)
-            .eq('member_id', memberId) // ✅ members.id
+            .eq('member_id', memberId)
+            // ── KEY FIX: only show completed payments ──────────────
+            // 'completed' = paid via Paystack and confirmed by webhook
+            // null = manually recorded (cash, mobile money manual etc.) — always show
+            // 'pending' = Paystack initialized but not yet confirmed — HIDE
+            // 'failed'/'abandoned' = cancelled/failed — HIDE
+            .or('payment_status.eq.completed,payment_status.is.null')
             .order('transaction_date', { ascending: false })
+            .order('created_at', { ascending: false })
             .limit(limit),
         ),
       ),
@@ -145,7 +149,7 @@ export class GivingService {
 
         const transactionData = {
           church_id: this.churchId,
-          member_id: memberId, // ✅ members.id
+          member_id: memberId,
           category_id: givingData.category_id,
           amount: givingData.amount,
           currency: 'GHS',
@@ -155,8 +159,10 @@ export class GivingService {
             givingData.transaction_date ||
             new Date().toISOString().split('T')[0],
           fiscal_year: new Date().getFullYear(),
-          notes: notes,
-          recorded_by: this.userId, // ✅ users.id (auth UUID) not memberId
+          notes,
+          recorded_by: this.userId,
+          // Manual payments are always considered completed
+          payment_status: 'completed',
         };
 
         return from(
@@ -191,9 +197,7 @@ export class GivingService {
 
   private buildTransactionNotes(data: CreateTransactionData): string {
     const notes: string[] = [];
-
     if (data.notes) notes.push(data.notes);
-
     switch (data.payment_method) {
       case 'mobile_money':
         if (data.mobile_number)
@@ -208,7 +212,6 @@ export class GivingService {
           notes.push(`Card: ****${data.card_number.slice(-4)}`);
         break;
     }
-
     return notes.join(' | ');
   }
 }

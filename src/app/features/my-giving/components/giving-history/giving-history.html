@@ -1,24 +1,23 @@
 <!-- src/app/features/my-giving/components/giving-history/giving-history.component.html -->
 <div class="giving-history">
-  <!-- Loading State -->
+
+  <!-- Loading -->
   <div *ngIf="loading" class="loading-container">
     <div class="spinner"></div>
     <p>Loading transaction history...</p>
   </div>
 
-  <!-- Empty State -->
+  <!-- Empty -->
   <div *ngIf="!loading && transactions.length === 0" class="empty-state">
     <i class="ri-inbox-line"></i>
     <h3>No Transactions Yet</h3>
     <p>Your giving history will appear here once you make your first contribution.</p>
   </div>
 
-  <!-- Transaction List -->
+  <!-- List -->
   <div *ngIf="!loading && transactions.length > 0" class="transaction-list">
-    <div
-      *ngFor="let transaction of transactions"
-      class="transaction-card"
-    >
+    <div *ngFor="let transaction of transactions" class="transaction-card">
+
       <div class="transaction-header">
         <div class="transaction-icon" [ngClass]="getCategoryIconColor(transaction.category_name || '')">
           <i [class]="getCategoryIcon(transaction.category_name || '')"></i>
@@ -31,8 +30,24 @@
             <span class="time">{{ formatTime(transaction.created_at) }}</span>
           </div>
         </div>
-        <div class="transaction-amount">
-          <span class="amount">{{ transaction.currency }} {{ transaction.amount | number:'1.2-2' }}</span>
+        <div class="transaction-right">
+          <div class="transaction-amount">
+            <span class="amount">{{ transaction.currency }} {{ transaction.amount | number:'1.2-2' }}</span>
+          </div>
+          <!-- Status badge — only shown for Paystack payments -->
+          <div class="status-badge completed"
+            *ngIf="transaction.payment_method === 'paystack' && transaction.payment_status === 'completed'">
+            <i class="ri-checkbox-circle-fill"></i> Confirmed
+          </div>
+          <div class="status-badge pending"
+            *ngIf="transaction.payment_method === 'paystack' && transaction.payment_status === 'pending'">
+            <i class="ri-time-line"></i> Processing
+          </div>
+          <div class="status-badge failed"
+            *ngIf="transaction.payment_method === 'paystack' &&
+                   (transaction.payment_status === 'failed' || transaction.payment_status === 'abandoned')">
+            <i class="ri-close-circle-fill"></i> Not completed
+          </div>
         </div>
       </div>
 
@@ -42,6 +57,11 @@
             <i [class]="getPaymentMethodIcon(transaction.payment_method)"></i>
             <span>{{ getPaymentMethodLabel(transaction.payment_method) }}</span>
           </div>
+          <!-- Payment channel from Paystack e.g. "card", "mobile_money" -->
+          <div class="detail-item channel-tag" *ngIf="transaction.payment_channel">
+            <i class="ri-signal-wifi-line"></i>
+            <span>via {{ transaction.payment_channel | titlecase }}</span>
+          </div>
         </div>
 
         <div *ngIf="transaction.transaction_reference" class="reference-number">
@@ -50,8 +70,8 @@
         </div>
 
         <div *ngIf="transaction.notes" class="transaction-notes">
-          <span class="label">Notes:</span>
-          <span class="value">{{ transaction.notes }}</span>
+          <i class="ri-file-text-line"></i>
+          <span>{{ transaction.notes }}</span>
         </div>
       </div>
     </div>

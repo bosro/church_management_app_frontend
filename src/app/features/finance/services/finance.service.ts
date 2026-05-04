@@ -255,6 +255,10 @@ export class FinanceService {
     if (filters?.memberId) query = query.eq('member_id', filters.memberId);
     if (filters?.paymentMethod)
       query = query.eq('payment_method', filters.paymentMethod);
+    // Only show completed Paystack transactions — hide pending/failed/abandoned.
+    // Manual payments (cash, mobile_money manual etc.) have null payment_status
+    // and are always shown. This mirrors what members see in their own history.
+    query = query.or('payment_status.eq.completed,payment_status.is.null');
 
     const { data, error, count } = await query
       .order('transaction_date', { ascending: false })

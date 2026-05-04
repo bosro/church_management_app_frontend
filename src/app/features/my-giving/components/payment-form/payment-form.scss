@@ -163,16 +163,22 @@ textarea.form-control {
     }
   }
 
-  .online-badge {
-    font-size: 0.5625rem;
-    font-weight: 800;
-    letter-spacing: 0.06em;
-    background: #5b21b6;
-    color: white;
-    padding: 2px 6px;
-    border-radius: 4px;
-    margin-top: -4px;
-  }
+ .online-badge {
+  font-size: 0.5625rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  background: #5b21b6;
+  color: white !important;   // ← force white regardless of parent selected state
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-top: -4px;
+}
+
+// When the online card IS selected, badge needs higher contrast
+.payment-method-card.selected .online-badge {
+  background: white;
+  color: #5b21b6 !important;  // ← invert: purple text on white background
+}
 
   @media (max-width: 480px) {
     padding: 1rem;
