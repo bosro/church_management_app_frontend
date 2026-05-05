@@ -23,10 +23,11 @@
         <i class="ri-money-dollar-circle-line"></i>
         Amount (GHS) <span class="required">*</span>
       </label>
-      <input type="number" id="amount" formControlName="amount" class="form-control" placeholder="Enter amount" min="1"
-        step="0.01" [class.error]="paymentForm.get('amount')?.invalid && paymentForm.get('amount')?.touched" />
-      <span *ngIf="paymentForm.get('amount')?.invalid && paymentForm.get('amount')?.touched" class="error-message">{{
-        getErrorMessage('amount') }}</span>
+      <input type="number" id="amount" formControlName="amount" class="form-control"
+        placeholder="Enter amount" min="1" step="0.01"
+        [class.error]="paymentForm.get('amount')?.invalid && paymentForm.get('amount')?.touched" />
+      <span *ngIf="paymentForm.get('amount')?.invalid && paymentForm.get('amount')?.touched"
+        class="error-message">{{ getErrorMessage('amount') }}</span>
     </div>
 
     <!-- Payment Method -->
@@ -38,7 +39,8 @@
 
       <div class="payment-methods">
         <div *ngFor="let method of paymentMethods" class="payment-method-card"
-          [class.selected]="isSelected(method.value)" [class.online-card]="method.isOnline"
+          [class.selected]="isSelected(method.value)"
+          [class.online-card]="method.isOnline"
           (click)="selectMethod(method.value)">
           <i [class]="method.icon"></i>
           <span>{{ method.label }}</span>
@@ -48,6 +50,45 @@
 
       <span *ngIf="paymentForm.get('payment_method')?.invalid && paymentForm.get('payment_method')?.touched"
         class="error-message">Please select a payment method</span>
+    </div>
+
+    <!-- ── Fee breakdown ─────────────────────────────────────────
+         Shown only when:
+         1. Paystack is selected
+         2. A valid amount is entered
+         3. pass_fees_to_payer is true (loaded from platform_settings)
+         4. Fees have finished loading
+    ──────────────────────────────────────────────────────────── -->
+
+    <!-- Loading fees indicator -->
+    <div class="fee-loading" *ngIf="isSelected('paystack') && loadingFees">
+      <i class="ri-loader-4-line spin"></i>
+      <span>Loading fee information...</span>
+    </div>
+
+    <!-- Fee breakdown card -->
+    <div class="fee-breakdown"
+      *ngIf="isSelected('paystack') && paymentForm.get('amount')?.value > 0 && passFeesToPayer && !loadingFees">
+      <div class="fee-breakdown-header">
+        <i class="ri-information-line"></i>
+        <span>Payment breakdown</span>
+      </div>
+      <div class="fee-row">
+        <span>Your giving amount</span>
+        <span>GHS {{ paymentForm.get('amount')?.value | number:'1.2-2' }}</span>
+      </div>
+      <div class="fee-row">
+        <span>Processing fee ({{ totalFeePercent | number:'1.2-2' }}%)</span>
+        <span class="fee-extra">+ GHS {{ feeAmount | number:'1.2-2' }}</span>
+      </div>
+      <div class="fee-row fee-total">
+        <strong>You will be charged</strong>
+        <strong>GHS {{ chargeAmount | number:'1.2-2' }}</strong>
+      </div>
+      <p class="fee-note">
+        <i class="ri-shield-check-line"></i>
+        The church receives your full giving amount. The fee covers Paystack processing and Churchman platform costs.
+      </p>
     </div>
 
     <!-- Mobile Money detail -->
@@ -108,8 +149,8 @@
         <i class="ri-file-text-line"></i>
         Notes (Optional)
       </label>
-      <textarea id="notes" formControlName="notes" class="form-control" placeholder="Add any additional notes..."
-        rows="3" maxlength="500"></textarea>
+      <textarea id="notes" formControlName="notes" class="form-control"
+        placeholder="Add any additional notes..." rows="3" maxlength="500"></textarea>
       <span class="char-count">{{ paymentForm.get('notes')?.value?.length || 0 }} / 500</span>
     </div>
 
@@ -124,5 +165,6 @@
         {{ loading ? 'Processing...' : 'Submit Payment' }}
       </button>
     </div>
+
   </form>
 </div>

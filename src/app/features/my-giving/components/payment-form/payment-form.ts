@@ -1,11 +1,21 @@
 // src/app/features/my-giving/components/payment-form/payment-form.component.ts
-import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
+import {
+  Component,
+  EventEmitter,
+  Input,
+  OnInit,
+  OnDestroy,
+  Output,
+} from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import {
   GivingCategory,
   CreateTransactionData,
   PaymentMethod,
 } from '../../../../models/giving.model';
+import { SupabaseService } from '../../../../core/services/supabase';
 
 @Component({
   selector: 'app-payment-form',
@@ -13,11 +23,13 @@ import {
   templateUrl: './payment-form.html',
   styleUrl: './payment-form.scss',
 })
-export class PaymentForm implements OnInit {
+export class PaymentForm implements OnInit, OnDestroy {
   @Input() categories: GivingCategory[] = [];
   @Input() loading = false;
   @Output() formSubmit = new EventEmitter<CreateTransactionData>();
   @Output() formCancel = new EventEmitter<void>();
+
+  private destroy$ = new Subject<void>();
 
   paymentForm!: FormGroup;
 
@@ -60,13 +72,32 @@ export class PaymentForm implements OnInit {
     },
   ];
 
-  constructor(private fb: FormBuilder) {}
+  // ── Platform fee settings (loaded from Supabase) ─────────
+  paystackFeePercent = 1.95; // default — overridden from platform_settings
+  platformFeePercent = 0.2; // default — overridden from platform_settings
+  passFeesToPayer = true; // default — overridden from platform_settings
+  loadingFees = false;
+
+  constructor(
+    private fb: FormBuilder,
+    private supabase: SupabaseService,
+  ) {}
 
   ngOnInit(): void {
+    this.initForm();
+    this.loadFeeSettings();
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  private initForm(): void {
     this.paymentForm = this.fb.group({
       category_id: ['', Validators.required],
       amount: ['', [Validators.required, Validators.min(1)]],
-      payment_method: ['', Validators.required], // starts empty — nothing pre-selected
+      payment_method: ['', Validators.required],
       mobile_number: [''],
       bank_name: [''],
       account_number: [''],
@@ -74,13 +105,58 @@ export class PaymentForm implements OnInit {
       notes: ['', Validators.maxLength(500)],
     });
 
-    // Update conditional validators whenever payment method changes
-    this.paymentForm.get('payment_method')!.valueChanges.subscribe((method) => {
-      this.updateConditionalValidators(method);
-    });
+    this.paymentForm
+      .get('payment_method')!
+      .valueChanges.pipe(takeUntil(this.destroy$))
+      .subscribe((method) => this.updateConditionalValidators(method));
   }
 
-  // ── Getters ──────────────────────────────────────────────────
+  // ── Load fee settings from platform_settings table ────────
+  private loadFeeSettings(): void {
+    this.loadingFees = true;
+    this.supabase.client
+      .from('platform_settings')
+      .select('key, value')
+      .in('key', [
+        'paystack_fee_percent',
+        'platform_fee_percent',
+        'pass_fees_to_payer',
+      ])
+      .then(({ data }) => {
+        this.loadingFees = false;
+        if (!data) return;
+        const map: Record<string, string> = {};
+        data.forEach((s: any) => {
+          map[s.key] = s.value;
+        });
+        if (map['paystack_fee_percent'])
+          this.paystackFeePercent = parseFloat(map['paystack_fee_percent']);
+        if (map['platform_fee_percent'])
+          this.platformFeePercent = parseFloat(map['platform_fee_percent']);
+        if (map['pass_fees_to_payer'])
+          this.passFeesToPayer = map['pass_fees_to_payer'] !== 'false';
+      });
+  }
+
+  // ── Fee calculation getters ────────────────────────────────
+  // These mirror the exact formula used in the Edge Function
+  get totalFeePercent(): number {
+    return this.paystackFeePercent + this.platformFeePercent;
+  }
+
+  get chargeAmount(): number {
+    const amount = parseFloat(this.paymentForm.get('amount')?.value || '0');
+    if (!amount || !this.passFeesToPayer) return amount;
+    const combinedRate = this.totalFeePercent / 100;
+    return Math.ceil((amount / (1 - combinedRate)) * 100) / 100;
+  }
+
+  get feeAmount(): number {
+    const amount = parseFloat(this.paymentForm.get('amount')?.value || '0');
+    return Math.max(0, this.chargeAmount - amount);
+  }
+
+  // ── Payment method helpers ─────────────────────────────────
   get selectedMethod(): string {
     return this.paymentForm.get('payment_method')?.value || '';
   }
@@ -89,15 +165,12 @@ export class PaymentForm implements OnInit {
     return this.selectedMethod === value;
   }
 
-  // ── Method card click ────────────────────────────────────────
   selectMethod(value: string): void {
     this.paymentForm.patchValue({ payment_method: value });
-    // Mark as touched so validation shows and submit enables
     this.paymentForm.get('payment_method')!.markAsTouched();
     this.paymentForm.get('payment_method')!.markAsDirty();
   }
 
-  // ── Conditional field validators ─────────────────────────────
   private updateConditionalValidators(method: string): void {
     const fields = [
       'mobile_number',
@@ -105,13 +178,11 @@ export class PaymentForm implements OnInit {
       'account_number',
       'card_number',
     ];
-    // Clear all
     fields.forEach((f) => {
       this.paymentForm.get(f)?.clearValidators();
       this.paymentForm.get(f)?.updateValueAndValidity();
     });
 
-    // Add for current method
     switch (method) {
       case 'mobile_money':
         this.paymentForm
@@ -134,7 +205,7 @@ export class PaymentForm implements OnInit {
     fields.forEach((f) => this.paymentForm.get(f)?.updateValueAndValidity());
   }
 
-  // ── Submit ────────────────────────────────────────────────────
+  // ── Submit ────────────────────────────────────────────────
   onSubmit(): void {
     if (this.paymentForm.invalid) {
       this.markAllTouched(this.paymentForm);

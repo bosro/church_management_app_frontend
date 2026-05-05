@@ -79,6 +79,13 @@ export class Sidebar implements OnInit {
           active: false,
           roles: ['super_admin'],
         },
+         {
+          icon: 'ri-money-dollar-circle-line',
+          label: 'Finance',
+          route: '/main/admin/finance',
+          active: false,
+          roles: ['super_admin'],
+        },
       ],
     },
     {

@@ -12,6 +12,7 @@ import { Pledges } from './components/pledges/pledges';
 import { PledgeDetails } from './pledge-details/pledge-details';
 import { CategoryExpenses } from './components/category-expenses/category-expenses';
 import { PaymentLinks } from './components/payment-links/payment-links';
+import { WithdrawalRequests } from './components/withdrawal-requests/withdrawal-requests';
 
 const FINANCE_VIEW_ROLES = [
   'super_admin',
@@ -61,6 +62,16 @@ const routes: Routes = [
     canActivate: [PermissionGuard],
     data: {
       title: 'Pledges',
+      permission: 'finance.view',
+      roles: FINANCE_VIEW_ROLES,
+    },
+  },
+   {
+    path: 'withdrawals',
+    component: WithdrawalRequests,
+    canActivate: [PermissionGuard],
+    data: {
+      title: 'WithdrawalRequests',
       permission: 'finance.view',
       roles: FINANCE_VIEW_ROLES,
     },

@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Finance Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #1a0f00;
+    --sidebar-bg: #110900;
+    --card-bg: #2a1800;
+    --card-bg2: #221200;
+    --orange: #e8650a;
+    --orange-light: #f07830;
+    --orange-dark: #c45008;
+    --green: #4ade80;
+    --green-chart: #22c55e;
+    --text: #f5e6d0;
+    --text-muted: #9a7a5a;
+    --text-dim: #6a4a2a;
+    --border: #3a2010;
+    --card-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    --radius: 16px;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    overflow: hidden;
+    font-size: 14px;
+  }
+
+  /* SIDEBAR */
+  .sidebar {
+    width: 68px;
+    background: var(--sidebar-bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 18px 0;
+    gap: 8px;
+    border-right: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .sidebar-logo {
+    width: 38px; height: 38px;
+    background: linear-gradient(135deg, #4ade80 0%, #22c55e 50%, #e8650a 100%);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 10px;
+  }
+  .sidebar-logo svg { width: 22px; height: 22px; }
+
+  .sidebar-nav {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 4px; width: 100%; padding: 0 10px;
+    flex: 1;
+  }
+
+  .nav-item {
+    width: 44px; height: 44px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.2s;
+    color: var(--text-muted);
+    position: relative;
+  }
+  .nav-item:hover { background: var(--card-bg); color: var(--text); }
+  .nav-item.active {
+    background: var(--orange);
+    color: #fff;
+  }
+  .nav-item.active svg { color: #fff; }
+  .nav-dot {
+    width: 6px; height: 6px;
+    background: var(--orange);
+    border-radius: 50%;
+    position: absolute;
+    top: 8px; right: 8px;
+  }
+
+  .sidebar-bottom {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 4px; padding: 0 10px;
+  }
+
+  /* MAIN */
+  .main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* TOPBAR */
+  .topbar {
+    display: flex;
+    align-items: center;
+    padding: 12px 20px;
+    gap: 12px;
+    border-bottom: 1px solid var(--border);
+    background: var(--sidebar-bg);
+    flex-shrink: 0;
+  }
+
+  .search-bar {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 14px;
+    flex: 1; max-width: 280px;
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+  .search-bar svg { color: var(--text-muted); flex-shrink: 0; }
+
+  .kbd {
+    background: var(--card-bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 4px 12px;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-left: auto;
+    display: flex; align-items: center; gap: 4px;
+  }
+
+  .topbar-actions {
+    display: flex; align-items: center; gap: 10px; margin-left: auto;
+  }
+
+  .icon-btn {
+    width: 36px; height: 36px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: var(--text-muted);
+  }
+  .icon-btn:hover { color: var(--text); }
+
+  .user-info {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 6px 12px 6px 6px;
+    cursor: pointer;
+  }
+  .user-avatar {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: linear-gradient(135deg, #8b6040, #5a3020);
+    overflow: hidden; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 600; color: #e8b080;
+  }
+  .user-details { line-height: 1.3; }
+  .user-name { font-size: 13px; font-weight: 600; color: var(--text); }
+  .user-handle { font-size: 11px; color: var(--text-muted); }
+
+  /* CONTENT */
+  .content {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    padding: 18px;
+    gap: 16px;
+  }
+
+  /* LEFT PANEL */
+  .left-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    overflow-y: auto;
+    min-width: 0;
+  }
+
+  /* CHART CARD */
+  .chart-card {
+    background: var(--card-bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 20px 16px;
+    position: relative;
+  }
+
+  .chart-header {
+    display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 4px;
+  }
+  .balance-label { font-size: 12px; color: var(--text-muted); font-weight: 500; margin-bottom: 4px; }
+  .balance-amount {
+    font-size: 30px; font-weight: 700; color: var(--text);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .badge-up {
+    font-size: 12px; font-weight: 600;
+    color: var(--green);
+    display: flex; align-items: center; gap: 3px;
+  }
+  .badge-down { color: #f87171; }
+
+  .time-tabs {
+    display: flex; gap: 2px;
+    background: var(--card-bg);
+    border-radius: 10px;
+    padding: 3px;
+  }
+  .time-tab {
+    padding: 5px 12px; border-radius: 7px;
+    font-size: 12px; font-weight: 500;
+    cursor: pointer; color: var(--text-muted);
+    transition: all 0.2s;
+  }
+  .time-tab.active {
+    background: var(--bg);
+    color: var(--text);
+  }
+
+  /* SVG CHART */
+  .chart-wrap { position: relative; margin-top: 8px; }
+  .chart-tooltip {
+    position: absolute;
+    top: 20px; left: 50%;
+    transform: translateX(-50%);
+    background: #f5e6d0;
+    color: #1a0f00;
+    border-radius: 10px;
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    pointer-events: none;
+  }
+  .chart-tooltip .date { font-weight: 500; font-size: 11px; color: #5a3020; margin-bottom: 2px; display: flex; align-items: center; gap: 4px; }
+  .chart-tooltip .amount { font-size: 14px; font-weight: 700; }
+
+  .chart-y-labels {
+    position: absolute; right: 0; top: 0; bottom: 28px;
+    display: flex; flex-direction: column; justify-content: space-between;
+    font-size: 11px; color: var(--text-muted);
+    padding: 4px 0;
+    pointer-events: none;
+  }
+
+  .chart-x-labels {
+    display: flex; justify-content: space-between;
+    padding: 6px 0 0 0;
+    font-size: 11px; color: var(--text-muted);
+  }
+
+  .chart-legend {
+    display: flex; align-items: center; gap: 18px;
+    margin-top: 10px; padding-top: 8px;
+    border-top: 1px solid var(--border);
+    font-size: 12px; color: var(--text-muted);
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-dot {
+    width: 12px; height: 12px; border-radius: 3px;
+    border: 2px solid;
+  }
+  .chart-footer {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 6px;
+  }
+  .avg-rate { font-size: 12px; color: var(--text-muted); }
+  .avg-rate span { color: var(--text); font-weight: 600; }
+
+  /* BOTTOM ROW */
+  .bottom-row {
+    display: flex; gap: 16px; flex: 1;
+  }
+
+  /* PROMO CARD */
+  .promo-card {
+    width: 240px; flex-shrink: 0;
+    background: linear-gradient(145deg, #2a1400 0%, #3d1e00 40%, #5a2800 100%);
+    border: 1px solid #5a3010;
+    border-radius: var(--radius);
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .promo-card::after {
+    content: '';
+    position: absolute;
+    bottom: -20px; right: -20px;
+    width: 180px; height: 180px;
+    background: radial-gradient(circle, rgba(180,80,10,0.3) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+
+  .promo-headphones {
+    position: absolute;
+    bottom: 50px; right: -10px;
+    width: 130px; height: 130px;
+    opacity: 0.85;
+  }
+
+  .promo-title {
+    font-size: 18px; font-weight: 700; line-height: 1.3;
+    margin-bottom: 8px; z-index: 1; position: relative;
+  }
+  .promo-title .highlight { color: var(--orange-light); }
+
+  .promo-desc {
+    font-size: 12px; color: var(--text-muted);
+    line-height: 1.5; margin-bottom: 16px;
+    z-index: 1; position: relative;
+  }
+
+  .promo-avatars {
+    display: flex; align-items: center; margin-bottom: 16px;
+    z-index: 1; position: relative;
+  }
+  .promo-avatar {
+    width: 28px; height: 28px; border-radius: 50%;
+    border: 2px solid var(--card-bg);
+    margin-right: -8px;
+    overflow: hidden; flex-shrink: 0;
+    font-size: 11px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .av1 { background: linear-gradient(135deg, #e8a060, #c06030); color: #fff; }
+  .av2 { background: linear-gradient(135deg, #60a0e8, #3060c0); color: #fff; }
+  .av3 { background: linear-gradient(135deg, #60e890, #20a050); color: #fff; }
+  .av-plus {
+    background: var(--orange); color: #fff;
+    width: 28px; height: 28px; border-radius: 50%;
+    border: 2px solid var(--card-bg);
+    margin-right: 0; margin-left: -0px;
+    font-size: 16px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .promo-btn {
+    background: #f5e6d0;
+    color: #1a0f00;
+    border: none;
+    border-radius: 10px;
+    padding: 12px;
+    font-size: 14px; font-weight: 600;
+    cursor: pointer;
+    width: 100%;
+    margin-top: auto;
+    z-index: 1; position: relative;
+  }
+
+  /* INVESTMENTS CARD */
+  .invest-card {
+    flex: 1;
+    background: var(--card-bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    min-width: 0;
+  }
+  .invest-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .invest-title { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+  .invest-amount {
+    font-size: 22px; font-weight: 700;
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  .sort-btn, .month-btn {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 12px; color: var(--text-muted);
+    display: flex; align-items: center; gap: 4px;
+    cursor: pointer;
+  }
+  .invest-controls { display: flex; gap: 6px; }
+
+  /* BAR CHART */
+  .bar-chart {
+    display: flex; align-items: flex-end; gap: 6px;
+    height: 140px;
+    margin-bottom: 8px;
+  }
+  .bar-group { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .bar {
+    width: 100%;
+    border-radius: 6px 6px 0 0;
+    position: relative;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    display: flex; align-items: flex-start; justify-content: center;
+    padding-top: 4px;
+  }
+  .bar:hover { opacity: 0.85; }
+  .bar-label-top {
+    font-size: 10px; font-weight: 600; color: var(--text);
+    position: absolute; top: -18px;
+  }
+  .bar-amber { background: linear-gradient(180deg, #b86020 0%, #7a3010 100%); }
+  .bar-green { background: linear-gradient(180deg, #4ade80 0%, #22c55e 100%); }
+  .bar-x { font-size: 10px; color: var(--text-muted); margin-top: 4px; }
+
+  /* RIGHT PANEL */
+  .right-panel {
+    width: 280px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    overflow-y: auto;
+  }
+
+  /* MY CARDS */
+  .cards-section {
+    background: linear-gradient(145deg, #3d1e00 0%, #2a1200 100%);
+    border: 1px solid #5a3010;
+    border-radius: var(--radius);
+    padding: 18px;
+  }
+  .section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .section-title { font-size: 15px; font-weight: 600; }
+  .add-btn {
+    background: var(--card-bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 5px 10px;
+    font-size: 12px; color: var(--text-muted);
+    cursor: pointer; display: flex; align-items: center; gap: 4px;
+  }
+
+  /* MINI CARDS */
+  .mini-cards {
+    display: flex; gap: 8px; margin-bottom: 14px;
+  }
+  .mini-card {
+    flex: 1;
+    background: var(--card-bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px;
+  }
+  .mini-card-brand { font-size: 10px; font-weight: 700; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 6px; }
+  .mini-card-amt { font-size: 13px; font-weight: 600; }
+  .mini-card-sub { font-size: 11px; color: var(--text-muted); }
+  .mini-card-dots {
+    display: flex; gap: 3px; margin-bottom: 4px;
+  }
+  .dot-red { width: 10px; height: 10px; background: #e53e3e; border-radius: 50%; opacity: 0.8; }
+  .dot-amber { width: 10px; height: 10px; background: #d97706; border-radius: 50%; opacity: 0.8; margin-left: -4px; }
+
+  /* BIG CARD */
+  .big-card {
+    background: linear-gradient(135deg, #3a1e08 0%, #1e0e00 100%);
+    border: 1px solid #5a3010;
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 14px;
+    position: relative;
+    overflow: hidden;
+  }
+  .big-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 20px,
+      rgba(255,255,255,0.015) 20px,
+      rgba(255,255,255,0.015) 21px
+    );
+  }
+  .big-card-visa { font-size: 18px; font-weight: 800; letter-spacing: 1px; color: #f5e6d0; margin-bottom: 24px; position: relative; z-index: 1; font-style: italic; }
+  .big-card-chip {
+    position: absolute; right: 16px; top: 16px;
+    width: 40px; height: 30px;
+    background: linear-gradient(135deg, #9a7040, #6a4820);
+    border-radius: 6px;
+    z-index: 1;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .chip-lines { width: 28px; height: 20px; border: 1px solid rgba(255,200,100,0.4); border-radius: 3px; position: relative; }
+  .chip-lines::after { content: ''; position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: rgba(255,200,100,0.3); }
+
+  .big-card-label { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; position: relative; z-index: 1; }
+  .big-card-amount {
+    font-size: 26px; font-weight: 700;
+    display: flex; align-items: center; gap: 10px;
+    position: relative; z-index: 1;
+  }
+
+  /* ACTION BUTTONS */
+  .action-btns { display: flex; gap: 10px; margin-bottom: 16px; }
+  .action-btn {
+    flex: 1; padding: 12px;
+    border-radius: 12px; border: none;
+    font-size: 14px; font-weight: 600;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    cursor: pointer;
+  }
+  .btn-request { background: var(--card-bg); color: var(--text); border: 1px solid var(--border); }
+  .btn-transfer { background: var(--orange); color: #fff; }
+
+  /* RECENT TRANSACTIONS */
+  .tx-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .tx-title { font-size: 14px; font-weight: 600; }
+  .view-all { font-size: 12px; color: var(--text-muted); cursor: pointer; }
+
+  .tx-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px;
+    background: var(--card-bg2);
+    border-radius: 10px;
+    margin-bottom: 8px;
+    border: 1px solid var(--border);
+  }
+  .tx-avatar {
+    width: 36px; height: 36px; border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; flex-shrink: 0;
+    overflow: hidden;
+  }
+  .tx-av1 { background: linear-gradient(135deg, #704030, #3a1a10); color: #e8a060; }
+  .tx-av2 { background: #1a1a2e; color: #4a90d9; }
+  .tx-av3 { background: #1a2a1a; color: #e8e8e8; }
+  .tx-info { flex: 1; min-width: 0; }
+  .tx-name { font-size: 13px; font-weight: 600; }
+  .tx-date { font-size: 11px; color: var(--text-muted); }
+  .tx-amount { font-size: 13px; font-weight: 700; }
+  .tx-pos { color: var(--green); }
+  .tx-neg { color: #f87171; }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 2L4 7v5c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V7L12 2z" fill="rgba(255,255,255,0.9)"/>
+    </svg>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-item active">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+    </div>
+    <div class="nav-item">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+    </div>
+    <div class="nav-item">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+    </div>
+    <div class="nav-item" style="position:relative;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+      <span class="nav-dot"></span>
+    </div>
+    <div class="nav-item">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+    </div>
+    <div class="nav-item">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+    </div>
+    <div class="nav-item">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    </div>
+  </nav>
+  <div class="sidebar-bottom">
+    <div class="nav-item">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+    </div>
+    <div class="nav-item">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div class="main">
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="search-bar">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <span>Search</span>
+    </div>
+    <div class="kbd">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3h12a3 3 0 0 0 3-3 3 3 0 0 0-3-3z"/></svg>
+      + Space
+    </div>
+    <div class="topbar-actions">
+      <div class="icon-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/></svg>
+      </div>
+      <div class="icon-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+      </div>
+      <div class="icon-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+      </div>
+      <div class="user-info">
+        <div class="user-avatar">ER</div>
+        <div class="user-details">
+          <div class="user-name">Ethan Reynolds</div>
+          <div class="user-handle">@ethan_reynolds</div>
+        </div>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:4px;color:var(--text-muted)"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTENT -->
+  <div class="content">
+
+    <!-- LEFT -->
+    <div class="left-panel">
+
+      <!-- CHART CARD -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="balance-label">Total Balance</div>
+            <div class="balance-amount">
+              $10,120.50
+              <span class="badge-up">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>
+                2,92 %
+              </span>
+            </div>
+          </div>
+          <div class="time-tabs">
+            <div class="time-tab">1 year</div>
+            <div class="time-tab active">6 month</div>
+            <div class="time-tab">3 month</div>
+            <div class="time-tab">1 month</div>
+          </div>
+        </div>
+
+        <div class="chart-wrap">
+          <!-- Tooltip -->
+          <div class="chart-tooltip" style="left:52%">
+            <div class="date">09  Dec, 2024
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#5a3020" stroke-width="2.5"><polyline points="7 17 17 7"/><polyline points="7 7 17 7 17 17"/></svg>
+            </div>
+            <div class="amount">9,780.90 USD</div>
+          </div>
+
+          <svg width="100%" height="200" viewBox="0 0 680 200" preserveAspectRatio="none" style="display:block;">
+            <defs>
+              <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#c45008" stop-opacity="0.5"/>
+                <stop offset="100%" stop-color="#c45008" stop-opacity="0.02"/>
+              </linearGradient>
+              <linearGradient id="greenGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#22c55e" stop-opacity="0.15"/>
+                <stop offset="100%" stop-color="#22c55e" stop-opacity="0.01"/>
+              </linearGradient>
+            </defs>
+            <!-- Grid lines -->
+            <line x1="0" y1="40" x2="680" y2="40" stroke="#3a2010" stroke-width="0.5"/>
+            <line x1="0" y1="80" x2="680" y2="80" stroke="#3a2010" stroke-width="0.5"/>
+            <line x1="0" y1="120" x2="680" y2="120" stroke="#3a2010" stroke-width="0.5"/>
+            <line x1="0" y1="160" x2="680" y2="160" stroke="#3a2010" stroke-width="0.5"/>
+            <line x1="0" y1="195" x2="680" y2="195" stroke="#3a2010" stroke-width="0.5"/>
+
+            <!-- Area fill -->
+            <path d="M0,160 C30,155 60,145 90,130 C120,115 150,140 180,125 C210,110 240,90 270,100 C300,110 330,130 360,120 C390,110 420,95 450,80 C480,65 510,90 540,100 C570,110 610,115 680,105 L680,195 L0,195 Z"
+                  fill="url(#areaGrad)"/>
+
+            <!-- Orange line -->
+            <path d="M0,160 C30,155 60,145 90,130 C120,115 150,140 180,125 C210,110 240,90 270,100 C300,110 330,130 360,120 C390,110 420,95 450,80 C480,65 510,90 540,100 C570,110 610,115 680,105"
+                  fill="none" stroke="#e8650a" stroke-width="2" stroke-linejoin="round"/>
+
+            <!-- Green dashed line (total monthly) -->
+            <path d="M0,175 C60,168 120,160 180,150 C240,140 300,145 360,138 C420,130 480,118 540,110 C600,102 640,98 680,94"
+                  fill="none" stroke="#22c55e" stroke-width="1.5" stroke-dasharray="5,4"/>
+
+            <!-- Tooltip dot -->
+            <circle cx="356" cy="120" r="5" fill="#f5e6d0" stroke="#e8650a" stroke-width="2"/>
+
+            <!-- Range selector line -->
+            <line x1="160" y1="196" x2="556" y2="196" stroke="#22c55e" stroke-width="3" stroke-linecap="round"/>
+            <circle cx="160" cy="196" r="4" fill="#3a2010" stroke="#9a7a5a" stroke-width="1.5"/>
+            <circle cx="350" cy="196" r="4" fill="#3a2010" stroke="#9a7a5a" stroke-width="1.5"/>
+            <circle cx="458" cy="196" r="4" fill="#3a2010" stroke="#9a7a5a" stroke-width="1.5"/>
+            <circle cx="556" cy="196" r="5" fill="#22c55e"/>
+          </svg>
+
+          <div class="chart-y-labels">
+            <span>$20k</span>
+            <span>$15k</span>
+            <span>$10k</span>
+            <span>$5k</span>
+            <span>$1k</span>
+          </div>
+        </div>
+
+        <div class="chart-x-labels">
+          <span>Sep</span><span>Oct</span><span>Nov</span><span>Dec</span><span>Jan</span><span>Feb</span>
+        </div>
+
+        <div class="chart-footer">
+          <div class="avg-rate">Average annual rate &nbsp;<span>$84,000</span></div>
+          <div class="chart-legend">
+            <div class="legend-item">
+              <div class="legend-dot" style="border-color:#f5e6d0;background:rgba(245,230,208,0.2)"></div>
+              Actual balance
+            </div>
+            <div class="legend-item">
+              <div class="legend-dot" style="border-color:#22c55e;background:rgba(34,197,94,0.15)"></div>
+              Total monthly balance
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BOTTOM ROW -->
+      <div class="bottom-row">
+
+        <!-- PROMO CARD -->
+        <div class="promo-card">
+          <div class="promo-title">
+            Trusted by <span class="highlight">Thousands</span><br>Join <span class="highlight">Us Today!</span>
+          </div>
+          <div class="promo-desc">Secure, reliable, and trusted by customers worldwide</div>
+          <div class="promo-avatars">
+            <div class="promo-avatar av1">A</div>
+            <div class="promo-avatar av2">B</div>
+            <div class="promo-avatar av3">C</div>
+            <div class="av-plus">+</div>
+          </div>
+          <!-- Headphones illustration -->
+          <svg class="promo-headphones" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <radialGradient id="hpGrad" cx="50%" cy="40%" r="60%">
+                <stop offset="0%" stop-color="#5a3020"/>
+                <stop offset="100%" stop-color="#1a0800"/>
+              </radialGradient>
+              <radialGradient id="hpShine" cx="35%" cy="30%" r="40%">
+                <stop offset="0%" stop-color="#7a4530" stop-opacity="0.8"/>
+                <stop offset="100%" stop-color="transparent"/>
+              </radialGradient>
+            </defs>
+            <!-- Band -->
+            <path d="M50,90 Q100,30 150,90" fill="none" stroke="#3a1a08" stroke-width="16" stroke-linecap="round"/>
+            <path d="M50,90 Q100,30 150,90" fill="none" stroke="#6a3518" stroke-width="10" stroke-linecap="round"/>
+            <!-- Left cup -->
+            <ellipse cx="50" cy="100" rx="22" ry="28" fill="url(#hpGrad)"/>
+            <ellipse cx="50" cy="100" rx="22" ry="28" fill="url(#hpShine)"/>
+            <ellipse cx="50" cy="100" rx="14" ry="18" fill="#2a1008"/>
+            <ellipse cx="50" cy="100" rx="8" ry="10" fill="#1a0800"/>
+            <!-- Right cup -->
+            <ellipse cx="150" cy="100" rx="22" ry="28" fill="url(#hpGrad)"/>
+            <ellipse cx="150" cy="100" rx="22" ry="28" fill="url(#hpShine)"/>
+            <ellipse cx="150" cy="100" rx="14" ry="18" fill="#2a1008"/>
+            <ellipse cx="150" cy="100" rx="8" ry="10" fill="#1a0800"/>
+            <!-- Highlights -->
+            <ellipse cx="44" cy="93" rx="6" ry="4" fill="rgba(255,180,100,0.15)" transform="rotate(-20,44,93)"/>
+            <ellipse cx="144" cy="93" rx="6" ry="4" fill="rgba(255,180,100,0.15)" transform="rotate(-20,144,93)"/>
+          </svg>
+
+          <button class="promo-btn">Request</button>
+        </div>
+
+        <!-- INVESTMENTS CARD -->
+        <div class="invest-card">
+          <div class="invest-header">
+            <div>
+              <div class="invest-title">Investments</div>
+              <div class="invest-amount">
+                $3,200.00
+                <span class="badge-up" style="font-size:11px;">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>
+                  1,52 %
+                </span>
+              </div>
+            </div>
+            <div class="invest-controls">
+              <div class="sort-btn">Sort <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="8 9 12 5 16 9"/><polyline points="16 15 12 19 8 15"/></svg></div>
+              <div class="month-btn">Month <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
+            </div>
+          </div>
+
+          <div class="bar-chart">
+            <!-- Bars: Sep $200, Oct $300, Nov $400, Dec $400, Jan $500(green), Feb $400 -->
+            <div class="bar-group">
+              <div class="bar bar-amber" style="height:56px;">
+                <span class="bar-label-top">$200</span>
+              </div>
+              <div class="bar-x">Sep</div>
+            </div>
+            <div class="bar-group">
+              <div class="bar bar-amber" style="height:84px;">
+                <span class="bar-label-top">$300</span>
+              </div>
+              <div class="bar-x">Oct</div>
+            </div>
+            <div class="bar-group">
+              <div class="bar bar-amber" style="height:112px;">
+                <span class="bar-label-top">$400</span>
+              </div>
+              <div class="bar-x">Nov</div>
+            </div>
+            <div class="bar-group">
+              <div class="bar bar-amber" style="height:112px;">
+                <span class="bar-label-top">$400</span>
+              </div>
+              <div class="bar-x">Dec</div>
+            </div>
+            <div class="bar-group">
+              <div class="bar bar-green" style="height:140px;">
+                <span class="bar-label-top" style="color:#1a0f00;background:#4ade80;padding:1px 5px;border-radius:4px;font-size:10px;">$500</span>
+              </div>
+              <div class="bar-x">Jan</div>
+            </div>
+            <div class="bar-group">
+              <div class="bar bar-amber" style="height:112px;">
+                <span class="bar-label-top">$400</span>
+              </div>
+              <div class="bar-x">Feb</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div class="right-panel">
+      <div class="cards-section">
+        <div class="section-header">
+          <div class="section-title">My cards</div>
+          <div class="add-btn">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add new
+          </div>
+        </div>
+
+        <!-- Mini cards row -->
+        <div class="mini-cards">
+          <div class="mini-card">
+            <div class="mini-card-brand">VISA</div>
+            <div class="mini-card-amt">$6,150.00</div>
+          </div>
+          <div class="mini-card">
+            <div class="mini-card-dots">
+              <div class="dot-red"></div><div class="dot-amber"></div>
+            </div>
+            <div class="mini-card-sub">$3,140.00</div>
+          </div>
+        </div>
+
+        <!-- Big card -->
+        <div class="big-card">
+          <div class="big-card-visa">VISA</div>
+          <div class="big-card-chip">
+            <div class="chip-lines"></div>
+          </div>
+          <div class="big-card-label">Balance</div>
+          <div class="big-card-amount">
+            $12,850.00
+            <span class="badge-up" style="font-size:11px;">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>
+              3,52 %
+            </span>
+          </div>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="action-btns">
+          <button class="action-btn btn-request">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
+            Request
+          </button>
+          <button class="action-btn btn-transfer">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="7 17 17 7"/><polyline points="7 7 17 7 17 17"/></svg>
+            Transfer
+          </button>
+        </div>
+
+        <!-- Recent Transactions -->
+        <div class="tx-header">
+          <div class="tx-title">Recent Transactions</div>
+          <div class="view-all">View All</div>
+        </div>
+
+        <div class="tx-item">
+          <div class="tx-avatar tx-av1">LB</div>
+          <div class="tx-info">
+            <div class="tx-name">Lucas Bennett</div>
+            <div class="tx-date">20 Jan, 02:00 PM</div>
+          </div>
+          <div class="tx-amount tx-pos">+$25.00</div>
+        </div>
+
+        <div class="tx-item">
+          <div class="tx-avatar tx-av2">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="4" fill="#1a73e8"/><path d="M12 11v2h3.5l-.5 3H12v7h-3v-7H7v-3h2V9.5C9 7 10.5 5 13 5h2v3h-1.5c-.6 0-1.5.3-1.5 1.5V11z" fill="white"/></svg>
+          </div>
+          <div class="tx-info">
+            <div class="tx-name">Google Drive</div>
+            <div class="tx-date">20 Jan, 02:00 PM</div>
+          </div>
+          <div class="tx-amount tx-neg">-$5.00</div>
+        </div>
+
+        <div class="tx-item">
+          <div class="tx-avatar tx-av3">
+            <svg width="20" height="20" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" fill="#f5f5f0"/><path d="M9.5 14.5l1.5-4.5 3 3-4.5 1.5z" fill="#f5f5f0"/></svg>
+          </div>
+          <div class="tx-info">
+            <div class="tx-name">Nike Store</div>
+            <div class="tx-date">19 Jan, 02:00 PM</div>
+          </div>
+          <div class="tx-amount tx-neg">-$55.00</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

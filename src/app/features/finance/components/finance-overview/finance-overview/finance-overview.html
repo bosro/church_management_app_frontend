@@ -269,6 +269,11 @@
                     <i class="ri-link-m"></i>
                     <span>Payment Links</span>
                   </button>
+                  <button class="action-btn action-orange" (click)="viewWithdrawals()"
+                    *ngIf="permissionService.isAdmin || permissionService.finance.manage">
+                    <i class="ri-bank-card-line"></i>
+                    <span>Withdrawals</span>
+                  </button>
                   <button class="action-btn action-teal" (click)="viewAllGiving()"
                     *ngIf="permissionService.isAdmin || permissionService.finance.view">
                     <i class="ri-list-check"></i>

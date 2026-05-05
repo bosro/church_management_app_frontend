@@ -249,6 +249,10 @@ export class FinanceOverview implements OnInit, OnDestroy {
     this.chartData = { labels: monthNames, tithe, offering };
   }
 
+  viewWithdrawals(): void {
+    this.router.navigate(['main/finance/withdrawals']);
+  }
+
   onYearChange(): void {
     this.loadFinanceData();
   }

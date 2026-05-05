@@ -14,6 +14,7 @@ import { PledgeDetails } from './pledge-details/pledge-details';
 import { FinanceRevenueChart } from './components/finance-revenue-chart/finance-revenue-chart';
 import { CategoryExpenses } from './components/category-expenses/category-expenses';
 import { PaymentLinks } from './components/payment-links/payment-links';
+import { WithdrawalRequests } from './components/withdrawal-requests/withdrawal-requests';
 
 
 
@@ -29,7 +30,8 @@ import { PaymentLinks } from './components/payment-links/payment-links';
     PledgeDetails,
     FinanceRevenueChart,
     CategoryExpenses,
-    PaymentLinks
+    PaymentLinks,
+    WithdrawalRequests
   ],
   imports: [
       CommonModule,

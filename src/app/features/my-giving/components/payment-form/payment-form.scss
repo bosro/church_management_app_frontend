@@ -163,22 +163,16 @@ textarea.form-control {
     }
   }
 
- .online-badge {
-  font-size: 0.5625rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  background: #5b21b6;
-  color: white !important;   // ← force white regardless of parent selected state
-  padding: 2px 6px;
-  border-radius: 4px;
-  margin-top: -4px;
-}
-
-// When the online card IS selected, badge needs higher contrast
-.payment-method-card.selected .online-badge {
-  background: white;
-  color: #5b21b6 !important;  // ← invert: purple text on white background
-}
+  .online-badge {
+    font-size: 0.5625rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    background: #5b21b6;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-top: -4px;
+  }
 
   @media (max-width: 480px) {
     padding: 1rem;
@@ -258,4 +252,96 @@ textarea.form-control {
   to {
     transform: rotate(360deg);
   }
+}
+
+// ── Fee breakdown ─────────────────────────────────────────────
+.fee-loading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  color: #6b7280;
+  background: #f9fafb;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  i {
+    font-size: 1rem;
+  }
+}
+
+.fee-breakdown {
+  background: #f5f3ff;
+  border: 1.5px solid #ddd6fe;
+  border-radius: 10px;
+  padding: 1rem 1.125rem;
+  margin-bottom: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  .fee-breakdown-header {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: #5b21b6;
+    margin-bottom: 0.25rem;
+    i {
+      font-size: 1rem;
+    }
+  }
+
+  .fee-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+    color: #374151;
+
+    .fee-extra {
+      color: #7c3aed;
+      font-weight: 600;
+    }
+
+    &.fee-total {
+      padding-top: 0.5rem;
+      margin-top: 0.25rem;
+      border-top: 1px solid #c4b5fd;
+      font-size: 0.9375rem;
+      color: #5b21b6;
+
+      strong {
+        color: #4c1d95;
+      }
+    }
+  }
+
+  .fee-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.375rem;
+    font-size: 0.75rem;
+    color: #7c3aed;
+    margin: 0.25rem 0 0;
+    line-height: 1.5;
+    i {
+      font-size: 0.875rem;
+      flex-shrink: 0;
+      margin-top: 0.1rem;
+    }
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+.spin {
+  animation: spin 1s linear infinite;
 }

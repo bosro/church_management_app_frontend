@@ -516,6 +516,12 @@
         transform: translateY(-2px);
       }
     }
+    &.action-orange {
+      background: linear-gradient(135deg, #ea580c 0%, #dc2626 100%);
+      &:hover {
+        transform: translateY(-2px);
+      }
+    }
   }
 }
 

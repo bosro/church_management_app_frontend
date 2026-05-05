@@ -1,0 +1,159 @@
+<!-- src/app/features/finance/components/withdrawal-requests/withdrawal-requests.component.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+  <div class="dashboard-content">
+    <app-header></app-header>
+    <div class="dashboard-body">
+      <div class="wr-container">
+
+        <button class="btn-back" (click)="goBack()"><i class="ri-arrow-left-line"></i><span>Back</span></button>
+
+        <div class="page-header">
+          <div class="header-left">
+            <h1>Withdrawal Requests</h1>
+            <p class="subtitle">Request transfers of collected funds to your church's bank account</p>
+          </div>
+          <button class="btn-primary" (click)="openRequestModal()">
+            <i class="ri-bank-card-line"></i><span>Request Withdrawal</span>
+          </button>
+        </div>
+
+        <div *ngIf="successMessage" class="success-alert"><i class="ri-checkbox-circle-line"></i><span>{{ successMessage }}</span></div>
+        <div *ngIf="errorMessage && !showRequestModal" class="error-alert"><i class="ri-error-warning-line"></i><span>{{ errorMessage }}</span></div>
+
+        <!-- Info banner -->
+        <div class="info-banner">
+          <i class="ri-information-line"></i>
+          <div>
+            <strong>How withdrawals work</strong>
+            <p>Submit a request with your church bank account details. The Churchman team reviews and approves it, then initiates a Paystack transfer to your account. Processing typically takes 1–3 business days.</p>
+          </div>
+        </div>
+
+        <div *ngIf="loading" class="loading-container">
+          <app-loading-spinner message="Loading requests..."></app-loading-spinner>
+        </div>
+
+        <div *ngIf="!loading" class="requests-card">
+          <div class="table-wrapper">
+            <table class="requests-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Amount</th>
+                  <th>Bank</th>
+                  <th>Account</th>
+                  <th>Reason</th>
+                  <th>Status</th>
+                  <th>Transfer Ref</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let req of requests">
+                  <td class="date-cell">{{ req.created_at | date:'MMM d, y' }}</td>
+                  <td><strong class="amount-cell">{{ formatCurrency(req.amount, req.currency) }}</strong></td>
+                  <td>
+                    <div class="bank-cell">
+                      <span>{{ req.bank_name }}</span>
+                      <span class="account-number">{{ req.account_number }}</span>
+                    </div>
+                  </td>
+                  <td>{{ req.account_name }}</td>
+                  <td class="reason-cell">{{ req.reason || '—' }}</td>
+                  <td>
+                    <span class="status-badge" [ngClass]="getStatusClass(req.status)">
+                      {{ getStatusLabel(req.status) }}
+                    </span>
+                    <p class="rejection-note" *ngIf="req.status === 'rejected' && req.rejection_reason">
+                      {{ req.rejection_reason }}
+                    </p>
+                  </td>
+                  <td>
+                    <span class="transfer-ref" *ngIf="req.paystack_transfer_code">
+                      {{ req.paystack_transfer_code }}
+                    </span>
+                    <span class="no-ref" *ngIf="!req.paystack_transfer_code">—</span>
+                  </td>
+                </tr>
+                <tr *ngIf="requests.length === 0">
+                  <td colspan="7">
+                    <div class="empty-state-table">
+                      <i class="ri-bank-card-line"></i>
+                      <p>No withdrawal requests yet</p>
+                      <button class="btn-primary-sm" (click)="openRequestModal()">
+                        <i class="ri-add-line"></i> Make First Request
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Request Modal ── -->
+<div *ngIf="showRequestModal" class="modal-overlay" (click)="closeRequestModal()">
+  <div class="request-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3><i class="ri-bank-card-line"></i> Request Withdrawal</h3>
+      <button class="modal-close-btn" (click)="closeRequestModal()"><i class="ri-close-line"></i></button>
+    </div>
+
+    <form [formGroup]="requestForm" (ngSubmit)="submitRequest()">
+      <div class="modal-body">
+
+        <div *ngIf="errorMessage" class="error-alert sm"><i class="ri-error-warning-line"></i><span>{{ errorMessage }}</span></div>
+
+        <div class="form-group">
+          <label>Amount (GHS) *</label>
+          <input type="number" formControlName="amount" min="10" step="0.01" placeholder="Minimum GHS 10"
+            [class.error]="requestForm.get('amount')?.invalid && requestForm.get('amount')?.touched" />
+          <span class="error-msg" *ngIf="requestForm.get('amount')?.invalid && requestForm.get('amount')?.touched">{{ getErrorMsg('amount') }}</span>
+        </div>
+
+        <div class="form-group">
+          <label>Bank *</label>
+          <select formControlName="bank_name"
+            [class.error]="requestForm.get('bank_name')?.invalid && requestForm.get('bank_name')?.touched">
+            <option value="">Select bank</option>
+            <option *ngFor="let bank of banks" [value]="bank.name">{{ bank.name }}</option>
+          </select>
+          <span class="error-msg" *ngIf="requestForm.get('bank_name')?.invalid && requestForm.get('bank_name')?.touched">{{ getErrorMsg('bank_name') }}</span>
+        </div>
+
+        <div class="form-group">
+          <label>Account Number *</label>
+          <input type="text" formControlName="account_number" placeholder="10–16 digit account number"
+            [class.error]="requestForm.get('account_number')?.invalid && requestForm.get('account_number')?.touched" />
+          <span class="error-msg" *ngIf="requestForm.get('account_number')?.invalid && requestForm.get('account_number')?.touched">{{ getErrorMsg('account_number') }}</span>
+        </div>
+
+        <div class="form-group">
+          <label>Account Name *</label>
+          <input type="text" formControlName="account_name" placeholder="Name on the bank account"
+            [class.error]="requestForm.get('account_name')?.invalid && requestForm.get('account_name')?.touched" />
+          <span class="error-msg" *ngIf="requestForm.get('account_name')?.invalid && requestForm.get('account_name')?.touched">{{ getErrorMsg('account_name') }}</span>
+        </div>
+
+        <div class="form-group">
+          <label>Reason (optional)</label>
+          <textarea formControlName="reason" rows="2" placeholder="Why are you requesting this withdrawal?"></textarea>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" (click)="closeRequestModal()" [disabled]="submitting">Cancel</button>
+        <button type="submit" class="btn-primary" [disabled]="submitting || requestForm.invalid">
+          <i *ngIf="!submitting" class="ri-send-plane-line"></i>
+          <i *ngIf="submitting" class="ri-loader-4-line spin"></i>
+          {{ submitting ? 'Submitting...' : 'Submit Request' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
