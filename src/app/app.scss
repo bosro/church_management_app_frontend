@@ -336,12 +336,12 @@
 
     &:hover {
       color: #6B7280;
-      transform: none; // override global button hover
+      transform: none; 
       box-shadow: none;
     }
 
     @media (max-width: 380px) {
-      display: none; // hide on very small screens, swipe-to-dismiss handles it
+      display: none;
     }
   }
 
