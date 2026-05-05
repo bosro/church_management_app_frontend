@@ -77,45 +77,59 @@
               <!-- Per-fee breakdown (all fees including paid) -->
               <div class="fee-overview-list">
                 <div *ngFor="let fee of fees" class="fee-overview-row">
-                  <div class="fee-overview-info">
-                    <span class="fee-overview-name">{{ fee.fee_name }}</span>
-                    <span class="fee-status-mini" [class]="'status-' + fee.status">{{ fee.status | titlecase }}</span>
-                  </div>
-                  <div class="fee-overview-amounts">
-                    <span class="fee-due">{{ formatCurrency(fee.amount_due) }}</span>
-                    <span class="fee-paid-of">paid {{ formatCurrency(fee.amount_paid) }}</span>
-                    <span class="fee-balance" [class.zero]="(fee.amount_due - fee.amount_paid) === 0">
-                      {{ formatCurrency(fee.amount_due - fee.amount_paid) }} left
-                    </span>
-                    <!-- History button -->
-                    <button class="btn-history" (click)="openPaymentHistory(fee, $event)"
-                      title="View payment history for this fee">
-                      <i class="ri-history-line"></i>
-                    </button>
 
-                    <!-- ── NEW: Fee action buttons ── -->
-                    <div class="fee-action-group" *ngIf="permissionService.school?.manage">
-                      <!-- Edit amount (only if no payments yet) -->
-                      <button class="btn-fee-action btn-fee-edit" *ngIf="fee.amount_paid == 0"
-                        (click)="openFeeAction(fee, 'edit_amount', $event)" title="Change fee amount for this student">
-                        <i class="ri-pencil-line"></i>
-                      </button>
-                      <!-- Reassign to different fee -->
-                      <button class="btn-fee-action btn-fee-reassign" *ngIf="fee.amount_paid == 0"
-                        (click)="openFeeAction(fee, 'reassign', $event)" title="Swap this fee for a different one">
-                        <i class="ri-swap-line"></i>
-                      </button>
-                      <!-- Unassign fee -->
-                      <button class="btn-fee-action btn-fee-unassign" *ngIf="fee.amount_paid == 0"
-                        (click)="openFeeAction(fee, 'unassign', $event)" title="Remove this fee from student">
-                        <i class="ri-user-unfollow-line"></i>
-                      </button>
-                      <!-- Show lock icon if fee has payments (no edit allowed) -->
-                      <span class="fee-locked-icon" *ngIf="fee.amount_paid > 0" title="Fee has payments — cannot edit">
-                        <i class="ri-lock-line"></i>
+                  <!-- Row 1: Fee name + status badge -->
+                  <div class="fee-overview-top">
+                    <span class="fee-overview-name">{{ fee.fee_name }}</span>
+                    <span class="fee-status-mini" [class]="'status-' + fee.status">
+                      {{ fee.status | titlecase }}
+                    </span>
+                  </div>
+
+                  <!-- Row 2: Amounts text + action buttons -->
+                  <div class="fee-overview-bottom">
+                    <div class="fee-overview-amounts-text">
+                      <span class="fee-due">{{ formatCurrency(fee.amount_due) }}</span>
+                      <span class="fee-paid-of">paid {{ formatCurrency(fee.amount_paid) }}</span>
+                      <span class="fee-balance" [class.zero]="(fee.amount_due - fee.amount_paid) === 0">
+                        {{ formatCurrency(fee.amount_due - fee.amount_paid) }} left
                       </span>
                     </div>
+
+                    <div class="fee-overview-buttons">
+                      <!-- History button -->
+                      <button class="btn-history" (click)="openPaymentHistory(fee, $event)"
+                        title="View payment history for this fee">
+                        <i class="ri-history-line"></i>
+                      </button>
+
+                      <!-- Action buttons — only for users with manage permission and no payments yet -->
+                      <ng-container *ngIf="permissionService.school?.manage">
+                        <!-- Edit amount -->
+                        <button class="btn-fee-action btn-fee-edit" *ngIf="fee.amount_paid == 0"
+                          (click)="openFeeAction(fee, 'edit_amount', $event)"
+                          title="Change fee amount for this student">
+                          <i class="ri-pencil-line"></i>
+                        </button>
+                        <!-- Reassign -->
+                        <button class="btn-fee-action btn-fee-reassign" *ngIf="fee.amount_paid == 0"
+                          (click)="openFeeAction(fee, 'reassign', $event)" title="Swap this fee for a different one">
+                          <i class="ri-swap-line"></i>
+                        </button>
+                        <!-- Unassign -->
+                        <button class="btn-fee-action btn-fee-unassign" *ngIf="fee.amount_paid == 0"
+                          (click)="openFeeAction(fee, 'unassign', $event)" title="Remove this fee from student">
+                          <i class="ri-user-unfollow-line"></i>
+                        </button>
+                        <!-- Lock icon if fee has payments -->
+                        <span class="fee-locked-icon" *ngIf="fee.amount_paid > 0"
+                          title="Fee has payments — cannot edit">
+                          <i class="ri-lock-line"></i>
+                        </span>
+                      </ng-container>
+                    </div>
                   </div>
+
                 </div>
               </div>
 
