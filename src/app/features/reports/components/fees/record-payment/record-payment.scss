@@ -118,51 +118,79 @@
   .fee-overview-list {
     .fee-overview-row {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 11px 16px;
+      flex-direction: column; // ← stack vertically instead of one long row
+      gap: 6px;
+      padding: 11px 14px;
       border-bottom: 1px solid #f3f4f6;
-      gap: 12px;
 
       &:last-child {
         border-bottom: none;
       }
 
-      .fee-overview-info {
+      // ── Row 1: Fee name + status badge ──────────────────────
+      .fee-overview-top {
         display: flex;
         align-items: center;
         gap: 8px;
-        min-width: 0;
+        flex-wrap: wrap;
 
         .fee-overview-name {
           font-size: 13px;
-          font-weight: 500;
+          font-weight: 600;
           color: #111827;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
+          flex: 1;
+          min-width: 0;
         }
       }
 
-      .fee-overview-amounts {
+      // ── Row 2: Amounts + buttons ─────────────────────────────
+      .fee-overview-bottom {
         display: flex;
         align-items: center;
-        gap: 10px;
-        flex-shrink: 0;
-        font-size: 12px;
+        gap: 8px;
+        flex-wrap: wrap;
 
-        .fee-due {
-          color: #374151;
-          font-weight: 600;
-        }
-        .fee-paid-of {
-          color: #059669;
-        }
-        .fee-balance {
-          color: #dc2626;
-          font-weight: 600;
-          &.zero {
+        // Amount text group — wraps naturally
+        .fee-overview-amounts-text {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex: 1;
+          min-width: 0;
+          flex-wrap: wrap;
+          font-size: 12px;
+
+          .fee-due {
+            color: #374151;
+            font-weight: 600;
+            white-space: nowrap;
+          }
+          .fee-paid-of {
             color: #059669;
+            white-space: nowrap;
+          }
+          .fee-balance {
+            color: #dc2626;
+            font-weight: 600;
+            white-space: nowrap;
+            &.zero {
+              color: #059669;
+            }
+          }
+        }
+
+        // Button group — always stays together, never splits
+        .fee-overview-buttons {
+          display: flex;
+          align-items: center;
+          gap: 3px;
+          flex-shrink: 0;
+          margin-left: auto;
+
+          // On very small screens, ensure buttons don't shrink below tap target
+          button,
+          .fee-locked-icon {
+            flex-shrink: 0;
           }
         }
       }
@@ -1227,13 +1255,6 @@
   }
 }
 
-
-
-
-
-
-
-
 // ═══════════════════════════════════════════════════════════════════════════
 // ADD TO record-payment.scss
 // Append these at the bottom of the file
@@ -1267,33 +1288,45 @@
   &.btn-fee-edit {
     background: #eef2ff;
     border-color: #c7d2fe;
-    i { color: #4f46e5; }
+    i {
+      color: #4f46e5;
+    }
     &:hover {
       background: #4f46e5;
       border-color: #4f46e5;
-      i { color: white; }
+      i {
+        color: white;
+      }
     }
   }
 
   &.btn-fee-reassign {
     background: #f0fdf4;
     border-color: #6ee7b7;
-    i { color: #059669; }
+    i {
+      color: #059669;
+    }
     &:hover {
       background: #059669;
       border-color: #059669;
-      i { color: white; }
+      i {
+        color: white;
+      }
     }
   }
 
   &.btn-fee-unassign {
     background: #fef2f2;
     border-color: #fecaca;
-    i { color: #dc2626; }
+    i {
+      color: #dc2626;
+    }
     &:hover {
       background: #dc2626;
       border-color: #dc2626;
-      i { color: white; }
+      i {
+        color: white;
+      }
     }
   }
 }
@@ -1344,19 +1377,27 @@
     justify-content: center;
     flex-shrink: 0;
 
-    i { font-size: 20px; }
+    i {
+      font-size: 20px;
+    }
 
     &.danger {
       background: #fee2e2;
-      i { color: #dc2626; }
+      i {
+        color: #dc2626;
+      }
     }
     &.edit {
       background: #eef2ff;
-      i { color: #4f46e5; }
+      i {
+        color: #4f46e5;
+      }
     }
     &.reassign {
       background: #f0fdf4;
-      i { color: #059669; }
+      i {
+        color: #059669;
+      }
     }
   }
 
@@ -1391,8 +1432,13 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    i { font-size: 18px; color: #6b7280; }
-    &:hover { background: #e5e7eb; }
+    i {
+      font-size: 18px;
+      color: #6b7280;
+    }
+    &:hover {
+      background: #e5e7eb;
+    }
   }
 }
 
@@ -1507,8 +1553,13 @@
     cursor: pointer;
     font-family: "Nunito Sans", sans-serif;
     transition: all 0.2s;
-    &:hover { background: #f9fafb; }
-    &:disabled { opacity: 0.6; cursor: not-allowed; }
+    &:hover {
+      background: #f9fafb;
+    }
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
   }
 
   .btn-confirm-danger {
@@ -1527,9 +1578,16 @@
     cursor: pointer;
     font-family: "Nunito Sans", sans-serif;
     transition: all 0.2s;
-    i { font-size: 15px; }
-    &:hover { background: #b91c1c; }
-    &:disabled { opacity: 0.6; cursor: not-allowed; }
+    i {
+      font-size: 15px;
+    }
+    &:hover {
+      background: #b91c1c;
+    }
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
   }
 
   .btn-confirm-primary {
@@ -1548,9 +1606,16 @@
     cursor: pointer;
     font-family: "Nunito Sans", sans-serif;
     transition: all 0.2s;
-    i { font-size: 15px; }
-    &:hover { background: #4338ca; }
-    &:disabled { opacity: 0.6; cursor: not-allowed; }
+    i {
+      font-size: 15px;
+    }
+    &:hover {
+      background: #4338ca;
+    }
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
   }
 
   @media (max-width: 480px) {

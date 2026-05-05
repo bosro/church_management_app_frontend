@@ -1,5 +1,6 @@
 import { NgModule, provideBrowserGlobalErrorListeners, isDevMode } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations'; // ← ADD THIS IMPORT
 import { AppRoutingModule } from './app-routing-module';
 import { App } from './app';
 import {
@@ -10,12 +11,15 @@ import { ServiceWorkerModule } from '@angular/service-worker';
 
 @NgModule({
   declarations: [App],
-  imports: [BrowserModule, AppRoutingModule, ServiceWorkerModule.register('ngsw-worker.js', {
-  enabled: !isDevMode(),
-  // Register the ServiceWorker as soon as the application is stable
-  // or after 30 seconds (whichever comes first).
-   registrationStrategy: 'registerImmediately',
-})],
+  imports: [
+    BrowserModule,
+    BrowserAnimationsModule, // ← ADD THIS HERE
+    AppRoutingModule,
+    ServiceWorkerModule.register('ngsw-worker.js', {
+      enabled: !isDevMode(),
+      registrationStrategy: 'registerImmediately',
+    })
+  ],
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideHttpClient(withInterceptorsFromDi()),
