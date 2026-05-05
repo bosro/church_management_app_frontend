@@ -106,7 +106,8 @@
           </div>
         </div>
         <div class="chart-empty" *ngIf="monthlyTrend.length === 0">
-          <i class="ri-bar-chart-line"></i><p>No data for {{ selectedYear }}</p>
+          <i class="ri-bar-chart-line"></i>
+          <p>No data for {{ selectedYear }}</p>
         </div>
       </div>
 
@@ -126,7 +127,8 @@
           </div>
         </div>
         <div class="chart-empty" *ngIf="churchStats.length === 0">
-          <i class="ri-building-line"></i><p>No churches yet</p>
+          <i class="ri-building-line"></i>
+          <p>No churches yet</p>
         </div>
       </div>
     </div>
@@ -163,9 +165,8 @@
             <span>Your fee added on top of Paystack's charge. You keep this amount.</span>
           </div>
           <div class="fee-input-wrap">
-            <input type="number" [(ngModel)]="platformFeeInput"
-              min="0" max="10" step="0.05"
-              class="fee-input" placeholder="0.20" />
+            <input type="number" [(ngModel)]="platformFeeInput" min="0" max="10" step="0.05" class="fee-input"
+              placeholder="0.20" />
             <span class="pct-symbol">%</span>
           </div>
         </div>
@@ -245,6 +246,25 @@
         </span>
       </div>
 
+      <!-- Withdrawal filters -->
+      <div class="table-filters">
+        <div class="filter-search">
+          <i class="ri-search-line"></i>
+          <input type="text" [(ngModel)]="withdrawalFilterChurch" (input)="onWithdrawalFilterChange()"
+            placeholder="Search church..." />
+        </div>
+        <select [(ngModel)]="withdrawalFilterStatus" (change)="onWithdrawalFilterChange()" class="filter-select">
+          <option value="">All Statuses</option>
+          <option value="pending">Pending</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+          <option value="processing">Processing</option>
+          <option value="completed">Completed</option>
+          <option value="failed">Failed</option>
+        </select>
+        <span class="filter-count">{{ filteredWithdrawals.length }} requests</span>
+      </div>
+
       <div *ngIf="loadingWithdrawals" class="loading-container">
         <app-loading-spinner></app-loading-spinner>
       </div>
@@ -255,7 +275,8 @@
             <tr>
               <th>Church</th>
               <th>Amount</th>
-              <th>Bank / Account</th>
+              <th>Type</th>
+              <th>Destination</th>
               <th>Reason</th>
               <th>Date</th>
               <th>Status</th>
@@ -263,13 +284,24 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let req of withdrawalRequests">
+            <tr *ngFor="let req of pagedWithdrawals">
               <td><strong>{{ req.church?.name || '—' }}</strong></td>
               <td><strong class="amount-val">{{ formatCurrency(req.amount, req.currency) }}</strong></td>
               <td>
-                <div class="bank-info">
+                <span class="type-badge-sm" [class.momo]="req.withdrawal_type === 'mobile_money'"
+                  [class.bank]="req.withdrawal_type === 'bank'">
+                  <i [class]="req.withdrawal_type === 'mobile_money' ? 'ri-smartphone-line' : 'ri-bank-line'"></i>
+                  {{ req.withdrawal_type === 'mobile_money' ? 'MoMo' : 'Bank' }}
+                </span>
+              </td>
+              <td>
+                <div class="bank-info" *ngIf="req.withdrawal_type === 'bank'">
                   <span>{{ req.bank_name }}</span>
                   <span class="acct-num">{{ req.account_number }}</span>
+                </div>
+                <div class="bank-info" *ngIf="req.withdrawal_type === 'mobile_money'">
+                  <span>{{ req.momo_provider }}</span>
+                  <span class="acct-num">{{ req.momo_number }}</span>
                 </div>
               </td>
               <td class="reason-col">{{ req.reason || '—' }}</td>
@@ -292,16 +324,27 @@
                 </span>
               </td>
             </tr>
-            <tr *ngIf="withdrawalRequests.length === 0">
-              <td colspan="7">
+            <tr *ngIf="filteredWithdrawals.length === 0">
+              <td colspan="8">
                 <div class="table-empty">
                   <i class="ri-bank-card-line"></i>
-                  <p>No withdrawal requests yet</p>
+                  <p>No withdrawal requests found</p>
                 </div>
               </td>
             </tr>
           </tbody>
         </table>
+      </div>
+      <!-- Withdrawal pagination -->
+      <div class="table-pagination" *ngIf="withdrawalTotalPages > 1">
+        <button class="page-btn" [disabled]="withdrawalPage === 1" (click)="withdrawalPage = withdrawalPage - 1">
+          <i class="ri-arrow-left-s-line"></i> Prev
+        </button>
+        <span class="page-info">Page {{ withdrawalPage }} of {{ withdrawalTotalPages }}</span>
+        <button class="page-btn" [disabled]="withdrawalPage === withdrawalTotalPages"
+          (click)="withdrawalPage = withdrawalPage + 1">
+          Next <i class="ri-arrow-right-s-line"></i>
+        </button>
       </div>
     </div>
 
@@ -314,6 +357,14 @@
           <h3>Church Breakdown</h3>
           <p>Giving, expenses and balance per church — {{ selectedYear }}</p>
         </div>
+      </div>
+      <div class="table-filters">
+        <div class="filter-search">
+          <i class="ri-search-line"></i>
+          <input type="text" [(ngModel)]="churchFilterName" (input)="onChurchFilterChange()"
+            placeholder="Search church..." />
+        </div>
+        <span class="filter-count">{{ filteredChurchStats.length }} churches</span>
       </div>
       <div class="table-wrapper">
         <table class="data-table">
@@ -330,7 +381,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let c of churchStats; let i = index" [class.top-row]="i === 0">
+            <tr *ngFor="let c of pagedChurchStats; let i = index" [class.top-row]="i === 0 && churchPage === 1">
               <td>
                 <div class="church-name-cell">
                   <span class="rank-badge" *ngIf="i < 3">{{ i + 1 }}</span>
@@ -347,16 +398,25 @@
               </td>
               <td class="center-col">{{ c.payment_links_count }}</td>
             </tr>
-            <tr *ngIf="churchStats.length === 0">
+            <tr *ngIf="filteredChurchStats.length === 0">
               <td colspan="8">
                 <div class="table-empty">
                   <i class="ri-building-line"></i>
-                  <p>No church data</p>
+                  <p>No church data found</p>
                 </div>
               </td>
             </tr>
           </tbody>
         </table>
+      </div>
+      <div class="table-pagination" *ngIf="churchTotalPages > 1">
+        <button class="page-btn" [disabled]="churchPage === 1" (click)="churchPage = churchPage - 1">
+          <i class="ri-arrow-left-s-line"></i> Prev
+        </button>
+        <span class="page-info">Page {{ churchPage }} of {{ churchTotalPages }}</span>
+        <button class="page-btn" [disabled]="churchPage === churchTotalPages" (click)="churchPage = churchPage + 1">
+          Next <i class="ri-arrow-right-s-line"></i>
+        </button>
       </div>
     </div>
 
@@ -369,6 +429,22 @@
           <h3>Recent Transactions</h3>
           <p>Latest giving activity across all churches</p>
         </div>
+      </div>
+      <div class="table-filters">
+        <div class="filter-search">
+          <i class="ri-search-line"></i>
+          <input type="text" [(ngModel)]="txnFilterChurch" (input)="onTxnFilterChange()"
+            placeholder="Search church..." />
+        </div>
+        <select [(ngModel)]="txnFilterMethod" (change)="onTxnFilterChange()" class="filter-select">
+          <option value="">All Methods</option>
+          <option value="paystack">Paystack (Online)</option>
+          <option value="mobile_money">Mobile Money</option>
+          <option value="cash">Cash</option>
+          <option value="bank_transfer">Bank Transfer</option>
+          <option value="card">Card</option>
+        </select>
+        <span class="filter-count">{{ filteredTransactions.length }} transactions</span>
       </div>
       <div class="table-wrapper">
         <table class="data-table">
@@ -383,7 +459,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let txn of recentTransactions">
+            <tr *ngFor="let txn of pagedTransactions">
               <td><span class="church-tag">{{ txn.church_name }}</span></td>
               <td>{{ txn.member_name }}</td>
               <td>{{ txn.category_name || '—' }}</td>
@@ -396,11 +472,11 @@
               </td>
               <td class="date-col">{{ txn.transaction_date | date:'MMM d, y' }}</td>
             </tr>
-            <tr *ngIf="recentTransactions.length === 0">
+            <tr *ngIf="filteredTransactions.length === 0">
               <td colspan="6">
                 <div class="table-empty">
                   <i class="ri-exchange-line"></i>
-                  <p>No transactions yet</p>
+                  <p>No transactions found</p>
                 </div>
               </td>
             </tr>
@@ -410,7 +486,18 @@
     </div>
 
   </div>
+  <div class="table-pagination" *ngIf="txnTotalPages > 1">
+    <button class="page-btn" [disabled]="txnPage === 1" (click)="txnPage = txnPage - 1">
+      <i class="ri-arrow-left-s-line"></i> Prev
+    </button>
+    <span class="page-info">Page {{ txnPage }} of {{ txnTotalPages }}</span>
+    <button class="page-btn" [disabled]="txnPage === txnTotalPages" (click)="txnPage = txnPage + 1">
+      Next <i class="ri-arrow-right-s-line"></i>
+    </button>
+  </div>
 </div>
+
+
 
 <!-- ══════════════════════════════════════════════════════════════
      Withdrawal review modal
@@ -440,7 +527,8 @@
         </div>
         <div class="detail-item">
           <span class="detail-label">Amount</span>
-          <span class="detail-value amount-big">{{ formatCurrency(selectedWithdrawal.amount, selectedWithdrawal.currency) }}</span>
+          <span class="detail-value amount-big">{{ formatCurrency(selectedWithdrawal.amount,
+            selectedWithdrawal.currency) }}</span>
         </div>
         <div class="detail-item">
           <span class="detail-label">Bank</span>
@@ -465,29 +553,27 @@
         <i class="ri-shield-keyhole-line"></i>
         <div>
           <strong>Live mode note</strong>
-          <p>Paystack will send an OTP to your registered phone to confirm this transfer. Check your Paystack dashboard after approving.</p>
+          <p>Paystack will send an OTP to your registered phone to confirm this transfer. Check your Paystack dashboard
+            after approving.</p>
         </div>
       </div>
 
       <!-- Rejection reason input — shown only when reject is clicked -->
       <div *ngIf="showRejectInput" class="reject-input-wrap">
         <label>Rejection Reason *</label>
-        <textarea [(ngModel)]="rejectionReason" rows="2"
-          placeholder="Explain why this is being rejected..."></textarea>
+        <textarea [(ngModel)]="rejectionReason" rows="2" placeholder="Explain why this is being rejected..."></textarea>
       </div>
 
     </div>
 
     <div class="modal-footer review-footer">
-      <button class="btn-reject"
-        (click)="showRejectInput ? rejectWithdrawal() : (showRejectInput = true)"
+      <button class="btn-reject" (click)="showRejectInput ? rejectWithdrawal() : (showRejectInput = true)"
         [disabled]="processingTransfer">
         <i class="ri-close-circle-line"></i>
         {{ showRejectInput ? 'Confirm Reject' : 'Reject' }}
       </button>
       <button class="btn-approve" (click)="approveWithdrawal()"
-        [disabled]="processingTransfer || selectedWithdrawal?.status === 'approved'"
-        *ngIf="!showRejectInput">
+        [disabled]="processingTransfer || selectedWithdrawal?.status === 'approved'" *ngIf="!showRejectInput">
         <i *ngIf="!processingTransfer" class="ri-check-double-line"></i>
         <i *ngIf="processingTransfer" class="ri-loader-4-line spin"></i>
         {{ processingTransfer ? 'Processing...' : 'Approve & Transfer' }}

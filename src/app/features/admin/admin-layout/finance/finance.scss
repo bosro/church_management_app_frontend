@@ -1045,3 +1045,140 @@
     cursor: not-allowed;
   }
 }
+
+// ── Table filters + pagination ────────────────────────────────
+.table-filters {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #f3f4f6;
+  flex-wrap: wrap;
+
+  .filter-search {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1;
+    min-width: 160px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 0.5rem 0.875rem;
+    transition: border-color 0.2s;
+    &:focus-within {
+      border-color: #5b21b6;
+      background: white;
+    }
+
+    i {
+      font-size: 1rem;
+      color: #9ca3af;
+      flex-shrink: 0;
+    }
+    input {
+      border: none;
+      background: none;
+      font-size: 0.875rem;
+      color: #374151;
+      width: 100%;
+      font-family: "Nunito Sans", sans-serif;
+      &:focus {
+        outline: none;
+      }
+      &::placeholder {
+        color: #9ca3af;
+      }
+    }
+  }
+
+  .filter-select {
+    padding: 0.5rem 0.875rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    background: white;
+    cursor: pointer;
+    font-family: "Nunito Sans", sans-serif;
+    color: #374151;
+    transition: border-color 0.2s;
+    flex-shrink: 0;
+    &:focus {
+      outline: none;
+      border-color: #5b21b6;
+    }
+  }
+
+  .filter-count {
+    font-size: 0.8125rem;
+    color: #9ca3af;
+    font-weight: 500;
+    white-space: nowrap;
+    margin-left: auto;
+  }
+}
+
+.table-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #f3f4f6;
+
+  .page-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.5rem 1rem;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #374151;
+    cursor: pointer;
+    font-family: "Nunito Sans", sans-serif;
+    transition: all 0.2s;
+    i {
+      font-size: 1rem;
+    }
+    &:hover:not(:disabled) {
+      border-color: #5b21b6;
+      color: #5b21b6;
+    }
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+  }
+
+  .page-info {
+    font-size: 0.875rem;
+    color: #6b7280;
+    font-weight: 500;
+  }
+}
+
+// MoMo type badge in super admin withdrawal table
+.type-badge-sm {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 20px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  white-space: nowrap;
+  i {
+    font-size: 0.75rem;
+  }
+  &.momo {
+    background: #fef3c7;
+    color: #d97706;
+  }
+  &.bank {
+    background: #dbeafe;
+    color: #2563eb;
+  }
+}

@@ -11,7 +11,7 @@
         <div class="page-header">
           <div class="header-left">
             <h1>Withdrawal Requests</h1>
-            <p class="subtitle">Request transfers of collected funds to your church's bank account</p>
+            <p class="subtitle">Request transfers of collected funds to your bank account or MoMo wallet</p>
           </div>
           <button class="btn-primary" (click)="openRequestModal()">
             <i class="ri-bank-card-line"></i><span>Request Withdrawal</span>
@@ -26,7 +26,7 @@
           <i class="ri-information-line"></i>
           <div>
             <strong>How withdrawals work</strong>
-            <p>Submit a request with your church bank account details. The Churchman team reviews and approves it, then initiates a Paystack transfer to your account. Processing typically takes 1–3 business days.</p>
+            <p>Submit a request with your bank account or Mobile Money details. The Churchman team reviews and initiates a Paystack transfer. Bank transfers typically take 1 business day; MoMo transfers are usually instant once approved.</p>
           </div>
         </div>
 
@@ -41,11 +41,11 @@
                 <tr>
                   <th>Date</th>
                   <th>Amount</th>
-                  <th>Bank</th>
-                  <th>Account</th>
+                  <th>Type</th>
+                  <th>Destination</th>
+                  <th>Account Name</th>
                   <th>Reason</th>
                   <th>Status</th>
-                  <th>Transfer Ref</th>
                 </tr>
               </thead>
               <tbody>
@@ -53,10 +53,13 @@
                   <td class="date-cell">{{ req.created_at | date:'MMM d, y' }}</td>
                   <td><strong class="amount-cell">{{ formatCurrency(req.amount, req.currency) }}</strong></td>
                   <td>
-                    <div class="bank-cell">
-                      <span>{{ req.bank_name }}</span>
-                      <span class="account-number">{{ req.account_number }}</span>
-                    </div>
+                    <span class="type-badge" [class.momo]="req.withdrawal_type === 'mobile_money'" [class.bank]="req.withdrawal_type === 'bank'">
+                      <i [class]="req.withdrawal_type === 'mobile_money' ? 'ri-smartphone-line' : 'ri-bank-line'"></i>
+                      {{ req.withdrawal_type === 'mobile_money' ? 'Mobile Money' : 'Bank' }}
+                    </span>
+                  </td>
+                  <td>
+                    <div class="destination-cell">{{ getDestination(req) }}</div>
                   </td>
                   <td>{{ req.account_name }}</td>
                   <td class="reason-cell">{{ req.reason || '—' }}</td>
@@ -67,12 +70,6 @@
                     <p class="rejection-note" *ngIf="req.status === 'rejected' && req.rejection_reason">
                       {{ req.rejection_reason }}
                     </p>
-                  </td>
-                  <td>
-                    <span class="transfer-ref" *ngIf="req.paystack_transfer_code">
-                      {{ req.paystack_transfer_code }}
-                    </span>
-                    <span class="no-ref" *ngIf="!req.paystack_transfer_code">—</span>
                   </td>
                 </tr>
                 <tr *ngIf="requests.length === 0">
@@ -109,6 +106,7 @@
 
         <div *ngIf="errorMessage" class="error-alert sm"><i class="ri-error-warning-line"></i><span>{{ errorMessage }}</span></div>
 
+        <!-- Amount + Account Name -->
         <div class="form-group">
           <label>Amount (GHS) *</label>
           <input type="number" formControlName="amount" min="10" step="0.01" placeholder="Minimum GHS 10"
@@ -117,28 +115,65 @@
         </div>
 
         <div class="form-group">
-          <label>Bank *</label>
-          <select formControlName="bank_name"
-            [class.error]="requestForm.get('bank_name')?.invalid && requestForm.get('bank_name')?.touched">
-            <option value="">Select bank</option>
-            <option *ngFor="let bank of banks" [value]="bank.name">{{ bank.name }}</option>
-          </select>
-          <span class="error-msg" *ngIf="requestForm.get('bank_name')?.invalid && requestForm.get('bank_name')?.touched">{{ getErrorMsg('bank_name') }}</span>
-        </div>
-
-        <div class="form-group">
-          <label>Account Number *</label>
-          <input type="text" formControlName="account_number" placeholder="10–16 digit account number"
-            [class.error]="requestForm.get('account_number')?.invalid && requestForm.get('account_number')?.touched" />
-          <span class="error-msg" *ngIf="requestForm.get('account_number')?.invalid && requestForm.get('account_number')?.touched">{{ getErrorMsg('account_number') }}</span>
-        </div>
-
-        <div class="form-group">
-          <label>Account Name *</label>
-          <input type="text" formControlName="account_name" placeholder="Name on the bank account"
+          <label>Account / Wallet Name *</label>
+          <input type="text" formControlName="account_name" placeholder="Name registered on account or wallet"
             [class.error]="requestForm.get('account_name')?.invalid && requestForm.get('account_name')?.touched" />
           <span class="error-msg" *ngIf="requestForm.get('account_name')?.invalid && requestForm.get('account_name')?.touched">{{ getErrorMsg('account_name') }}</span>
         </div>
+
+        <!-- Withdrawal type toggle -->
+        <div class="type-toggle-group">
+          <label class="type-toggle-label">Transfer to *</label>
+          <div class="type-toggle">
+            <button type="button" class="type-btn" [class.active]="withdrawalType === 'mobile_money'"
+              (click)="setWithdrawalType('mobile_money')">
+              <i class="ri-smartphone-line"></i> Mobile Money
+            </button>
+            <button type="button" class="type-btn" [class.active]="withdrawalType === 'bank'"
+              (click)="setWithdrawalType('bank')">
+              <i class="ri-bank-line"></i> Bank Account
+            </button>
+          </div>
+        </div>
+
+        <!-- MoMo fields -->
+        <ng-container *ngIf="withdrawalType === 'mobile_money'">
+          <div class="form-group">
+            <label>MoMo Provider *</label>
+            <div class="momo-providers">
+              <label *ngFor="let p of momoProviders" class="momo-option"
+                [class.selected]="requestForm.get('momo_provider')?.value === p.code">
+                <input type="radio" formControlName="momo_provider" [value]="p.code" />
+                <span>{{ p.name }}</span>
+              </label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>MoMo Number *</label>
+            <input type="tel" formControlName="momo_number" placeholder="e.g. 0244123456" maxlength="13"
+              [class.error]="requestForm.get('momo_number')?.invalid && requestForm.get('momo_number')?.touched" />
+            <span class="error-msg" *ngIf="requestForm.get('momo_number')?.invalid && requestForm.get('momo_number')?.touched">{{ getErrorMsg('momo_number') }}</span>
+          </div>
+        </ng-container>
+
+        <!-- Bank fields -->
+        <ng-container *ngIf="withdrawalType === 'bank'">
+          <div class="form-group">
+            <label>Bank *</label>
+            <select formControlName="bank_name"
+              [class.error]="requestForm.get('bank_name')?.invalid && requestForm.get('bank_name')?.touched">
+              <option value="">Select bank</option>
+              <option *ngFor="let bank of banks" [value]="bank.name">{{ bank.name }}</option>
+            </select>
+            <span class="error-msg" *ngIf="requestForm.get('bank_name')?.invalid && requestForm.get('bank_name')?.touched">{{ getErrorMsg('bank_name') }}</span>
+          </div>
+          <div class="form-group">
+            <label>Account Number *</label>
+            <input type="text" formControlName="account_number" placeholder="10–16 digit account number"
+              [class.error]="requestForm.get('account_number')?.invalid && requestForm.get('account_number')?.touched" />
+            <span class="error-msg" *ngIf="requestForm.get('account_number')?.invalid && requestForm.get('account_number')?.touched">{{ getErrorMsg('account_number') }}</span>
+          </div>
+        </ng-container>
 
         <div class="form-group">
           <label>Reason (optional)</label>
