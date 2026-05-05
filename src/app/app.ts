@@ -1,3 +1,5 @@
+// src/app/app.ts  —  FULL REPLACEMENT
+
 import { Component, OnInit, NgZone } from '@angular/core';
 import { Router, NavigationEnd } from '@angular/router';
 import { AuthService } from './core/services/auth';
@@ -7,6 +9,7 @@ import { trigger, style, transition, animate } from '@angular/animations';
 import { SwUpdate, VersionReadyEvent } from '@angular/service-worker';
 import { filter, take } from 'rxjs/operators';
 import { SettingsService } from './features/settings/services';
+import { PwaInstallService } from './core/services/pwa-install.service';
 
 @Component({
   selector: 'app-root',
@@ -38,6 +41,9 @@ export class App implements OnInit {
   updateAvailable = false;
   isOffline = false;
 
+  // ── PWA Install ────────────────────────────────────────
+  showInstallBanner = false;
+
   constructor(
     private router: Router,
     private authService: AuthService,
@@ -45,7 +51,11 @@ export class App implements OnInit {
     private subscriptionService: SubscriptionService,
     private updates: SwUpdate,
     private ngZone: NgZone,
-    private settingsService: SettingsService
+    private settingsService: SettingsService,
+    // ✅ Inject here — constructor injection triggers the service constructor
+    // immediately, which is when the beforeinstallprompt listener is registered.
+    // This is the earliest safe point in Angular's lifecycle.
+    public pwaInstall: PwaInstallService,
   ) {
     this.authService.setSubscriptionService(this.subscriptionService);
     this.clearStuckLocks();
@@ -55,20 +65,16 @@ export class App implements OnInit {
   private initServiceWorkerUpdates(): void {
     if (!this.updates.isEnabled) return;
 
-    // Only listen for VERSION_READY — this is the only state where
-    // a new version is fully installed and safe to activate.
     this.updates.versionUpdates
       .pipe(
         filter((evt): evt is VersionReadyEvent => evt.type === 'VERSION_READY'),
       )
       .subscribe(() => {
-        // Run inside NgZone so Angular's change detection picks up the flag.
         this.ngZone.run(() => {
           this.updateAvailable = true;
         });
       });
 
-    // Proactively check for updates on app load, then every 6 hours.
     this.updates
       .checkForUpdate()
       .catch((err) => console.warn('SW update check failed:', err));
@@ -95,10 +101,10 @@ export class App implements OnInit {
     });
 
     this.authService.currentProfile$
-  .pipe(filter(p => !!p), take(1))
-  .subscribe(() => {
-    this.settingsService.refreshChurchProfile(); // seeds the BehaviorSubject early
-  });
+      .pipe(filter((p) => !!p), take(1))
+      .subscribe(() => {
+        this.settingsService.refreshChurchProfile();
+      });
 
     this.isOffline = !navigator.onLine;
     window.addEventListener('online', () =>
@@ -107,8 +113,31 @@ export class App implements OnInit {
     window.addEventListener('offline', () =>
       this.ngZone.run(() => (this.isOffline = true)),
     );
+
+    // ── Show install banner when the browser fires beforeinstallprompt ──────
+    // Only show if user hasn't already dismissed it this session
+    this.pwaInstall.canInstall$.subscribe((canInstall) => {
+      this.showInstallBanner =
+        canInstall && !this.pwaInstall.wasDismissedThisSession;
+    });
   }
 
+  // ── PWA Install actions ─────────────────────────────────
+  async installApp(): Promise<void> {
+    const accepted = await this.pwaInstall.promptInstall();
+    if (accepted) {
+      this.showInstallBanner = false;
+    }
+    // If dismissed, keep banner hidden — they've seen the prompt
+    this.showInstallBanner = false;
+  }
+
+  dismissInstall(): void {
+    this.pwaInstall.dismissInstallBanner();
+    this.showInstallBanner = false;
+  }
+
+  // ── Existing methods ────────────────────────────────────
   private clearStuckLocks(): void {
     try {
       const hasCleared = sessionStorage.getItem('locks-cleared');
@@ -126,13 +155,8 @@ export class App implements OnInit {
   updateApp(): void {
     this.updates
       .activateUpdate()
-      .then(() => {
-        window.location.reload();
-      })
-      .catch(() => {
-        // Fallback if activateUpdate fails
-        window.location.reload();
-      });
+      .then(() => window.location.reload())
+      .catch(() => window.location.reload());
     this.updateAvailable = false;
   }
 
@@ -140,7 +164,3 @@ export class App implements OnInit {
     this.updateAvailable = false;
   }
 }
-
-
-
-

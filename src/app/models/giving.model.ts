@@ -170,7 +170,9 @@ export interface CategoryExpense {
   title: string;
   description?: string;
   receipt_reference?: string;
+  receipt_media_urls?: string[];   // Supabase Storage URLs for images/videos
   approved_by?: string;
   recorded_by: string;
   created_at?: string;
+  updated_at?: string;
 }

@@ -1979,4 +1979,306 @@ export class SchoolService {
 
     if (error) throw new Error(error.message);
   }
+
+  /**
+   * Check if a student_fee has any payments linked to it.
+   * Returns payment count — caller decides whether to block unassign.
+   */
+  getStudentFeePaymentCount(studentFeeId: string): Observable<number> {
+    return from(
+      this.supabase.client
+        .from('fee_payments')
+        .select('id', { count: 'exact', head: true })
+        .eq('student_fee_id', studentFeeId)
+        .eq('church_id', this.churchId),
+    ).pipe(
+      map(({ count, error }) => {
+        if (error) throw new Error(error.message);
+        return count || 0;
+      }),
+    );
+  }
+
+  /**
+   * Unassign a fee from a single student (deletes student_fee row).
+   * SAFE: only proceeds if no payments are linked (amount_paid === 0).
+   * Force flag bypasses the check for admin override.
+   */
+  unassignFeeFromStudent(
+    studentFeeId: string,
+    force = false,
+  ): Observable<void> {
+    return from(this._unassignFeeFromStudent(studentFeeId, force));
+  }
+
+  private async _unassignFeeFromStudent(
+    studentFeeId: string,
+    force: boolean,
+  ): Promise<void> {
+    // Safety check: block if payments exist unless forced
+    if (!force) {
+      const { count, error: countError } = await this.supabase.client
+        .from('fee_payments')
+        .select('id', { count: 'exact', head: true })
+        .eq('student_fee_id', studentFeeId)
+        .eq('church_id', this.churchId);
+
+      if (countError) throw new Error(countError.message);
+      if ((count || 0) > 0) {
+        throw new Error(
+          'This fee has payments recorded against it. Remove the payments first before unassigning.',
+        );
+      }
+    }
+
+    const { error } = await this.supabase.client
+      .from('student_fees')
+      .delete()
+      .eq('id', studentFeeId)
+      .eq('church_id', this.churchId);
+
+    if (error) throw new Error(error.message);
+  }
+
+  /**
+   * Reassign a fee for a student:
+   * 1. Unassign the old fee (blocks if it has payments)
+   * 2. Assign the new fee structure with an optional custom amount override
+   */
+  reassignFeeForStudent(
+    oldStudentFeeId: string,
+    newFeeStructureId: string,
+    academicYear: string,
+    term: string,
+    studentId: string,
+    customAmount?: number,
+  ): Observable<string> {
+    return from(
+      this._reassignFeeForStudent(
+        oldStudentFeeId,
+        newFeeStructureId,
+        academicYear,
+        term,
+        studentId,
+        customAmount,
+      ),
+    );
+  }
+
+  private async _reassignFeeForStudent(
+    oldStudentFeeId: string,
+    newFeeStructureId: string,
+    academicYear: string,
+    term: string,
+    studentId: string,
+    customAmount?: number,
+  ): Promise<string> {
+    // Step 1: Remove old assignment (will throw if payments exist)
+    await this._unassignFeeFromStudent(oldStudentFeeId, false);
+
+    // Step 2: Check if this fee structure is already assigned
+    const { data: existing } = await this.supabase.client
+      .from('student_fees')
+      .select('id')
+      .eq('church_id', this.churchId)
+      .eq('student_id', studentId)
+      .eq('fee_structure_id', newFeeStructureId)
+      .eq('academic_year', academicYear)
+      .eq('term', term)
+      .maybeSingle();
+
+    if (existing?.id) return existing.id;
+
+    // Step 3: Fetch fee structure to get default amount
+    const { data: feeStructure, error: fsError } = await this.supabase.client
+      .from('fee_structures')
+      .select('amount')
+      .eq('id', newFeeStructureId)
+      .eq('church_id', this.churchId)
+      .single();
+
+    if (fsError) throw new Error(fsError.message);
+
+    const amountDue =
+      customAmount !== undefined ? customAmount : Number(feeStructure.amount);
+
+    // Step 4: Insert new student_fee with custom or default amount
+    const { data: newFee, error: insertError } = await this.supabase.client
+      .from('student_fees')
+      .insert({
+        church_id: this.churchId,
+        student_id: studentId,
+        fee_structure_id: newFeeStructureId,
+        academic_year: academicYear,
+        term,
+        amount_due: amountDue,
+        amount_paid: 0,
+        status: 'unpaid',
+      })
+      .select('id')
+      .single();
+
+    if (insertError) throw new Error(insertError.message);
+    return newFee.id;
+  }
+
+  /**
+   * Assign a fee to a student with a CUSTOM amount (bypasses fee structure default).
+   * Used when an admission student pays a different rate.
+   */
+  assignFeeToStudentWithCustomAmount(
+    studentId: string,
+    feeStructureId: string,
+    academicYear: string,
+    term: string,
+    customAmount: number,
+  ): Observable<string> {
+    return from(
+      this._assignFeeToStudentWithCustomAmount(
+        studentId,
+        feeStructureId,
+        academicYear,
+        term,
+        customAmount,
+      ),
+    );
+  }
+
+  private async _assignFeeToStudentWithCustomAmount(
+    studentId: string,
+    feeStructureId: string,
+    academicYear: string,
+    term: string,
+    customAmount: number,
+  ): Promise<string> {
+    // Check for existing assignment
+    const { data: existing } = await this.supabase.client
+      .from('student_fees')
+      .select('id')
+      .eq('church_id', this.churchId)
+      .eq('student_id', studentId)
+      .eq('fee_structure_id', feeStructureId)
+      .eq('academic_year', academicYear)
+      .eq('term', term)
+      .maybeSingle();
+
+    if (existing?.id) {
+      throw new Error(
+        'This fee is already assigned to this student. Unassign it first to change the amount.',
+      );
+    }
+
+    const { data, error } = await this.supabase.client
+      .from('student_fees')
+      .insert({
+        church_id: this.churchId,
+        student_id: studentId,
+        fee_structure_id: feeStructureId,
+        academic_year: academicYear,
+        term,
+        amount_due: customAmount,
+        amount_paid: 0,
+        status: 'unpaid',
+      })
+      .select('id')
+      .single();
+
+    if (error) throw new Error(error.message);
+    return data.id;
+  }
+
+  /**
+   * Update the amount_due on an existing student_fee (without unassigning).
+   * Only allowed if no payments have been made yet.
+   */
+  updateStudentFeeAmount(
+    studentFeeId: string,
+    newAmount: number,
+  ): Observable<void> {
+    return from(this._updateStudentFeeAmount(studentFeeId, newAmount));
+  }
+
+  private async _updateStudentFeeAmount(
+    studentFeeId: string,
+    newAmount: number,
+  ): Promise<void> {
+    // Block if any payments exist
+    const { count, error: countError } = await this.supabase.client
+      .from('fee_payments')
+      .select('id', { count: 'exact', head: true })
+      .eq('student_fee_id', studentFeeId)
+      .eq('church_id', this.churchId);
+
+    if (countError) throw new Error(countError.message);
+    if ((count || 0) > 0) {
+      throw new Error(
+        'Cannot change the fee amount after payments have been recorded.',
+      );
+    }
+
+    const { error } = await this.supabase.client
+      .from('student_fees')
+      .update({
+        amount_due: newAmount,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', studentFeeId)
+      .eq('church_id', this.churchId);
+
+    if (error) throw new Error(error.message);
+  }
+
+  /**
+   * Get all students assigned to a specific fee structure (for the
+   * "View Assigned Students" modal on the Fee Structures page).
+   */
+  getStudentsAssignedToFeeStructure(
+    feeStructureId: string,
+    academicYear: string,
+    term: string,
+  ): Observable<
+    {
+      studentFeeId: string;
+      studentId: string;
+      studentName: string;
+      studentNumber: string;
+      className: string;
+      amountDue: number;
+      amountPaid: number;
+      status: string;
+      hasPayments: boolean;
+    }[]
+  > {
+    return from(
+      this.supabase.client
+        .from('student_fees')
+        .select(
+          'id, student_id, amount_due, amount_paid, status, student:students(first_name, last_name, student_number, class:school_classes(name))',
+        )
+        .eq('church_id', this.churchId)
+        .eq('fee_structure_id', feeStructureId)
+        .eq('academic_year', academicYear)
+        .eq('term', term)
+        .order('created_at'),
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw new Error(error.message);
+        return (data || []).map((row: any) => ({
+          studentFeeId: row.id,
+          studentId: row.student_id,
+          studentName: `${row.student?.first_name || ''} ${row.student?.last_name || ''}`.trim(),
+          studentNumber: row.student?.student_number || '',
+          className: row.student?.class?.name || '—',
+          amountDue: Number(row.amount_due),
+          amountPaid: Number(row.amount_paid),
+          status: row.status,
+          hasPayments: Number(row.amount_paid) > 0,
+        }));
+      }),
+    );
+  }
+ 
 }
+
+
+

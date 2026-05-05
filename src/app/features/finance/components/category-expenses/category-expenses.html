@@ -20,10 +20,8 @@
           </button>
         </div>
 
-        <div *ngIf="successMessage" class="success-alert"><i class="ri-checkbox-circle-line"></i><span>{{ successMessage
-            }}</span></div>
-        <div *ngIf="errorMessage" class="error-alert"><i class="ri-error-warning-line"></i><span>{{ errorMessage
-            }}</span></div>
+        <div *ngIf="successMessage" class="success-alert"><i class="ri-checkbox-circle-line"></i><span>{{ successMessage }}</span></div>
+        <div *ngIf="errorMessage" class="error-alert"><i class="ri-error-warning-line"></i><span>{{ errorMessage }}</span></div>
 
         <!-- Filters -->
         <div class="filters-card">
@@ -44,13 +42,11 @@
               </select>
             </div>
             <div class="filter-actions">
-              <button class="btn-clear-filters" (click)="clearFilters()"><i class="ri-close-circle-line"></i>
-                Clear</button>
+              <button class="btn-clear-filters" (click)="clearFilters()"><i class="ri-close-circle-line"></i> Clear</button>
             </div>
           </div>
         </div>
 
-        <!-- Loading -->
         <div *ngIf="loading" class="loading-container">
           <app-loading-spinner message="Loading expenses..."></app-loading-spinner>
         </div>
@@ -65,7 +61,8 @@
                   <th>Title</th>
                   <th>Category</th>
                   <th>Amount</th>
-                  <th>Receipt Ref</th>
+                  <th>Receipt</th>
+                  <th>Media</th>
                   <th *ngIf="canManageFinance">Actions</th>
                 </tr>
               </thead>
@@ -81,22 +78,39 @@
                   <td><span class="category-badge">{{ expense.category_name || '—' }}</span></td>
                   <td><span class="expense-amount">{{ formatCurrency(expense.amount, expense.currency) }}</span></td>
                   <td><span class="reference">{{ expense.receipt_reference || '—' }}</span></td>
+                  <td>
+                    <!-- Media thumbnails -->
+                    <div class="media-thumbs" *ngIf="expense.receipt_media_urls?.length">
+                      <div *ngFor="let url of expense.receipt_media_urls; let i = index"
+                        class="thumb-wrap"
+                        (click)="openLightbox(url, isVideo(url) ? 'video' : 'image')"
+                        title="Click to view">
+                        <img *ngIf="!isVideo(url)" [src]="url" alt="Receipt" class="thumb-img" />
+                        <div *ngIf="isVideo(url)" class="thumb-video">
+                          <i class="ri-play-circle-fill"></i>
+                        </div>
+                      </div>
+                      <span class="thumb-count" *ngIf="expense.receipt_media_urls!.length > 3">
+                        +{{ expense.receipt_media_urls!.length - 3 }}
+                      </span>
+                    </div>
+                    <span class="no-media" *ngIf="!expense.receipt_media_urls?.length">—</span>
+                  </td>
                   <td *ngIf="canManageFinance">
                     <div class="action-btns">
-                      <button class="btn-action btn-edit" (click)="openEditModal(expense, $event)" title="Edit"><i
-                          class="ri-edit-line"></i></button>
-                      <button class="btn-action btn-delete" (click)="deleteExpense(expense.id, $event)"
-                        title="Delete"><i class="ri-delete-bin-line"></i></button>
+                      <button class="btn-action btn-edit" (click)="openEditModal(expense, $event)" title="Edit"><i class="ri-edit-line"></i></button>
+                      <button class="btn-action btn-delete" (click)="openDeleteModal(expense, $event)" title="Delete"><i class="ri-delete-bin-line"></i></button>
                     </div>
                   </td>
                 </tr>
                 <tr *ngIf="expenses.length === 0">
-                  <td [attr.colspan]="canManageFinance ? 6 : 5">
+                  <td [attr.colspan]="canManageFinance ? 7 : 6">
                     <div class="empty-state-table">
                       <i class="ri-receipt-line"></i>
                       <p>No expenses recorded yet</p>
-                      <button class="btn-primary-sm" (click)="openCreateModal()" *ngIf="canManageFinance"><i
-                          class="ri-add-line"></i> Record First Expense</button>
+                      <button class="btn-primary-sm" (click)="openCreateModal()" *ngIf="canManageFinance">
+                        <i class="ri-add-line"></i> Record First Expense
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -105,20 +119,17 @@
           </div>
         </div>
 
-        <!-- Pagination -->
         <div class="pagination" *ngIf="totalPages > 1 && !loading">
-          <button class="pagination-btn" [disabled]="currentPage === 1" (click)="previousPage()"><i
-              class="ri-arrow-left-s-line"></i> Previous</button>
+          <button class="pagination-btn" [disabled]="currentPage === 1" (click)="previousPage()"><i class="ri-arrow-left-s-line"></i> Previous</button>
           <span class="page-info">Page {{ currentPage }} of {{ totalPages }}</span>
-          <button class="pagination-btn" [disabled]="currentPage === totalPages" (click)="nextPage()">Next <i
-              class="ri-arrow-right-s-line"></i></button>
+          <button class="pagination-btn" [disabled]="currentPage === totalPages" (click)="nextPage()">Next <i class="ri-arrow-right-s-line"></i></button>
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Expense Modal -->
+<!-- ── Expense Modal ── -->
 <div *ngIf="showModal" class="modal-overlay" (click)="closeModal()">
   <div class="expense-modal" (click)="$event.stopPropagation()">
     <div class="modal-header">
@@ -128,64 +139,185 @@
     <form [formGroup]="expenseForm" (ngSubmit)="saveExpense()">
       <div class="modal-body">
         <div class="modal-form-grid">
+
           <div class="form-group full-width">
             <label>Title *</label>
             <input type="text" formControlName="title" placeholder="e.g. Bought cement for building"
               [class.error]="expenseForm.get('title')?.invalid && expenseForm.get('title')?.touched" />
-            <span class="error-message"
-              *ngIf="expenseForm.get('title')?.invalid && expenseForm.get('title')?.touched">{{ getErrorMessage('title')
-              }}</span>
+            <span class="error-message" *ngIf="expenseForm.get('title')?.invalid && expenseForm.get('title')?.touched">{{ getErrorMessage('title') }}</span>
           </div>
+
           <div class="form-group">
             <label>Category *</label>
-            <select formControlName="category_id"
-              [class.error]="expenseForm.get('category_id')?.invalid && expenseForm.get('category_id')?.touched">
+            <select formControlName="category_id" [class.error]="expenseForm.get('category_id')?.invalid && expenseForm.get('category_id')?.touched">
               <option value="">Select category</option>
               <option *ngFor="let cat of categories" [value]="cat.id">{{ cat.name }}</option>
             </select>
-            <span class="error-message"
-              *ngIf="expenseForm.get('category_id')?.invalid && expenseForm.get('category_id')?.touched">{{
-              getErrorMessage('category_id') }}</span>
+            <span class="error-message" *ngIf="expenseForm.get('category_id')?.invalid && expenseForm.get('category_id')?.touched">{{ getErrorMessage('category_id') }}</span>
           </div>
+
           <div class="form-group">
             <label>Date *</label>
             <input type="date" formControlName="expense_date"
               [class.error]="expenseForm.get('expense_date')?.invalid && expenseForm.get('expense_date')?.touched" />
-            <span class="error-message"
-              *ngIf="expenseForm.get('expense_date')?.invalid && expenseForm.get('expense_date')?.touched">{{
-              getErrorMessage('expense_date') }}</span>
+            <span class="error-message" *ngIf="expenseForm.get('expense_date')?.invalid && expenseForm.get('expense_date')?.touched">{{ getErrorMessage('expense_date') }}</span>
           </div>
+
           <div class="form-group">
             <label>Amount *</label>
             <input type="number" formControlName="amount" step="0.01" min="0" placeholder="0.00"
               [class.error]="expenseForm.get('amount')?.invalid && expenseForm.get('amount')?.touched" />
-            <span class="error-message"
-              *ngIf="expenseForm.get('amount')?.invalid && expenseForm.get('amount')?.touched">{{
-              getErrorMessage('amount') }}</span>
+            <span class="error-message" *ngIf="expenseForm.get('amount')?.invalid && expenseForm.get('amount')?.touched">{{ getErrorMessage('amount') }}</span>
           </div>
+
           <div class="form-group">
             <label>Currency</label>
             <select formControlName="currency">
               <option *ngFor="let curr of currencies" [value]="curr">{{ curr }}</option>
             </select>
           </div>
+
           <div class="form-group">
             <label>Receipt / Invoice Ref</label>
             <input type="text" formControlName="receipt_reference" placeholder="Optional reference number" />
           </div>
+
           <div class="form-group full-width">
             <label>Description</label>
-            <textarea formControlName="description" rows="3" placeholder="Additional details..."></textarea>
+            <textarea formControlName="description" rows="2" placeholder="Additional details..."></textarea>
           </div>
+
+          <!-- ── Media Upload ────────────────────────────── -->
+          <div class="form-group full-width">
+            <label>
+              <i class="ri-image-line"></i> Receipts / Evidence
+              <span class="media-limits-hint">Images up to 5 MB · Videos up to 30 MB · Max {{ 5 }} files</span>
+            </label>
+
+            <!-- Size / type alert -->
+            <div *ngIf="mediaAlert" class="media-alert">
+              <i class="ri-error-warning-line"></i>
+              <span>{{ mediaAlert }}</span>
+              <button type="button" class="media-alert-close" (click)="mediaAlert = ''"><i class="ri-close-line"></i></button>
+            </div>
+
+            <!-- Drop zone -->
+            <div class="drop-zone"
+              [class.drag-over]="isDragOver"
+              [class.has-files]="mediaFiles.length > 0"
+              (dragover)="onDragOver($event)"
+              (dragleave)="onDragLeave()"
+              (drop)="onDrop($event)"
+              (click)="fileInput.click()">
+              <input #fileInput type="file" multiple hidden
+                accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,video/mp4,video/quicktime,video/webm"
+                (change)="onFileInputChange($event)" />
+
+              <div class="drop-zone-content" *ngIf="mediaFiles.length === 0">
+                <i class="ri-upload-cloud-2-line"></i>
+                <p><strong>Click to upload</strong> or drag and drop</p>
+                <p class="drop-hint">JPG, PNG, WEBP, HEIC, MP4, MOV — max 5 files</p>
+              </div>
+
+              <div class="drop-zone-content small" *ngIf="mediaFiles.length > 0 && mediaFiles.length < 5">
+                <i class="ri-add-circle-line"></i>
+                <span>Add more files</span>
+              </div>
+            </div>
+
+            <!-- Previews -->
+            <div class="media-preview-grid" *ngIf="mediaFiles.length > 0">
+              <div *ngFor="let m of mediaFiles; let i = index" class="media-preview-item" [class.uploading]="m.uploading" [class.has-error]="m.error">
+
+                <!-- Image preview -->
+                <img *ngIf="m.type === 'image'" [src]="m.preview" alt="Preview"
+                  class="preview-img" (click)="openLightbox(m.preview, 'image')" />
+
+                <!-- Video preview -->
+                <div *ngIf="m.type === 'video'" class="preview-video" (click)="openLightbox(m.preview, 'video')">
+                  <i class="ri-play-circle-fill"></i>
+                  <span>{{ m.file.name || 'Video' }}</span>
+                </div>
+
+                <!-- Uploading overlay -->
+                <div *ngIf="m.uploading" class="preview-uploading">
+                  <i class="ri-loader-4-line spin"></i>
+                </div>
+
+                <!-- Error overlay -->
+                <div *ngIf="m.error" class="preview-error" [title]="m.error">
+                  <i class="ri-error-warning-fill"></i>
+                </div>
+
+                <!-- Uploaded tick -->
+                <div *ngIf="m.uploadedUrl && !m.uploading && !m.error" class="preview-done">
+                  <i class="ri-checkbox-circle-fill"></i>
+                </div>
+
+                <!-- Remove button -->
+                <button type="button" class="preview-remove" (click)="removeMedia(i)" title="Remove">
+                  <i class="ri-close-line"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
+
       <div class="modal-footer">
         <button type="button" class="btn-secondary" (click)="closeModal()" [disabled]="saving">Cancel</button>
         <button type="submit" class="btn-primary" [disabled]="saving || expenseForm.invalid">
-          <span *ngIf="!saving">{{ editingExpense ? 'Update Expense' : 'Save Expense' }}</span>
-          <span *ngIf="saving"><i class="ri-loader-4-line spin"></i> Saving...</span>
+          <span *ngIf="!saving && !uploadingMedia">{{ editingExpense ? 'Update Expense' : 'Save Expense' }}</span>
+          <span *ngIf="uploadingMedia"><i class="ri-loader-4-line spin"></i> Uploading media...</span>
+          <span *ngIf="saving && !uploadingMedia"><i class="ri-loader-4-line spin"></i> Saving...</span>
         </button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- ── Delete Confirmation Modal ── -->
+<div *ngIf="showDeleteModal" class="modal-overlay" (click)="closeDeleteModal()">
+  <div class="delete-modal" (click)="$event.stopPropagation()">
+
+    <div class="delete-modal-icon">
+      <i class="ri-delete-bin-2-line"></i>
+    </div>
+
+    <h3>Delete Expense?</h3>
+
+    <div class="delete-modal-detail" *ngIf="deletingExpense">
+      <p class="delete-title">{{ deletingExpense.title }}</p>
+      <p class="delete-meta">
+        {{ formatCurrency(deletingExpense.amount, deletingExpense.currency) }}
+        <span class="dot">•</span>
+        {{ deletingExpense.expense_date | date:'MMM d, y' }}
+      </p>
+    </div>
+
+    <p class="delete-warning">
+      This will permanently remove the expense record and cannot be undone.
+    </p>
+
+    <div class="delete-modal-actions">
+      <button class="btn-cancel" (click)="closeDeleteModal()" [disabled]="deleting">
+        Cancel
+      </button>
+      <button class="btn-confirm-delete" (click)="confirmDelete()" [disabled]="deleting">
+        <i *ngIf="!deleting" class="ri-delete-bin-line"></i>
+        <i *ngIf="deleting" class="ri-loader-4-line spin"></i>
+        {{ deleting ? 'Deleting...' : 'Yes, Delete' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Lightbox ── -->
+<div *ngIf="lightboxUrl" class="lightbox-overlay" (click)="closeLightbox()">
+  <button class="lightbox-close" (click)="closeLightbox()"><i class="ri-close-line"></i></button>
+  <div class="lightbox-content" (click)="$event.stopPropagation()">
+    <img *ngIf="lightboxType === 'image'" [src]="lightboxUrl" alt="Receipt" class="lightbox-img" />
+    <video *ngIf="lightboxType === 'video'" [src]="lightboxUrl" controls autoplay class="lightbox-video"></video>
   </div>
 </div>

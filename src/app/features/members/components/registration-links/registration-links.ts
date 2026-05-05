@@ -393,3 +393,6 @@ export class RegistrationLinks implements OnInit, OnDestroy {
     this.router.navigate(['main/members']);
   }
 }
+
+
+

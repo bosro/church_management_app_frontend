@@ -74,6 +74,23 @@ export class RecordPayment implements OnInit, OnDestroy {
   selectedTerm = '';
   selectedYear = '';
 
+  // ── Unassign / Reassign state ─────────────────────────────
+  showFeeActionModal = false;
+  feeActionTarget: StudentFee | null = null; // the fee being acted on
+  feeAction: 'unassign' | 'reassign' | 'edit_amount' | null = null;
+  feeActionProcessing = false;
+  feeActionError = '';
+
+  // For reassign flow
+  reassignToFeeStructureId = '';
+  reassignCustomAmount: number | null = null;
+  reassignUseCustomAmount = false;
+  reassignAvailableFees: any[] = [];
+  loadingReassignFees = false;
+
+  // For edit_amount flow
+  editAmountValue: number | null = null;
+
   constructor(
     private schoolService: SchoolService,
     public permissionService: PermissionService,
@@ -378,6 +395,151 @@ export class RecordPayment implements OnInit, OnDestroy {
         },
       });
   }
+
+  // ── Open fee action modal ─────────────────────────────────
+  openFeeAction(
+    fee: StudentFee,
+    action: 'unassign' | 'reassign' | 'edit_amount',
+    event: Event,
+  ): void {
+    event.stopPropagation();
+    this.feeActionTarget = fee;
+    this.feeAction = action;
+    this.feeActionError = '';
+    this.reassignToFeeStructureId = '';
+    this.reassignCustomAmount = null;
+    this.reassignUseCustomAmount = false;
+    this.editAmountValue = fee.amount_due;
+    this.showFeeActionModal = true;
+
+    if (action === 'reassign') {
+      this.loadReassignFees();
+    }
+  }
+
+  closeFeeActionModal(): void {
+    if (this.feeActionProcessing) return;
+    this.showFeeActionModal = false;
+    this.feeActionTarget = null;
+    this.feeAction = null;
+    this.feeActionError = '';
+    this.reassignAvailableFees = [];
+  }
+
+  // ── Load available fees for reassign dropdown ─────────────
+  loadReassignFees(): void {
+    this.loadingReassignFees = true;
+    this.schoolService
+      .getAllFeeStructuresForAssignment(this.selectedYear, this.selectedTerm)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (structures) => {
+          // Exclude fees already assigned to this student
+          const assignedIds = this.fees.map((f) => f.fee_structure_id);
+          // Also exclude the one being replaced (it will be removed)
+          this.reassignAvailableFees = structures.filter(
+            (s) => s.id !== this.feeActionTarget?.fee_structure_id,
+          );
+          this.loadingReassignFees = false;
+        },
+        error: () => {
+          this.loadingReassignFees = false;
+        },
+      });
+  }
+
+  // ── Get selected reassign fee's default amount ─────────────
+  get reassignSelectedFeeAmount(): number {
+    const found = this.reassignAvailableFees.find(
+      (f) => f.id === this.reassignToFeeStructureId,
+    );
+    return found ? Number(found.amount) : 0;
+  }
+
+  // ── Execute unassign ──────────────────────────────────────
+  executeUnassign(): void {
+    if (!this.feeActionTarget) return;
+    this.feeActionProcessing = true;
+    this.feeActionError = '';
+
+    this.schoolService
+      .unassignFeeFromStudent(this.feeActionTarget.id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.feeActionProcessing = false;
+          this.closeFeeActionModal();
+          this.successMessage = `"${this.feeActionTarget?.fee_name}" unassigned successfully.`;
+          this.loadFees();
+          setTimeout(() => (this.successMessage = ''), 4000);
+        },
+        error: (err) => {
+          this.feeActionProcessing = false;
+          this.feeActionError = err.message || 'Failed to unassign fee.';
+        },
+      });
+  }
+
+  // ── Execute reassign ──────────────────────────────────────
+  executeReassign(): void {
+    if (!this.feeActionTarget || !this.reassignToFeeStructureId) return;
+    this.feeActionProcessing = true;
+    this.feeActionError = '';
+
+    const customAmt =
+      this.reassignUseCustomAmount && this.reassignCustomAmount !== null
+        ? this.reassignCustomAmount
+        : undefined;
+
+    this.schoolService
+      .reassignFeeForStudent(
+        this.feeActionTarget.id,
+        this.reassignToFeeStructureId,
+        this.selectedYear,
+        this.selectedTerm,
+        this.studentId,
+        customAmt,
+      )
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.feeActionProcessing = false;
+          this.closeFeeActionModal();
+          this.successMessage = 'Fee reassigned successfully.';
+          this.loadFees();
+          setTimeout(() => (this.successMessage = ''), 4000);
+        },
+        error: (err) => {
+          this.feeActionProcessing = false;
+          this.feeActionError = err.message || 'Failed to reassign fee.';
+        },
+      });
+  }
+
+  // ── Execute edit amount ───────────────────────────────────
+  executeEditAmount(): void {
+    if (!this.feeActionTarget || this.editAmountValue === null) return;
+    this.feeActionProcessing = true;
+    this.feeActionError = '';
+
+    this.schoolService
+      .updateStudentFeeAmount(this.feeActionTarget.id, this.editAmountValue)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.feeActionProcessing = false;
+          this.closeFeeActionModal();
+          this.successMessage = `Fee amount updated to ${this.formatCurrency(this.editAmountValue!)}`;
+          this.loadFees();
+          setTimeout(() => (this.successMessage = ''), 4000);
+        },
+        error: (err) => {
+          this.feeActionProcessing = false;
+          this.feeActionError = err.message || 'Failed to update fee amount.';
+        },
+      });
+  }
+
   cancel(): void {
     this.router.navigate(['main/reports/students', this.studentId]);
   }

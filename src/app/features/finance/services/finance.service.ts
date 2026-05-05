@@ -557,6 +557,7 @@ export class FinanceService {
     title: string;
     description?: string;
     receipt_reference?: string;
+    receipt_media_urls?: string[];
   }): Observable<CategoryExpense> {
     const churchId = this.getChurchId();
     const currentUserId = this.getCurrentUserId();
@@ -575,6 +576,7 @@ export class FinanceService {
           title: expenseData.title,
           description: expenseData.description || null,
           receipt_reference: expenseData.receipt_reference || null,
+          receipt_media_urls: expenseData.receipt_media_urls || [],
           recorded_by: currentUserId,
         })
         .select()
@@ -604,6 +606,7 @@ export class FinanceService {
           title: expenseData.title,
           description: expenseData.description,
           receipt_reference: expenseData.receipt_reference,
+          receipt_media_urls: expenseData.receipt_media_urls,
           updated_at: new Date().toISOString(),
         })
         .eq('id', expenseId)

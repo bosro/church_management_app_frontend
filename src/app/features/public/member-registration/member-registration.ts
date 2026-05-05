@@ -22,7 +22,7 @@ export class MemberRegistration implements OnInit, OnDestroy {
   valid = false;
   invalidReason = '';
 
-  // ── Church branding (fetched after validate) ──────────────
+  // ── Church branding ───────────────────────────────────────
   churchId = '';
   churchName = '';
   churchLogo: string | null = null;
@@ -46,6 +46,23 @@ export class MemberRegistration implements OnInit, OnDestroy {
     { value: 'married', label: 'Married' },
     { value: 'divorced', label: 'Divorced' },
     { value: 'widowed', label: 'Widowed' },
+  ];
+
+  educationLevels = [
+    'Primary',
+    'Secondary',
+    'Diploma',
+    'Bachelors',
+    'Masters',
+    'PhD',
+    'Other',
+  ];
+
+  parentsAliveOptions = [
+    { value: 'both_alive', label: 'Both Alive' },
+    { value: 'father_deceased', label: 'Father Deceased' },
+    { value: 'mother_deceased', label: 'Mother Deceased' },
+    { value: 'both_deceased', label: 'Both Deceased' },
   ];
 
   constructor(
@@ -78,12 +95,15 @@ export class MemberRegistration implements OnInit, OnDestroy {
     const today = new Date().toISOString().split('T')[0];
 
     this.form = this.fb.group({
+      // Basic
       first_name: ['', [Validators.required, Validators.minLength(2)]],
       middle_name: [''],
       last_name: ['', [Validators.required, Validators.minLength(2)]],
       date_of_birth: [''],
       gender: [''],
       marital_status: [''],
+
+      // Contact
       phone_primary: [
         '',
         [Validators.required, Validators.pattern(/^0[0-9]{9}$/)],
@@ -92,10 +112,24 @@ export class MemberRegistration implements OnInit, OnDestroy {
       email: ['', [Validators.email]],
       address: [''],
       city: [''],
+
+      // Professional
       occupation: [''],
+      employer: [''],
+      education_level: [''],
+
+      // Emergency
       emergency_contact_name: [''],
       emergency_contact_phone: ['', [Validators.pattern(/^0[0-9]{9}$/)]],
       emergency_contact_relationship: [''],
+
+      // Family
+      spouse_name: [''],
+      children_names: [''],
+      father_name: [''],
+      mother_name: [''],
+      parents_alive_status: [''],
+
       join_date: [today, [Validators.required]],
     });
   }
@@ -128,10 +162,6 @@ export class MemberRegistration implements OnInit, OnDestroy {
       });
   }
 
-  /**
-   * Pull church name + logo so we can show them in the header.
-   * If anything fails we just keep generic copy — never blocks the form.
-   */
   private async fetchChurchBranding(churchId: string): Promise<void> {
     try {
       const { data } = await this.supabase.client
@@ -145,16 +175,22 @@ export class MemberRegistration implements OnInit, OnDestroy {
         this.churchLogo = data.logo_url || null;
       }
     } catch {
-      /* non-critical, keep generic header */
+      /* non-critical */
     } finally {
       this.validating = false;
     }
+  }
+
+  // Show spouse field only when married
+  get isMarried(): boolean {
+    return this.form.get('marital_status')?.value === 'married';
   }
 
   async onSubmit(): Promise<void> {
     if (this.form.invalid) {
       Object.values(this.form.controls).forEach((c) => c.markAsTouched());
       this.errorMessage = 'Please fill in all required fields correctly';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
@@ -181,6 +217,7 @@ export class MemberRegistration implements OnInit, OnDestroy {
     } catch (error: any) {
       this.errorMessage =
         error.message || 'Registration failed. Please try again.';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       this.submitting = false;
     }
@@ -202,7 +239,7 @@ export class MemberRegistration implements OnInit, OnDestroy {
       return `Minimum ${control.getError('minlength').requiredLength} characters`;
     if (control.hasError('email')) return 'Invalid email address';
     if (control.hasError('pattern'))
-      return 'Invalid phone (must be 10 digits starting with 0)';
+      return 'Must be 10 digits starting with 0 (e.g. 0201234567)';
     return 'Invalid input';
   }
 

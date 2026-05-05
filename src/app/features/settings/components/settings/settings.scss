@@ -957,5 +957,22 @@
 
 
 
+/* ── Append these to the END of settings.component.scss ── */
+
+.optional-indicator {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: #9ca3af;
+  margin-left: 0.5rem;
+}
+
+textarea.form-control,
+textarea {
+  resize: vertical;
+  min-height: 80px;
+  font-family: "Nunito Sans", sans-serif;
+  font-size: 0.9375rem;
+}
+
 
 

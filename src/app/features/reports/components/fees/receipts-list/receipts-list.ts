@@ -162,3 +162,5 @@ export class ReceiptsList implements OnInit, OnDestroy {
 }
 
 
+
+
