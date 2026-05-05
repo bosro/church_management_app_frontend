@@ -192,3 +192,6 @@ export class RegistrationLinkService {
     return `${window.location.origin}/public/register/${token}`;
   }
 }
+
+
+

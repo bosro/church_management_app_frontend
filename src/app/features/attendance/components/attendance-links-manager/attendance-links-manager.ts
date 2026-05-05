@@ -188,3 +188,5 @@ export class AttendanceLinksManager implements OnInit, OnDestroy {
     });
   }
 }
+
+

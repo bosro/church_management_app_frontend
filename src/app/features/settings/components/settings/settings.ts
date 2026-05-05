@@ -1,4 +1,11 @@
 // src/app/features/settings/components/settings/settings.component.ts
+// CHANGES vs original:
+// 1. MemberProfile interface — added: education_level, baptism_date, baptism_location,
+//    spouse_name, children_names, father_name, mother_name, parents_alive_status
+// 2. memberForm — added all the above fields
+// 3. populateMemberForm() — patches all new fields
+// 4. initForms() — phone pattern tightened to match admin (0XXXXXXXXX)
+
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Subject } from 'rxjs';
@@ -37,10 +44,20 @@ interface MemberProfile {
   city?: string;
   occupation?: string;
   employer?: string;
+  education_level?: string;
   photo_url?: string;
   emergency_contact_name?: string;
   emergency_contact_phone?: string;
   emergency_contact_relationship?: string;
+  // Baptism
+  baptism_date?: string;
+  baptism_location?: string;
+  // Family
+  spouse_name?: string;
+  children_names?: string;
+  father_name?: string;
+  mother_name?: string;
+  parents_alive_status?: string;
 }
 
 @Component({
@@ -92,6 +109,24 @@ export class Settings implements OnInit, OnDestroy {
   showUpgradeModal = false;
   upgradeModalTrigger = '';
 
+  // ── Options ───────────────────────────────────────────────
+  educationLevels = [
+    'Primary',
+    'Secondary',
+    'Diploma',
+    'Bachelors',
+    'Masters',
+    'PhD',
+    'Other',
+  ];
+
+  parentsAliveOptions = [
+    { value: 'both_alive', label: 'Both Alive' },
+    { value: 'father_deceased', label: 'Father Deceased' },
+    { value: 'mother_deceased', label: 'Mother Deceased' },
+    { value: 'both_deceased', label: 'Both Deceased' },
+  ];
+
   constructor(
     private fb: FormBuilder,
     private settingsService: SettingsService,
@@ -107,14 +142,12 @@ export class Settings implements OnInit, OnDestroy {
     this.checkPermissions();
     this.initForms();
 
-    // ✅ FIX: Set default active tab based on role
     if (this.isMember) {
       this.activeTab = 'profile';
     } else {
       this.activeTab = 'general';
     }
 
-    // ← ADD THIS: Read ?tab= query param and override default
     this.route.queryParams
       .pipe(takeUntil(this.destroy$))
       .subscribe((params) => {
@@ -132,10 +165,21 @@ export class Settings implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  // ── Computed helpers ──────────────────────────────────────
+
+  get isMarried(): boolean {
+    return this.memberForm.get('marital_status')?.value === 'married';
+  }
+
+  get today(): string {
+    return new Date().toISOString().split('T')[0];
+  }
+
+  // ── Subscription ──────────────────────────────────────────
+
   loadSubscriptionStatus(): void {
     if (this.isMember) return;
 
-    // Super admins have no church — subscription not applicable
     const churchId = this.authService.getChurchId();
     if (!churchId) {
       this.loadingSubscription = false;
@@ -205,24 +249,60 @@ export class Settings implements OnInit, OnDestroy {
       description: ['', [Validators.maxLength(500)]],
     });
 
+    // ── Member form — now includes ALL fields that admin add/edit has ─────────
     this.memberForm = this.fb.group({
-      first_name: ['', [Validators.required, Validators.minLength(2)]],
-      middle_name: [''],
-      last_name: ['', [Validators.required, Validators.minLength(2)]],
+      // Basic
+      first_name: [
+        '',
+        [
+          Validators.required,
+          Validators.minLength(2),
+          Validators.maxLength(50),
+        ],
+      ],
+      middle_name: ['', [Validators.maxLength(50)]],
+      last_name: [
+        '',
+        [
+          Validators.required,
+          Validators.minLength(2),
+          Validators.maxLength(50),
+        ],
+      ],
       date_of_birth: [''],
       gender: [''],
       marital_status: [''],
-      phone_primary: ['', [Validators.pattern(/^[+]?[\d\s()-]+$/)]],
-      phone_secondary: ['', [Validators.pattern(/^[+]?[\d\s()-]+$/)]],
+
+      // Contact
+      phone_primary: ['', [Validators.pattern(/^0[0-9]{9}$/)]],
+      phone_secondary: ['', [Validators.pattern(/^0[0-9]{9}$/)]],
       email: ['', [Validators.email]],
-      address: [''],
-      city: [''],
-      occupation: [''],
-      employer: [''],
+      address: ['', [Validators.maxLength(200)]],
+      city: ['', [Validators.maxLength(100)]],
+
+      // Professional
+      occupation: ['', [Validators.maxLength(100)]],
+      employer: ['', [Validators.maxLength(100)]],
+      education_level: [''],
+
+      // Photo (handled separately but kept in form for patch value)
       photo_url: [''],
-      emergency_contact_name: [''],
-      emergency_contact_phone: ['', [Validators.pattern(/^[+]?[\d\s()-]+$/)]],
-      emergency_contact_relationship: [''],
+
+      // Emergency
+      emergency_contact_name: ['', [Validators.maxLength(100)]],
+      emergency_contact_phone: ['', [Validators.pattern(/^0[0-9]{9}$/)]],
+      emergency_contact_relationship: ['', [Validators.maxLength(50)]],
+
+      // Baptism (read-only display fields — member can update their own)
+      baptism_date: [''],
+      baptism_location: ['', [Validators.maxLength(100)]],
+
+      // Family
+      spouse_name: ['', [Validators.maxLength(100)]],
+      children_names: ['', [Validators.maxLength(300)]],
+      father_name: ['', [Validators.maxLength(100)]],
+      mother_name: ['', [Validators.maxLength(100)]],
+      parents_alive_status: [''],
     });
   }
 
@@ -240,10 +320,8 @@ export class Settings implements OnInit, OnDestroy {
     this.errorMessage = '';
 
     const userId = this.authService.getUserId();
-    const churchId = this.authService.getChurchId();
 
     try {
-      // Step 1: Try to find existing member record
       let { data: memberData, error: fetchError } = await this.supabase.client
         .from('members')
         .select('*')
@@ -257,47 +335,21 @@ export class Settings implements OnInit, OnDestroy {
         return;
       }
 
-      // Step 2: If no member found, create one
       if (!memberData) {
-        // console.log('📝 No member record found, creating one...');
-
-        // Get user profile data from profiles table
-        const { data: profileData, error: profileError } =
-          await this.supabase.client
-            .from('profiles')
-            .select('email, full_name, avatar_url')
-            .eq('id', userId)
-            .single();
-
-        if (profileError) {
-          console.error('Error fetching profile data:', profileError);
-          this.errorMessage = 'Failed to load user data';
-          this.loadingProfile = false;
-          return;
-        }
-
-        // Parse the full name
-        const nameParts = (profileData?.full_name || '').trim().split(/\s+/);
-        const firstName = nameParts[0] || 'User';
-        const lastName = nameParts.slice(1).join(' ') || '';
-
-        // Create the member record
         const { data: newMember, error: createError } =
           await this.supabase.client.rpc('create_member_profile');
 
         if (createError) {
-          console.error('❌ Error creating member profile:', createError);
+          console.error('Error creating member profile:', createError);
           this.errorMessage =
             'Failed to create your profile. Please contact your administrator.';
           this.loadingProfile = false;
           return;
         }
 
-        // console.log('✅ Member profile created via function');
         memberData = newMember;
       }
 
-      // Step 3: Load the member data
       this.memberProfile = memberData as MemberProfile;
       this.populateMemberForm(memberData);
 
@@ -305,15 +357,9 @@ export class Settings implements OnInit, OnDestroy {
         this.photoPreviewUrl = memberData.photo_url;
       }
 
-      // console.log('✅ Member profile loaded:', {
-      //   id: memberData.id,
-      //   name: `${memberData.first_name} ${memberData.last_name}`,
-      //   hasPhoto: !!memberData.photo_url,
-      // });
-
       this.loadingProfile = false;
     } catch (err: any) {
-      console.error('💥 Unexpected error in loadMemberProfile:', err);
+      console.error('Unexpected error in loadMemberProfile:', err);
       this.errorMessage = 'An unexpected error occurred. Please try again.';
       this.loadingProfile = false;
     }
@@ -321,35 +367,53 @@ export class Settings implements OnInit, OnDestroy {
 
   private populateMemberForm(profile: any): void {
     this.memberForm.patchValue({
+      // Basic
       first_name: profile.first_name || '',
       middle_name: profile.middle_name || '',
       last_name: profile.last_name || '',
       date_of_birth: profile.date_of_birth || '',
       gender: profile.gender || '',
       marital_status: profile.marital_status || '',
+
+      // Contact
       phone_primary: profile.phone_primary || '',
       phone_secondary: profile.phone_secondary || '',
       email: profile.email || '',
       address: profile.address || '',
       city: profile.city || '',
+
+      // Professional
       occupation: profile.occupation || '',
       employer: profile.employer || '',
+      education_level: profile.education_level || '',
+
+      // Photo
       photo_url: profile.photo_url || '',
+
+      // Emergency
       emergency_contact_name: profile.emergency_contact_name || '',
       emergency_contact_phone: profile.emergency_contact_phone || '',
       emergency_contact_relationship:
         profile.emergency_contact_relationship || '',
+
+      // Baptism
+      baptism_date: profile.baptism_date || '',
+      baptism_location: profile.baptism_location || '',
+
+      // Family
+      spouse_name: profile.spouse_name || '',
+      children_names: profile.children_names || '',
+      father_name: profile.father_name || '',
+      mother_name: profile.mother_name || '',
+      parents_alive_status: profile.parents_alive_status || '',
     });
   }
 
-  // ✅ Add this helper method to the class
   private prepareUpdateData(formValue: any): any {
     const updateData: any = {};
 
     Object.keys(formValue).forEach((key) => {
       const value = formValue[key];
-
-      // Convert empty strings to null for database compatibility
       if (value === '' || value === null || value === undefined) {
         updateData[key] = null;
       } else {
@@ -360,7 +424,6 @@ export class Settings implements OnInit, OnDestroy {
     return updateData;
   }
 
-  // Then use it in saveMemberProfile:
   async saveMemberProfile(): Promise<void> {
     if (this.memberForm.invalid) {
       this.markFormGroupTouched(this.memberForm);
@@ -389,7 +452,6 @@ export class Settings implements OnInit, OnDestroy {
         }
       }
 
-      // ✅ Use the helper method
       const updateData = this.prepareUpdateData(this.memberForm.value);
 
       const { error } = await this.supabase.client
@@ -485,9 +547,7 @@ export class Settings implements OnInit, OnDestroy {
 
   onPhotoFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
-    if (!input.files || input.files.length === 0) {
-      return;
-    }
+    if (!input.files || input.files.length === 0) return;
 
     const file = input.files[0];
 
@@ -516,9 +576,7 @@ export class Settings implements OnInit, OnDestroy {
   }
 
   async uploadPhoto(): Promise<string | null> {
-    if (!this.selectedPhotoFile) {
-      return null;
-    }
+    if (!this.selectedPhotoFile) return null;
 
     this.uploadingPhoto = true;
     this.errorMessage = '';
@@ -533,7 +591,7 @@ export class Settings implements OnInit, OnDestroy {
 
       const bucketName = this.isMember ? 'member-photos' : 'church-logos';
 
-      const { data, error } = await this.supabase.client.storage
+      const { error } = await this.supabase.client.storage
         .from(bucketName)
         .upload(fileName, this.selectedPhotoFile, {
           cacheControl: '3600',
@@ -571,9 +629,7 @@ export class Settings implements OnInit, OnDestroy {
     }
 
     const fileInput = document.getElementById('photo-file') as HTMLInputElement;
-    if (fileInput) {
-      fileInput.value = '';
-    }
+    if (fileInput) fileInput.value = '';
   }
 
   async saveChurchProfile(): Promise<void> {
@@ -619,10 +675,7 @@ export class Settings implements OnInit, OnDestroy {
             this.successMessage = 'Church profile updated successfully!';
             this.loading = false;
             this.scrollToTop();
-
-            // ✅ Refresh church profile in header
             this.settingsService.refreshChurchProfile();
-
             setTimeout(() => {
               this.successMessage = '';
             }, 3000);
@@ -679,7 +732,6 @@ export class Settings implements OnInit, OnDestroy {
           this.notificationSettings = updatedSettings;
           this.successMessage = 'Setting updated successfully!';
           this.savingSettings = false;
-
           setTimeout(() => {
             this.successMessage = '';
           }, 2000);
@@ -687,7 +739,6 @@ export class Settings implements OnInit, OnDestroy {
         error: (error) => {
           this.errorMessage = error.message || 'Failed to update setting';
           this.savingSettings = false;
-          console.error('Error updating setting:', error);
         },
       });
   }
@@ -703,8 +754,6 @@ export class Settings implements OnInit, OnDestroy {
     if (!this.financeSettings) return;
 
     this.savingSettings = true;
-    this.errorMessage = '';
-
     const updatedSettings = {
       ...this.financeSettings,
       [key]: !this.financeSettings[key],
@@ -718,7 +767,6 @@ export class Settings implements OnInit, OnDestroy {
           this.financeSettings = updatedSettings;
           this.successMessage = 'Setting updated successfully!';
           this.savingSettings = false;
-
           setTimeout(() => {
             this.successMessage = '';
           }, 2000);
@@ -726,7 +774,6 @@ export class Settings implements OnInit, OnDestroy {
         error: (error) => {
           this.errorMessage = error.message || 'Failed to update setting';
           this.savingSettings = false;
-          console.error('Error updating setting:', error);
         },
       });
   }
@@ -741,8 +788,6 @@ export class Settings implements OnInit, OnDestroy {
     if (!this.communicationSettings) return;
 
     this.savingSettings = true;
-    this.errorMessage = '';
-
     const updatedSettings = {
       ...this.communicationSettings,
       [key]: !this.communicationSettings[key],
@@ -756,7 +801,6 @@ export class Settings implements OnInit, OnDestroy {
           this.communicationSettings = updatedSettings;
           this.successMessage = 'Setting updated successfully!';
           this.savingSettings = false;
-
           setTimeout(() => {
             this.successMessage = '';
           }, 2000);
@@ -764,7 +808,6 @@ export class Settings implements OnInit, OnDestroy {
         error: (error) => {
           this.errorMessage = error.message || 'Failed to update setting';
           this.savingSettings = false;
-          console.error('Error updating setting:', error);
         },
       });
   }
@@ -780,8 +823,6 @@ export class Settings implements OnInit, OnDestroy {
     if (!this.securitySettings) return;
 
     this.savingSettings = true;
-    this.errorMessage = '';
-
     const updatedSettings = {
       ...this.securitySettings,
       [key]: !this.securitySettings[key],
@@ -795,7 +836,6 @@ export class Settings implements OnInit, OnDestroy {
           this.securitySettings = updatedSettings;
           this.successMessage = 'Setting updated successfully!';
           this.savingSettings = false;
-
           setTimeout(() => {
             this.successMessage = '';
           }, 2000);
@@ -803,7 +843,6 @@ export class Settings implements OnInit, OnDestroy {
         error: (error) => {
           this.errorMessage = error.message || 'Failed to update setting';
           this.savingSettings = false;
-          console.error('Error updating setting:', error);
         },
       });
   }
@@ -812,14 +851,12 @@ export class Settings implements OnInit, OnDestroy {
     Object.keys(formGroup.controls).forEach((key) => {
       const control = formGroup.get(key);
       control?.markAsTouched();
-
       if (control instanceof FormGroup) {
         this.markFormGroupTouched(control);
       }
     });
   }
 
-  // ADD these helper methods (before markFormGroupTouched)
   getUsagePercent(
     resource:
       | 'members'
@@ -878,31 +915,21 @@ export class Settings implements OnInit, OnDestroy {
     const form = formType === 'church' ? this.churchForm : this.memberForm;
     const control = form.get(fieldName);
 
-    if (!control || !control.errors || !control.touched) {
-      return '';
-    }
+    if (!control || !control.errors || !control.touched) return '';
 
-    if (control.hasError('required')) {
-      return 'This field is required';
-    }
-    if (control.hasError('email')) {
-      return 'Please enter a valid email address';
-    }
+    if (control.hasError('required')) return 'This field is required';
+    if (control.hasError('email')) return 'Please enter a valid email address';
     if (control.hasError('minlength')) {
-      const minLength = control.getError('minlength').requiredLength;
-      return `Minimum ${minLength} characters required`;
+      return `Minimum ${control.getError('minlength').requiredLength} characters required`;
     }
     if (control.hasError('maxlength')) {
-      const maxLength = control.getError('maxlength').requiredLength;
-      return `Maximum ${maxLength} characters allowed`;
+      return `Maximum ${control.getError('maxlength').requiredLength} characters allowed`;
     }
     if (control.hasError('pattern')) {
-      if (fieldName.includes('phone')) {
-        return 'Please enter a valid phone number';
-      }
-      if (fieldName === 'website' || fieldName === 'logo_url') {
+      if (fieldName.includes('phone'))
+        return 'Enter a valid 10-digit phone number (e.g. 0201234567)';
+      if (fieldName === 'website' || fieldName === 'logo_url')
         return 'Please enter a valid URL (starting with http:// or https://)';
-      }
       return 'Invalid format';
     }
 
@@ -927,6 +954,3 @@ export class Settings implements OnInit, OnDestroy {
     }
   }
 }
-
-
-

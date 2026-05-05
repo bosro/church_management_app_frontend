@@ -77,24 +77,20 @@
               </div>
               <div class="class-actions">
                 <!-- Export button — only for class fee groups -->
-                <button class="btn-icon-outline"
-                  *ngIf="group.class && group.class.id !== '__general__'"
+                <button class="btn-icon-outline" *ngIf="group.class && group.class.id !== '__general__'"
                   (click)="openClassExport(group.class.id, group.class.name)"
-                  title="Export fee statement for this class"
-                  [disabled]="exportingClass">
+                  title="Export fee statement for this class" [disabled]="exportingClass">
                   <i class="ri-download-line"></i>
                 </button>
 
                 <!-- CLASS fee group: Assign to Class + Assign to individual student -->
                 <ng-container *ngIf="group.class && group.class.id !== '__general__' && permissionService.school.fees">
-                  <button class="btn-assign"
-                    (click)="confirmAssign(group.class.id, group.class.name)"
+                  <button class="btn-assign" (click)="confirmAssign(group.class.id, group.class.name)"
                     title="Assign these fees to all students in this class">
                     <i class="ri-user-add-line"></i>
                     Assign to Class
                   </button>
-                  <button class="btn-assign btn-assign-student"
-                    (click)="openAssignToStudentModal(group.fees)"
+                  <button class="btn-assign btn-assign-student" (click)="openAssignToStudentModal(group.fees)"
                     title="Assign a fee from this class to a specific student">
                     <i class="ri-user-follow-line"></i>
                     Assign to Student
@@ -140,6 +136,12 @@
                         <i class="ri-delete-bin-line"></i>
                       </button>
 
+                      <!-- NEW: View assigned students -->
+                      <button class="btn-icon-small btn-view-students" (click)="openAssignedStudents(fee, $event)"
+                        title="See which students have this fee assigned">
+                        <i class="ri-group-line"></i>
+                      </button>
+
                       <!-- GENERAL fee row: "Assign to All Students" + "Assign to Student" -->
                       <ng-container *ngIf="!group.class || group.class.id === '__general__'">
                         <button class="btn-assign-inline btn-assign-all-students"
@@ -149,8 +151,7 @@
                           All Students
                         </button>
                         <button class="btn-assign-inline btn-assign-student-inline"
-                          (click)="openAssignToStudentModal([fee])"
-                          title="Assign this fee to a specific student">
+                          (click)="openAssignToStudentModal([fee])" title="Assign this fee to a specific student">
                           <i class="ri-user-follow-line"></i>
                           One Student
                         </button>
@@ -507,5 +508,136 @@
         {{ assigningToStudent ? 'Assigning...' : 'Assign to Student' }}
       </button>
     </div>
+  </div>
+</div>
+
+<!-- Assigned Students Modal -->
+<div class="modal-overlay" *ngIf="showAssignedStudentsModal" (click)="closeAssignedStudentsModal()">
+  <div class="assigned-students-modal" (click)="$event.stopPropagation()">
+
+    <!-- Header -->
+    <div class="assigned-students-header">
+      <div class="assigned-students-header-info">
+        <div class="assigned-students-icon">
+          <i class="ri-group-line"></i>
+        </div>
+        <div>
+          <h3>{{ assignedStudentsModalFee?.fee_name }}</h3>
+          <p>
+            Students assigned — {{ selectedTerm }} {{ selectedYear }}
+            <span *ngIf="!loadingAssignedStudents">
+              · <strong>{{ assignedStudentsList.length }}</strong> student{{ assignedStudentsList.length !== 1 ? 's' :
+              '' }}
+            </span>
+          </p>
+        </div>
+      </div>
+      <button class="modal-close-btn" (click)="closeAssignedStudentsModal()">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+
+    <!-- Error in modal -->
+    <div *ngIf="unassignStudentError" class="assigned-students-error">
+      <i class="ri-error-warning-line"></i>
+      {{ unassignStudentError }}
+      <button (click)="unassignStudentError = ''"
+        style="margin-left:auto;background:none;border:none;cursor:pointer;color:#dc2626;">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+
+    <!-- Loading -->
+    <div *ngIf="loadingAssignedStudents" class="assigned-students-loading">
+      <div class="spinner"></div>
+      <p>Loading assigned students...</p>
+    </div>
+
+    <!-- Empty -->
+    <div *ngIf="!loadingAssignedStudents && assignedStudentsList.length === 0" class="assigned-students-empty">
+      <i class="ri-user-line"></i>
+      <p>No students have been assigned this fee yet.</p>
+      <span>Use "Assign to Class" or "Assign to Student" to add students.</span>
+    </div>
+
+    <!-- Student list -->
+    <div *ngIf="!loadingAssignedStudents && assignedStudentsList.length > 0" class="assigned-students-body">
+
+      <!-- Fee amount header -->
+      <div class="assigned-fee-amount-bar">
+        <span>Fee amount: <strong>{{ formatCurrencyForModal(assignedStudentsModalFee?.amount || 0) }}</strong></span>
+        <span class="assigned-fee-note">
+          <i class="ri-information-line"></i>
+          Students with a different amount were assigned individually
+        </span>
+      </div>
+
+      <div class="assigned-student-list">
+        <div *ngFor="let s of assignedStudentsList" class="assigned-student-row">
+          <!-- Avatar -->
+          <div class="assigned-student-avatar">
+            {{ s.studentName.split(' ')[0]?.[0] || '?' }}{{ s.studentName.split(' ')[1]?.[0] || '' }}
+          </div>
+
+          <!-- Info -->
+          <div class="assigned-student-info">
+            <span class="assigned-student-name">{{ s.studentName }}</span>
+            <span class="assigned-student-meta">
+              {{ s.studentNumber }}
+              <span *ngIf="s.className !== '—'"> · {{ s.className }}</span>
+            </span>
+          </div>
+
+          <!-- Amount (highlight if different from fee structure default) -->
+          <div class="assigned-student-amounts">
+            <span class="assigned-amount-due"
+              [class.amount-custom]="s.amountDue !== (assignedStudentsModalFee?.amount || 0)">
+              {{ formatCurrencyForModal(s.amountDue) }}
+              <span *ngIf="s.amountDue !== (assignedStudentsModalFee?.amount || 0)" class="custom-badge"
+                title="Custom amount — different from class default">
+                custom
+              </span>
+            </span>
+            <span class="assigned-amount-paid" *ngIf="s.amountPaid > 0">
+              paid {{ formatCurrencyForModal(s.amountPaid) }}
+            </span>
+          </div>
+
+          <!-- Status -->
+          <span class="status-badge-sm" [class.status-paid]="s.status === 'paid'"
+            [class.status-partial]="s.status === 'partial'" [class.status-unpaid]="s.status === 'unpaid'">
+            {{ s.status | titlecase }}
+          </span>
+
+          <!-- Unassign button -->
+          <div class="assigned-student-actions">
+            <button class="btn-unassign-student" *ngIf="!s.hasPayments"
+              (click)="unassignStudentFromFee(s.studentFeeId, s.studentName)"
+              [disabled]="unassigningStudentFeeId === s.studentFeeId"
+              title="Unassign this fee from {{ s.studentName }}">
+              <i class="ri-user-unfollow-line" *ngIf="unassigningStudentFeeId !== s.studentFeeId"></i>
+              <i class="ri-loader-4-line spin" *ngIf="unassigningStudentFeeId === s.studentFeeId"></i>
+            </button>
+            <!-- Lock icon if paid -->
+            <span class="unassign-locked-icon" *ngIf="s.hasPayments"
+              title="Cannot unassign — payments have been recorded">
+              <i class="ri-lock-line"></i>
+            </span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div class="assigned-students-footer">
+      <span class="footer-hint" *ngIf="assignedStudentsList.length > 0">
+        <i class="ri-lock-line"></i> Fees with payments cannot be unassigned
+      </span>
+      <button class="btn-close-modal" (click)="closeAssignedStudentsModal()">
+        Close
+      </button>
+    </div>
+
   </div>
 </div>

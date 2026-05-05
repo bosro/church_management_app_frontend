@@ -374,3 +374,5 @@ export class SettingsService {
     return this.authService.hasRole(roles);
   }
 }
+
+

@@ -16,6 +16,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { PdfBrandingService } from '../../../../../core/services/pdf-branding.service';
 import { ClassFeeExportService } from '../../../services/class-fee-export.service';
+import { SchoolFilterService } from '../../../services/school-filter.service';
 
 @Component({
   selector: 'app-fee-structures',
@@ -82,17 +83,39 @@ export class FeeStructures implements OnInit, OnDestroy {
   showAssignGeneralFeeAllModal = false;
   generalFeeToAssignAll: FeeStructure | null = null;
 
+  // ── Assigned Students Modal ───────────────────────────────
+  showAssignedStudentsModal = false;
+  assignedStudentsModalFee: FeeStructure | null = null;
+  assignedStudentsList: {
+    studentFeeId: string;
+    studentId: string;
+    studentName: string;
+    studentNumber: string;
+    className: string;
+    amountDue: number;
+    amountPaid: number;
+    status: string;
+    hasPayments: boolean;
+  }[] = [];
+  loadingAssignedStudents = false;
+
+  // Per-student unassign state inside the modal
+  unassigningStudentFeeId: string | null = null;
+  unassignStudentError = '';
+
   constructor(
     private schoolService: SchoolService,
     public permissionService: PermissionService,
     public router: Router,
     private pdfBranding: PdfBrandingService,
     private classFeeExport: ClassFeeExportService,
+    private schoolFilter: SchoolFilterService,
   ) {}
 
   ngOnInit(): void {
     this.academicYears = generateAcademicYears();
-    this.selectedYear = currentAcademicYear();
+    this.selectedTerm = this.schoolFilter.term;
+    this.selectedYear = this.schoolFilter.year;
     this.loadClasses();
     this.loadFeeStructures();
   }
@@ -130,6 +153,7 @@ export class FeeStructures implements OnInit, OnDestroy {
   }
 
   onFilterChange(): void {
+    this.schoolFilter.setBoth(this.selectedTerm, this.selectedYear);
     this.loadFeeStructures();
   }
 
@@ -858,7 +882,74 @@ export class FeeStructures implements OnInit, OnDestroy {
         },
       });
   }
+
+  // ── Open assigned students modal ──────────────────────────
+  openAssignedStudents(fee: FeeStructure, event: Event): void {
+    event.stopPropagation();
+    this.assignedStudentsModalFee = fee;
+    this.assignedStudentsList = [];
+    this.unassignStudentError = '';
+    this.showAssignedStudentsModal = true;
+    this.loadAssignedStudents(fee);
+  }
+
+  closeAssignedStudentsModal(): void {
+    this.showAssignedStudentsModal = false;
+    this.assignedStudentsModalFee = null;
+    this.assignedStudentsList = [];
+    this.unassignStudentError = '';
+  }
+
+  loadAssignedStudents(fee: FeeStructure): void {
+    this.loadingAssignedStudents = true;
+    this.schoolService
+      .getStudentsAssignedToFeeStructure(
+        fee.id,
+        this.selectedYear,
+        this.selectedTerm,
+      )
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (students) => {
+          this.assignedStudentsList = students;
+          this.loadingAssignedStudents = false;
+        },
+        error: (err) => {
+          this.errorMessage = err.message || 'Failed to load assigned students';
+          this.loadingAssignedStudents = false;
+        },
+      });
+  }
+
+  // ── Unassign a single student from within the modal ───────
+  unassignStudentFromFee(studentFeeId: string, studentName: string): void {
+    this.unassigningStudentFeeId = studentFeeId;
+    this.unassignStudentError = '';
+
+    this.schoolService
+      .unassignFeeFromStudent(studentFeeId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.unassigningStudentFeeId = null;
+          // Remove from list immediately
+          this.assignedStudentsList = this.assignedStudentsList.filter(
+            (s) => s.studentFeeId !== studentFeeId,
+          );
+          this.successMessage = `Fee unassigned from ${studentName}.`;
+          setTimeout(() => (this.successMessage = ''), 4000);
+        },
+        error: (err) => {
+          this.unassigningStudentFeeId = null;
+          this.unassignStudentError = err.message || 'Failed to unassign fee.';
+        },
+      });
+  }
+
+  formatCurrencyForModal(amount: number): string {
+    return new Intl.NumberFormat('en-GH', {
+      style: 'currency',
+      currency: 'GHS',
+    }).format(amount || 0);
+  }
 }
-
-
-

@@ -471,10 +471,22 @@
 // ─── Receipt Note ─────────────────────────────────────────
 .receipt-note {
   text-align: center;
-  font-size: 11px;
-  color: #9ca3af;
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
   margin: 16px 0 0;
   font-style: italic;
+}
+
+.receipt-note--warning {
+  font-size: 14px;
+  font-weight: 800;
+  color: #962222;
+  // background: #fef2f2;
+  // border: 1px solid #fecaca;
+  border-radius: 6px;
+  padding: 2px 14px;
+  margin-bottom: 5px;
 }
 
 // ─── Print Styles ─────────────────────────────────────────
@@ -628,6 +640,18 @@
   }
 }
 
+.not-paid-badge {
+  display: inline-flex;
+  padding: 1px 7px;
+  background: #f3f4f6;
+  color: #9ca3af;
+  border-radius: 100px;
+  font-size: 10px;
+  font-weight: 600;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
 // ── Received-by line on receipt ────────────────────────────────────────────
 .receipt-received-by {
   display: flex;
@@ -736,6 +760,27 @@
   }
 }
 
+.fee-breakdown-row {
+  td {
+    padding-top: 2px !important;
+    padding-bottom: 2px !important;
+    border-bottom: none !important;
+    background: #fafafa;
+    font-size: 11px;
+  }
+
+  &.current-payment-row td {
+    background: #fefdf0;
+  }
+}
+
+@media print {
+  .fee-breakdown-row td {
+    font-size: 9px;
+    padding: 2px 8px !important;
+  }
+}
+
 .history-receipt-no {
   font-family: monospace;
   font-size: 11px;
@@ -819,3 +864,5 @@
     print-color-adjust: exact;
   }
 }
+
+

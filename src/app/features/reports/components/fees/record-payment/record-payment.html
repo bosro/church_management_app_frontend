@@ -87,14 +87,38 @@
                     <span class="fee-balance" [class.zero]="(fee.amount_due - fee.amount_paid) === 0">
                       {{ formatCurrency(fee.amount_due - fee.amount_paid) }} left
                     </span>
-                    <!-- NEW: History button -->
+                    <!-- History button -->
                     <button class="btn-history" (click)="openPaymentHistory(fee, $event)"
                       title="View payment history for this fee">
                       <i class="ri-history-line"></i>
                     </button>
+
+                    <!-- ── NEW: Fee action buttons ── -->
+                    <div class="fee-action-group" *ngIf="permissionService.school?.manage">
+                      <!-- Edit amount (only if no payments yet) -->
+                      <button class="btn-fee-action btn-fee-edit" *ngIf="fee.amount_paid == 0"
+                        (click)="openFeeAction(fee, 'edit_amount', $event)" title="Change fee amount for this student">
+                        <i class="ri-pencil-line"></i>
+                      </button>
+                      <!-- Reassign to different fee -->
+                      <button class="btn-fee-action btn-fee-reassign" *ngIf="fee.amount_paid == 0"
+                        (click)="openFeeAction(fee, 'reassign', $event)" title="Swap this fee for a different one">
+                        <i class="ri-swap-line"></i>
+                      </button>
+                      <!-- Unassign fee -->
+                      <button class="btn-fee-action btn-fee-unassign" *ngIf="fee.amount_paid == 0"
+                        (click)="openFeeAction(fee, 'unassign', $event)" title="Remove this fee from student">
+                        <i class="ri-user-unfollow-line"></i>
+                      </button>
+                      <!-- Show lock icon if fee has payments (no edit allowed) -->
+                      <span class="fee-locked-icon" *ngIf="fee.amount_paid > 0" title="Fee has payments — cannot edit">
+                        <i class="ri-lock-line"></i>
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
+
             </div>
 
             <!-- Outstanding Fees to pay -->
@@ -397,5 +421,192 @@
         {{ assigningFee ? 'Assigning...' : 'Assign Fee' }}
       </button>
     </div>
+  </div>
+</div>
+
+
+<!-- ── Fee Action Modal (Unassign / Reassign / Edit Amount) ──────────── -->
+<div class="modal-overlay" *ngIf="showFeeActionModal" (click)="closeFeeActionModal()">
+  <div class="fee-action-modal" (click)="$event.stopPropagation()">
+
+    <!-- UNASSIGN -->
+    <ng-container *ngIf="feeAction === 'unassign'">
+      <div class="fee-action-modal-header">
+        <div class="fee-action-icon danger">
+          <i class="ri-user-unfollow-line"></i>
+        </div>
+        <div>
+          <h3>Unassign Fee</h3>
+          <p>Remove this fee from <strong>{{ getFullName() }}</strong></p>
+        </div>
+        <button class="modal-close-btn" (click)="closeFeeActionModal()">
+          <i class="ri-close-line"></i>
+        </button>
+      </div>
+      <div class="fee-action-modal-body">
+        <div class="fee-action-summary-row">
+          <span class="fee-action-name">{{ feeActionTarget?.fee_name }}</span>
+          <span class="fee-action-amount">{{ formatCurrency(feeActionTarget?.amount_due || 0) }}</span>
+        </div>
+        <div class="fee-action-warning">
+          <i class="ri-error-warning-line"></i>
+          This will remove the fee from the student's record. The student will no longer
+          owe this fee. This cannot be undone — you would need to re-assign the fee manually.
+        </div>
+        <div class="fee-action-error" *ngIf="feeActionError">
+          <i class="ri-close-circle-line"></i>
+          {{ feeActionError }}
+        </div>
+      </div>
+      <div class="fee-action-modal-footer">
+        <button class="btn-cancel" (click)="closeFeeActionModal()" [disabled]="feeActionProcessing">Cancel</button>
+        <button class="btn-confirm-danger" (click)="executeUnassign()" [disabled]="feeActionProcessing">
+          <i class="ri-user-unfollow-line" *ngIf="!feeActionProcessing"></i>
+          <i class="ri-loader-4-line spin" *ngIf="feeActionProcessing"></i>
+          {{ feeActionProcessing ? 'Removing...' : 'Unassign Fee' }}
+        </button>
+      </div>
+    </ng-container>
+
+    <!-- EDIT AMOUNT -->
+    <ng-container *ngIf="feeAction === 'edit_amount'">
+      <div class="fee-action-modal-header">
+        <div class="fee-action-icon edit">
+          <i class="ri-pencil-line"></i>
+        </div>
+        <div>
+          <h3>Edit Fee Amount</h3>
+          <p>Custom amount for <strong>{{ getFullName() }}</strong> only</p>
+        </div>
+        <button class="modal-close-btn" (click)="closeFeeActionModal()">
+          <i class="ri-close-line"></i>
+        </button>
+      </div>
+      <div class="fee-action-modal-body">
+        <div class="fee-action-summary-row">
+          <span class="fee-action-name">{{ feeActionTarget?.fee_name }}</span>
+          <span class="fee-action-amount fee-amount-original">
+            Class default: {{ formatCurrency(feeActionTarget?.amount_due || 0) }}
+          </span>
+        </div>
+        <div class="form-group" style="margin-top:14px;">
+          <label>New Amount for This Student (GHS) *</label>
+          <input type="number" [(ngModel)]="editAmountValue" min="0" step="0.01" placeholder="Enter custom amount..."
+            style="width:100%;padding:9px 12px;border:1.5px solid #4f46e5;border-radius:8px;font-size:15px;font-weight:600;font-family:'Nunito Sans',sans-serif;box-sizing:border-box;" />
+        </div>
+        <p style="font-size:12px;color:#6b7280;margin:6px 0 0;">
+          <i class="ri-information-line" style="color:#4f46e5;"></i>
+          Only this student's fee amount changes. Other students in the same class are unaffected.
+          This cannot be changed after any payment is recorded.
+        </p>
+        <div class="fee-action-error" *ngIf="feeActionError">
+          <i class="ri-close-circle-line"></i>
+          {{ feeActionError }}
+        </div>
+      </div>
+      <div class="fee-action-modal-footer">
+        <button class="btn-cancel" (click)="closeFeeActionModal()" [disabled]="feeActionProcessing">Cancel</button>
+        <button class="btn-confirm-primary" (click)="executeEditAmount()"
+          [disabled]="feeActionProcessing || !editAmountValue || editAmountValue <= 0">
+          <i class="ri-save-line" *ngIf="!feeActionProcessing"></i>
+          <i class="ri-loader-4-line spin" *ngIf="feeActionProcessing"></i>
+          {{ feeActionProcessing ? 'Saving...' : 'Update Amount' }}
+        </button>
+      </div>
+    </ng-container>
+
+    <!-- REASSIGN -->
+    <ng-container *ngIf="feeAction === 'reassign'">
+      <div class="fee-action-modal-header">
+        <div class="fee-action-icon reassign">
+          <i class="ri-swap-line"></i>
+        </div>
+        <div>
+          <h3>Reassign Fee</h3>
+          <p>Swap fee for <strong>{{ getFullName() }}</strong></p>
+        </div>
+        <button class="modal-close-btn" (click)="closeFeeActionModal()">
+          <i class="ri-close-line"></i>
+        </button>
+      </div>
+      <div class="fee-action-modal-body">
+        <!-- Current fee being replaced -->
+        <div style="margin-bottom:14px;">
+          <p
+            style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.4px;margin:0 0 6px;">
+            Removing
+          </p>
+          <div class="fee-action-summary-row" style="background:#fef2f2;border-color:#fecaca;">
+            <span class="fee-action-name" style="color:#dc2626;">
+              <i class="ri-close-circle-line" style="margin-right:4px;"></i>
+              {{ feeActionTarget?.fee_name }}
+            </span>
+            <span class="fee-action-amount" style="color:#dc2626;">
+              {{ formatCurrency(feeActionTarget?.amount_due || 0) }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Select new fee -->
+        <div class="form-group">
+          <label>Replace With *</label>
+          <div *ngIf="loadingReassignFees" style="padding:10px;color:#6b7280;font-size:13px;">
+            <i class="ri-loader-4-line spin"></i> Loading fee structures...
+          </div>
+          <div *ngIf="!loadingReassignFees">
+            <div *ngIf="reassignAvailableFees.length === 0"
+              style="padding:12px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;color:#9ca3af;text-align:center;">
+              No other fee structures available for {{ selectedTerm }} {{ selectedYear }}
+            </div>
+            <div class="reassign-fee-list" *ngIf="reassignAvailableFees.length > 0">
+              <label *ngFor="let fs of reassignAvailableFees" class="reassign-fee-option"
+                [class.selected]="reassignToFeeStructureId === fs.id">
+                <input type="radio" name="reassignFee" [value]="fs.id" [(ngModel)]="reassignToFeeStructureId" />
+                <div class="reassign-fee-info">
+                  <span class="reassign-fee-name">{{ fs.fee_name }}</span>
+                  <span class="reassign-fee-class" *ngIf="fs.class?.name">{{ fs.class.name }}</span>
+                </div>
+                <span class="reassign-fee-amount">{{ formatCurrency(fs.amount) }}</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Custom amount toggle -->
+        <div class="form-group" *ngIf="reassignToFeeStructureId" style="margin-top:10px;">
+          <label class="checkbox-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <input type="checkbox" [(ngModel)]="reassignUseCustomAmount"
+              style="width:16px;height:16px;accent-color:#4f46e5;" />
+            <span style="font-size:13px;font-weight:600;color:#374151;">
+              Use a custom amount instead of the default
+              ({{ formatCurrency(reassignSelectedFeeAmount) }})
+            </span>
+          </label>
+          <div *ngIf="reassignUseCustomAmount" style="margin-top:10px;">
+            <input type="number" [(ngModel)]="reassignCustomAmount" min="0" step="0.01"
+              placeholder="Enter custom amount..."
+              style="width:100%;padding:9px 12px;border:1.5px solid #4f46e5;border-radius:8px;font-size:15px;font-weight:600;font-family:'Nunito Sans',sans-serif;box-sizing:border-box;" />
+            <p style="font-size:11px;color:#6b7280;margin:4px 0 0;">
+              Only this student's fee will use this amount.
+            </p>
+          </div>
+        </div>
+
+        <div class="fee-action-error" *ngIf="feeActionError">
+          <i class="ri-close-circle-line"></i>
+          {{ feeActionError }}
+        </div>
+      </div>
+      <div class="fee-action-modal-footer">
+        <button class="btn-cancel" (click)="closeFeeActionModal()" [disabled]="feeActionProcessing">Cancel</button>
+        <button class="btn-confirm-primary" (click)="executeReassign()"
+          [disabled]="feeActionProcessing || !reassignToFeeStructureId || (reassignUseCustomAmount && (!reassignCustomAmount || reassignCustomAmount <= 0))">
+          <i class="ri-swap-line" *ngIf="!feeActionProcessing"></i>
+          <i class="ri-loader-4-line spin" *ngIf="feeActionProcessing"></i>
+          {{ feeActionProcessing ? 'Reassigning...' : 'Confirm Reassign' }}
+        </button>
+      </div>
+    </ng-container>
+
   </div>
 </div>

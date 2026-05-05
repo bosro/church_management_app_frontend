@@ -23,7 +23,7 @@
             </button>
 
             <!-- NEW: Registration Links button -->
-            <button class="btn-secondary" (click)="router.navigate(['main/reports/students/registration-links'])"
+            <button class="btn-secondary btn-enrollment-links" (click)="router.navigate(['main/reports/students/registration-links'])"
               *ngIf="permissionService.school.manage">
               <i class="ri-links-line"></i>
               Enrollment Links
@@ -447,3 +447,8 @@
     </table>
   </div>
 </div>
+
+
+
+
+

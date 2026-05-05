@@ -6,7 +6,6 @@
   min-height: 100vh;
   background: #f9fafb;
 }
-
 .dashboard-content {
   margin-left: 280px;
   flex: 1;
@@ -14,23 +13,19 @@
   flex-direction: column;
   min-width: 0;
   width: calc(100% - 280px);
-
   @media (max-width: 768px) {
     margin-left: 0;
     width: 100%;
   }
 }
-
 .dashboard-body {
   flex: 1;
   padding: 2rem;
   overflow-y: auto;
-
   @media (max-width: 768px) {
     padding: 1rem;
   }
 }
-
 .reports-container {
   max-width: 1400px;
   margin: 0 auto;
@@ -52,16 +47,13 @@
   transition: all 0.2s;
   margin-bottom: 1.5rem;
   font-family: "Nunito Sans", sans-serif;
-
   i {
     font-size: 1.125rem;
   }
-
   &:hover {
     background: #f9fafb;
     border-color: #d1d5db;
   }
-
   @media (max-width: 768px) {
     width: 100%;
     justify-content: center;
@@ -74,7 +66,6 @@
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 2rem;
-
   .header-left {
     h1 {
       font-size: 2rem;
@@ -88,10 +79,8 @@
       margin: 0;
     }
   }
-
   .year-selector {
     position: relative;
-
     select {
       padding: 0.75rem 2.5rem 0.75rem 1rem;
       border: 1px solid #e5e7eb;
@@ -102,13 +91,11 @@
       cursor: pointer;
       appearance: none;
       font-family: "Nunito Sans", sans-serif;
-
       &:focus {
         outline: none;
         border-color: #5b21b6;
       }
     }
-
     i {
       position: absolute;
       right: 0.75rem;
@@ -132,7 +119,6 @@
   border-radius: 8px;
   margin-bottom: 1.5rem;
   animation: slideDown 0.3s ease;
-
   i {
     font-size: 1.25rem;
     color: #059669;
@@ -143,7 +129,6 @@
     font-weight: 500;
   }
 }
-
 .error-alert {
   display: flex;
   align-items: center;
@@ -154,7 +139,6 @@
   border-radius: 8px;
   margin-bottom: 1.5rem;
   animation: slideDown 0.3s ease;
-
   i {
     font-size: 1.25rem;
     color: #dc2626;
@@ -165,26 +149,23 @@
     font-weight: 500;
   }
 }
-
 .loading-container {
   display: flex;
   justify-content: center;
   padding: 3rem 0;
 }
 
-// ── Reports content ──────────────────────────────────────────
+// ── Reports sections ─────────────────────────────────────────
 .reports-content {
   display: flex;
   flex-direction: column;
   gap: 2.5rem;
 }
-
 .reports-section {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
 }
-
 .section-title {
   h2 {
     font-size: 1.375rem;
@@ -192,7 +173,6 @@
     color: #111827;
     margin: 0 0 0.25rem 0;
   }
-
   .section-subtitle {
     font-size: 0.9375rem;
     color: #6b7280;
@@ -205,7 +185,6 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 1.25rem;
-
   .stat-card {
     background: white;
     border-radius: 12px;
@@ -213,7 +192,12 @@
     display: flex;
     align-items: center;
     gap: 1rem;
-
+    &.stat-card-primary {
+      border-left: 3px solid #059669;
+    }
+    &.stat-card-net {
+      border-left: 3px solid #059669;
+    }
     .stat-icon {
       width: 56px;
       height: 56px;
@@ -226,7 +210,6 @@
         font-size: 1.75rem;
       }
     }
-
     .stat-info {
       flex: 1;
       .stat-label {
@@ -239,6 +222,14 @@
         font-weight: 800;
         color: #111827;
         margin: 0;
+      }
+      .stat-meta {
+        font-size: 0.75rem;
+        color: #9ca3af;
+        margin: 0.2rem 0 0 0;
+      }
+      .expense-meta {
+        color: #dc2626;
       }
     }
   }
@@ -253,18 +244,15 @@
   padding: 1.25rem 1.5rem;
   background: white;
   border-radius: 10px;
-
   .filter-group {
     display: flex;
     flex-direction: column;
     gap: 0.375rem;
-
     label {
       font-size: 0.8125rem;
       font-weight: 600;
       color: #374151;
     }
-
     .filter-input,
     input {
       padding: 0.625rem 0.875rem;
@@ -274,7 +262,6 @@
       background: #f9fafb;
       font-family: "Nunito Sans", sans-serif;
       transition: border-color 0.2s;
-
       &:focus {
         outline: none;
         border-color: #5b21b6;
@@ -282,7 +269,6 @@
       }
     }
   }
-
   .btn-apply {
     display: flex;
     align-items: center;
@@ -297,12 +283,10 @@
     cursor: pointer;
     font-family: "Nunito Sans", sans-serif;
     transition: background 0.2s;
-
     &:hover {
       background: #6d28d9;
     }
   }
-
   .btn-clear-filter {
     display: flex;
     align-items: center;
@@ -317,7 +301,6 @@
     cursor: pointer;
     font-family: "Nunito Sans", sans-serif;
     transition: all 0.2s;
-
     &:hover {
       border-color: #dc2626;
       color: #dc2626;
@@ -341,12 +324,10 @@
   transition: all 0.22s;
   position: relative;
   overflow: hidden;
-
   &:hover {
     border-color: #c4b5fd;
     transform: translateY(-2px);
   }
-
   &.active {
     border-color: #5b21b6;
     background: #fdfbff;
@@ -363,7 +344,6 @@
     font-size: 0.75rem;
     font-weight: 700;
   }
-
   .category-card-icon {
     width: 52px;
     height: 52px;
@@ -372,12 +352,10 @@
     align-items: center;
     justify-content: center;
     margin-bottom: 1rem;
-
     i {
       font-size: 1.625rem;
     }
   }
-
   .category-card-name {
     font-size: 1rem;
     font-weight: 700;
@@ -386,54 +364,46 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    padding-right: 2.5rem; // avoid pct-pill overlap
+    padding-right: 2.5rem;
   }
-
   .category-card-amount {
     font-size: 1.5rem;
     font-weight: 800;
     color: #111827;
     margin-bottom: 0.75rem;
   }
-
   .category-card-meta {
     display: flex;
     gap: 1rem;
     margin-bottom: 0.5rem;
-
     span {
       display: flex;
       align-items: center;
       gap: 0.3rem;
       font-size: 0.8125rem;
       color: #6b7280;
-
       i {
         font-size: 0.875rem;
       }
     }
   }
-
   .category-card-avg {
     font-size: 0.8125rem;
     color: #9ca3af;
     margin-bottom: 1rem;
   }
-
   .category-progress-track {
     height: 5px;
     background: #f3f4f6;
     border-radius: 3px;
     overflow: hidden;
     margin-bottom: 1rem;
-
     .category-progress-fill {
       height: 100%;
       border-radius: 3px;
       transition: width 0.4s ease;
     }
   }
-
   .category-card-cta {
     display: flex;
     align-items: center;
@@ -441,7 +411,6 @@
     font-size: 0.8125rem;
     font-weight: 600;
     color: #5b21b6;
-
     i {
       font-size: 1.125rem;
     }
@@ -458,7 +427,6 @@
   background: white;
   border-radius: 12px;
   text-align: center;
-
   i {
     font-size: 3rem;
     color: #d1d5db;
@@ -479,7 +447,6 @@
   border: 2px solid #ede9fe;
   animation: slideDown 0.25s ease;
 }
-
 .givers-drilldown-header {
   display: flex;
   justify-content: space-between;
@@ -489,17 +456,14 @@
   padding: 1.25rem 1.5rem;
   background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
   border-bottom: 1px solid #ddd6fe;
-
   .givers-drilldown-title {
     display: flex;
     align-items: center;
     gap: 0.625rem;
-
     i {
       font-size: 1.375rem;
       color: #5b21b6;
     }
-
     h3 {
       font-size: 1.125rem;
       font-weight: 700;
@@ -507,14 +471,12 @@
       margin: 0;
     }
   }
-
   .givers-drilldown-summary {
     display: flex;
     gap: 0.5rem;
     flex-wrap: wrap;
   }
 }
-
 .ds-pill {
   display: inline-flex;
   align-items: center;
@@ -522,7 +484,6 @@
   border-radius: 20px;
   font-size: 0.8125rem;
   font-weight: 600;
-
   &.green {
     background: #d1fae5;
     color: #059669;
@@ -536,19 +497,14 @@
     color: #5b21b6;
   }
 }
-
-// ── Givers table ─────────────────────────────────────────────
 .givers-table-wrapper {
   overflow-x: auto;
 }
-
 .givers-table {
   width: 100%;
   border-collapse: collapse;
-
   thead {
     background: #f9fafb;
-
     th {
       padding: 0.875rem 1.5rem;
       text-align: left;
@@ -560,19 +516,16 @@
       white-space: nowrap;
     }
   }
-
   tbody {
     tr {
       border-bottom: 1px solid #f3f4f6;
       transition: background 0.15s;
-
       &:last-child {
         border-bottom: none;
       }
       &:hover {
         background: #fafafa;
       }
-
       td {
         padding: 1rem 1.5rem;
         font-size: 0.9375rem;
@@ -580,61 +533,50 @@
       }
     }
   }
-
   .rank-cell {
     font-weight: 700;
     color: #6b7280;
     width: 48px;
   }
-
   .mono-cell {
     font-family: "Courier New", monospace;
     font-size: 0.875rem;
     color: #6b7280;
   }
-
   .center-cell {
     text-align: center;
     font-weight: 600;
-    color: #374151;
   }
-
   .amount-cell {
     font-weight: 700;
     color: #059669;
     white-space: nowrap;
   }
-
   .date-cell {
     color: #6b7280;
     white-space: nowrap;
   }
-
   .empty-row td {
     padding: 0;
   }
 }
-
 .giver-cell {
   display: flex;
   align-items: center;
   gap: 0.75rem;
 }
-
 .giver-avatar {
   width: 38px;
   height: 38px;
   border-radius: 50%;
   overflow: hidden;
   flex-shrink: 0;
-
   img {
     width: 100%;
     height: 100%;
     object-fit: cover;
   }
 }
-
 .giver-initials {
   width: 100%;
   height: 100%;
@@ -646,19 +588,16 @@
   color: #5b21b6;
   background: linear-gradient(135deg, #ddd6fe 0%, #c4b5fd 100%);
 }
-
 .giver-name-wrap {
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
-
   .giver-name {
     font-weight: 600;
     color: #111827;
     font-size: 0.9375rem;
   }
 }
-
 .visitor-badge {
   display: inline-flex;
   padding: 0.1rem 0.5rem;
@@ -669,14 +608,12 @@
   font-weight: 700;
   width: fit-content;
 }
-
 .table-empty {
   display: flex;
   flex-direction: column;
   align-items: center;
   padding: 2.5rem;
   text-align: center;
-
   i {
     font-size: 2.5rem;
     color: #d1d5db;
@@ -692,14 +629,17 @@
 // ── Export section ───────────────────────────────────────────
 .export-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 1.5rem;
-
   .export-card {
     background: white;
     border-radius: 12px;
     padding: 2rem;
-
+    display: flex;
+    flex-direction: column;
+    &.export-card-expenses {
+      border-top: 3px solid #dc2626;
+    }
     .export-icon {
       width: 64px;
       height: 64px;
@@ -714,37 +654,35 @@
         font-size: 2rem;
       }
     }
-
+    .export-icon.expenses-icon {
+      background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+      color: #dc2626;
+    }
     h3 {
       font-size: 1.25rem;
       font-weight: 700;
       color: #111827;
       margin: 0 0 0.5rem 0;
     }
-
     p {
       font-size: 0.9375rem;
       color: #6b7280;
       margin: 0 0 1.5rem 0;
     }
-
     .date-filters {
       display: flex;
       gap: 1rem;
       margin-bottom: 1.5rem;
-
       .filter-group {
         flex: 1;
         display: flex;
         flex-direction: column;
         gap: 0.5rem;
-
         label {
           font-size: 0.8125rem;
           font-weight: 600;
           color: #374151;
         }
-
         input {
           padding: 0.75rem;
           border: 1px solid #e5e7eb;
@@ -752,7 +690,6 @@
           font-size: 0.9375rem;
           background: #f9fafb;
           font-family: "Nunito Sans", sans-serif;
-
           &:focus {
             outline: none;
             border-color: #5b21b6;
@@ -761,11 +698,10 @@
         }
       }
     }
-
     .spacer {
-      height: 100px;
+      flex: 1;
+      min-height: 80px;
     }
-
     .btn-export {
       width: 100%;
       display: flex;
@@ -785,7 +721,6 @@
       i {
         font-size: 1.125rem;
       }
-
       &:hover {
         background: #6d28d9;
         transform: translateY(-2px);
@@ -796,6 +731,12 @@
         transform: none;
       }
     }
+    .btn-export.btn-export-expenses {
+      background: #dc2626;
+      &:hover {
+        background: #b91c1c;
+      }
+    }
   }
 }
 
@@ -804,12 +745,10 @@
   background: white;
   border-radius: 12px;
   padding: 1.5rem;
-
   .givers-list {
     display: flex;
     flex-direction: column;
     gap: 0.875rem;
-
     .giver-row {
       display: flex;
       align-items: center;
@@ -818,33 +757,27 @@
       background: #f9fafb;
       border-radius: 10px;
       transition: background 0.15s;
-
       &:hover {
         background: #f3f4f6;
       }
-
-      .giver-rank {
-        .rank-number {
-          width: 44px;
-          height: 44px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: white;
-          border: 2px solid #e5e7eb;
-          border-radius: 50%;
-          font-size: 1rem;
-          font-weight: 800;
-          color: #6b7280;
-
-          &.top-three {
-            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-            border: none;
-            color: white;
-          }
+      .giver-rank .rank-number {
+        width: 44px;
+        height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: white;
+        border: 2px solid #e5e7eb;
+        border-radius: 50%;
+        font-size: 1rem;
+        font-weight: 800;
+        color: #6b7280;
+        &.top-three {
+          background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+          border: none;
+          color: white;
         }
       }
-
       .giver-info {
         flex: 1;
         .giver-name {
@@ -859,7 +792,6 @@
           margin: 0;
         }
       }
-
       .giver-amount .amount {
         font-size: 1.25rem;
         font-weight: 800;
@@ -867,7 +799,6 @@
         margin: 0;
       }
     }
-
     .empty-state {
       display: flex;
       flex-direction: column;
@@ -875,7 +806,6 @@
       justify-content: center;
       padding: 3rem;
       text-align: center;
-
       i {
         font-size: 3rem;
         color: #d1d5db;
@@ -900,12 +830,10 @@
   align-items: center;
   justify-content: center;
   animation: fadeIn 0.2s ease;
-
   @media (max-width: 480px) {
     align-items: flex-end;
   }
 }
-
 .export-modal {
   background: white;
   border-radius: 16px;
@@ -914,19 +842,16 @@
   max-width: 420px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.18);
   animation: slideUp 0.25s ease;
-
   @media (max-width: 480px) {
     border-radius: 16px 16px 0 0;
     padding: 1.5rem;
     max-width: 100%;
   }
-
   .export-modal-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     margin-bottom: 0.375rem;
-
     h3 {
       display: flex;
       align-items: center;
@@ -940,7 +865,6 @@
         color: #5b21b6;
       }
     }
-
     .modal-close-btn {
       width: 32px;
       height: 32px;
@@ -961,20 +885,22 @@
       }
     }
   }
-
   .export-subtitle {
     font-size: 0.875rem;
     color: #6b7280;
     margin: 0 0 1.5rem;
+    small {
+      display: block;
+      margin-top: 0.25rem;
+      color: #9ca3af;
+    }
   }
 }
-
 .export-options {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
 }
-
 .export-option {
   display: flex;
   align-items: center;
@@ -988,7 +914,6 @@
   text-align: left;
   font-family: "Nunito Sans", sans-serif;
   width: 100%;
-
   &:hover {
     border-color: #5b21b6;
     background: #f5f3ff;
@@ -997,7 +922,6 @@
       transform: translateX(3px);
     }
   }
-
   .export-icon {
     width: 44px;
     height: 44px;
@@ -1028,7 +952,6 @@
       }
     }
   }
-
   .export-info {
     flex: 1;
     min-width: 0;
@@ -1044,7 +967,6 @@
       color: #6b7280;
     }
   }
-
   .export-arrow {
     font-size: 1.25rem;
     color: #d1d5db;
@@ -1066,7 +988,6 @@
     grid-template-columns: 1fr;
   }
 }
-
 @media (max-width: 768px) {
   .stats-grid {
     grid-template-columns: 1fr 1fr;
@@ -1085,7 +1006,6 @@
     flex-direction: column !important;
   }
 }
-
 @media (max-width: 480px) {
   .stats-grid {
     grid-template-columns: 1fr;
@@ -1106,7 +1026,6 @@
     transform: translateY(0);
   }
 }
-
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -1115,7 +1034,6 @@
     opacity: 1;
   }
 }
-
 @keyframes slideUp {
   from {
     opacity: 0;
@@ -1126,11 +1044,7 @@
     transform: translateY(0);
   }
 }
-
 button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
-
-
-

@@ -1,18 +1,15 @@
 <!-- src/app/features/finance/components/record-giving/record-giving.component.html -->
 <div class="dashboard-layout">
   <app-sidebar></app-sidebar>
-
   <div class="dashboard-content">
     <app-header></app-header>
-
     <div class="dashboard-body">
       <div class="record-giving-container">
+
         <!-- Page Header -->
         <div class="page-header">
           <div class="header-left">
-            <button class="back-btn" (click)="cancel()">
-              <i class="ri-arrow-left-line"></i>
-            </button>
+            <button class="back-btn" (click)="cancel()"><i class="ri-arrow-left-line"></i></button>
             <div>
               <h1>Record Giving</h1>
               <p class="subtitle">Record a new giving transaction</p>
@@ -20,21 +17,34 @@
           </div>
         </div>
 
-        <!-- Success Message -->
+        <!-- Alerts -->
         <div *ngIf="successMessage" class="success-alert">
-          <i class="ri-checkbox-circle-line"></i>
-          <span>{{ successMessage }}</span>
+          <i class="ri-checkbox-circle-line"></i><span>{{ successMessage }}</span>
         </div>
-
-        <!-- Error Message -->
         <div *ngIf="errorMessage" class="error-alert">
-          <i class="ri-error-warning-line"></i>
-          <span>{{ errorMessage }}</span>
+          <i class="ri-error-warning-line"></i><span>{{ errorMessage }}</span>
         </div>
 
-        <!-- Form -->
-        <div class="form-card">
-          <form [formGroup]="givingForm" (ngSubmit)="onSubmit()">
+        <!-- ── Mode Toggle ───────────────────────────────────── -->
+        <div class="mode-toggle">
+          <button type="button" [class.active]="mode === 'individual'" (click)="switchMode('individual')">
+            <i class="ri-user-line"></i>
+            <span>Individual Record</span>
+            <small>Record one person's giving</small>
+          </button>
+          <button type="button" [class.active]="mode === 'bulk'" (click)="switchMode('bulk')">
+            <i class="ri-group-line"></i>
+            <span>Bulk / Total Record</span>
+            <small>Record the day's total for a category</small>
+          </button>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════
+             INDIVIDUAL MODE
+        ════════════════════════════════════════════════════ -->
+        <div class="form-card" *ngIf="mode === 'individual'">
+          <form [formGroup]="givingForm" (ngSubmit)="onSubmitIndividual()">
+
             <!-- Member Selection -->
             <div class="form-section">
               <h3>Member (Optional)</h3>
@@ -43,26 +53,15 @@
               <div *ngIf="!selectedMember" class="member-search">
                 <div class="search-input-wrapper">
                   <i class="ri-search-line search-icon"></i>
-                  <input
-                    type="text"
-                    [formControl]="searchControl"
-                    placeholder="Search member by name, email, or phone..."
-                    class="search-input"
-                  />
+                  <input type="text" [formControl]="searchControl" placeholder="Search by name, email or phone..."
+                    class="search-input" />
                   <i *ngIf="searching" class="ri-loader-4-line spin"></i>
                 </div>
-
-                <!-- Search Results -->
                 <div class="search-results" *ngIf="searchResults.length > 0">
-                  <div
-                    *ngFor="let member of searchResults"
-                    class="search-result-item"
-                    (click)="selectMember(member)"
-                  >
+                  <div *ngFor="let member of searchResults" class="search-result-item" (click)="selectMember(member)">
                     <div class="member-avatar-small">
                       <img *ngIf="member.photo_url" [src]="member.photo_url" [alt]="getMemberFullName(member)" />
-                      <div *ngIf="!member.photo_url" class="avatar-placeholder-small">
-                        {{ getMemberInitials(member) }}
+                      <div *ngIf="!member.photo_url" class="avatar-placeholder-small">{{ getMemberInitials(member) }}
                       </div>
                     </div>
                     <div class="member-info-small">
@@ -74,163 +73,169 @@
                 </div>
               </div>
 
-              <!-- Selected Member -->
               <div *ngIf="selectedMember" class="selected-member">
                 <div class="member-avatar-medium">
-                  <img *ngIf="selectedMember.photo_url" [src]="selectedMember.photo_url" [alt]="getMemberFullName(selectedMember)" />
-                  <div *ngIf="!selectedMember.photo_url" class="avatar-placeholder-medium">
-                    {{ getMemberInitials(selectedMember) }}
-                  </div>
+                  <img *ngIf="selectedMember.photo_url" [src]="selectedMember.photo_url"
+                    [alt]="getMemberFullName(selectedMember)" />
+                  <div *ngIf="!selectedMember.photo_url" class="avatar-placeholder-medium">{{
+                    getMemberInitials(selectedMember) }}</div>
                 </div>
                 <div class="member-info-medium">
                   <p class="member-name-medium">{{ getMemberFullName(selectedMember) }}</p>
                   <p class="member-number">{{ selectedMember.member_number }}</p>
                 </div>
-                <button type="button" class="btn-remove-member" (click)="removeMember()">
-                  <i class="ri-close-line"></i>
-                </button>
+                <button type="button" class="btn-remove-member" (click)="removeMember()"><i
+                    class="ri-close-line"></i></button>
               </div>
             </div>
 
             <!-- Transaction Details -->
             <div class="form-section">
               <h3>Transaction Details</h3>
-
               <div class="form-grid">
-                <!-- Transaction Date -->
                 <div class="form-group">
                   <label for="transaction_date">Date *</label>
-                  <input
-                    id="transaction_date"
-                    type="date"
-                    formControlName="transaction_date"
-                    [class.error]="givingForm.get('transaction_date')?.invalid && givingForm.get('transaction_date')?.touched"
-                  />
+                  <input id="transaction_date" type="date" formControlName="transaction_date"
+                    [class.error]="givingForm.get('transaction_date')?.invalid && givingForm.get('transaction_date')?.touched" />
                   <span
                     *ngIf="givingForm.get('transaction_date')?.invalid && givingForm.get('transaction_date')?.touched"
-                    class="error-message"
-                  >
-                    {{ getErrorMessage('transaction_date') }}
-                  </span>
+                    class="error-message">{{ getErrorMessage('transaction_date') }}</span>
                 </div>
-
-                <!-- Amount -->
                 <div class="form-group">
                   <label for="amount">Amount *</label>
-                  <input
-                    id="amount"
-                    type="number"
-                    formControlName="amount"
-                    placeholder="0.00"
-                    step="0.01"
-                    min="0"
-                    [class.error]="givingForm.get('amount')?.invalid && givingForm.get('amount')?.touched"
-                  />
-                  <span
-                    *ngIf="givingForm.get('amount')?.invalid && givingForm.get('amount')?.touched"
-                    class="error-message"
-                  >
-                    {{ getErrorMessage('amount') }}
-                  </span>
+                  <input id="amount" type="number" formControlName="amount" placeholder="0.00" step="0.01" min="0"
+                    [class.error]="givingForm.get('amount')?.invalid && givingForm.get('amount')?.touched" />
+                  <span *ngIf="givingForm.get('amount')?.invalid && givingForm.get('amount')?.touched"
+                    class="error-message">{{ getErrorMessage('amount') }}</span>
                 </div>
-
-                <!-- Currency -->
                 <div class="form-group">
                   <label for="currency">Currency *</label>
-                  <select
-                    id="currency"
-                    formControlName="currency"
-                    [class.error]="givingForm.get('currency')?.invalid && givingForm.get('currency')?.touched"
-                  >
+                  <select id="currency" formControlName="currency">
                     <option *ngFor="let curr of currencies" [value]="curr">{{ curr }}</option>
                   </select>
                 </div>
-
-                <!-- Category -->
                 <div class="form-group">
                   <label for="category_id">Category *</label>
-                  <select
-                    id="category_id"
-                    formControlName="category_id"
-                    [class.error]="givingForm.get('category_id')?.invalid && givingForm.get('category_id')?.touched"
-                  >
+                  <select id="category_id" formControlName="category_id"
+                    [class.error]="givingForm.get('category_id')?.invalid && givingForm.get('category_id')?.touched">
                     <option value="">Select Category</option>
-                    <option *ngFor="let category of categories" [value]="category.id">
-                      {{ category.name }}
-                    </option>
+                    <option *ngFor="let cat of categories" [value]="cat.id">{{ cat.name }}</option>
                   </select>
-                  <span
-                    *ngIf="givingForm.get('category_id')?.invalid && givingForm.get('category_id')?.touched"
-                    class="error-message"
-                  >
-                    {{ getErrorMessage('category_id') }}
-                  </span>
+                  <span *ngIf="givingForm.get('category_id')?.invalid && givingForm.get('category_id')?.touched"
+                    class="error-message">{{ getErrorMessage('category_id') }}</span>
                 </div>
-
-                <!-- Payment Method -->
                 <div class="form-group">
                   <label for="payment_method">Payment Method *</label>
-                  <select
-                    id="payment_method"
-                    formControlName="payment_method"
-                    [class.error]="givingForm.get('payment_method')?.invalid && givingForm.get('payment_method')?.touched"
-                  >
-                    <option *ngFor="let method of paymentMethods" [value]="method.value">
-                      {{ method.label }}
-                    </option>
+                  <select id="payment_method" formControlName="payment_method">
+                    <option *ngFor="let method of paymentMethods" [value]="method.value">{{ method.label }}</option>
                   </select>
                 </div>
-
-                <!-- Transaction Reference -->
                 <div class="form-group">
                   <label for="transaction_reference">Reference Number</label>
-                  <input
-                    id="transaction_reference"
-                    type="text"
-                    formControlName="transaction_reference"
-                    placeholder="Enter reference number (optional)"
-                  />
+                  <input id="transaction_reference" type="text" formControlName="transaction_reference"
+                    placeholder="Optional" />
                 </div>
-
-                <!-- Notes -->
                 <div class="form-group full-width">
                   <label for="notes">Notes</label>
-                  <textarea
-                    id="notes"
-                    formControlName="notes"
-                    placeholder="Add any additional notes..."
-                    rows="3"
-                  ></textarea>
+                  <textarea id="notes" formControlName="notes" placeholder="Add any additional notes..."
+                    rows="3"></textarea>
                 </div>
               </div>
             </div>
 
-            <!-- Form Actions -->
             <div class="form-actions">
-              <button
-                type="button"
-                class="btn-secondary"
-                (click)="cancel()"
-                [disabled]="loading"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                class="btn-primary"
-                [disabled]="loading"
-              >
+              <button type="button" class="btn-secondary" (click)="cancel()" [disabled]="loading">Cancel</button>
+              <button type="submit" class="btn-primary" [disabled]="loading">
                 <span *ngIf="!loading">Record Giving</span>
-                <span *ngIf="loading">
-                  <i class="ri-loader-4-line spin"></i>
-                  Recording...
-                </span>
+                <span *ngIf="loading"><i class="ri-loader-4-line spin"></i> Recording...</span>
               </button>
             </div>
           </form>
         </div>
+
+        <!-- ═══════════════════════════════════════════════════
+             BULK MODE
+        ════════════════════════════════════════════════════ -->
+        <div class="form-card" *ngIf="mode === 'bulk'">
+          <div class="bulk-info-banner">
+            <i class="ri-information-line"></i>
+            <div>
+              <strong>Bulk / Total Recording</strong>
+              <p>Use this to record the combined total for a category from one service or event — for example, Sunday's
+                total offering without breaking it down per person.</p>
+            </div>
+          </div>
+
+          <form [formGroup]="bulkForm" (ngSubmit)="onSubmitBulk()">
+            <div class="form-section" style="border-bottom: none; margin-bottom: 0; padding-bottom: 0;">
+              <h3>Bulk Record Details</h3>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="record_date">Date *</label>
+                  <input id="record_date" type="date" formControlName="record_date"
+                    [class.error]="bulkForm.get('record_date')?.invalid && bulkForm.get('record_date')?.touched" />
+                  <span *ngIf="bulkForm.get('record_date')?.invalid && bulkForm.get('record_date')?.touched"
+                    class="error-message">{{ getErrorMessage('record_date', bulkForm) }}</span>
+                </div>
+                <div class="form-group">
+                  <label for="bulk_category">Category *</label>
+                  <select id="bulk_category" formControlName="category_id"
+                    [class.error]="bulkForm.get('category_id')?.invalid && bulkForm.get('category_id')?.touched">
+                    <option value="">Select Category</option>
+                    <option *ngFor="let cat of categories" [value]="cat.id">{{ cat.name }}</option>
+                  </select>
+                  <span *ngIf="bulkForm.get('category_id')?.invalid && bulkForm.get('category_id')?.touched"
+                    class="error-message">{{ getErrorMessage('category_id', bulkForm) }}</span>
+                </div>
+                <div class="form-group">
+                  <label for="total_amount">Total Amount *</label>
+                  <input id="total_amount" type="number" formControlName="total_amount" placeholder="0.00" step="0.01"
+                    min="0"
+                    [class.error]="bulkForm.get('total_amount')?.invalid && bulkForm.get('total_amount')?.touched" />
+                  <span *ngIf="bulkForm.get('total_amount')?.invalid && bulkForm.get('total_amount')?.touched"
+                    class="error-message">{{ getErrorMessage('total_amount', bulkForm) }}</span>
+                </div>
+                <div class="form-group">
+                  <label for="bulk_currency">Currency *</label>
+                  <select id="bulk_currency" formControlName="currency">
+                    <option *ngFor="let curr of currencies" [value]="curr">{{ curr }}</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="bulk_payment_method">Payment Method *</label>
+                  <select id="bulk_payment_method" formControlName="payment_method">
+                    <option *ngFor="let method of bulkPaymentMethods" [value]="method.value">{{ method.label }}</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="attendee_count">Number of Contributors</label>
+                  <input id="attendee_count" type="number" formControlName="attendee_count"
+                    placeholder="Optional — how many people contributed" min="1" />
+                </div>
+                <div class="form-group full-width">
+                  <label for="description">Description</label>
+                  <input id="description" type="text" formControlName="description"
+                    placeholder="e.g. Sunday 1st service offering, Revival night seed" />
+                </div>
+                <div class="form-group full-width">
+                  <label for="bulk_notes">Notes</label>
+                  <textarea id="bulk_notes" formControlName="notes" placeholder="Any additional notes..."
+                    rows="3"></textarea>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button type="button" class="btn-secondary" (click)="cancel()" [disabled]="loading">Cancel</button>
+              <button type="submit" class="btn-primary" [disabled]="loading">
+                <span *ngIf="!loading"><i class="ri-save-line"></i> Save Bulk Record</span>
+                <span *ngIf="loading"><i class="ri-loader-4-line spin"></i> Saving...</span>
+              </button>
+            </div>
+          </form>
+        </div>
+
       </div>
     </div>
   </div>
 </div>
-

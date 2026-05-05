@@ -28,6 +28,7 @@
         </div>
 
         <form [formGroup]="eventForm" (ngSubmit)="onSubmit()">
+
           <!-- Basic Details Card -->
           <div class="form-card">
             <h3>Event Details</h3>
@@ -75,16 +76,16 @@
                 <input id="expected_attendance" type="number" formControlName="expected_attendance"
                   placeholder="Enter expected number" min="1"
                   [class.error]="eventForm.get('expected_attendance')?.invalid && eventForm.get('expected_attendance')?.touched" />
-                <span
-                  *ngIf="eventForm.get('expected_attendance')?.invalid && eventForm.get('expected_attendance')?.touched"
+                <span *ngIf="eventForm.get('expected_attendance')?.invalid && eventForm.get('expected_attendance')?.touched"
                   class="error-message">{{ getErrorMessage('expected_attendance') }}</span>
               </div>
 
               <div class="form-group full-width">
                 <label for="notes">Notes</label>
-                <textarea id="notes" formControlName="notes" placeholder="Add any notes about this event..."
-                  rows="3"></textarea>
+                <textarea id="notes" formControlName="notes"
+                  placeholder="Add any notes about this event..." rows="3"></textarea>
               </div>
+
             </div>
           </div>
 
@@ -93,7 +94,7 @@
             <div class="recurrence-header">
               <div class="recurrence-header__text">
                 <h3>Recurring Event</h3>
-                <p>Enable if this event happens on a regular schedule (e.g. every Sunday)</p>
+                <p>Enable if this event happens on a regular schedule</p>
               </div>
               <label class="toggle-switch">
                 <input type="checkbox" formControlName="is_recurring" />
@@ -102,30 +103,59 @@
             </div>
 
             <div *ngIf="isRecurring" class="recurrence-options">
-              <div class="form-grid">
-                <div class="form-group">
-                  <label>Repeats</label>
-                  <select formControlName="recurrence_frequency">
-                    <option *ngFor="let f of frequencies" [value]="f.value">{{ f.label }}</option>
-                  </select>
-                </div>
 
-                <div class="form-group">
-                  <label>Day of Week</label>
-                  <select formControlName="recurrence_day_of_week">
-                    <option *ngFor="let d of daysOfWeek" [value]="d.value">{{ d.label }}</option>
-                  </select>
+              <!-- Frequency selector -->
+              <div class="freq-grid">
+                <button
+                  *ngFor="let f of frequencies"
+                  type="button"
+                  class="freq-btn"
+                  [class.freq-btn--active]="selectedFrequency === f.value"
+                  (click)="eventForm.get('recurrence_frequency')?.setValue(f.value)">
+                  <span class="freq-btn__label">{{ f.label }}</span>
+                  <span class="freq-btn__desc">{{ f.description }}</span>
+                </button>
+              </div>
+
+              <!-- Day-of-week multi-selector (hidden for daily + monthly) -->
+              <div *ngIf="showDaySelector" class="day-selector-section">
+                <label class="day-selector-label">
+                  Repeats on
+                  <span class="day-selector-hint">(select one or more days)</span>
+                </label>
+                <div class="day-chips">
+                  <button
+                    *ngFor="let day of daysOfWeek"
+                    type="button"
+                    class="day-chip"
+                    [class.day-chip--active]="isDaySelected(day.value)"
+                    (click)="toggleDay(day.value)">
+                    {{ day.label }}
+                  </button>
                 </div>
               </div>
 
+              <!-- End date -->
+              <div class="end-date-section">
+                <div class="end-date-row">
+                  <div class="end-date-text">
+                    <label>End Date <span class="optional">(optional)</span></label>
+                    <p>Leave blank if this event repeats indefinitely</p>
+                  </div>
+                  <input
+                    type="date"
+                    formControlName="recurrence_end_date"
+                    class="end-date-input"
+                    [min]="eventForm.get('event_date')?.value" />
+                </div>
+              </div>
+
+              <!-- Summary box -->
               <div class="recurrence-info-box">
                 <i class="ri-information-line"></i>
-                <span>
-                  A new occurrence of this event will automatically become available for
-                  attendance marking each time the scheduled day arrives. Previous occurrences
-                  will remain as read-only records.
-                </span>
+                <span>{{ getRecurrenceSummary() }}</span>
               </div>
+
             </div>
           </div>
 
@@ -140,13 +170,9 @@
               {{ loading ? 'Creating...' : 'Create Event' }}
             </button>
           </div>
-        </form>
 
+        </form>
       </div>
     </div>
   </div>
 </div>
-
-
-
-

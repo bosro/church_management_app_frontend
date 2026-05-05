@@ -12,6 +12,9 @@ import { CategoriesManagement } from './components/categories-management/categor
 import { CreatePledge } from './components/create-pledge/create-pledge/create-pledge';
 import { PledgeDetails } from './pledge-details/pledge-details';
 import { FinanceRevenueChart } from './components/finance-revenue-chart/finance-revenue-chart';
+import { CategoryExpenses } from './components/category-expenses/category-expenses';
+import { PaymentLinks } from './components/payment-links/payment-links';
+import { WithdrawalRequests } from './components/withdrawal-requests/withdrawal-requests';
 
 
 
@@ -25,7 +28,10 @@ import { FinanceRevenueChart } from './components/finance-revenue-chart/finance-
     CreatePledge,
     CategoriesManagement,
     PledgeDetails,
-    FinanceRevenueChart
+    FinanceRevenueChart,
+    CategoryExpenses,
+    PaymentLinks,
+    WithdrawalRequests
   ],
   imports: [
       CommonModule,

@@ -8,6 +8,25 @@ import {
   TERMS,
 } from '../../../models/school.model';
 import { FeedingService } from '../../reports/services/feeding.service';
+import { FeedingFilterService } from '../../reports/services/feeding-filter.service';
+
+interface StudentState {
+  isPresent: boolean;
+  attendanceId: string | null;
+  saving: boolean;
+  summary: {
+    totalPaid: number;
+    presentDays: number;
+    totalOwed: number;
+    balance: number;
+    hasPayment: boolean;
+    totalDaysCovered: number;
+    prepaidDaysRemaining: number;
+  } | null;
+  loadingSummary: boolean;
+  error: string;
+  dailyRate: number; // resolved per-student rate (class override → tier → fallback)
+}
 
 @Component({
   selector: 'app-feeding-record',
@@ -24,8 +43,8 @@ export class FeedingRecord implements OnInit, OnDestroy {
 
   // Filters
   selectedDate = new Date().toISOString().split('T')[0];
-  selectedTerm = TERMS[0];
-  selectedYear = currentAcademicYear();
+  selectedTerm = '';
+  selectedYear = '';
   terms = TERMS;
   academicYears = generateAcademicYears();
 
@@ -69,14 +88,22 @@ export class FeedingRecord implements OnInit, OnDestroy {
   editNotes = '';
   editDate = '';
   processingEdit = false;
+  editError = ''; // error shown inside edit modal
   // Full list of payments for a student (fetched on edit open)
   studentPayments: any[] = [];
   loadingStudentPayments = false;
+
+  // Pagination
+  currentPage = 1;
+  pageSize = 20;
+  totalStudents = 0;
+  isShowingActiveStudents = false;
 
   constructor(
     private feedingService: FeedingService,
     private route: ActivatedRoute,
     private cdr: ChangeDetectorRef,
+    public feedingFilter: FeedingFilterService,
   ) {}
 
   ngOnInit(): void {
@@ -85,8 +112,13 @@ export class FeedingRecord implements OnInit, OnDestroy {
       this.errorMessage = 'Invalid page link — school ID is missing.';
       return;
     }
+
+    this.selectedTerm = this.feedingFilter.term;
+    this.selectedYear = this.feedingFilter.year;
+
     this.loadSchoolInfo();
-    this.loadClasses();
+    this.loadClasses(); // ← ADD THIS BACK
+    this.loadInitialStudents();
     this.loadDailySummary();
 
     this.searchSubject
@@ -128,17 +160,112 @@ export class FeedingRecord implements OnInit, OnDestroy {
       .subscribe({
         next: (c) => {
           this.classes = c;
-          // Restore last selected class so reload shows students again
-          const saved = localStorage.getItem(`feeding_class_${this.churchId}`);
-          if (saved && c.find((cls: any) => cls.id === saved)) {
-            this.selectedClassId = saved;
-            this.loadStudentsByClass();
-          }
+          // ← Remove the saved class restore block entirely
           this.cdr.markForCheck();
         },
       });
   }
 
+  async loadInitialStudents(): Promise<void> {
+    if (!this.churchId) return;
+    this.loadingStudents = true;
+    this.cdr.markForCheck();
+
+    // 1. Find student IDs with activity today
+    const [attRes, payRes] = await Promise.all([
+      (this.feedingService as any).supabase.client
+        .from('feeding_attendance')
+        .select('student_id')
+        .eq('church_id', this.churchId)
+        .eq('attendance_date', this.selectedDate)
+        .eq('academic_year', this.selectedYear)
+        .eq('term', this.selectedTerm),
+      (this.feedingService as any).supabase.client
+        .from('feeding_payments')
+        .select('student_id')
+        .eq('church_id', this.churchId)
+        .eq('payment_date', this.selectedDate)
+        .eq('academic_year', this.selectedYear)
+        .eq('term', this.selectedTerm),
+    ]);
+
+    const activeIds = Array.from(
+      new Set([
+        ...(attRes.data || []).map((r: any) => r.student_id),
+        ...(payRes.data || []).map((r: any) => r.student_id),
+      ]),
+    );
+
+    if (activeIds.length > 0) {
+      // Load just those students
+      const { data } = await (this.feedingService as any).supabase.client
+        .from('students')
+        .select(
+          'id, first_name, last_name, middle_name, student_number, class:school_classes(id, name, tier)',
+        )
+        .eq('church_id', this.churchId)
+        .eq('is_active', true)
+        .in('id', activeIds)
+        .order('first_name');
+
+      this.students = data || [];
+      this.isShowingActiveStudents = true;
+    } else {
+      // No activity yet — load all students paginated
+      await this.loadAllStudentsPaginated(1);
+      this.isShowingActiveStudents = false;
+    }
+
+    this.studentStates = {};
+    this.students.forEach((s) => {
+      this.studentStates[s.id] = this.defaultStudentState();
+    });
+    this.loadingStudents = false;
+
+    if (this.students.length) {
+      this.loadAttendanceAndSummaries(this.students);
+    }
+    this.cdr.markForCheck();
+  }
+
+  async loadAllStudentsPaginated(page: number): Promise<void> {
+    const from = (page - 1) * this.pageSize;
+    const to = from + this.pageSize - 1;
+
+    const { data, count } = await (this.feedingService as any).supabase.client
+      .from('students')
+      .select(
+        'id, first_name, last_name, middle_name, student_number, class:school_classes(id, name, tier)',
+        { count: 'exact' },
+      )
+      .eq('church_id', this.churchId)
+      .eq('is_active', true)
+      .order('first_name')
+      .range(from, to);
+
+    this.students = data || [];
+    this.totalStudents = count || 0;
+    this.currentPage = page;
+  }
+
+  goToPage(page: number): void {
+    if (this.selectedClassId || this.isShowingActiveStudents) return;
+    this.loadingStudents = true;
+    this.cdr.markForCheck();
+    this.loadAllStudentsPaginated(page).then(() => {
+      this.studentStates = {};
+      this.students.forEach((s) => {
+        this.studentStates[s.id] = this.defaultStudentState();
+      });
+      this.loadingStudents = false;
+      if (this.students.length) this.loadAttendanceAndSummaries(this.students);
+      this.cdr.markForCheck();
+    });
+  }
+
+  get totalPages(): number {
+    return Math.ceil(this.totalStudents / this.pageSize);
+  }
   // ── Students ──────────────────────────────────────────────
 
   loadStudentsByClass(): void {
@@ -319,6 +446,16 @@ export class FeedingRecord implements OnInit, OnDestroy {
   // ── Filter change handlers ────────────────────────────────
 
   onDateChange(): void {
+    if (!this.selectedClassId) {
+      // Reset and reload active students for new date
+      this.students = [];
+      this.studentStates = {};
+      this.currentPage = 1;
+      this.loadInitialStudents();
+      this.loadDailySummary();
+      return;
+    }
+
     const ids = this.students.map((s) => s.id);
     ids.forEach((sid) => {
       if (this.studentStates[sid]) {
@@ -333,6 +470,7 @@ export class FeedingRecord implements OnInit, OnDestroy {
   }
 
   onTermYearChange(): void {
+    this.feedingFilter.setBoth(this.selectedTerm, this.selectedYear);
     const ids = this.students.map((s) => s.id);
     ids.forEach((sid) => {
       if (this.studentStates[sid]) {
@@ -448,17 +586,32 @@ export class FeedingRecord implements OnInit, OnDestroy {
 
   getPaymentStatus(
     studentId: string,
-  ): 'paid' | 'partial' | 'unpaid' | 'absent' {
+  ): 'paid' | 'prepaid' | 'partial' | 'unpaid' | 'absent' {
     const state = this.studentStates[studentId];
     if (!state) return 'unpaid';
     if (!state.isPresent) return 'absent';
     if (state.loadingSummary) return 'unpaid';
     const summary = state.summary;
     if (!summary) return 'unpaid';
-    // Must have at least one explicit payment to be 'paid'
+    // Pre-paid: student has advance days already paid for
+    if (summary.prepaidDaysRemaining > 0) return 'prepaid';
+    // Fully paid for all days attended
     if (summary.hasPayment && summary.balance <= 0) return 'paid';
+    // Partial payment made
     if (summary.hasPayment && summary.totalPaid > 0) return 'partial';
     return 'unpaid';
+  }
+
+  isPrepaidToday(studentId: string): boolean {
+    return this.getPaymentStatus(studentId) === 'prepaid';
+  }
+
+  getPrepaidDaysRemaining(studentId: string): number {
+    return this.studentStates[studentId]?.summary?.prepaidDaysRemaining ?? 0;
+  }
+
+  get hasPrepaidStudents(): boolean {
+    return this.students.some((s) => this.isPrepaidToday(s.id));
   }
 
   // ── Create payment modal ──────────────────────────────────
@@ -614,6 +767,7 @@ export class FeedingRecord implements OnInit, OnDestroy {
     this.editAmount = 0;
     this.editNotes = '';
     this.editDate = '';
+    this.editError = '';
     this.studentPayments = [];
   }
 
@@ -626,10 +780,16 @@ export class FeedingRecord implements OnInit, OnDestroy {
   submitEdit(): void {
     if (!this.editPayment || !this.editAmount || this.editAmount <= 0) return;
     this.processingEdit = true;
+    this.editError = ''; // clear any previous modal-level error
+    this.cdr.markForCheck();
 
     const rate = this.studentDailyRate(this.editingStudent?.id);
     const daysCovered =
       rate > 0 ? Math.max(1, Math.floor(this.editAmount / rate)) : 1;
+    // Capture before closing
+    const studentRef = this.students.find(
+      (s) => s.id === this.editingStudent?.id,
+    );
 
     this.feedingService
       .updatePayment(this.editPayment.id, {
@@ -642,23 +802,16 @@ export class FeedingRecord implements OnInit, OnDestroy {
       .subscribe({
         next: (updated) => {
           this.processingEdit = false;
-          // Update local list
-          const idx = this.studentPayments.findIndex(
-            (p) => p.id === updated.id,
-          );
-          if (idx >= 0) this.studentPayments[idx] = updated;
-          this.successMessage = `Payment updated successfully`;
+          this.closeEditModal(); // close first, then refresh
+          this.successMessage = 'Payment updated successfully';
           setTimeout(() => (this.successMessage = ''), 3000);
-          const student = this.students.find(
-            (s) => s.id === this.editingStudent?.id,
-          );
-          if (student) this.refreshStudents([student]);
-          this.closeEditModal();
+          if (studentRef) this.refreshStudents([studentRef]);
           this.cdr.markForCheck();
         },
         error: (err) => {
           this.processingEdit = false;
-          this.errorMessage = err.message || 'Failed to update payment';
+          // Show error INSIDE the modal so the user sees it
+          this.editError = err.message || 'Failed to update payment';
           this.cdr.markForCheck();
         },
       });
@@ -713,6 +866,10 @@ export class FeedingRecord implements OnInit, OnDestroy {
     }).format(amount || 0);
   }
 
+  confirmTermYear(): void {
+    this.feedingFilter.setBoth(this.selectedTerm, this.selectedYear);
+  }
+
   get today(): string {
     return new Date().toISOString().split('T')[0];
   }
@@ -723,19 +880,3 @@ export class FeedingRecord implements OnInit, OnDestroy {
 }
 
 // ── Interfaces ────────────────────────────────────────────
-
-interface StudentState {
-  isPresent: boolean;
-  attendanceId: string | null;
-  saving: boolean;
-  summary: {
-    totalPaid: number;
-    presentDays: number;
-    totalOwed: number;
-    balance: number;
-    hasPayment: boolean;
-  } | null;
-  loadingSummary: boolean;
-  error: string;
-  dailyRate: number; // resolved per-student rate (class override → tier → fallback)
-}

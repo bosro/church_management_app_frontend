@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AeuxGlobal Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --green-primary: #22c55e;
+    --green-light: #4ade80;
+    --green-dark: #16a34a;
+    --green-muted: #bbf7d0;
+    --green-bg: #f0fdf4;
+    --sidebar-bg: #0f1a0f;
+    --sidebar-hover: #1a2e1a;
+    --text-primary: #111827;
+    --text-secondary: #6b7280;
+    --text-muted: #9ca3af;
+    --card-bg: #ffffff;
+    --dark-card: #111827;
+    --border: #e5e7eb;
+    --red: #ef4444;
+    --font: 'DM Sans', sans-serif;
+    --mono: 'DM Mono', monospace;
+  }
+
+  body {
+    font-family: var(--font);
+    background: linear-gradient(135deg, #1a4a1a 0%, #0a2a0a 50%, #143214 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .app-wrapper {
+    width: 1100px;
+    height: 720px;
+    background: #f3f4f6;
+    border-radius: 20px;
+    overflow: hidden;
+    display: flex;
+    box-shadow: 0 40px 120px rgba(0,0,0,0.6);
+  }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    width: 210px;
+    min-width: 210px;
+    background: var(--sidebar-bg);
+    display: flex;
+    flex-direction: column;
+    padding: 20px 0;
+    color: white;
+  }
+
+  .sidebar-logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 18px 20px;
+    font-weight: 700;
+    font-size: 15px;
+    color: white;
+  }
+
+  .logo-icon {
+    display: flex;
+    gap: 2px;
+    align-items: flex-end;
+  }
+  .logo-icon span {
+    background: var(--green-primary);
+    border-radius: 2px;
+    width: 4px;
+  }
+  .logo-icon span:nth-child(1) { height: 10px; }
+  .logo-icon span:nth-child(2) { height: 16px; }
+  .logo-icon span:nth-child(3) { height: 12px; }
+
+  .workspace-card {
+    margin: 0 12px 16px;
+    background: #1f2f1f;
+    border-radius: 10px;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+  }
+  .workspace-icon {
+    width: 28px; height: 28px;
+    background: var(--green-primary);
+    border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+  }
+  .workspace-info { flex: 1; }
+  .workspace-label { font-size: 9px; color: #6b7280; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+  .workspace-name { font-size: 12px; font-weight: 600; color: white; margin-top: 1px; }
+  .workspace-chevron { color: #6b7280; font-size: 11px; }
+
+  .search-bar {
+    margin: 0 12px 20px;
+    background: #1f2f1f;
+    border-radius: 8px;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+  }
+  .search-bar span { color: #6b7280; font-size: 12px; flex: 1; }
+  .search-shortcut {
+    font-size: 10px;
+    color: #4b5563;
+    background: #2a3f2a;
+    padding: 2px 5px;
+    border-radius: 4px;
+    font-family: var(--mono);
+  }
+
+  .nav-label {
+    font-size: 10px;
+    color: #4b5563;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    padding: 0 18px 8px;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 18px;
+    font-size: 13px;
+    color: #9ca3af;
+    cursor: pointer;
+    border-radius: 8px;
+    margin: 1px 8px;
+    transition: all 0.15s;
+    position: relative;
+  }
+  .nav-item:hover { background: var(--sidebar-hover); color: white; }
+  .nav-item.active { background: #1f3a1f; color: white; font-weight: 500; }
+  .nav-icon {
+    width: 20px; height: 20px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
+
+  .nav-badge {
+    margin-left: auto;
+    background: var(--green-primary);
+    color: white;
+    border-radius: 50%;
+    width: 18px; height: 18px;
+    font-size: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 600;
+  }
+  .nav-badge-new {
+    margin-left: auto;
+    background: #1f3a1f;
+    color: var(--green-primary);
+    border-radius: 5px;
+    padding: 2px 6px;
+    font-size: 9px;
+    font-weight: 600;
+    border: 1px solid #2d5a2d;
+  }
+
+  .sidebar-bottom {
+    margin-top: auto;
+    padding: 0 12px;
+  }
+
+  .settings-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    color: #9ca3af;
+    font-size: 13px;
+    cursor: pointer;
+    border-radius: 8px;
+    margin-bottom: 4px;
+  }
+  .settings-item:hover { background: var(--sidebar-hover); color: white; }
+
+  .user-section {
+    padding: 0 12px;
+    margin-top: 8px;
+  }
+  .user-section-label {
+    font-size: 9px;
+    color: #4b5563;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    padding: 0 2px;
+  }
+  .user-card {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .user-card:hover { background: var(--sidebar-hover); }
+  .user-avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #4ade80, #22c55e);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: white;
+    position: relative;
+    overflow: hidden;
+  }
+  .user-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+  .user-avatar-dot {
+    width: 8px; height: 8px;
+    background: var(--green-primary);
+    border-radius: 50%;
+    position: absolute;
+    bottom: 0; right: 0;
+    border: 1.5px solid var(--sidebar-bg);
+  }
+  .user-info { flex: 1; }
+  .user-name { font-size: 12px; font-weight: 600; color: white; }
+  .user-handle { font-size: 10px; color: #6b7280; margin-top: 1px; }
+  .user-more { color: #4b5563; font-size: 14px; }
+
+  /* ── MAIN ── */
+  .main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: #f3f4f6;
+    overflow: hidden;
+  }
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px 16px;
+    background: #f3f4f6;
+  }
+  .page-title { font-size: 22px; font-weight: 700; color: var(--text-primary); }
+  .topbar-right { display: flex; align-items: center; gap: 10px; }
+  .bell-btn {
+    width: 36px; height: 36px;
+    background: white;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .add-widget-btn {
+    background: var(--dark-card);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 9px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: var(--font);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .add-widget-btn:hover { background: #1f2937; }
+
+  /* ── CONTENT ── */
+  .content {
+    flex: 1;
+    padding: 0 24px 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* ── STAT CARDS ROW ── */
+  .stat-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 14px;
+  }
+
+  .stat-card {
+    background: white;
+    border-radius: 14px;
+    padding: 16px 18px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+  .stat-card.dark {
+    background: var(--dark-card);
+    color: white;
+  }
+  .stat-label {
+    font-size: 10px;
+    color: var(--text-muted);
+    font-weight: 500;
+    margin-bottom: 6px;
+    text-transform: capitalize;
+  }
+  .stat-card.dark .stat-label { color: #9ca3af; }
+  .stat-value {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.1;
+    margin-bottom: 8px;
+  }
+  .stat-card.dark .stat-value { color: white; }
+  .stat-value sup { font-size: 12px; }
+  .stat-change {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 500;
+  }
+  .stat-change.up { color: var(--green-primary); }
+  .stat-change.down { color: var(--red); }
+  .stat-change span { color: var(--text-muted); font-weight: 400; }
+
+  .stat-card-inner {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .stat-card-inner .stat-info { flex: 1; }
+
+  /* mini bar chart */
+  .mini-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    height: 40px;
+    margin-top: 4px;
+  }
+  .mini-bar {
+    width: 6px;
+    border-radius: 2px;
+    background: #e5e7eb;
+  }
+  .stat-card.dark .mini-bar { background: #374151; }
+  .mini-bar.active-green { background: var(--green-primary); }
+  .mini-bar.active-red { background: var(--red); }
+  .mini-bar.active-gray { background: #d1d5db; }
+
+  /* ── MIDDLE ROW ── */
+  .middle-row {
+    display: grid;
+    grid-template-columns: 1fr 260px;
+    gap: 14px;
+  }
+
+  /* Climate Chart */
+  .chart-card {
+    background: white;
+    border-radius: 14px;
+    padding: 18px 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+  .chart-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .chart-title { font-size: 15px; font-weight: 700; color: var(--text-primary); }
+  .chart-filter {
+    background: #f3f4f6;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 5px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex; align-items: center; gap: 4px;
+  }
+
+  .chart-area {
+    position: relative;
+    height: 150px;
+  }
+
+  .chart-y-labels {
+    position: absolute;
+    left: 0; top: 0; bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    font-size: 9px;
+    color: var(--text-muted);
+    width: 22px;
+  }
+
+  .chart-bars-wrap {
+    margin-left: 28px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .chart-bars {
+    flex: 1;
+    display: flex;
+    align-items: flex-end;
+    gap: 5px;
+    border-bottom: 1px solid #f0f0f0;
+    position: relative;
+    padding-bottom: 0;
+  }
+
+  .chart-gridline {
+    position: absolute;
+    left: 0; right: 0;
+    border-top: 1px dashed #f0f0f0;
+  }
+
+  .bar-group {
+    flex: 1;
+    display: flex;
+    align-items: flex-end;
+    position: relative;
+  }
+  .bar {
+    width: 100%;
+    border-radius: 3px 3px 0 0;
+    position: relative;
+  }
+  .bar.dim { background: #d1d5db; }
+  .bar.bright { background: var(--green-primary); }
+
+  .bar-tooltip {
+    position: absolute;
+    top: -22px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--dark-card);
+    color: white;
+    font-size: 9px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 5px;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+  .bar-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%; left: 50%;
+    transform: translateX(-50%);
+    border: 4px solid transparent;
+    border-top-color: var(--dark-card);
+  }
+
+  .chart-x-labels {
+    display: flex;
+    gap: 5px;
+    margin-top: 5px;
+  }
+  .chart-x-labels span {
+    flex: 1;
+    text-align: center;
+    font-size: 9px;
+    color: var(--text-muted);
+  }
+
+  /* CO2 Card */
+  .co2-card {
+    background: #f0fdf4;
+    border-radius: 14px;
+    padding: 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .co2-big {
+    font-size: 36px;
+    font-weight: 800;
+    color: var(--text-primary);
+    line-height: 1;
+  }
+  .co2-big span { font-size: 18px; font-weight: 700; color: #374151; }
+  .co2-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #dcfce7;
+    color: var(--green-dark);
+    border-radius: 6px;
+    padding: 3px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    margin: 6px 0 4px;
+  }
+  .co2-sub { font-size: 12px; color: var(--text-secondary); font-weight: 500; }
+
+  .recycling-items { margin-top: 14px; display: flex; flex-direction: column; gap: 10px; }
+  .recycling-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: white;
+    border-radius: 10px;
+    padding: 10px 12px;
+  }
+  .recycling-icon {
+    width: 30px; height: 30px;
+    background: #dcfce7;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
+  .recycling-name { font-size: 12px; font-weight: 600; color: var(--text-primary); }
+  .recycling-tons { font-size: 10px; color: var(--text-muted); margin-top: 1px; }
+
+  /* ── BOTTOM ROW ── */
+  .bottom-row {
+    display: grid;
+    grid-template-columns: 1fr 260px;
+    gap: 14px;
+  }
+
+  /* Table */
+  .table-card {
+    background: white;
+    border-radius: 14px;
+    padding: 18px 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+  .table-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .table-title { font-size: 15px; font-weight: 700; color: var(--text-primary); }
+  .table-filter {
+    background: #f3f4f6;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 5px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex; align-items: center; gap: 4px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  thead th {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: capitalize;
+    text-align: left;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f3f4f6;
+  }
+  tbody tr { border-bottom: 1px solid #f9fafb; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody td {
+    padding: 9px 0;
+    font-size: 12px;
+    color: var(--text-primary);
+    vertical-align: middle;
+  }
+
+  .region-cell { display: flex; align-items: center; gap: 8px; }
+  .flag { font-size: 16px; }
+  .region-name { font-size: 12px; font-weight: 600; }
+  .region-sub { font-size: 10px; color: var(--text-muted); }
+
+  .tech-badge {
+    display: inline-block;
+    padding: 3px 9px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 600;
+  }
+  .tech-badge.mechanical { background: #fef3c7; color: #92400e; }
+  .tech-badge.energy { background: #d1fae5; color: #065f46; }
+  .tech-badge.chemical { background: #e0e7ff; color: #3730a3; }
+
+  .sparkline {
+    display: flex;
+    align-items: center;
+    height: 24px;
+    gap: 1px;
+  }
+  .spark-point {
+    width: 3px;
+    border-radius: 1px;
+  }
+
+  /* Map Card */
+  .map-card {
+    background: var(--dark-card);
+    border-radius: 14px;
+    padding: 16px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    position: relative;
+    overflow: hidden;
+  }
+  .map-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .map-title { font-size: 14px; font-weight: 700; color: white; }
+  .map-filter {
+    background: #1f2937;
+    border: 1px solid #374151;
+    border-radius: 7px;
+    padding: 4px 9px;
+    font-size: 10px;
+    font-weight: 600;
+    color: #9ca3af;
+    cursor: pointer;
+    display: flex; align-items: center; gap: 4px;
+  }
+
+  .map-visual {
+    border-radius: 10px;
+    overflow: hidden;
+    height: 155px;
+    background: #162a16;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .europe-svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .map-tooltip {
+    position: absolute;
+    top: 30px;
+    left: 50px;
+    background: #1f2937;
+    border-radius: 8px;
+    padding: 7px 10px;
+    border: 1px solid #374151;
+  }
+  .map-tooltip-title { font-size: 10px; font-weight: 700; color: white; }
+  .map-tooltip-sub { font-size: 9px; color: #9ca3af; margin-top: 1px; }
+  .map-tooltip-value {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--green-primary);
+    margin-top: 3px;
+    display: flex; align-items: center; gap: 3px;
+  }
+
+  .map-help {
+    position: absolute;
+    bottom: 22px;
+    left: 22px;
+    width: 22px; height: 22px;
+    background: #374151;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+    color: #9ca3af;
+    cursor: pointer;
+  }
+
+  /* Trend sparklines */
+  .trend-up { color: var(--green-primary); }
+  .trend-down { color: var(--red); }
+
+  .dots-btn {
+    color: #9ca3af;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 0 4px;
+  }
+
+  /* Scrollbar */
+  .content::-webkit-scrollbar { width: 4px; }
+  .content::-webkit-scrollbar-track { background: transparent; }
+  .content::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 2px; }
+</style>
+</head>
+<body>
+<div class="app-wrapper">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">
+        <span></span><span></span><span></span>
+      </div>
+      AeuxGlobal
+    </div>
+
+    <div class="workspace-card">
+      <div class="workspace-icon">✦</div>
+      <div class="workspace-info">
+        <div class="workspace-label">Team Workspace</div>
+        <div class="workspace-name">EcoPlastic</div>
+      </div>
+      <div class="workspace-chevron">⌄</div>
+    </div>
+
+    <div class="search-bar">
+      <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="#6b7280" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <span>Search for...</span>
+      <div class="search-shortcut">⌘F</div>
+    </div>
+
+    <div class="nav-label">Navigation</div>
+
+    <div class="nav-item active">
+      <div class="nav-icon">
+        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      </div>
+      Dashboard
+    </div>
+
+    <div class="nav-item">
+      <div class="nav-icon">
+        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 16l4-4 4 4 4-4"/></svg>
+      </div>
+      Analytics
+    </div>
+
+    <div class="nav-item">
+      <div class="nav-icon">
+        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0-3-3.87"/></svg>
+      </div>
+      Team Structure
+    </div>
+
+    <div class="nav-item">
+      <div class="nav-icon">
+        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      </div>
+      Reports
+      <div class="nav-badge">1</div>
+    </div>
+
+    <div class="nav-item">
+      <div class="nav-icon">
+        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+      </div>
+      Support
+      <div class="nav-badge-new">New</div>
+    </div>
+
+    <div class="sidebar-bottom">
+      <div class="settings-item">
+        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Settings
+      </div>
+    </div>
+
+    <div class="user-section">
+      <div class="user-section-label">User Account</div>
+      <div class="user-card">
+        <div class="user-avatar">
+          AW
+          <div class="user-avatar-dot"></div>
+        </div>
+        <div class="user-info">
+          <div class="user-name">Alex Williamson</div>
+          <div class="user-handle">#dela-1974</div>
+        </div>
+        <div class="user-more">···</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <div class="topbar">
+      <h1 class="page-title">Dashboard</h1>
+      <div class="topbar-right">
+        <div class="bell-btn">🔔</div>
+        <button class="add-widget-btn">
+          <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add Custom Widget
+        </button>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- STAT CARDS -->
+      <div class="stat-cards">
+
+        <!-- Air Pollution -->
+        <div class="stat-card dark">
+          <div class="stat-card-inner">
+            <div class="stat-info">
+              <div class="stat-label">Air Pollution Level</div>
+              <div class="stat-value">35.05 μg/m³</div>
+              <div class="stat-change up">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="#22c55e"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                2.3% <span>than last month</span>
+              </div>
+            </div>
+            <div class="mini-bars">
+              <div class="mini-bar" style="height:30%"></div>
+              <div class="mini-bar active-green" style="height:55%"></div>
+              <div class="mini-bar active-green" style="height:80%"></div>
+              <div class="mini-bar active-green" style="height:60%"></div>
+              <div class="mini-bar active-green" style="height:95%"></div>
+              <div class="mini-bar active-green" style="height:70%"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Environmental Quality -->
+        <div class="stat-card">
+          <div class="stat-label">Environmental Quality Index</div>
+          <div class="stat-value">75.50<span style="font-size:14px;color:#9ca3af;font-weight:500">/100%</span></div>
+          <div class="stat-change down">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="#ef4444"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            1.4% <span>than last month</span>
+          </div>
+          <div class="mini-bars" style="margin-top:6px">
+            <div class="mini-bar active-red" style="height:70%"></div>
+            <div class="mini-bar" style="height:40%"></div>
+            <div class="mini-bar active-red" style="height:90%"></div>
+            <div class="mini-bar" style="height:30%"></div>
+            <div class="mini-bar active-red" style="height:60%"></div>
+            <div class="mini-bar" style="height:45%"></div>
+          </div>
+        </div>
+
+        <!-- Investments -->
+        <div class="stat-card">
+          <div class="stat-label">Investments in Clean Technologies</div>
+          <div class="stat-value">$967,570</div>
+          <div class="stat-change up">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="#22c55e"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            5.1 <span>than last month</span>
+          </div>
+          <div class="mini-bars" style="margin-top:6px">
+            <div class="mini-bar" style="height:35%"></div>
+            <div class="mini-bar active-green" style="height:65%"></div>
+            <div class="mini-bar" style="height:45%"></div>
+            <div class="mini-bar active-green" style="height:85%"></div>
+            <div class="mini-bar" style="height:55%"></div>
+            <div class="mini-bar active-green" style="height:75%"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MIDDLE ROW -->
+      <div class="middle-row">
+
+        <!-- Climate Change Chart -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title">Climate Change Index</div>
+            <div class="chart-filter">2 month ▾</div>
+          </div>
+          <div class="chart-area">
+            <div class="chart-y-labels">
+              <span>100</span>
+              <span>80</span>
+              <span>60</span>
+              <span>40</span>
+              <span>20</span>
+              <span>0</span>
+            </div>
+            <div class="chart-bars-wrap">
+              <div class="chart-bars" id="climateChart">
+                <div class="chart-gridline" style="bottom:80%"></div>
+                <div class="chart-gridline" style="bottom:60%"></div>
+                <div class="chart-gridline" style="bottom:40%"></div>
+                <div class="chart-gridline" style="bottom:20%"></div>
+                <!-- Bars W1-W8 -->
+                <div class="bar-group"><div class="bar dim" style="height:40%"></div></div>
+                <div class="bar-group"><div class="bar dim" style="height:55%"></div></div>
+                <div class="bar-group"><div class="bar dim" style="height:35%"></div></div>
+                <div class="bar-group">
+                  <div class="bar bright" style="height:82%">
+                    <div class="bar-tooltip">82.6 CCI</div>
+                  </div>
+                </div>
+                <div class="bar-group"><div class="bar bright" style="height:65%"></div></div>
+                <div class="bar-group"><div class="bar bright" style="height:75%"></div></div>
+                <div class="bar-group"><div class="bar bright" style="height:58%"></div></div>
+                <div class="bar-group"><div class="bar bright" style="height:68%"></div></div>
+              </div>
+              <div class="chart-x-labels">
+                <span>W1</span><span>W2</span><span>W3</span><span>W4</span><span>W5</span><span>W6</span><span>W7</span><span>W8</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CO2 Card -->
+        <div class="co2-card">
+          <div>
+            <div class="co2-big">99,681m <span>TONS</span></div>
+            <div class="co2-badge">
+              <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="#16a34a" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>
+              20% reduced CO2
+            </div>
+          </div>
+          <div class="recycling-items">
+            <div class="recycling-item">
+              <div class="recycling-icon">♻️</div>
+              <div>
+                <div class="recycling-name">Mechanical recycling</div>
+                <div class="recycling-tons">1,697 TONS</div>
+              </div>
+            </div>
+            <div class="recycling-item">
+              <div class="recycling-icon">🧪</div>
+              <div>
+                <div class="recycling-name">Chemical recycling</div>
+                <div class="recycling-tons">913 TONS</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- BOTTOM ROW -->
+      <div class="bottom-row">
+
+        <!-- Table -->
+        <div class="table-card">
+          <div class="table-header">
+            <div class="table-title">Plastic Recycling by Region</div>
+            <div class="table-filter">All regions ▾</div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Region</th>
+                <th>Factory</th>
+                <th>Recycled</th>
+                <th>Dynamic</th>
+                <th>Main Technologies</th>
+                <th>Total Value</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <div class="region-cell">
+                    <span class="flag">🇺🇸</span>
+                    <div>
+                      <div class="region-name">USA</div>
+                      <div class="region-sub">America</div>
+                    </div>
+                  </div>
+                </td>
+                <td>253+</td>
+                <td>35%</td>
+                <td>
+                  <svg width="60" height="20" viewBox="0 0 60 20">
+                    <polyline points="0,15 10,10 20,12 30,8 40,10 50,6 60,9" fill="none" stroke="#22c55e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </td>
+                <td><span class="tech-badge mechanical">Mechanical</span></td>
+                <td style="font-weight:600">4,167,987 tons</td>
+                <td><span class="dots-btn">⋮</span></td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="region-cell">
+                    <span class="flag">🇩🇪</span>
+                    <div>
+                      <div class="region-name">German</div>
+                      <div class="region-sub">Europe</div>
+                    </div>
+                  </div>
+                </td>
+                <td>211+</td>
+                <td>60%</td>
+                <td>
+                  <svg width="60" height="20" viewBox="0 0 60 20">
+                    <polyline points="0,5 10,8 20,6 30,12 40,10 50,15 60,13" fill="none" stroke="#ef4444" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </td>
+                <td><span class="tech-badge mechanical">Mechanical</span></td>
+                <td style="font-weight:600">2,571,193 tons</td>
+                <td><span class="dots-btn">⋮</span></td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="region-cell">
+                    <span class="flag">🇯🇵</span>
+                    <div>
+                      <div class="region-name">Japan</div>
+                      <div class="region-sub">Asia</div>
+                    </div>
+                  </div>
+                </td>
+                <td>364+</td>
+                <td>85%</td>
+                <td>
+                  <svg width="60" height="20" viewBox="0 0 60 20">
+                    <polyline points="0,12 10,9 20,11 30,7 40,9 50,5 60,8" fill="none" stroke="#22c55e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </td>
+                <td><span class="tech-badge energy">Energy recovery</span></td>
+                <td style="font-weight:600">1,864,275 tons</td>
+                <td><span class="dots-btn">⋮</span></td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="region-cell">
+                    <span class="flag">🇨🇳</span>
+                    <div>
+                      <div class="region-name">China</div>
+                      <div class="region-sub">Asia</div>
+                    </div>
+                  </div>
+                </td>
+                <td>855+</td>
+                <td>25%</td>
+                <td>
+                  <svg width="60" height="20" viewBox="0 0 60 20">
+                    <polyline points="0,8 10,12 20,9 30,14 40,11 50,16 60,13" fill="none" stroke="#ef4444" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </td>
+                <td><span class="tech-badge chemical">Chemical</span></td>
+                <td style="font-weight:600">8,643,742 tons</td>
+                <td><span class="dots-btn">⋮</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Map Card -->
+        <div class="map-card">
+          <div class="map-header">
+            <div class="map-title">Global pollution</div>
+            <div class="map-filter">Europe ▾</div>
+          </div>
+          <div class="map-visual">
+            <!-- Simplified Europe SVG map -->
+            <svg viewBox="0 0 300 200" xmlns="http://www.w3.org/2000/svg" class="europe-svg">
+              <!-- Background -->
+              <rect width="300" height="200" fill="#162a16"/>
+              <!-- Country shapes (simplified) -->
+              <!-- Norway/Scandinavia -->
+              <path d="M140 20 L155 15 L165 25 L162 45 L155 55 L148 50 L140 35 Z" fill="#1a3a1a" opacity="0.8"/>
+              <path d="M155 15 L175 10 L185 20 L182 40 L172 50 L162 45 L165 25 Z" fill="#1e4a1e" opacity="0.8"/>
+              <!-- Sweden/Finland -->
+              <path d="M165 25 L180 18 L195 22 L198 50 L188 60 L175 58 L168 45 Z" fill="#1a3a1a" opacity="0.8"/>
+              <!-- UK -->
+              <path d="M100 55 L115 48 L120 58 L118 72 L108 78 L98 70 Z" fill="#1d451d" opacity="0.8"/>
+              <!-- France -->
+              <path d="M110 80 L130 75 L145 82 L148 100 L135 110 L115 108 L105 95 Z" fill="#1d451d" opacity="0.8"/>
+              <!-- Germany - highlighted bright -->
+              <path d="M148 72 L168 68 L178 78 L175 95 L160 100 L148 95 L145 82 Z" fill="#22c55e" opacity="0.7"/>
+              <!-- Poland -->
+              <path d="M178 72 L200 68 L210 80 L205 95 L188 98 L178 90 Z" fill="#1d451d" opacity="0.8"/>
+              <!-- Ukraine - highlighted -->
+              <path d="M205 80 L235 75 L248 90 L240 110 L218 115 L205 105 Z" fill="#16a34a" opacity="0.7"/>
+              <!-- Spain -->
+              <path d="M95 112 L125 108 L138 120 L130 138 L108 142 L88 130 Z" fill="#1a3a1a" opacity="0.8"/>
+              <!-- Italy -->
+              <path d="M148 102 L162 98 L172 108 L168 130 L158 145 L148 140 L142 120 Z" fill="#1d451d" opacity="0.8"/>
+              <!-- Romania/Bulgaria -->
+              <path d="M195 100 L220 95 L228 110 L220 122 L200 125 L190 115 Z" fill="#2d7a2d" opacity="0.7"/>
+              <!-- Greece -->
+              <path d="M185 130 L205 125 L210 142 L198 155 L182 150 L178 138 Z" fill="#1a3a1a" opacity="0.8"/>
+              <!-- Belarus/Baltic -->
+              <path d="M195 58 L220 52 L232 65 L225 80 L210 82 L198 72 Z" fill="#1d451d" opacity="0.8"/>
+
+              <!-- Ukraine tooltip marker -->
+              <circle cx="222" cy="92" r="5" fill="#22c55e" opacity="0.9"/>
+              <circle cx="222" cy="92" r="9" fill="#22c55e" opacity="0.3"/>
+            </svg>
+
+            <!-- Tooltip overlay -->
+            <div class="map-tooltip">
+              <div class="map-tooltip-title">Ukraine</div>
+              <div class="map-tooltip-sub">High Level</div>
+              <div class="map-tooltip-value">
+                89%
+                <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="#22c55e" stroke-width="2.5"><polyline points="7 17 17 7"/><polyline points="7 7 17 7 17 17"/></svg>
+              </div>
+            </div>
+
+            <div class="map-help">?</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+</div>
+</body>
+</html>

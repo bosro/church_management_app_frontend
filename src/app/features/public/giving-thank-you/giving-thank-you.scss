@@ -1,0 +1,216 @@
+// src/app/features/public/giving-thank-you/giving-thank-you.component.scss
+// Matches your public-student-registration styles exactly.
+// Only adds the new blocks (.divider, .next-steps, .privacy-note).
+
+.public-wrapper {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+  padding: 2rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  @media (max-width: 640px) {
+    padding: 1rem 0.75rem;
+    align-items: flex-start;
+  }
+}
+
+.public-container {
+  width: 100%;
+  max-width: 560px;
+}
+
+// ── Status card ───────────────────────────────────────────────
+.status-state {
+  background: white;
+  border-radius: 16px;
+  padding: 3rem 2.5rem;
+  text-align: center;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+
+  @media (max-width: 640px) {
+    padding: 2rem 1.5rem;
+    border-radius: 12px;
+  }
+
+  h2 {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: #111827;
+    margin: 0 0 0.75rem;
+
+    @media (max-width: 640px) { font-size: 1.5rem; }
+  }
+
+  p {
+    color: #6b7280;
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    margin: 0 0 0.5rem;
+  }
+
+  .hint {
+    font-size: 0.8125rem;
+    color: #9ca3af;
+    margin-top: 0.375rem;
+  }
+}
+
+// ── Success icon ──────────────────────────────────────────────
+.status-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.5rem;
+
+  i { font-size: 2.75rem; }
+
+  &.success {
+    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+    i { color: #059669; }
+    // Subtle pulse animation on load
+    animation: pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+}
+
+// ── Reference number pill ─────────────────────────────────────
+// Matches your .success-detail from registration exactly
+.success-detail {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  background: #f5f3ff;
+  border: 2px solid #c4b5fd;
+  border-radius: 12px;
+  padding: 1rem 2rem;
+  margin: 1rem 0;
+
+  .label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.25rem;
+  }
+
+  .value {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #4f46e5;
+    font-family: monospace;
+    word-break: break-all;
+  }
+}
+
+// ── Divider ───────────────────────────────────────────────────
+.divider {
+  height: 1px;
+  background: #f3f4f6;
+  margin: 1.75rem 0;
+}
+
+// ── Next steps ────────────────────────────────────────────────
+.next-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  text-align: left;
+  margin-bottom: 2rem;
+
+  .step {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.875rem;
+
+    .step-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: #f5f3ff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+
+      i {
+        font-size: 1.25rem;
+        color: #4f46e5;
+      }
+    }
+
+    .step-text {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+      padding-top: 0.25rem;
+
+      strong {
+        font-size: 0.9375rem;
+        font-weight: 700;
+        color: #111827;
+      }
+
+      span {
+        font-size: 0.8125rem;
+        color: #6b7280;
+        line-height: 1.5;
+      }
+    }
+  }
+}
+
+// ── CTA button ────────────────────────────────────────────────
+// Matches your .btn-primary from registration exactly
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.75rem;
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: "Nunito Sans", sans-serif;
+
+  i { font-size: 1.125rem; }
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(79, 70, 229, 0.35);
+  }
+}
+
+// ── Privacy note ──────────────────────────────────────────────
+// Matches your .privacy-note from registration exactly
+.privacy-note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #f3f4f6;
+  font-size: 0.75rem;
+  color: #9ca3af;
+
+  i {
+    color: #10b981;
+    font-size: 1rem;
+  }
+}
+
+// ── Animations ────────────────────────────────────────────────
+@keyframes pop {
+  0%   { transform: scale(0); opacity: 0; }
+  80%  { transform: scale(1.1); }
+  100% { transform: scale(1); opacity: 1; }
+}

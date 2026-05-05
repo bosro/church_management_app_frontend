@@ -19,6 +19,45 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 16px;
+
+  @media (max-width: 600px) {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  }
+
+  @media (max-width: 400px) {
+    grid-template-columns: 1fr; // ← ADD: single column on tiny screens
+  }
+}
+
+
+
+.page-header {
+  .header-left {
+    min-width: 0; // ← ADD
+    flex: 1;      // ← ADD
+
+    > div {
+      min-width: 0; // ← ADD: the div wrapping h1 + subtitle
+    }
+  }
+}
+
+// ─── class-footer buttons — wrap on mobile ────────────────────
+.class-card {
+  .class-footer {
+    flex-wrap: wrap; // ← ADD
+
+    @media (max-width: 768px) {
+      flex-direction: column;
+      gap: 6px;
+
+      .btn-view,
+      .btn-add-student {
+        width: 100%;
+        justify-content: center; // ← ADD
+      }
+    }
+  }
 }
 
 // ─── Class Card ───────────────────────────────────────────

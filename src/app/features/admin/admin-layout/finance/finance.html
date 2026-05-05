@@ -1,0 +1,497 @@
+<!-- src/app/features/admin/super-admin-finance/super-admin-finance.component.html -->
+<div class="sa-finance">
+
+  <div class="page-header">
+    <div class="header-left">
+      <h1>Platform Finance</h1>
+      <p class="subtitle">Giving overview across all churches on Churchman</p>
+    </div>
+    <div class="header-right">
+      <select class="year-select" [(ngModel)]="selectedYear" (change)="onYearChange()">
+        <option *ngFor="let year of years" [value]="year">{{ year }}</option>
+      </select>
+      <button class="btn-refresh" (click)="loadAll()" title="Refresh"><i class="ri-refresh-line"></i></button>
+    </div>
+  </div>
+
+  <div *ngIf="errorMessage" class="error-alert">
+    <i class="ri-error-warning-line"></i><span>{{ errorMessage }}</span>
+  </div>
+
+  <div *ngIf="loading" class="loading-container">
+    <app-loading-spinner message="Loading platform data..."></app-loading-spinner>
+  </div>
+
+  <div *ngIf="!loading" class="finance-content">
+
+    <!-- ══════════════════════════════════════════════════════════
+         SECTION 1 — Platform totals
+    ══════════════════════════════════════════════════════════ -->
+    <div class="stats-grid">
+      <div class="stat-card stat-primary">
+        <div class="stat-icon" style="background:rgba(255,255,255,0.2)">
+          <i class="ri-money-dollar-circle-line"></i>
+        </div>
+        <div class="stat-info">
+          <p class="stat-label">Total Platform Giving</p>
+          <h2 class="stat-value">{{ formatCompact(platformTotal) }}</h2>
+          <p class="stat-meta">{{ selectedYear }} · All churches</p>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon green"><i class="ri-building-line"></i></div>
+        <div class="stat-info">
+          <p class="stat-label">Active Churches</p>
+          <h2 class="stat-value">{{ activeChurches }}</h2>
+          <p class="stat-meta">On the platform</p>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon blue"><i class="ri-exchange-dollar-line"></i></div>
+        <div class="stat-info">
+          <p class="stat-label">Total Transactions</p>
+          <h2 class="stat-value">{{ platformTransactions | number }}</h2>
+          <p class="stat-meta">Across all churches</p>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon amber"><i class="ri-receipt-line"></i></div>
+        <div class="stat-info">
+          <p class="stat-label">Total Expenses</p>
+          <h2 class="stat-value">{{ formatCompact(platformExpenses) }}</h2>
+          <p class="stat-meta">All categories</p>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon teal"><i class="ri-scales-line"></i></div>
+        <div class="stat-info">
+          <p class="stat-label">Net Balance</p>
+          <h2 class="stat-value">{{ formatCompact(platformNetBalance) }}</h2>
+          <p class="stat-meta">Giving minus expenses</p>
+        </div>
+      </div>
+
+      <div class="stat-card stat-alert" *ngIf="pendingWithdrawals.length > 0">
+        <div class="stat-icon red"><i class="ri-bank-card-line"></i></div>
+        <div class="stat-info">
+          <p class="stat-label">Pending Withdrawals</p>
+          <h2 class="stat-value">{{ pendingWithdrawals.length }}</h2>
+          <p class="stat-meta">Awaiting your review</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         SECTION 2 — Charts
+    ══════════════════════════════════════════════════════════ -->
+    <div class="charts-row">
+
+      <!-- Monthly giving trend bar chart -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <h3>Monthly Giving Trend</h3>
+          <p>{{ selectedYear }}</p>
+        </div>
+        <div class="bar-chart" *ngIf="monthlyTrend.length > 0">
+          <div *ngFor="let m of monthlyTrend" class="bar-col">
+            <div class="bar-label-top">{{ formatCompact(m.total_giving) }}</div>
+            <div class="bar-wrap">
+              <div class="bar-fill" [style.height.%]="getBarHeight(m.total_giving)"></div>
+            </div>
+            <div class="bar-label-bottom">{{ m.month_name }}</div>
+          </div>
+        </div>
+        <div class="chart-empty" *ngIf="monthlyTrend.length === 0">
+          <i class="ri-bar-chart-line"></i><p>No data for {{ selectedYear }}</p>
+        </div>
+      </div>
+
+      <!-- Per-church horizontal bar chart -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <h3>Giving by Church</h3>
+          <p>{{ selectedYear }}</p>
+        </div>
+        <div class="horiz-bars" *ngIf="churchStats.length > 0">
+          <div *ngFor="let c of churchStats" class="horiz-row">
+            <div class="horiz-label" [title]="c.church_name">{{ c.church_name }}</div>
+            <div class="horiz-track">
+              <div class="horiz-fill" [style.width.%]="getChurchBarWidth(c.total_giving)"></div>
+            </div>
+            <div class="horiz-value">{{ formatCompact(c.total_giving) }}</div>
+          </div>
+        </div>
+        <div class="chart-empty" *ngIf="churchStats.length === 0">
+          <i class="ri-building-line"></i><p>No churches yet</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         SECTION 3 — Fee Settings (Super Admin Control)
+    ══════════════════════════════════════════════════════════ -->
+    <div class="section-card">
+      <div class="section-header">
+        <div>
+          <h3><i class="ri-settings-3-line"></i> Fee Settings</h3>
+          <p>Control what payers are charged across all churches — changes apply immediately</p>
+        </div>
+      </div>
+
+      <div class="fee-settings-body">
+
+        <!-- Paystack fee row — locked, not editable -->
+        <div class="fee-setting-row">
+          <div class="fee-setting-info">
+            <strong>Paystack Ghana Fee</strong>
+            <span>Paystack's fixed transaction cost. Cannot be changed — set by Paystack.</span>
+          </div>
+          <div class="fee-value-locked">
+            <span>1.95%</span>
+            <i class="ri-lock-line"></i>
+          </div>
+        </div>
+
+        <!-- Platform fee row — editable -->
+        <div class="fee-setting-row">
+          <div class="fee-setting-info">
+            <strong>Churchman Platform Fee</strong>
+            <span>Your fee added on top of Paystack's charge. You keep this amount.</span>
+          </div>
+          <div class="fee-input-wrap">
+            <input type="number" [(ngModel)]="platformFeeInput"
+              min="0" max="10" step="0.05"
+              class="fee-input" placeholder="0.20" />
+            <span class="pct-symbol">%</span>
+          </div>
+        </div>
+
+        <!-- Pass fees toggle row -->
+        <div class="fee-setting-row">
+          <div class="fee-setting-info">
+            <strong>Pass fees to payer</strong>
+            <span>
+              <strong>ON:</strong> Payer pays slightly more to cover all fees — church receives exact amount.<br>
+              <strong>OFF:</strong> Church absorbs fees — payer pays only what they entered.
+            </span>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" [(ngModel)]="passFeesToPayer" />
+            <span class="toggle-track">
+              <span class="toggle-thumb"></span>
+            </span>
+            <span class="toggle-label" [class.on]="passFeesToPayer">
+              {{ passFeesToPayer ? 'ON' : 'OFF' }}
+            </span>
+          </label>
+        </div>
+
+        <!-- Live preview -->
+        <div class="fee-preview">
+          <p class="preview-label">
+            <i class="ri-calculator-line"></i>
+            Live preview — church wants to receive <strong>GHS 100</strong>:
+          </p>
+          <div class="preview-grid">
+            <div class="preview-row">
+              <span>Payer is charged</span>
+              <strong>GHS {{ previewChargeAmount }}</strong>
+            </div>
+            <div class="preview-row">
+              <span>Paystack keeps (1.95%)</span>
+              <strong class="red">− GHS {{ previewPaystackFee }}</strong>
+            </div>
+            <div class="preview-row">
+              <span>Churchman keeps ({{ platformFeeInput }}%)</span>
+              <strong class="purple">− GHS {{ previewPlatformFee }}</strong>
+            </div>
+            <div class="preview-row preview-total">
+              <span>Church receives</span>
+              <strong class="green">GHS {{ previewChurchReceives }}</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Save confirmation -->
+        <div class="settings-saved" *ngIf="settingsSaved">
+          <i class="ri-checkbox-circle-line"></i>
+          Settings saved and live across all churches
+        </div>
+
+        <button class="btn-save-settings" (click)="saveFeeSettings()" [disabled]="savingSettings">
+          <i *ngIf="!savingSettings" class="ri-save-line"></i>
+          <i *ngIf="savingSettings" class="ri-loader-4-line spin"></i>
+          {{ savingSettings ? 'Saving...' : 'Save Fee Settings' }}
+        </button>
+
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         SECTION 4 — Withdrawal Requests
+    ══════════════════════════════════════════════════════════ -->
+    <div class="section-card">
+      <div class="section-header">
+        <div>
+          <h3>Withdrawal Requests</h3>
+          <p>Review and process church withdrawal requests</p>
+        </div>
+        <span class="pending-badge" *ngIf="pendingWithdrawals.length > 0">
+          {{ pendingWithdrawals.length }} pending
+        </span>
+      </div>
+
+      <div *ngIf="loadingWithdrawals" class="loading-container">
+        <app-loading-spinner></app-loading-spinner>
+      </div>
+
+      <div class="requests-table-wrapper" *ngIf="!loadingWithdrawals">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Church</th>
+              <th>Amount</th>
+              <th>Bank / Account</th>
+              <th>Reason</th>
+              <th>Date</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let req of withdrawalRequests">
+              <td><strong>{{ req.church?.name || '—' }}</strong></td>
+              <td><strong class="amount-val">{{ formatCurrency(req.amount, req.currency) }}</strong></td>
+              <td>
+                <div class="bank-info">
+                  <span>{{ req.bank_name }}</span>
+                  <span class="acct-num">{{ req.account_number }}</span>
+                </div>
+              </td>
+              <td class="reason-col">{{ req.reason || '—' }}</td>
+              <td class="date-col">{{ req.created_at | date:'MMM d, y' }}</td>
+              <td>
+                <span class="status-badge" [ngClass]="getStatusClass(req.status)">
+                  {{ req.status | titlecase }}
+                </span>
+              </td>
+              <td>
+                <button class="btn-review" (click)="openWithdrawalModal(req)"
+                  *ngIf="req.status === 'pending' || req.status === 'approved'">
+                  Review
+                </button>
+                <span class="done-label" *ngIf="req.status === 'completed'">
+                  <i class="ri-check-double-line"></i> Done
+                </span>
+                <span class="done-label red" *ngIf="req.status === 'rejected'">
+                  <i class="ri-close-line"></i> Rejected
+                </span>
+              </td>
+            </tr>
+            <tr *ngIf="withdrawalRequests.length === 0">
+              <td colspan="7">
+                <div class="table-empty">
+                  <i class="ri-bank-card-line"></i>
+                  <p>No withdrawal requests yet</p>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         SECTION 5 — Church breakdown table
+    ══════════════════════════════════════════════════════════ -->
+    <div class="section-card">
+      <div class="section-header">
+        <div>
+          <h3>Church Breakdown</h3>
+          <p>Giving, expenses and balance per church — {{ selectedYear }}</p>
+        </div>
+      </div>
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Church</th>
+              <th>Members</th>
+              <th>Total Giving</th>
+              <th>Transactions</th>
+              <th>Bulk Giving</th>
+              <th>Expenses</th>
+              <th>Net Balance</th>
+              <th>Pay Links</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let c of churchStats; let i = index" [class.top-row]="i === 0">
+              <td>
+                <div class="church-name-cell">
+                  <span class="rank-badge" *ngIf="i < 3">{{ i + 1 }}</span>
+                  {{ c.church_name }}
+                </div>
+              </td>
+              <td class="center-col">{{ c.member_count | number }}</td>
+              <td><strong class="amount-val">{{ formatCompact(c.total_giving) }}</strong></td>
+              <td class="center-col">{{ c.total_transactions | number }}</td>
+              <td>{{ formatCompact(c.total_bulk) }}</td>
+              <td class="expense-col">{{ formatCompact(c.total_expenses) }}</td>
+              <td [class.positive]="c.net_balance >= 0" [class.negative]="c.net_balance < 0">
+                <strong>{{ formatCompact(c.net_balance) }}</strong>
+              </td>
+              <td class="center-col">{{ c.payment_links_count }}</td>
+            </tr>
+            <tr *ngIf="churchStats.length === 0">
+              <td colspan="8">
+                <div class="table-empty">
+                  <i class="ri-building-line"></i>
+                  <p>No church data</p>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         SECTION 6 — Recent transactions across all churches
+    ══════════════════════════════════════════════════════════ -->
+    <div class="section-card">
+      <div class="section-header">
+        <div>
+          <h3>Recent Transactions</h3>
+          <p>Latest giving activity across all churches</p>
+        </div>
+      </div>
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Church</th>
+              <th>Member</th>
+              <th>Category</th>
+              <th>Amount</th>
+              <th>Method</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let txn of recentTransactions">
+              <td><span class="church-tag">{{ txn.church_name }}</span></td>
+              <td>{{ txn.member_name }}</td>
+              <td>{{ txn.category_name || '—' }}</td>
+              <td><strong class="amount-val">{{ formatCurrency(txn.amount, txn.currency) }}</strong></td>
+              <td>
+                <div class="method-cell">
+                  <i [class]="getMethodIcon(txn.payment_method)"></i>
+                  <span>{{ txn.payment_method | titlecase }}</span>
+                </div>
+              </td>
+              <td class="date-col">{{ txn.transaction_date | date:'MMM d, y' }}</td>
+            </tr>
+            <tr *ngIf="recentTransactions.length === 0">
+              <td colspan="6">
+                <div class="table-empty">
+                  <i class="ri-exchange-line"></i>
+                  <p>No transactions yet</p>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     Withdrawal review modal
+══════════════════════════════════════════════════════════════ -->
+<div *ngIf="showWithdrawalModal" class="modal-overlay" (click)="closeWithdrawalModal()">
+  <div class="review-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3><i class="ri-bank-card-line"></i> Review Withdrawal Request</h3>
+      <button class="modal-close-btn" (click)="closeWithdrawalModal()">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+
+    <div class="modal-body" *ngIf="selectedWithdrawal">
+
+      <div *ngIf="withdrawalSuccess" class="success-alert sm">
+        <i class="ri-checkbox-circle-line"></i><span>{{ withdrawalSuccess }}</span>
+      </div>
+      <div *ngIf="withdrawalError" class="error-alert sm">
+        <i class="ri-error-warning-line"></i><span>{{ withdrawalError }}</span>
+      </div>
+
+      <div class="detail-grid">
+        <div class="detail-item">
+          <span class="detail-label">Church</span>
+          <span class="detail-value">{{ selectedWithdrawal.church?.name }}</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">Amount</span>
+          <span class="detail-value amount-big">{{ formatCurrency(selectedWithdrawal.amount, selectedWithdrawal.currency) }}</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">Bank</span>
+          <span class="detail-value">{{ selectedWithdrawal.bank_name }}</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">Account Number</span>
+          <span class="detail-value mono">{{ selectedWithdrawal.account_number }}</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">Account Name</span>
+          <span class="detail-value">{{ selectedWithdrawal.account_name }}</span>
+        </div>
+        <div class="detail-item full">
+          <span class="detail-label">Reason</span>
+          <span class="detail-value">{{ selectedWithdrawal.reason || 'Not provided' }}</span>
+        </div>
+      </div>
+
+      <!-- OTP warning -->
+      <div class="otp-notice">
+        <i class="ri-shield-keyhole-line"></i>
+        <div>
+          <strong>Live mode note</strong>
+          <p>Paystack will send an OTP to your registered phone to confirm this transfer. Check your Paystack dashboard after approving.</p>
+        </div>
+      </div>
+
+      <!-- Rejection reason input — shown only when reject is clicked -->
+      <div *ngIf="showRejectInput" class="reject-input-wrap">
+        <label>Rejection Reason *</label>
+        <textarea [(ngModel)]="rejectionReason" rows="2"
+          placeholder="Explain why this is being rejected..."></textarea>
+      </div>
+
+    </div>
+
+    <div class="modal-footer review-footer">
+      <button class="btn-reject"
+        (click)="showRejectInput ? rejectWithdrawal() : (showRejectInput = true)"
+        [disabled]="processingTransfer">
+        <i class="ri-close-circle-line"></i>
+        {{ showRejectInput ? 'Confirm Reject' : 'Reject' }}
+      </button>
+      <button class="btn-approve" (click)="approveWithdrawal()"
+        [disabled]="processingTransfer || selectedWithdrawal?.status === 'approved'"
+        *ngIf="!showRejectInput">
+        <i *ngIf="!processingTransfer" class="ri-check-double-line"></i>
+        <i *ngIf="processingTransfer" class="ri-loader-4-line spin"></i>
+        {{ processingTransfer ? 'Processing...' : 'Approve & Transfer' }}
+      </button>
+    </div>
+  </div>
+</div>
