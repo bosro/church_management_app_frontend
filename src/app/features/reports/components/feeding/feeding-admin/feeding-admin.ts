@@ -426,7 +426,7 @@ export class FeedingAdmin implements OnInit, OnDestroy {
     );
     const daysCovered =
       rate > 0
-        ? Math.max(1, Math.floor(this.editPaymentAmount / rate))
+        ? Math.max(0, Math.floor(this.editPaymentAmount / rate))
         : this.editingPayment.days_covered;
 
     this.feedingService
@@ -584,4 +584,5 @@ export class FeedingAdmin implements OnInit, OnDestroy {
     return new Date().toISOString().split('T')[0];
   }
 }
+
 

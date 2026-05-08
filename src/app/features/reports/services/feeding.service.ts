@@ -4,7 +4,11 @@ import { map } from 'rxjs/operators';
 import { SupabaseService } from '../../../core/services/supabase';
 import { AuthService } from '../../../core/services/auth';
 
-export type FeedingTier = 'creche_kg' | 'lower_primary' | 'upper_primary' | 'jhs_shs';
+export type FeedingTier =
+  | 'creche_kg'
+  | 'lower_primary'
+  | 'upper_primary'
+  | 'jhs_shs';
 
 export const TIER_LABELS: Record<FeedingTier, string> = {
   creche_kg: 'Creche / Nursery / KG',
@@ -100,7 +104,15 @@ export class FeedingService {
     classId?: string,
   ): Observable<any> {
     return from(
-      this.upsertSettingManually(churchId, academicYear, term, dailyAmount, scope, tier, classId),
+      this.upsertSettingManually(
+        churchId,
+        academicYear,
+        term,
+        dailyAmount,
+        scope,
+        tier,
+        classId,
+      ),
     );
   }
 
@@ -135,7 +147,10 @@ export class FeedingService {
       // UPDATE existing row
       const { data, error } = await this.supabase.client
         .from('feeding_fee_settings')
-        .update({ daily_amount: dailyAmount, updated_at: new Date().toISOString() })
+        .update({
+          daily_amount: dailyAmount,
+          updated_at: new Date().toISOString(),
+        })
         .eq('id', existing.id)
         .select()
         .single();
@@ -335,21 +350,15 @@ export class FeedingService {
       payment_date?: string;
     },
   ): Promise<any> {
-    // Build update payload — only include updated_at if column exists
-    // (safe to always include; Postgres will error only if column missing)
-    const payload: any = { ...changes };
-    try {
-      payload.updated_at = new Date().toISOString();
-    } catch (_) {}
-
     const { data, error } = await this.supabase.client
       .from('feeding_payments')
-      .update(payload)
+      .update(changes) // pass changes directly, no updated_at
       .eq('id', paymentId)
       .select();
 
     if (error) throw new Error(error.message);
-    if (!data || data.length === 0) throw new Error('Payment not found or could not be updated');
+    if (!data || data.length === 0)
+      throw new Error('Payment not found or could not be updated');
     return data[0];
   }
 
@@ -428,6 +437,7 @@ export class FeedingService {
     hasPayment: boolean;
     totalDaysCovered: number;
     prepaidDaysRemaining: number;
+    creditBalance: number; // NEW: monetary credit remaining
   }> {
     const [paymentsRes, attendanceRes] = await Promise.all([
       this.supabase.client
@@ -451,15 +461,19 @@ export class FeedingService {
       (s: number, p: any) => s + Number(p.amount_paid),
       0,
     );
-    // Total days covered by all payments (sum of days_covered field)
     const totalDaysCovered = (paymentsRes.data || []).reduce(
       (s: number, p: any) => s + Number(p.days_covered || 0),
       0,
     );
     const presentDays = (attendanceRes.data || []).length;
     const totalOwed = presentDays * dailyRate;
-    // Pre-paid days remaining = days already paid for minus days already attended
-    const prepaidDaysRemaining = Math.max(0, totalDaysCovered - presentDays);
+
+    // Monetary credit: how much paid vs how much owed so far
+    const creditBalance = Math.max(0, totalPaid - totalOwed);
+    // How many future days does the credit cover
+    const prepaidDaysRemaining =
+      dailyRate > 0 ? Math.floor(creditBalance / dailyRate) : 0;
+
     return {
       totalPaid,
       presentDays,
@@ -468,6 +482,7 @@ export class FeedingService {
       hasPayment: (paymentsRes.data || []).length > 0,
       totalDaysCovered,
       prepaidDaysRemaining,
+      creditBalance,
     };
   }
 
@@ -534,7 +549,10 @@ export class FeedingService {
     churchId: string,
     academicYear: string,
     term: string,
-    students: Array<{ id: string; class?: { id: string; tier: string | null } | null }>,
+    students: Array<{
+      id: string;
+      class?: { id: string; tier: string | null } | null;
+    }>,
   ): Promise<Record<string, number>> {
     // Fetch all settings for this church/year/term at once
     const { data: settings } = await this.supabase.client
@@ -552,7 +570,9 @@ export class FeedingService {
         if (match) return Number(match.daily_amount);
       }
       if (classTier) {
-        const match = rows.find((r: any) => r.tier === classTier && !r.class_id);
+        const match = rows.find(
+          (r: any) => r.tier === classTier && !r.class_id,
+        );
         if (match) return Number(match.daily_amount);
       }
       const fallback = rows.find((r: any) => !r.tier && !r.class_id);
@@ -586,17 +606,22 @@ export class FeedingService {
     presentDays: number;
     totalOwed: number;
     prepaidDaysRemaining: number;
+    creditBalance: number;
     balance: number;
   }> {
     const [studentRes, paymentsRes, attendanceRes] = await Promise.all([
       this.supabase.client
         .from('students')
-        .select('id, first_name, last_name, middle_name, student_number, class:school_classes(name, tier)')
+        .select(
+          'id, first_name, last_name, middle_name, student_number, class:school_classes(name, tier)',
+        )
         .eq('id', studentId)
         .single(),
       this.supabase.client
         .from('feeding_payments')
-        .select('id, payment_date, amount_paid, days_covered, notes, created_at')
+        .select(
+          'id, payment_date, amount_paid, days_covered, notes, created_at',
+        )
         .eq('church_id', churchId)
         .eq('student_id', studentId)
         .eq('academic_year', academicYear)
@@ -615,26 +640,37 @@ export class FeedingService {
     const payments = paymentsRes.data || [];
     const attendance = attendanceRes.data || [];
 
-    // Build a map of date → payment and date → attendance
     const paymentMap: Record<string, any> = {};
-    payments.forEach((p: any) => { paymentMap[p.payment_date] = p; });
+    payments.forEach((p: any) => {
+      paymentMap[p.payment_date] = p;
+    });
     const attendanceMap: Record<string, any> = {};
-    attendance.forEach((a: any) => { attendanceMap[a.attendance_date] = a; });
+    attendance.forEach((a: any) => {
+      attendanceMap[a.attendance_date] = a;
+    });
 
-    // Collect all unique dates
-    const allDates = Array.from(new Set([
-      ...payments.map((p: any) => p.payment_date),
-      ...attendance.map((a: any) => a.attendance_date),
-    ])).sort();
+    const allDates = Array.from(
+      new Set([
+        ...payments.map((p: any) => p.payment_date),
+        ...attendance.map((a: any) => a.attendance_date),
+      ]),
+    ).sort();
 
-    // Build timeline with running carry-forward balance
-    const totalPaid = payments.reduce((s: number, p: any) => s + Number(p.amount_paid), 0);
-    const totalDaysCovered = payments.reduce((s: number, p: any) => s + Number(p.days_covered || 0), 0);
+    const totalPaid = payments.reduce(
+      (s: number, p: any) => s + Number(p.amount_paid),
+      0,
+    );
+    const totalDaysCovered = payments.reduce(
+      (s: number, p: any) => s + Number(p.days_covered || 0),
+      0,
+    );
     const presentDays = attendance.filter((a: any) => a.is_present).length;
     const totalOwed = presentDays * dailyRate;
-    const prepaidDaysRemaining = Math.max(0, totalDaysCovered - presentDays);
+    const creditBalance = Math.max(0, totalPaid - totalOwed);
+    const prepaidDaysRemaining =
+      dailyRate > 0 ? Math.floor(creditBalance / dailyRate) : 0;
 
-    // Running balance: starts at 0, adds payment, subtracts daily rate on present days
+    // Running monetary balance (positive = credit/overpaid, negative = owes money)
     let runningBalance = 0;
     const timeline: DayEntry[] = allDates.map((date) => {
       const payment = paymentMap[date];
@@ -645,6 +681,10 @@ export class FeedingService {
       if (amountPaid > 0) runningBalance += amountPaid;
       if (isPresent && dailyRate > 0) runningBalance -= dailyRate;
 
+      // coveredByAdvance: present today, no payment today, but running balance >= 0 (credit covered it)
+      const coveredByAdvance =
+        !payment && isPresent === true && runningBalance >= 0;
+
       return {
         date,
         isPresent,
@@ -653,7 +693,7 @@ export class FeedingService {
         notes: payment?.notes || null,
         paymentId: payment?.id || null,
         runningBalance,
-        coveredByAdvance: !payment && isPresent && runningBalance >= 0,
+        coveredByAdvance,
       };
     });
 
@@ -667,11 +707,11 @@ export class FeedingService {
       presentDays,
       totalOwed,
       prepaidDaysRemaining,
+      creditBalance,
       balance: Math.max(0, totalOwed - totalPaid),
     };
   }
 }
-
 // ── Supporting types ──────────────────────────────────────
 export interface DayEntry {
   date: string;
@@ -683,5 +723,3 @@ export interface DayEntry {
   runningBalance: number;
   coveredByAdvance: boolean;
 }
-
-
