@@ -1124,6 +1124,10 @@ export class FeedingRecord implements OnInit, OnDestroy {
     return new Date().toISOString().split('T')[0];
   }
 
+  isToday(dateStr: string): boolean {
+    return dateStr === this.today;
+  }
+
   trackByStudentId(_: number, student: any): string {
     return student.id;
   }
