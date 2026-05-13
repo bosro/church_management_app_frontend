@@ -24,7 +24,8 @@
         </div>
         <div *ngIf="errorMessage" class="error-alert">
           <i class="ri-error-warning-line"></i>{{ errorMessage }}
-          <button (click)="errorMessage = ''" style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:16px;">
+          <button (click)="errorMessage = ''"
+            style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:16px;">
             <i class="ri-close-line"></i>
           </button>
         </div>
@@ -43,6 +44,115 @@
               <option *ngFor="let y of academicYears" [value]="y">{{ y }}</option>
             </select>
           </div>
+        </div>
+
+        <!-- ── Weekly Summary Bar ──────────────────────────────── -->
+        <div class="weekly-summary-bar">
+          <div class="weekly-bar-header">
+            <span class="weekly-bar-title">
+              <i class="ri-calendar-2-line" style="margin-right:4px;"></i>
+              Weekly Collection Overview
+            </span>
+            <div class="week-nav">
+              <button (click)="shiftWeek(-1)" title="Previous week">
+                <i class="ri-arrow-left-s-line"></i>
+              </button>
+              <span class="week-label" *ngIf="weeklySummary">
+                {{ formatWeekRange(weeklySummary.weekStart, weeklySummary.weekEnd) }}
+              </span>
+              <span class="week-label" *ngIf="!weeklySummary && !loadingWeekly">—</span>
+              <span class="current-week-badge" *ngIf="isCurrentWeek">This week</span>
+              <button (click)="shiftWeek(1)" [disabled]="isCurrentWeek" title="Next week">
+                <i class="ri-arrow-right-s-line"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="weekly-bar-loading" *ngIf="loadingWeekly">
+            <div class="spinner"></div>
+            <span>Computing weekly totals...</span>
+          </div>
+
+          <ng-container *ngIf="!loadingWeekly && weeklySummary">
+            <div class="weekly-bar-stats">
+              <div class="wbs-item enrollment">
+                <div class="wbs-label"><i class="ri-group-line"></i> Enrollment Expected</div>
+                <span class="wbs-value">{{ formatCurrency(weeklySummary.enrollmentExpected) }}</span>
+                <span class="wbs-sub">if all students attended all 5 days</span>
+              </div>
+              <div class="wbs-item owed">
+                <div class="wbs-label"><i class="ri-user-follow-line"></i> Attendance Owed</div>
+                <span class="wbs-value">{{ formatCurrency(weeklySummary.attendanceOwed) }}</span>
+                <span class="wbs-sub">based on who actually came</span>
+              </div>
+              <div class="wbs-item collected">
+                <div class="wbs-label"><i class="ri-money-dollar-circle-line"></i> Cash Received</div>
+                <span class="wbs-value">{{ formatCurrency(weeklySummary.collected) }}</span>
+                <span class="wbs-sub">payments dated this week</span>
+              </div>
+              <div class="wbs-item allocated">
+                <div class="wbs-label"><i class="ri-calendar-check-line"></i> Allocated to Week</div>
+                <span class="wbs-value">{{ formatCurrency(weeklySummary.allocatedToWeek) }}</span>
+                <span class="wbs-sub">portion covering this week's days</span>
+              </div>
+              <div class="wbs-item shortfall" [class.no-shortfall]="weeklySummary.shortfall === 0">
+                <div class="wbs-label"><i class="ri-arrow-down-circle-line"></i> Shortfall</div>
+                <span class="wbs-value">
+                  {{ weeklySummary.shortfall === 0 ? '✓ Covered' : formatCurrency(weeklySummary.shortfall) }}
+                </span>
+                <span class="wbs-sub">allocated vs attendance owed</span>
+              </div>
+            </div>
+
+            <!-- Carry-forward notice -->
+            <div class="carry-forward-notice" *ngIf="weeklySummary.carryForward > 0">
+              <i class="ri-arrow-right-circle-line"></i>
+              <span>
+                <strong>{{ weeklySummary.carryForward }} day(s)</strong> paid this week carry forward into future weeks
+                — worth <strong>{{ formatCurrency(weeklySummary.carryForwardAmount) }}</strong>.
+                These days are already settled; those students won't owe payment when those days arrive.
+              </span>
+            </div>
+
+            <!-- Progress bar -->
+            <div class="weekly-progress" *ngIf="weeklySummary.attendanceOwed > 0">
+              <div class="progress-label">
+                <span>Allocated vs attendance owed</span>
+                <span>
+                  {{ ((min(weeklySummary.allocatedToWeek, weeklySummary.attendanceOwed)
+                  / weeklySummary.attendanceOwed) * 100 | number:'1.0-0') }}%
+                </span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill"
+                  [style.width.%]="min(100, (weeklySummary.allocatedToWeek / weeklySummary.attendanceOwed) * 100)"
+                  [class.full]="weeklySummary.allocatedToWeek >= weeklySummary.attendanceOwed"
+                  [class.partial]="weeklySummary.allocatedToWeek > 0 && weeklySummary.allocatedToWeek < weeklySummary.attendanceOwed"
+                  [class.low]="weeklySummary.allocatedToWeek === 0">
+                </div>
+              </div>
+            </div>
+
+            <!-- Collection progress bar -->
+            <div class="weekly-progress" *ngIf="weeklySummary.attendanceOwed > 0">
+              <div class="progress-label">
+                <span>Collection progress (vs attendance owed)</span>
+                <span>
+                  {{ weeklySummary.attendanceOwed > 0
+                  ? ((weeklySummary.collected / weeklySummary.attendanceOwed) * 100 | number:'1.0-0')
+                  : 0 }}%
+                </span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill" [style.width.%]="[weeklySummary.attendanceOwed > 0
+            ? min(100, (weeklySummary.collected / weeklySummary.attendanceOwed) * 100)
+            : 0]" [class.full]="weeklySummary.collected >= weeklySummary.attendanceOwed"
+                  [class.partial]="weeklySummary.collected > 0 && weeklySummary.collected < weeklySummary.attendanceOwed"
+                  [class.low]="weeklySummary.collected === 0">
+                </div>
+              </div>
+            </div>
+          </ng-container>
         </div>
 
         <div class="admin-grid">
@@ -68,7 +178,8 @@
 
                   <!-- Tier rows -->
                   <div class="settings-rows">
-                    <div class="setting-row" *ngFor="let row of settingRows | settingScope:'tier'; trackBy: trackByRowLabel">
+                    <div class="setting-row"
+                      *ngFor="let row of settingRows | settingScope:'tier'; trackBy: trackByRowLabel">
                       <div class="setting-row-label">
                         <span class="tier-badge" [ngClass]="row.tier">{{ getTierLabel(row.tier) }}</span>
                       </div>
@@ -83,8 +194,8 @@
                       <div class="setting-row-edit" *ngIf="row.editing">
                         <div class="amount-input-wrap compact">
                           <span class="currency-prefix">GH₵</span>
-                          <input type="number" [(ngModel)]="row.editingAmount" min="0" step="0.01"
-                            placeholder="0.00" (keydown.enter)="saveSetting(row)" />
+                          <input type="number" [(ngModel)]="row.editingAmount" min="0" step="0.01" placeholder="0.00"
+                            (keydown.enter)="saveSetting(row)" />
                         </div>
                         <button class="btn-save-inline" (click)="saveSetting(row)"
                           [disabled]="row.saving || row.editingAmount <= 0">
@@ -99,7 +210,8 @@
                   </div>
 
                   <!-- Class override rows -->
-                  <div class="override-section" *ngIf="(settingRows | settingScope:'class').length > 0 || showAddOverride">
+                  <div class="override-section"
+                    *ngIf="(settingRows | settingScope:'class').length > 0 || showAddOverride">
                     <div class="override-header">
                       <i class="ri-git-branch-line"></i>
                       <span>Class Overrides</span>
@@ -129,8 +241,8 @@
                         <div class="setting-row-edit" *ngIf="row.editing">
                           <div class="amount-input-wrap compact">
                             <span class="currency-prefix">GH₵</span>
-                            <input type="number" [(ngModel)]="row.editingAmount" min="0" step="0.01"
-                              placeholder="0.00" (keydown.enter)="saveSetting(row)" />
+                            <input type="number" [(ngModel)]="row.editingAmount" min="0" step="0.01" placeholder="0.00"
+                              (keydown.enter)="saveSetting(row)" />
                           </div>
                           <button class="btn-save-inline" (click)="saveSetting(row)"
                             [disabled]="row.saving || row.editingAmount <= 0">
@@ -162,10 +274,12 @@
                       </select>
                       <div class="amount-input-wrap compact" style="margin-top: 8px;">
                         <span class="currency-prefix">GH₵</span>
-                        <input type="number" [(ngModel)]="addOverrideAmount" min="0" step="0.01" placeholder="Daily amount" />
+                        <input type="number" [(ngModel)]="addOverrideAmount" min="0" step="0.01"
+                          placeholder="Daily amount" />
                       </div>
                       <div class="add-override-actions">
-                        <button class="btn-cancel-inline" (click)="showAddOverride = false; addOverrideClassId = ''; addOverrideAmount = 0">
+                        <button class="btn-cancel-inline"
+                          (click)="showAddOverride = false; addOverrideClassId = ''; addOverrideAmount = 0">
                           Cancel
                         </button>
                         <button class="btn-save-settings"
@@ -261,8 +375,7 @@
                 <tbody>
                   <tr *ngFor="let p of payments; trackBy: trackByPaymentId">
                     <td data-label="Student">
-                      <p class="rec-name rec-name-link" (click)="openStudentDetail(p)"
-                        title="View feeding history">
+                      <p class="rec-name rec-name-link" (click)="openStudentDetail(p)" title="View feeding history">
                         {{ getStudentName(p.student) }}
                         <i class="ri-external-link-line" style="font-size:11px;opacity:0.5;margin-left:3px;"></i>
                       </p>
@@ -326,7 +439,8 @@
     <div class="modal-header">
       <div *ngIf="studentDetail">
         <h3>{{ studentDetail.student?.first_name }} {{ studentDetail.student?.last_name }}</h3>
-        <p>{{ studentDetail.student?.student_number }} · {{ studentDetail.student?.class?.name }} · {{ selectedTerm }} {{ selectedYear }}</p>
+        <p>{{ studentDetail.student?.student_number }} · {{ studentDetail.student?.class?.name }} · {{ selectedTerm }}
+          {{ selectedYear }}</p>
       </div>
       <div *ngIf="!studentDetail && studentDetailLoading">
         <h3>Loading...</h3>
@@ -377,7 +491,8 @@
       <!-- Prepaid notice -->
       <div class="detail-prepaid-notice" *ngIf="studentDetail.prepaidDaysRemaining > 0">
         <i class="ri-information-line"></i>
-        This student has <strong>{{ studentDetail.prepaidDaysRemaining }} advance day(s)</strong> already paid for and will not need payment for the next {{ studentDetail.prepaidDaysRemaining }} school day(s).
+        This student has <strong>{{ studentDetail.prepaidDaysRemaining }} advance day(s)</strong> already paid for and
+        will not need payment for the next {{ studentDetail.prepaidDaysRemaining }} school day(s).
       </div>
 
       <!-- Day-by-day timeline -->
@@ -394,10 +509,8 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let day of studentDetail.timeline"
-              [class.row-covered]="day.coveredByAdvance"
-              [class.row-absent]="day.isPresent === false"
-              [class.row-paid]="day.amountPaid > 0">
+            <tr *ngFor="let day of studentDetail.timeline" [class.row-covered]="day.coveredByAdvance"
+              [class.row-absent]="day.isPresent === false" [class.row-paid]="day.amountPaid > 0">
               <td class="day-date">{{ day.date | date:'EEE, MMM d' }}</td>
               <td class="text-center">
                 <span *ngIf="day.isPresent === true" class="att-badge present">
@@ -456,7 +569,8 @@
         <i class="ri-information-line"></i>
         Daily rate for this class:
         <strong class="rate-value">
-          {{ formatCurrency(resolveRateForDisplay(editingPayment?.student?.class?.id, editingPayment?.student?.class?.tier)) }}
+          {{ formatCurrency(resolveRateForDisplay(editingPayment?.student?.class?.id,
+          editingPayment?.student?.class?.tier)) }}
         </strong>
       </div>
 

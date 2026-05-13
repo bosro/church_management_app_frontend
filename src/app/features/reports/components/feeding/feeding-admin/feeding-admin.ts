@@ -90,6 +90,11 @@ export class FeedingAdmin implements OnInit, OnDestroy {
   tierLabels = TIER_LABELS;
   allTiers = ALL_TIERS;
 
+  // Weekly summary
+  weeklySummary: any = null;
+  loadingWeekly = false;
+  weekAnchorDate = new Date().toISOString().split('T')[0]; // drives which week
+
   constructor(
     private feedingService: FeedingService,
     private authService: AuthService,
@@ -142,6 +147,7 @@ export class FeedingAdmin implements OnInit, OnDestroy {
         next: (rows) => {
           this.buildSettingRows(rows);
           this.loadingSettings = false;
+          this.loadWeeklySummary(); // ← ADD THIS LINE
           this.cdr.markForCheck();
         },
         error: () => {
@@ -572,6 +578,61 @@ export class FeedingAdmin implements OnInit, OnDestroy {
     return r.classId || r.tier || 'school';
   }
 
+  // ── Weekly summary ────────────────────────────────────────
+
+  loadWeeklySummary(): void {
+    // Guard: settingRows must be loaded before we can resolve rates
+    if (!this.settingRows.length) return;
+    this.loadingWeekly = true;
+    this.feedingService
+      .getWeeklySummary(
+        this.churchId,
+        this.selectedYear,
+        this.selectedTerm,
+        this.weekAnchorDate,
+        (classId, classTier) => this.resolveRateForDisplay(classId, classTier),
+      )
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (s) => {
+          this.weeklySummary = s;
+          this.loadingWeekly = false;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.loadingWeekly = false;
+          this.cdr.markForCheck();
+        },
+      });
+  }
+
+  shiftWeek(direction: -1 | 1): void {
+    const d = new Date(this.weekAnchorDate + 'T00:00:00');
+    d.setDate(d.getDate() + direction * 7);
+    this.weekAnchorDate = d.toISOString().split('T')[0];
+    this.loadWeeklySummary();
+  }
+
+  get isCurrentWeek(): boolean {
+    if (!this.weeklySummary) return false;
+    const today = new Date().toISOString().split('T')[0];
+    return (
+      today >= this.weeklySummary.weekStart &&
+      today <= this.weeklySummary.weekEnd
+    );
+  }
+
+  formatWeekRange(start: string, end: string): string {
+    const s = new Date(start + 'T00:00:00');
+    const e = new Date(end + 'T00:00:00');
+    const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
+    return `${s.toLocaleDateString('en-GH', opts)} – ${e.toLocaleDateString('en-GH', opts)}`;
+  }
+
+  min(a: number, b: number): number {
+    return Math.min(a, b);
+  }
+
   private showSuccess(msg: string): void {
     this.successMessage = msg;
     setTimeout(() => {
@@ -584,5 +645,3 @@ export class FeedingAdmin implements OnInit, OnDestroy {
     return new Date().toISOString().split('T')[0];
   }
 }
-
-

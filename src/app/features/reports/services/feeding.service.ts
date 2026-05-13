@@ -711,6 +711,193 @@ export class FeedingService {
       balance: Math.max(0, totalOwed - totalPaid),
     };
   }
+
+  // ── Weekly summary ────────────────────────────────────────
+  // Returns enrollment-expected, attendance-owed, and actually-collected
+  // totals for the ISO week containing `weekDate`.
+
+  async getWeeklySummaryPromise(
+    churchId: string,
+    academicYear: string,
+    term: string,
+    weekDate: string,
+    rateResolver: (classId?: string, classTier?: string) => number,
+  ): Promise<{
+    weekStart: string;
+    weekEnd: string;
+    enrollmentExpected: number;
+    attendanceOwed: number;
+    collected: number; // cash physically received this week
+    allocatedToWeek: number; // portion of ALL payments that covers this week's days
+    carryForward: number; // days paid this week that spill into future weeks
+    carryForwardAmount: number;
+    shortfall: number; // attendanceOwed - allocatedToWeek
+  }> {
+    const d = new Date(weekDate + 'T00:00:00');
+    const day = d.getDay();
+    const diffToMon = day === 0 ? -6 : 1 - day;
+    const mon = new Date(d);
+    mon.setDate(d.getDate() + diffToMon);
+    const fri = new Date(mon);
+    fri.setDate(mon.getDate() + 4);
+
+    const fmt = (dt: Date) => dt.toISOString().split('T')[0];
+    const weekStart = fmt(mon);
+    const weekEnd = fmt(fri);
+
+    // School days in this week (Mon–Fri as date strings)
+    const weekDays: string[] = [];
+    for (let i = 0; i < 5; i++) {
+      const dd = new Date(mon);
+      dd.setDate(mon.getDate() + i);
+      weekDays.push(fmt(dd));
+    }
+
+    const [studentsRes, attendanceRes, paymentsRes] = await Promise.all([
+      this.supabase.client
+        .from('students')
+        .select('id, class:school_classes(id, tier)')
+        .eq('church_id', churchId)
+        .eq('is_active', true),
+
+      this.supabase.client
+        .from('feeding_attendance')
+        .select('student_id, attendance_date, is_present')
+        .eq('church_id', churchId)
+        .eq('academic_year', academicYear)
+        .eq('term', term)
+        .gte('attendance_date', weekStart)
+        .lte('attendance_date', weekEnd),
+
+      // Fetch ALL payments — we need ones paid before this week too,
+      // because their days_covered may spill INTO this week
+      this.supabase.client
+        .from('feeding_payments')
+        .select('student_id, payment_date, amount_paid, days_covered')
+        .eq('church_id', churchId)
+        .eq('academic_year', academicYear)
+        .eq('term', term),
+    ]);
+
+    const students: any[] = studentsRes.data || [];
+    const attendance: any[] = attendanceRes.data || [];
+    const allPayments: any[] = paymentsRes.data || [];
+
+    // Build student → rate map
+    const studentRateMap: Record<string, number> = {};
+    for (const s of students) {
+      studentRateMap[s.id] = rateResolver(s.class?.id, s.class?.tier);
+    }
+
+    // ── Enrollment expected ───────────────────────────────────
+    const enrollmentExpected = students.reduce((sum, s) => {
+      return sum + (studentRateMap[s.id] ?? 0) * 5;
+    }, 0);
+
+    // ── Attendance owed ───────────────────────────────────────
+    const attendanceOwed = attendance
+      .filter((a) => a.is_present)
+      .reduce((sum, a) => sum + (studentRateMap[a.student_id] ?? 0), 0);
+
+    // ── Cash collected THIS week (payment_date falls in week) ─
+    const collected = allPayments
+      .filter((p) => p.payment_date >= weekStart && p.payment_date <= weekEnd)
+      .reduce((sum, p) => sum + Number(p.amount_paid), 0);
+
+    // ── Allocated-to-week calculation ─────────────────────────
+    // For each payment (regardless of when it was paid), we figure out
+    // which school days it covers sequentially from payment_date forward,
+    // then count how many of those days fall inside this week.
+    //
+    // Assumptions (matching how your app records payments):
+    //   - days_covered counts consecutive school days (Mon–Fri) from payment_date
+    //   - Weekends are skipped automatically
+    //   - One payment covers one student
+
+    const addSchoolDays = (from: string, count: number): string[] => {
+      const days: string[] = [];
+      const cur = new Date(from + 'T00:00:00');
+      // Start from payment_date itself if it's a weekday, else next Monday
+      while (days.length < count) {
+        const dow = cur.getDay();
+        if (dow !== 0 && dow !== 6) {
+          days.push(fmt(cur));
+        }
+        cur.setDate(cur.getDate() + 1);
+      }
+      return days;
+    };
+
+    let allocatedToWeek = 0;
+    let carryForwardDays = 0;
+    let carryForwardAmount = 0;
+
+    const weekDaySet = new Set(weekDays);
+
+    for (const p of allPayments) {
+      const rate = studentRateMap[p.student_id] ?? 0;
+      const daysCovered = Number(p.days_covered) || 0;
+      if (daysCovered === 0 || rate === 0) {
+        // No days_covered recorded — fall back to crediting full amount
+        // to the payment_date week only (old behaviour for legacy records)
+        if (p.payment_date >= weekStart && p.payment_date <= weekEnd) {
+          allocatedToWeek += Number(p.amount_paid);
+        }
+        continue;
+      }
+
+      const coveredDays = addSchoolDays(p.payment_date, daysCovered);
+      const daysInThisWeek = coveredDays.filter((d) =>
+        weekDaySet.has(d),
+      ).length;
+      const daysAfterThisWeek = coveredDays.filter((d) => d > weekEnd).length;
+
+      allocatedToWeek += daysInThisWeek * rate;
+
+      // Carry-forward: days paid (from this week's payments) that go beyond Friday
+      if (p.payment_date >= weekStart && p.payment_date <= weekEnd) {
+        carryForwardDays += daysAfterThisWeek;
+        carryForwardAmount += daysAfterThisWeek * rate;
+      }
+    }
+
+    return {
+      weekStart,
+      weekEnd,
+      enrollmentExpected,
+      attendanceOwed,
+      collected,
+      allocatedToWeek,
+      carryForward: carryForwardDays,
+      carryForwardAmount,
+      shortfall: Math.max(0, attendanceOwed - allocatedToWeek),
+    };
+  }
+
+  getWeeklySummary(
+    churchId: string,
+    academicYear: string,
+    term: string,
+    weekDate: string,
+    rateResolver: (classId?: string, classTier?: string) => number,
+  ): Observable<{
+    weekStart: string;
+    weekEnd: string;
+    enrollmentExpected: number;
+    attendanceOwed: number;
+    collected: number;
+    shortfall: number;
+  }> {
+    return from(
+      this.getWeeklySummaryPromise(
+        churchId,
+        academicYear,
+        term,
+        weekDate,
+        rateResolver,
+      ),
+    );
+  }
 }
 // ── Supporting types ──────────────────────────────────────
 export interface DayEntry {
