@@ -102,6 +102,22 @@
                 </span>
                 <span class="wbs-sub">allocated vs attendance owed</span>
               </div>
+
+              <!-- ── NEW: per-student breakdown tiles ── -->
+              <div class="wbs-item wbs-clickable wbs-covered" (click)="openWeeklyBreakdown('covered')">
+                <div class="wbs-label"><i class="ri-checkbox-circle-line"></i> Fully Covered</div>
+                <span class="wbs-value wbs-covered-val">
+                  {{ weeklySummary.coveredCount ?? '—' }}
+                </span>
+                <span class="wbs-sub">students · click to view</span>
+              </div>
+              <div class="wbs-item wbs-clickable wbs-owing" (click)="openWeeklyBreakdown('owing')">
+                <div class="wbs-label"><i class="ri-error-warning-line"></i> Still Owing</div>
+                <span class="wbs-value wbs-owing-val">
+                  {{ weeklySummary.owingCount ?? '—' }}
+                </span>
+                <span class="wbs-sub">students · click to view</span>
+              </div>
             </div>
 
             <!-- Carry-forward notice -->
@@ -604,5 +620,124 @@
         {{ processingPaymentEdit ? 'Saving...' : 'Save Changes' }}
       </button>
     </div>
+  </div>
+</div>
+
+
+<!-- ── Weekly Student Breakdown Modal ─────────────────────── -->
+<div class="modal-overlay" *ngIf="showWeeklyBreakdownModal" (click)="closeWeeklyBreakdown()">
+  <div class="weekly-breakdown-modal" (click)="$event.stopPropagation()">
+
+    <div class="modal-header">
+      <div>
+        <h3>
+          <i class="ri-checkbox-circle-line" *ngIf="weeklyBreakdownMode === 'covered'"
+            style="color:#059669;margin-right:6px;"></i>
+          <i class="ri-error-warning-line" *ngIf="weeklyBreakdownMode === 'owing'"
+            style="color:#dc2626;margin-right:6px;"></i>
+          {{ weeklyBreakdownMode === 'covered' ? 'Fully Covered Students' : 'Students Still Owing' }}
+        </h3>
+        <p *ngIf="weeklyBreakdownData">
+          {{ formatWeekRange(weeklyBreakdownData.weekStart, weeklyBreakdownData.weekEnd) }}
+          · {{ breakdownRows.length }} student{{ breakdownRows.length !== 1 ? 's' : '' }}
+        </p>
+      </div>
+      <button class="close-btn" (click)="closeWeeklyBreakdown()">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+
+    <!-- Toggle tabs -->
+    <div class="wbd-tabs">
+      <button class="wbd-tab" [class.active]="weeklyBreakdownMode === 'covered'"
+        (click)="weeklyBreakdownMode = 'covered'">
+        <i class="ri-checkbox-circle-line"></i> Covered
+        <span class="wbd-tab-count covered" *ngIf="weeklyBreakdownData">
+          {{ weeklyBreakdownData.covered.length }}
+        </span>
+      </button>
+      <button class="wbd-tab" [class.active]="weeklyBreakdownMode === 'owing'"
+        (click)="weeklyBreakdownMode = 'owing'">
+        <i class="ri-error-warning-line"></i> Owing
+        <span class="wbd-tab-count owing" *ngIf="weeklyBreakdownData">
+          {{ weeklyBreakdownData.owing.length }}
+        </span>
+      </button>
+    </div>
+
+    <!-- Loading -->
+    <div *ngIf="weeklyBreakdownLoading" class="loading-state" style="padding:40px;">
+      <div class="spinner"></div>
+      <p>Loading student data...</p>
+    </div>
+
+    <!-- Table -->
+    <ng-container *ngIf="!weeklyBreakdownLoading && weeklyBreakdownData">
+
+      <div class="wbd-empty" *ngIf="breakdownRows.length === 0">
+        <i class="ri-inbox-line"></i>
+        <p>No students in this category for the week</p>
+      </div>
+
+      <div class="wbd-table-wrap" *ngIf="breakdownRows.length > 0">
+        <table class="wbd-table">
+          <thead>
+            <tr>
+              <th>Student</th>
+              <th class="text-center">Days Present</th>
+              <th class="text-right">Daily Rate</th>
+              <th class="text-right">Week Owed</th>
+              <th class="text-right">Allocated</th>
+              <th class="text-right" *ngIf="weeklyBreakdownMode === 'owing'">Shortfall</th>
+              <th class="text-right" *ngIf="weeklyBreakdownMode === 'covered'">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of breakdownRows">
+              <td>
+                <p class="wbd-name">{{ row.name }}</p>
+                <p class="wbd-meta">{{ row.studentNumber }} · {{ row.className }}</p>
+              </td>
+              <td class="text-center">
+                <span class="wbd-days-badge">{{ row.presentDays }}</span>
+              </td>
+              <td class="text-right">
+                <span class="mini-rate-chip">{{ formatCurrency(row.dailyRate) }}</span>
+              </td>
+              <td class="text-right wbd-owed">{{ formatCurrency(row.owedThisWeek) }}</td>
+              <td class="text-right wbd-allocated">{{ formatCurrency(row.allocatedAmount) }}</td>
+              <td class="text-right" *ngIf="weeklyBreakdownMode === 'owing'">
+                <span class="wbd-shortfall-chip">{{ formatCurrency(row.shortfall) }}</span>
+              </td>
+              <td class="text-right" *ngIf="weeklyBreakdownMode === 'covered'">
+                <span class="wbd-covered-chip"><i class="ri-check-line"></i> Covered</span>
+              </td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr class="wbd-total-row">
+              <td><strong>Total</strong></td>
+              <td class="text-center">
+                <strong>{{ breakdownRows | totalPresentDays }}</strong>
+              </td>
+              <td></td>
+              <td class="text-right">
+                <strong>{{ formatCurrency(breakdownRows | totalField:'owedThisWeek') }}</strong>
+              </td>
+              <td class="text-right">
+                <strong>{{ formatCurrency(breakdownRows | totalField:'allocatedAmount') }}</strong>
+              </td>
+              <td class="text-right" *ngIf="weeklyBreakdownMode === 'owing'">
+                <strong style="color:#dc2626">
+                  {{ formatCurrency(breakdownRows | totalField:'shortfall') }}
+                </strong>
+              </td>
+              <td *ngIf="weeklyBreakdownMode === 'covered'"></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </ng-container>
+
   </div>
 </div>

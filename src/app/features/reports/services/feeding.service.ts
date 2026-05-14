@@ -727,11 +727,13 @@ export class FeedingService {
     weekEnd: string;
     enrollmentExpected: number;
     attendanceOwed: number;
-    collected: number; // cash physically received this week
-    allocatedToWeek: number; // portion of ALL payments that covers this week's days
-    carryForward: number; // days paid this week that spill into future weeks
+    collected: number;
+    allocatedToWeek: number;
+    carryForward: number;
     carryForwardAmount: number;
-    shortfall: number; // attendanceOwed - allocatedToWeek
+    shortfall: number;
+    coveredCount: number; // ← add this
+    owingCount: number; // ← add this
   }> {
     const d = new Date(weekDate + 'T00:00:00');
     const day = d.getDay();
@@ -861,6 +863,36 @@ export class FeedingService {
       }
     }
 
+    // Quick per-student covered/owing counts (same logic, lightweight)
+    const studentPresentDays: Record<string, number> = {};
+    attendance
+      .filter((a) => a.is_present)
+      .forEach((a) => {
+        studentPresentDays[a.student_id] =
+          (studentPresentDays[a.student_id] || 0) + 1;
+      });
+
+    const studentAllocatedDays: Record<string, number> = {};
+    for (const p of allPayments) {
+      const rate = studentRateMap[p.student_id] ?? 0;
+      const daysCovered = Number(p.days_covered) || 0;
+      if (daysCovered === 0 || rate === 0) continue;
+      const coveredDays = addSchoolDays(p.payment_date, daysCovered);
+      const inWeek = coveredDays.filter((d) => weekDaySet.has(d)).length;
+      studentAllocatedDays[p.student_id] =
+        (studentAllocatedDays[p.student_id] || 0) + inWeek;
+    }
+
+    let coveredCount = 0;
+    let owingCount = 0;
+    for (const sid of Object.keys(studentPresentDays)) {
+      const present = studentPresentDays[sid] ?? 0;
+      const allocated = studentAllocatedDays[sid] ?? 0;
+      if (present === 0) continue;
+      if (allocated >= present) coveredCount++;
+      else owingCount++;
+    }
+
     return {
       weekStart,
       weekEnd,
@@ -871,7 +903,168 @@ export class FeedingService {
       carryForward: carryForwardDays,
       carryForwardAmount,
       shortfall: Math.max(0, attendanceOwed - allocatedToWeek),
+      coveredCount,
+      owingCount,
     };
+  }
+
+  // ── Per-student weekly status ─────────────────────────────
+  // Returns two lists: students fully covered this week, and students with a shortfall.
+  // Only includes students who attended at least one day this week.
+
+  async getWeeklyStudentBreakdown(
+    churchId: string,
+    academicYear: string,
+    term: string,
+    weekDate: string,
+    rateResolver: (classId?: string, classTier?: string) => number,
+  ): Promise<{
+    weekStart: string;
+    weekEnd: string;
+    covered: WeeklyStudentRow[];
+    owing: WeeklyStudentRow[];
+  }> {
+    const d = new Date(weekDate + 'T00:00:00');
+    const day = d.getDay();
+    const diffToMon = day === 0 ? -6 : 1 - day;
+    const mon = new Date(d);
+    mon.setDate(d.getDate() + diffToMon);
+    const fri = new Date(mon);
+    fri.setDate(mon.getDate() + 4);
+    const fmt = (dt: Date) => dt.toISOString().split('T')[0];
+    const weekStart = fmt(mon);
+    const weekEnd = fmt(fri);
+
+    const weekDays: string[] = [];
+    for (let i = 0; i < 5; i++) {
+      const dd = new Date(mon);
+      dd.setDate(mon.getDate() + i);
+      weekDays.push(fmt(dd));
+    }
+    const weekDaySet = new Set(weekDays);
+
+    const [studentsRes, attendanceRes, allPaymentsRes] = await Promise.all([
+      this.supabase.client
+        .from('students')
+        .select(
+          'id, first_name, last_name, student_number, class:school_classes(id, name, tier)',
+        )
+        .eq('church_id', churchId)
+        .eq('is_active', true),
+
+      this.supabase.client
+        .from('feeding_attendance')
+        .select('student_id, attendance_date, is_present')
+        .eq('church_id', churchId)
+        .eq('academic_year', academicYear)
+        .eq('term', term)
+        .gte('attendance_date', weekStart)
+        .lte('attendance_date', weekEnd),
+
+      this.supabase.client
+        .from('feeding_payments')
+        .select('student_id, payment_date, amount_paid, days_covered')
+        .eq('church_id', churchId)
+        .eq('academic_year', academicYear)
+        .eq('term', term),
+    ]);
+
+    const students: any[] = studentsRes.data || [];
+    const attendance: any[] = attendanceRes.data || [];
+    const allPayments: any[] = allPaymentsRes.data || [];
+
+    // Build student map
+    const studentMap: Record<string, any> = {};
+    students.forEach((s) => (studentMap[s.id] = s));
+
+    // Rate map
+    const rateMap: Record<string, number> = {};
+    students.forEach((s) => {
+      rateMap[s.id] = rateResolver(s.class?.id, s.class?.tier);
+    });
+
+    // Days present this week per student
+    const presentDaysMap: Record<string, number> = {};
+    attendance.forEach((a) => {
+      if (a.is_present) {
+        presentDaysMap[a.student_id] = (presentDaysMap[a.student_id] || 0) + 1;
+      }
+    });
+
+    // Helper: school days covered by a payment sequentially from payment_date
+    const addSchoolDays = (from: string, count: number): string[] => {
+      const days: string[] = [];
+      const cur = new Date(from + 'T00:00:00');
+      while (days.length < count) {
+        const dow = cur.getDay();
+        if (dow !== 0 && dow !== 6) days.push(fmt(cur));
+        cur.setDate(cur.getDate() + 1);
+      }
+      return days;
+    };
+
+    // Days allocated to THIS week per student
+    const allocatedDaysMap: Record<string, number> = {};
+    allPayments.forEach((p) => {
+      const daysCovered = Number(p.days_covered) || 0;
+      const rate = rateMap[p.student_id] ?? 0;
+      if (daysCovered === 0 || rate === 0) return;
+      const coveredDays = addSchoolDays(p.payment_date, daysCovered);
+      const inWeek = coveredDays.filter((d) => weekDaySet.has(d)).length;
+      allocatedDaysMap[p.student_id] =
+        (allocatedDaysMap[p.student_id] || 0) + inWeek;
+    });
+
+    // Amount paid this week per student (cash received)
+    const paidThisWeekMap: Record<string, number> = {};
+    allPayments
+      .filter((p) => p.payment_date >= weekStart && p.payment_date <= weekEnd)
+      .forEach((p) => {
+        paidThisWeekMap[p.student_id] =
+          (paidThisWeekMap[p.student_id] || 0) + Number(p.amount_paid);
+      });
+
+    const covered: WeeklyStudentRow[] = [];
+    const owing: WeeklyStudentRow[] = [];
+
+    // Only process students who attended this week
+    const attendingStudentIds = Object.keys(presentDaysMap);
+
+    for (const sid of attendingStudentIds) {
+      const student = studentMap[sid];
+      if (!student) continue;
+      const rate = rateMap[sid] ?? 0;
+      const presentDays = presentDaysMap[sid] ?? 0;
+      const allocatedDays = allocatedDaysMap[sid] ?? 0;
+      const owedThisWeek = presentDays * rate;
+      const allocatedAmount = allocatedDays * rate;
+      const shortfall = Math.max(0, owedThisWeek - allocatedAmount);
+
+      const row: WeeklyStudentRow = {
+        id: sid,
+        name: `${student.first_name} ${student.last_name}`.trim(),
+        studentNumber: student.student_number || '',
+        className: student.class?.name || '—',
+        presentDays,
+        owedThisWeek,
+        allocatedAmount,
+        shortfall,
+        paidThisWeek: paidThisWeekMap[sid] ?? 0,
+        dailyRate: rate,
+      };
+
+      if (shortfall === 0) {
+        covered.push(row);
+      } else {
+        owing.push(row);
+      }
+    }
+
+    // Sort owing by shortfall descending, covered by name
+    owing.sort((a, b) => b.shortfall - a.shortfall);
+    covered.sort((a, b) => a.name.localeCompare(b.name));
+
+    return { weekStart, weekEnd, covered, owing };
   }
 
   getWeeklySummary(
@@ -887,6 +1080,8 @@ export class FeedingService {
     attendanceOwed: number;
     collected: number;
     shortfall: number;
+    coveredCount: number; // ← add
+    owingCount: number; // ← add
   }> {
     return from(
       this.getWeeklySummaryPromise(
@@ -909,4 +1104,17 @@ export interface DayEntry {
   paymentId: string | null;
   runningBalance: number;
   coveredByAdvance: boolean;
+}
+
+export interface WeeklyStudentRow {
+  id: string;
+  name: string;
+  studentNumber: string;
+  className: string;
+  presentDays: number;
+  owedThisWeek: number;
+  allocatedAmount: number;
+  shortfall: number;
+  paidThisWeek: number;
+  dailyRate: number;
 }

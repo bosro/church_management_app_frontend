@@ -1641,3 +1641,250 @@
 .wbs-item.allocated .wbs-value {
   color: #4f46e5;
 }
+
+
+
+// ─── Weekly clickable stat tiles ──────────────────────────
+.wbs-clickable {
+  cursor: pointer;
+  transition: background 0.18s, transform 0.12s;
+  user-select: none;
+
+  &:hover {
+    transform: translateY(-1px);
+  }
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+.wbs-covered {
+  &:hover { background: #f0fdf4; }
+  .wbs-label i { color: #059669; }
+}
+
+.wbs-owing {
+  &:hover { background: #fef2f2; }
+  .wbs-label i { color: #dc2626; }
+}
+
+.wbs-covered-val { color: #059669 !important; }
+.wbs-owing-val   { color: #dc2626 !important; }
+
+// ─── Weekly breakdown modal ───────────────────────────────
+.weekly-breakdown-modal {
+  background: white;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 700px;
+  max-height: 88vh;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  animation: slideUp 0.25s ease;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
+  @media (max-width: 600px) {
+    border-radius: 16px 16px 0 0;
+    max-height: 92vh;
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 18px 20px;
+    border-bottom: 1px solid #e5e7eb;
+    flex-shrink: 0;
+
+    h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #111827;
+      margin: 0 0 4px;
+      display: flex;
+      align-items: center;
+    }
+    p {
+      font-size: 13px;
+      color: #6b7280;
+      margin: 0;
+    }
+
+    .close-btn {
+      width: 32px; height: 32px;
+      background: #f3f4f6;
+      border: none; border-radius: 6px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      i { font-size: 18px; color: #6b7280; }
+      &:hover { background: #e5e7eb; }
+    }
+  }
+}
+
+// ─── Tabs ─────────────────────────────────────────────────
+.wbd-tabs {
+  display: flex;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f9fafb;
+  flex-shrink: 0;
+}
+
+.wbd-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: "Nunito Sans", sans-serif;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  color: #6b7280;
+  transition: all 0.15s;
+
+  i { font-size: 15px; }
+
+  &.active {
+    color: #111827;
+    border-bottom-color: #4f46e5;
+    background: white;
+  }
+  &:hover:not(.active) {
+    background: #f3f4f6;
+  }
+}
+
+.wbd-tab-count {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  border-radius: 100px;
+  font-size: 11px;
+  font-weight: 800;
+
+  &.covered { background: #d1fae5; color: #065f46; }
+  &.owing   { background: #fee2e2; color: #991b1b; }
+}
+
+// ─── Breakdown table ──────────────────────────────────────
+.wbd-table-wrap {
+  overflow-y: auto;
+  flex: 1;
+}
+
+.wbd-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 520px;
+
+  thead {
+    background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+
+    th {
+      padding: 10px 14px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #374151;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      text-align: left;
+      white-space: nowrap;
+    }
+  }
+
+  tbody tr {
+    border-bottom: 1px solid #f3f4f6;
+    transition: background 0.12s;
+    &:last-child { border-bottom: none; }
+    &:hover { background: #fafafa; }
+
+    td {
+      padding: 11px 14px;
+      font-size: 13px;
+      color: #374151;
+      vertical-align: middle;
+    }
+  }
+
+  tfoot .wbd-total-row {
+    background: #f9fafb;
+    border-top: 2px solid #e5e7eb;
+    td {
+      padding: 11px 14px;
+      font-size: 13px;
+    }
+  }
+
+  .text-center { text-align: center; }
+  .text-right  { text-align: right; }
+}
+
+.wbd-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 2px;
+}
+.wbd-meta {
+  font-size: 11px;
+  color: #9ca3af;
+  margin: 0;
+}
+.wbd-owed      { color: #374151; font-weight: 600; }
+.wbd-allocated { color: #059669; font-weight: 600; }
+
+.wbd-days-badge {
+  display: inline-flex;
+  padding: 2px 9px;
+  background: #e0e7ff;
+  color: #3730a3;
+  border-radius: 100px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.wbd-shortfall-chip {
+  display: inline-flex;
+  padding: 3px 9px;
+  background: #fee2e2;
+  color: #991b1b;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.wbd-covered-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  background: #d1fae5;
+  color: #065f46;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  i { font-size: 13px; }
+}
+
+.wbd-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 48px 24px;
+  color: #9ca3af;
+  text-align: center;
+  i { font-size: 40px; margin-bottom: 10px; }
+  p { font-size: 14px; margin: 0; }
+}

@@ -27,8 +27,10 @@ import { ReceiptsList } from './components/fees/receipts-list/receipts-list';
 import { StudentRegistrationLinks } from './components/students/student-registration-links/student-registration-links';
 import { QrCodeComponent } from 'ng-qrcode';
 import { SettingScopePipe } from '../../core/pipes/settings.pipe';
-
-
+import {
+  TotalFieldPipe,
+  TotalPresentDaysPipe,
+} from '../../core/pipes/feeding-summary.pipe';
 
 @NgModule({
   declarations: [
@@ -54,14 +56,10 @@ import { SettingScopePipe } from '../../core/pipes/settings.pipe';
     FeedingAdmin,
     ReceiptsList,
     StudentRegistrationLinks,
-    SettingScopePipe
-
+    SettingScopePipe,
+    TotalFieldPipe,
+    TotalPresentDaysPipe,
   ],
-  imports: [
-    CommonModule,
-    ReportsRoutingModule,
-    QrCodeComponent,
-
-  ]
+  imports: [CommonModule, ReportsRoutingModule, QrCodeComponent],
 })
-export class ReportsModule { }
+export class ReportsModule {}

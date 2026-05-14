@@ -8,6 +8,7 @@ import {
   TIER_LABELS,
   FeedingTier,
   DayEntry,
+  WeeklyStudentRow,
 } from '../../../services/feeding.service';
 import { AuthService } from '../../../../../core/services/auth';
 import {
@@ -94,6 +95,17 @@ export class FeedingAdmin implements OnInit, OnDestroy {
   weeklySummary: any = null;
   loadingWeekly = false;
   weekAnchorDate = new Date().toISOString().split('T')[0]; // drives which week
+
+  // Weekly student breakdown modal
+  showWeeklyBreakdownModal = false;
+  weeklyBreakdownMode: 'covered' | 'owing' = 'covered';
+  weeklyBreakdownLoading = false;
+  weeklyBreakdownData: {
+    weekStart: string; // ← add
+    weekEnd: string; // ← add
+    covered: WeeklyStudentRow[];
+    owing: WeeklyStudentRow[];
+  } | null = null;
 
   constructor(
     private feedingService: FeedingService,
@@ -620,6 +632,42 @@ export class FeedingAdmin implements OnInit, OnDestroy {
       today >= this.weeklySummary.weekStart &&
       today <= this.weeklySummary.weekEnd
     );
+  }
+
+  async openWeeklyBreakdown(mode: 'covered' | 'owing'): Promise<void> {
+    this.weeklyBreakdownMode = mode;
+    this.showWeeklyBreakdownModal = true;
+    this.weeklyBreakdownLoading = true;
+    this.weeklyBreakdownData = null;
+    this.cdr.markForCheck();
+
+    try {
+      const result = await this.feedingService.getWeeklyStudentBreakdown(
+        this.churchId,
+        this.selectedYear,
+        this.selectedTerm,
+        this.weekAnchorDate,
+        (classId, classTier) => this.resolveRateForDisplay(classId, classTier),
+      );
+      this.weeklyBreakdownData = result;
+    } catch (err: any) {
+      this.errorMessage = err.message || 'Failed to load student breakdown';
+    } finally {
+      this.weeklyBreakdownLoading = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  closeWeeklyBreakdown(): void {
+    this.showWeeklyBreakdownModal = false;
+    this.weeklyBreakdownData = null;
+  }
+
+  get breakdownRows(): WeeklyStudentRow[] {
+    if (!this.weeklyBreakdownData) return [];
+    return this.weeklyBreakdownMode === 'covered'
+      ? this.weeklyBreakdownData.covered
+      : this.weeklyBreakdownData.owing;
   }
 
   formatWeekRange(start: string, end: string): string {
