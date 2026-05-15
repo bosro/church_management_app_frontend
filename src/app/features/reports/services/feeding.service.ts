@@ -24,6 +24,20 @@ export const ALL_TIERS: FeedingTier[] = [
   'jhs_shs',
 ];
 
+export interface UnrecordedStudentRow {
+  id: string;
+  name: string;
+  studentNumber: string;
+  className: string;
+  classTier: string | null;
+  classId: string | null;
+  dailyRate: number;
+  totalPaid: number;
+  presentDaysThisTerm: number;
+  totalOwed: number;
+  creditBalance: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class FeedingService {
   constructor(
@@ -53,7 +67,8 @@ export class FeedingService {
       .eq('church_id', churchId)
       .eq('academic_year', academicYear)
       .eq('term', term)
-      .or(filters.join(','));
+      .or(filters.join(','))
+      .order('created_at', { ascending: false }); // ← ADD THIS LINE
 
     if (!data || data.length === 0) return 0;
 
@@ -116,6 +131,147 @@ export class FeedingService {
     );
   }
 
+  async getUnrecordedStudentsForWeek(
+    churchId: string,
+    academicYear: string,
+    term: string,
+    weekDate: string,
+    rateResolver: (classId?: string, classTier?: string) => number,
+  ): Promise<{
+    weekStart: string;
+    weekEnd: string;
+    students: UnrecordedStudentRow[];
+  }> {
+    const d = new Date(weekDate + 'T00:00:00');
+    const day = d.getDay();
+    const diffToMon = day === 0 ? -6 : 1 - day;
+    const mon = new Date(d);
+    mon.setDate(d.getDate() + diffToMon);
+    const fri = new Date(mon);
+    fri.setDate(mon.getDate() + 4);
+    const fmt = (dt: Date) => dt.toISOString().split('T')[0];
+    const weekStart = fmt(mon);
+    const weekEnd = fmt(fri);
+
+    const [studentsRes, attendanceRes, paymentsRes, termAttRes] =
+      await Promise.all([
+        // All active students
+        this.supabase.client
+          .from('students')
+          .select(
+            'id, first_name, last_name, student_number, class:school_classes(id, name, tier)',
+          )
+          .eq('church_id', churchId)
+          .eq('is_active', true),
+
+        // Students WITH any attendance record this week
+        this.supabase.client
+          .from('feeding_attendance')
+          .select('student_id')
+          .eq('church_id', churchId)
+          .eq('academic_year', academicYear)
+          .eq('term', term)
+          .gte('attendance_date', weekStart)
+          .lte('attendance_date', weekEnd),
+
+        // All payments this term (for credit balance)
+        this.supabase.client
+          .from('feeding_payments')
+          .select('student_id, amount_paid')
+          .eq('church_id', churchId)
+          .eq('academic_year', academicYear)
+          .eq('term', term),
+
+        // All present days this term (for total owed)
+        this.supabase.client
+          .from('feeding_attendance')
+          .select('student_id')
+          .eq('church_id', churchId)
+          .eq('academic_year', academicYear)
+          .eq('term', term)
+          .eq('is_present', true),
+      ]);
+
+    const students: any[] = studentsRes.data || [];
+    const recordedIds = new Set(
+      (attendanceRes.data || []).map((a: any) => a.student_id),
+    );
+
+    // Build payment totals per student
+    const paidMap: Record<string, number> = {};
+    (paymentsRes.data || []).forEach((p: any) => {
+      paidMap[p.student_id] =
+        (paidMap[p.student_id] || 0) + Number(p.amount_paid);
+    });
+
+    // Build present days per student this term
+    const presentMap: Record<string, number> = {};
+    (termAttRes.data || []).forEach((a: any) => {
+      presentMap[a.student_id] = (presentMap[a.student_id] || 0) + 1;
+    });
+
+    // Filter to students NOT recorded this week
+    const unrecorded: UnrecordedStudentRow[] = [];
+    for (const s of students) {
+      if (recordedIds.has(s.id)) continue;
+
+      const rate = rateResolver(s.class?.id, s.class?.tier);
+      const totalPaid = paidMap[s.id] || 0;
+      const presentDays = presentMap[s.id] || 0;
+      const totalOwed = presentDays * rate;
+      const creditBalance = Math.max(0, totalPaid - totalOwed);
+
+      unrecorded.push({
+        id: s.id,
+        name: `${s.first_name} ${s.last_name}`.trim(),
+        studentNumber: s.student_number || '',
+        className: s.class?.name || '—',
+        classTier: s.class?.tier || null,
+        classId: s.class?.id || null,
+        dailyRate: rate,
+        totalPaid,
+        presentDaysThisTerm: presentDays,
+        totalOwed,
+        creditBalance,
+      });
+    }
+
+    // Sort: students with credit first (they matter most), then by name
+    unrecorded.sort((a, b) => {
+      if (b.creditBalance !== a.creditBalance)
+        return b.creditBalance - a.creditBalance;
+      return a.name.localeCompare(b.name);
+    });
+
+    return { weekStart, weekEnd, students: unrecorded };
+  }
+
+  // Mark multiple days absent for a student (admin override)
+  async markDaysAbsent(
+    churchId: string,
+    studentId: string,
+    dates: string[],
+    academicYear: string,
+    term: string,
+  ): Promise<void> {
+    const records = dates.map((date) => ({
+      church_id: churchId,
+      student_id: studentId,
+      attendance_date: date,
+      academic_year: academicYear,
+      term,
+      is_present: false,
+    }));
+
+    const { error } = await this.supabase.client
+      .from('feeding_attendance')
+      .upsert(records, {
+        onConflict: 'church_id,student_id,attendance_date',
+      });
+
+    if (error) throw new Error(error.message);
+  }
+
   private async upsertSettingManually(
     churchId: string,
     academicYear: string,
@@ -125,7 +281,6 @@ export class FeedingService {
     tier?: FeedingTier,
     classId?: string,
   ): Promise<any> {
-    // Find existing row for this exact scope
     let existingQuery = this.supabase.client
       .from('feeding_fee_settings')
       .select('id')
@@ -141,10 +296,15 @@ export class FeedingService {
       existingQuery = existingQuery.is('tier', null).is('class_id', null);
     }
 
-    const { data: existing } = await existingQuery.maybeSingle();
+    // Use limit(1) + array instead of maybeSingle() to safely handle any duplicates
+    const { data: existingRows } = await existingQuery
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    const existing =
+      existingRows && existingRows.length > 0 ? existingRows[0] : null;
 
     if (existing?.id) {
-      // UPDATE existing row
       const { data, error } = await this.supabase.client
         .from('feeding_fee_settings')
         .update({
@@ -157,7 +317,6 @@ export class FeedingService {
       if (error) throw new Error(error.message);
       return data;
     } else {
-      // INSERT new row
       const { data, error } = await this.supabase.client
         .from('feeding_fee_settings')
         .insert({
@@ -174,7 +333,6 @@ export class FeedingService {
       return data;
     }
   }
-
   deleteSetting(settingId: string): Observable<void> {
     return from(
       this.supabase.client
@@ -560,7 +718,8 @@ export class FeedingService {
       .select('daily_amount, tier, class_id')
       .eq('church_id', churchId)
       .eq('academic_year', academicYear)
-      .eq('term', term);
+      .eq('term', term)
+      .order('created_at', { ascending: false }); // ← ADD THIS LINE
 
     const rows = settings || [];
 

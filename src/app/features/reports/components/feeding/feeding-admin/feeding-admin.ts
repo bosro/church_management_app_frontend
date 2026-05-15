@@ -107,6 +107,18 @@ export class FeedingAdmin implements OnInit, OnDestroy {
     owing: WeeklyStudentRow[];
   } | null = null;
 
+  showUnrecordedModal = false;
+  unrecordedLoading = false;
+  unrecordedData: {
+    weekStart: string;
+    weekEnd: string;
+    students: any[];
+  } | null = null;
+
+  // Per-student selected absent days in the modal
+  unrecordedSelections: Record<string, Set<string>> = {};
+  processingAbsent: Record<string, boolean> = {};
+
   constructor(
     private feedingService: FeedingService,
     private authService: AuthService,
@@ -351,6 +363,112 @@ export class FeedingAdmin implements OnInit, OnDestroy {
           this.cdr.markForCheck();
         },
       });
+  }
+
+  async openUnrecordedModal(): Promise<void> {
+    this.showUnrecordedModal = true;
+    this.unrecordedLoading = true;
+    this.unrecordedData = null;
+    this.unrecordedSelections = {};
+    this.cdr.markForCheck();
+
+    try {
+      this.unrecordedData =
+        await this.feedingService.getUnrecordedStudentsForWeek(
+          this.churchId,
+          this.selectedYear,
+          this.selectedTerm,
+          this.weekAnchorDate,
+          (classId, classTier) =>
+            this.resolveRateForDisplay(classId, classTier),
+        );
+
+      // Init selections for each student
+      if (this.unrecordedData) {
+        for (const s of this.unrecordedData.students) {
+          this.unrecordedSelections[s.id] = new Set();
+        }
+      }
+    } catch (err: any) {
+      this.errorMessage = err.message || 'Failed to load unrecorded students';
+    } finally {
+      this.unrecordedLoading = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  closeUnrecordedModal(): void {
+    this.showUnrecordedModal = false;
+    this.unrecordedData = null;
+    this.unrecordedSelections = {};
+  }
+
+  getWeekDays(weekStart: string): string[] {
+    const days: string[] = [];
+    const d = new Date(weekStart + 'T00:00:00');
+    for (let i = 0; i < 5; i++) {
+      const dd = new Date(d);
+      dd.setDate(d.getDate() + i);
+      days.push(dd.toISOString().split('T')[0]);
+    }
+    return days;
+  }
+
+  toggleAbsentDay(studentId: string, date: string): void {
+    const sel = this.unrecordedSelections[studentId];
+    if (!sel) return;
+    if (sel.has(date)) sel.delete(date);
+    else sel.add(date);
+    this.cdr.markForCheck();
+  }
+
+  isDaySelected(studentId: string, date: string): boolean {
+    return this.unrecordedSelections[studentId]?.has(date) ?? false;
+  }
+
+  async confirmAbsentDays(student: any): Promise<void> {
+    const dates = Array.from(this.unrecordedSelections[student.id] || []);
+    if (!dates.length) return;
+
+    this.processingAbsent[student.id] = true;
+    this.cdr.markForCheck();
+
+    try {
+      await this.feedingService.markDaysAbsent(
+        this.churchId,
+        student.id,
+        dates,
+        this.selectedYear,
+        this.selectedTerm,
+      );
+
+      // Remove from list after marking
+      if (this.unrecordedData) {
+        this.unrecordedData.students = this.unrecordedData.students.filter(
+          (s) => s.id !== student.id,
+        );
+      }
+      this.showSuccess(
+        `Marked ${dates.length} absent day(s) for ${student.name}`,
+      );
+
+      // Refresh weekly summary
+      this.loadWeeklySummary();
+    } catch (err: any) {
+      this.errorMessage = err.message || 'Failed to mark absent days';
+    } finally {
+      this.processingAbsent[student.id] = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  formatDayLabel(dateStr: string): string {
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('en-GH', { weekday: 'short', day: 'numeric' });
+  }
+
+  get unrecordedCount(): number {
+    return this.unrecordedData?.students.length ?? 0;
   }
 
   // ── Records ───────────────────────────────────────────────

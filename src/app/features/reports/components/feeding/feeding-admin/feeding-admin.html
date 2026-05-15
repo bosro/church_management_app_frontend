@@ -118,6 +118,17 @@
                 </span>
                 <span class="wbs-sub">students · click to view</span>
               </div>
+
+              <!-- Unrecorded students tile -->
+              <div class="wbs-item wbs-clickable wbs-unrecorded" (click)="openUnrecordedModal()">
+                <div class="wbs-label">
+                  <i class="ri-question-mark"></i> Not Recorded
+                </div>
+                <span class="wbs-value wbs-unrecorded-val">
+                  {{ (54 - (weeklySummary?.coveredCount ?? 0) - (weeklySummary?.owingCount ?? 0)) }}
+                </span>
+                <span class="wbs-sub">this week · click to review</span>
+              </div>
             </div>
 
             <!-- Carry-forward notice -->
@@ -656,8 +667,7 @@
           {{ weeklyBreakdownData.covered.length }}
         </span>
       </button>
-      <button class="wbd-tab" [class.active]="weeklyBreakdownMode === 'owing'"
-        (click)="weeklyBreakdownMode = 'owing'">
+      <button class="wbd-tab" [class.active]="weeklyBreakdownMode === 'owing'" (click)="weeklyBreakdownMode = 'owing'">
         <i class="ri-error-warning-line"></i> Owing
         <span class="wbd-tab-count owing" *ngIf="weeklyBreakdownData">
           {{ weeklyBreakdownData.owing.length }}
@@ -738,6 +748,121 @@
         </table>
       </div>
     </ng-container>
+
+  </div>
+</div>
+
+<!-- ── Unrecorded Students Modal ──────────────────────── -->
+<div class="modal-overlay" *ngIf="showUnrecordedModal"
+     (click)="closeUnrecordedModal()">
+  <div class="weekly-breakdown-modal" (click)="$event.stopPropagation()">
+
+    <div class="modal-header">
+      <div>
+        <h3>
+          <i class="ri-question-mark" style="color:#d97706;margin-right:6px;"></i>
+          Not Recorded This Week
+        </h3>
+        <p *ngIf="unrecordedData">
+          {{ formatWeekRange(unrecordedData.weekStart, unrecordedData.weekEnd) }}
+          · {{ unrecordedData.students.length }} student{{ unrecordedData.students.length !== 1 ? 's' : '' }}
+        </p>
+      </div>
+      <button class="close-btn" (click)="closeUnrecordedModal()">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+
+    <!-- Info banner -->
+    <div style="padding:12px 20px;background:#fffbeb;border-bottom:1px solid #fde68a;
+                font-size:13px;color:#92400e;display:flex;gap:8px;align-items:flex-start;">
+      <i class="ri-information-line" style="font-size:16px;color:#d97706;flex-shrink:0;margin-top:1px;"></i>
+      <span>
+        These students have <strong>no attendance record</strong> for any day this week.
+        If they were absent, select which days and click <strong>Mark Absent</strong>
+        — this will deduct from their accumulated credit. If no action is taken, their
+        balance is unaffected.
+      </span>
+    </div>
+
+    <!-- Loading -->
+    <div *ngIf="unrecordedLoading" class="loading-state" style="padding:40px;">
+      <div class="spinner"></div>
+      <p>Loading unrecorded students...</p>
+    </div>
+
+    <!-- Empty state -->
+    <div *ngIf="!unrecordedLoading && unrecordedData?.students?.length === 0"
+         class="wbd-empty">
+      <i class="ri-checkbox-circle-line" style="color:#059669;"></i>
+      <p>All students have been recorded this week</p>
+    </div>
+
+    <!-- Student list -->
+    <div class="wbd-table-wrap"
+         *ngIf="!unrecordedLoading && unrecordedData && unrecordedData.students.length > 0">
+      <table class="wbd-table">
+        <thead>
+          <tr>
+            <th>Student</th>
+            <th class="text-right">Rate</th>
+            <th class="text-right">Credit Balance</th>
+            <th>Mark Absent Days</th>
+            <th class="text-center">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let student of unrecordedData.students">
+            <td>
+              <p class="wbd-name">{{ student.name }}</p>
+              <p class="wbd-meta">{{ student.studentNumber }} · {{ student.className }}</p>
+            </td>
+            <td class="text-right">
+              <span class="mini-rate-chip">{{ formatCurrency(student.dailyRate) }}</span>
+            </td>
+            <td class="text-right">
+              <span *ngIf="student.creditBalance > 0"
+                    style="color:#7c3aed;font-weight:700;">
+                {{ formatCurrency(student.creditBalance) }}
+              </span>
+              <span *ngIf="student.creditBalance === 0"
+                    style="color:#9ca3af;">—</span>
+            </td>
+            <td>
+              <!-- Day checkboxes Mon-Fri -->
+              <div style="display:flex;gap:6px;flex-wrap:wrap;"
+                   *ngIf="unrecordedData">
+                <button *ngFor="let day of getWeekDays(unrecordedData.weekStart)"
+                        (click)="toggleAbsentDay(student.id, day)"
+                        [style.background]="isDaySelected(student.id, day) ? '#fee2e2' : '#f9fafb'"
+                        [style.border]="isDaySelected(student.id, day) ? '1.5px solid #fca5a5' : '1px solid #e5e7eb'"
+                        [style.color]="isDaySelected(student.id, day) ? '#dc2626' : '#6b7280'"
+                        style="padding:4px 8px;border-radius:6px;font-size:11px;
+                               font-weight:700;cursor:pointer;font-family:'Nunito Sans',sans-serif;
+                               transition:all 0.15s;">
+                  {{ formatDayLabel(day) }}
+                </button>
+              </div>
+            </td>
+            <td class="text-center">
+              <button
+                [disabled]="!unrecordedSelections[student.id]?.size || processingAbsent[student.id]"
+                (click)="confirmAbsentDays(student)"
+                style="display:inline-flex;align-items:center;gap:5px;
+                       padding:7px 14px;background:#dc2626;color:white;
+                       border:none;border-radius:8px;font-size:12px;font-weight:700;
+                       cursor:pointer;font-family:'Nunito Sans',sans-serif;
+                       transition:background 0.2s;white-space:nowrap;"
+                [style.opacity]="(!unrecordedSelections[student.id]?.size || processingAbsent[student.id]) ? '0.4' : '1'">
+                <i class="ri-loader-4-line spin" *ngIf="processingAbsent[student.id]"></i>
+                <i class="ri-user-unfollow-line" *ngIf="!processingAbsent[student.id]"></i>
+                Mark Absent
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
 
   </div>
 </div>

@@ -58,6 +58,10 @@ export class Users implements OnInit {
   };
   provisioning = false;
 
+  showDeleteModal = false;
+  userToDelete: UserWithChurch | null = null;
+  deleting = false;
+
   constructor(
     private adminService: AdminService,
     private authService: AuthService,
@@ -289,6 +293,44 @@ export class Users implements OnInit {
       'elder',
       'finance_officer',
     ].includes(role);
+  }
+
+  openDeleteModal(user: UserWithChurch): void {
+    // Prevent deleting super_admin accounts
+    if (user.role === 'super_admin') {
+      this.errorMessage = 'Super admin accounts cannot be deleted.';
+      setTimeout(() => (this.errorMessage = ''), 3000);
+      return;
+    }
+    this.userToDelete = user;
+    this.showDeleteModal = true;
+    this.errorMessage = '';
+  }
+
+  closeDeleteModal(): void {
+    this.showDeleteModal = false;
+    this.userToDelete = null;
+  }
+
+  confirmDeleteUser(): void {
+    if (!this.userToDelete) return;
+
+    this.deleting = true;
+    this.errorMessage = '';
+
+    this.adminService.deleteUserCompletely(this.userToDelete.id).subscribe({
+      next: () => {
+        this.successMessage = `User deleted successfully.`;
+        this.deleting = false;
+        this.closeDeleteModal();
+        this.loadUsers();
+        setTimeout(() => (this.successMessage = ''), 3000);
+      },
+      error: (error) => {
+        this.errorMessage = error.message || 'Failed to delete user';
+        this.deleting = false;
+      },
+    });
   }
 
   formatDate(date: string): string {

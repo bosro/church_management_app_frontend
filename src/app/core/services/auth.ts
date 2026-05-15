@@ -262,29 +262,28 @@ export class AuthService {
     data: any,
     signUpData: SignUpData,
   ): Promise<any> {
-    const suggestedRole = this.mapPositionToRole(signUpData.position || '');
+    // Create church + signup_request + link profile in one atomic DB call
+    const { data: result, error } = await this.supabase.client.rpc(
+      'create_admin_signup',
+      {
+        p_user_id: data.user.id,
+        p_full_name: signUpData.full_name,
+        p_email: signUpData.email,
+        p_phone: signUpData.phone,
+        p_position: signUpData.position,
+        p_church_name: signUpData.church_name,
+        p_church_location: signUpData.church_location,
+        p_church_size: signUpData.church_size,
+        p_how_heard: signUpData.how_heard || null,
+      },
+    );
 
-    const { data: signupRequest, error: requestError } =
-      await this.supabase.insert<SignupRequest>('signup_requests', {
-        user_id: data.user.id,
-        full_name: signUpData.full_name,
-        email: signUpData.email,
-        phone: signUpData.phone,
-        position: signUpData.position,
-        church_name: signUpData.church_name,
-        church_location: signUpData.church_location,
-        church_size: signUpData.church_size,
-        how_heard: signUpData.how_heard,
-        status: 'pending',
-      });
-
-    if (requestError) {
-      console.error('Signup request creation error:', requestError);
-      throw requestError;
+    if (error) {
+      console.error('create_admin_signup error:', error);
     }
 
-    if (!signupRequest || signupRequest.length === 0) {
-      throw new Error('Failed to create signup request');
+    if (result?.success === false) {
+      console.warn('create_admin_signup warning:', result.message);
     }
 
     try {
@@ -297,8 +296,8 @@ export class AuthService {
         position: signUpData.position,
         church_size: signUpData.church_size,
         how_heard: signUpData.how_heard,
-        suggested_role: suggestedRole,
-        request_id: signupRequest[0].id,
+        suggested_role: result?.role || 'church_admin',
+        request_id: result?.church_id,
       });
     } catch (notifyError) {
       console.warn('Failed to send admin notification:', notifyError);
@@ -307,9 +306,9 @@ export class AuthService {
     return {
       ...data,
       needsEmailConfirmation: !data.user.email_confirmed_at,
-      pendingApproval: false, // ← change to false
+      pendingApproval: false,
       message:
-        'Please check your email to confirm your account. Once confirmed, you can sign in immediately!', // ← updated message
+        'Please check your email to confirm your account. Once confirmed, you can sign in immediately!',
     };
   }
 
@@ -658,6 +657,3 @@ export class AuthService {
     );
   }
 }
-
-
-

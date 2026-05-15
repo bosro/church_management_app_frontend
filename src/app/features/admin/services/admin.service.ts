@@ -387,4 +387,22 @@ export class AdminService {
       }),
     );
   }
+
+  deleteUserCompletely(userId: string): Observable<any> {
+    const adminId = this.supabase.currentUser?.id;
+
+    return from(
+      this.supabase.client.rpc('delete_user_completely', {
+        p_user_id: userId,
+        p_admin_id: adminId,
+      }),
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw error;
+        if (data?.success === false) throw new Error(data.message);
+        return data;
+      }),
+      catchError((err) => throwError(() => err)),
+    );
+  }
 }
