@@ -1252,6 +1252,93 @@ export class FeedingService {
       ),
     );
   }
+
+  // ── Recording windows ─────────────────────────────────────
+
+  getActiveRecordingWindow(churchId: string): Observable<{
+    id: string;
+    allow_from: string;
+    allow_to: string;
+    reason: string | null;
+  } | null> {
+    return from(
+      this.supabase.client
+        .from('feeding_recording_windows')
+        .select('id, allow_from, allow_to, reason')
+        .eq('church_id', churchId)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ).pipe(map(({ data }) => data || null));
+  }
+
+  async getActiveRecordingWindowPromise(churchId: string): Promise<{
+    id: string;
+    allow_from: string;
+    allow_to: string;
+    reason: string | null;
+  } | null> {
+    const { data } = await this.supabase.client
+      .from('feeding_recording_windows')
+      .select('id, allow_from, allow_to, reason')
+      .eq('church_id', churchId)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    return data || null;
+  }
+
+  createRecordingWindow(
+    churchId: string,
+    allowFrom: string,
+    allowTo: string,
+    reason?: string,
+  ): Observable<any> {
+    return from(
+      this.supabase.client
+        .from('feeding_recording_windows')
+        .insert({
+          church_id: churchId,
+          allow_from: allowFrom,
+          allow_to: allowTo,
+          reason: reason || null,
+          is_active: true,
+        })
+        .select()
+        .single(),
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw new Error(error.message);
+        return data;
+      }),
+    );
+  }
+
+  deactivateRecordingWindow(windowId: string): Observable<void> {
+    return from(
+      this.supabase.client
+        .from('feeding_recording_windows')
+        .update({ is_active: false })
+        .eq('id', windowId),
+    ).pipe(
+      map(({ error }) => {
+        if (error) throw new Error(error.message);
+      }),
+    );
+  }
+
+  getAllRecordingWindows(churchId: string): Observable<any[]> {
+    return from(
+      this.supabase.client
+        .from('feeding_recording_windows')
+        .select('*')
+        .eq('church_id', churchId)
+        .order('created_at', { ascending: false })
+        .limit(20),
+    ).pipe(map(({ data }) => data || []));
+  }
 }
 // ── Supporting types ──────────────────────────────────────
 export interface DayEntry {

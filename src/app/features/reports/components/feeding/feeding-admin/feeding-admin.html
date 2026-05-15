@@ -349,6 +349,65 @@
               </div>
             </div>
 
+            <!-- ── Recording Window Card ──────────────────────────── -->
+            <div class="admin-card">
+              <div class="card-header">
+                <i class="ri-calendar-event-line"></i>
+                <h3>Teacher Recording Window</h3>
+                <span class="card-header-sub">Allow backdated recording</span>
+              </div>
+              <div class="card-body">
+
+                <!-- No active window -->
+                <ng-container *ngIf="!activeWindow">
+                  <p style="font-size:13px;color:#6b7280;margin:0 0 12px;line-height:1.5;">
+                    Currently the teacher can only record for <strong>today</strong>.
+                    Open a window to allow recording for past dates.
+                  </p>
+                  <div class="window-action-row">
+                    <button class="btn-open-window" (click)="openWindowModal()">
+                      <i class="ri-calendar-event-line"></i>
+                      Open Recording Window
+                    </button>
+                  </div>
+                </ng-container>
+
+                <!-- Active window -->
+                <ng-container *ngIf="activeWindow">
+                  <div class="window-status-box" [class.active]="isWindowActive()"
+                    [class.scheduled]="!isWindowActive()">
+                    <div class="window-status-header" [class.active]="isWindowActive()"
+                      [class.scheduled]="!isWindowActive()">
+                      <i class="ri-checkbox-circle-line"></i>
+                      <span>{{ isWindowActive() ? 'Window Active' : 'Window Scheduled' }}</span>
+                    </div>
+                    <p class="window-date-range">
+                      {{ formatDateShort(activeWindow.allow_from) }}
+                      –
+                      {{ formatDateShort(activeWindow.allow_to) }}
+                    </p>
+                    <p class="window-reason" *ngIf="activeWindow.reason">
+                      {{ activeWindow.reason }}
+                    </p>
+                  </div>
+
+                  <div class="window-action-row">
+                    <button class="btn-edit-window" (click)="openWindowModal()">
+                      <i class="ri-edit-line"></i> Edit Window
+                    </button>
+                    <button class="btn-close-window" (click)="deactivateWindow()">
+                      <i class="ri-close-circle-line"></i> Close
+                    </button>
+                  </div>
+
+                  <button class="btn-window-history" (click)="loadWindowHistory()">
+                    <i class="ri-history-line"></i> View history
+                  </button>
+                </ng-container>
+
+              </div>
+            </div>
+
           </div>
 
           <!-- ── Right column: Records ────────────────────── -->
@@ -753,8 +812,7 @@
 </div>
 
 <!-- ── Unrecorded Students Modal ──────────────────────── -->
-<div class="modal-overlay" *ngIf="showUnrecordedModal"
-     (click)="closeUnrecordedModal()">
+<div class="modal-overlay" *ngIf="showUnrecordedModal" (click)="closeUnrecordedModal()">
   <div class="weekly-breakdown-modal" (click)="$event.stopPropagation()">
 
     <div class="modal-header">
@@ -792,15 +850,13 @@
     </div>
 
     <!-- Empty state -->
-    <div *ngIf="!unrecordedLoading && unrecordedData?.students?.length === 0"
-         class="wbd-empty">
+    <div *ngIf="!unrecordedLoading && unrecordedData?.students?.length === 0" class="wbd-empty">
       <i class="ri-checkbox-circle-line" style="color:#059669;"></i>
       <p>All students have been recorded this week</p>
     </div>
 
     <!-- Student list -->
-    <div class="wbd-table-wrap"
-         *ngIf="!unrecordedLoading && unrecordedData && unrecordedData.students.length > 0">
+    <div class="wbd-table-wrap" *ngIf="!unrecordedLoading && unrecordedData && unrecordedData.students.length > 0">
       <table class="wbd-table">
         <thead>
           <tr>
@@ -821,23 +877,19 @@
               <span class="mini-rate-chip">{{ formatCurrency(student.dailyRate) }}</span>
             </td>
             <td class="text-right">
-              <span *ngIf="student.creditBalance > 0"
-                    style="color:#7c3aed;font-weight:700;">
+              <span *ngIf="student.creditBalance > 0" style="color:#7c3aed;font-weight:700;">
                 {{ formatCurrency(student.creditBalance) }}
               </span>
-              <span *ngIf="student.creditBalance === 0"
-                    style="color:#9ca3af;">—</span>
+              <span *ngIf="student.creditBalance === 0" style="color:#9ca3af;">—</span>
             </td>
             <td>
               <!-- Day checkboxes Mon-Fri -->
-              <div style="display:flex;gap:6px;flex-wrap:wrap;"
-                   *ngIf="unrecordedData">
+              <div style="display:flex;gap:6px;flex-wrap:wrap;" *ngIf="unrecordedData">
                 <button *ngFor="let day of getWeekDays(unrecordedData.weekStart)"
-                        (click)="toggleAbsentDay(student.id, day)"
-                        [style.background]="isDaySelected(student.id, day) ? '#fee2e2' : '#f9fafb'"
-                        [style.border]="isDaySelected(student.id, day) ? '1.5px solid #fca5a5' : '1px solid #e5e7eb'"
-                        [style.color]="isDaySelected(student.id, day) ? '#dc2626' : '#6b7280'"
-                        style="padding:4px 8px;border-radius:6px;font-size:11px;
+                  (click)="toggleAbsentDay(student.id, day)"
+                  [style.background]="isDaySelected(student.id, day) ? '#fee2e2' : '#f9fafb'"
+                  [style.border]="isDaySelected(student.id, day) ? '1.5px solid #fca5a5' : '1px solid #e5e7eb'"
+                  [style.color]="isDaySelected(student.id, day) ? '#dc2626' : '#6b7280'" style="padding:4px 8px;border-radius:6px;font-size:11px;
                                font-weight:700;cursor:pointer;font-family:'Nunito Sans',sans-serif;
                                transition:all 0.15s;">
                   {{ formatDayLabel(day) }}
@@ -845,10 +897,8 @@
               </div>
             </td>
             <td class="text-center">
-              <button
-                [disabled]="!unrecordedSelections[student.id]?.size || processingAbsent[student.id]"
-                (click)="confirmAbsentDays(student)"
-                style="display:inline-flex;align-items:center;gap:5px;
+              <button [disabled]="!unrecordedSelections[student.id]?.size || processingAbsent[student.id]"
+                (click)="confirmAbsentDays(student)" style="display:inline-flex;align-items:center;gap:5px;
                        padding:7px 14px;background:#dc2626;color:white;
                        border:none;border-radius:8px;font-size:12px;font-weight:700;
                        cursor:pointer;font-family:'Nunito Sans',sans-serif;
@@ -864,5 +914,99 @@
       </table>
     </div>
 
+  </div>
+</div>
+
+<!-- ── Recording Window Modal ────────────────────────── -->
+<div class="modal-overlay" *ngIf="showWindowModal" (click)="closeWindowModal()">
+  <div class="edit-payment-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div>
+        <h3>{{ activeWindow ? 'Edit Recording Window' : 'Open Recording Window' }}</h3>
+        <p>Allow the teacher to record for a specific date range</p>
+      </div>
+      <button class="close-btn" (click)="closeWindowModal()">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <div class="window-info-banner">
+        <i class="ri-information-line"></i>
+        <span>
+          While this window is active, the teacher can navigate to any date within
+          the range and record attendance and payments — including editing existing
+          records for those dates. Today is always recordable regardless.
+        </span>
+      </div>
+
+      <div class="form-group">
+        <label>Allow Recording From *</label>
+        <input type="date" [(ngModel)]="windowFrom" [max]="today" />
+      </div>
+
+      <div class="form-group">
+        <label>Allow Recording To *</label>
+        <input type="date" [(ngModel)]="windowTo" [max]="today" />
+      </div>
+
+      <div class="form-group">
+        <label>Reason (shown to teacher)</label>
+        <input type="text" [(ngModel)]="windowReason" placeholder="e.g. System was down on Thursday May 14" />
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-cancel" (click)="closeWindowModal()" [disabled]="savingWindow">
+        Cancel
+      </button>
+      <button class="btn-save" (click)="saveWindow()" [disabled]="!windowFrom || !windowTo || savingWindow">
+        <i class="ri-loader-4-line spin" *ngIf="savingWindow"></i>
+        <i class="ri-calendar-check-line" *ngIf="!savingWindow"></i>
+        {{ savingWindow ? 'Saving...' : 'Save Window' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Window history modal -->
+<div class="modal-overlay" *ngIf="showWindowHistory" (click)="showWindowHistory = false">
+  <div class="edit-payment-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div>
+        <h3>Recording Window History</h3>
+        <p>Past windows opened by admins</p>
+      </div>
+      <button class="close-btn" (click)="showWindowHistory = false">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+    <div class="modal-body" style="padding:0;">
+      <table class="window-history-table">
+        <thead>
+          <tr>
+            <th>Date Range</th>
+            <th>Reason</th>
+            <th style="text-align:center;">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let w of windowHistory">
+            <td>{{ formatDateShort(w.allow_from) }} – {{ formatDateShort(w.allow_to) }}</td>
+            <td style="color:#6b7280;">{{ w.reason || '—' }}</td>
+            <td style="text-align:center;">
+              <span class="window-status-chip" [class.active]="w.is_active" [class.closed]="!w.is_active">
+                {{ w.is_active ? 'Active' : 'Closed' }}
+              </span>
+            </td>
+          </tr>
+          <tr *ngIf="windowHistory.length === 0">
+            <td colspan="3" class="window-history-empty">
+              No recording windows have been created yet
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>

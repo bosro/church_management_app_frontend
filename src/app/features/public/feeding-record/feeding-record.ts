@@ -123,6 +123,15 @@ export class FeedingRecord implements OnInit, OnDestroy {
   totalStudents = 0;
   isShowingActiveStudents = false;
 
+  // Add these new properties
+  activeRecordingWindow: {
+    id: string;
+    allow_from: string;
+    allow_to: string;
+    reason: string | null;
+  } | null = null;
+  windowLoaded = false;
+
   constructor(
     private feedingService: FeedingService,
     private route: ActivatedRoute,
@@ -144,6 +153,7 @@ export class FeedingRecord implements OnInit, OnDestroy {
     this.loadClasses();
     this.loadInitialStudents();
     this.loadDailySummary();
+    this.loadRecordingWindow();
 
     this.searchSubject
       .pipe(debounceTime(350), distinctUntilChanged(), takeUntil(this.destroy$))
@@ -750,6 +760,20 @@ export class FeedingRecord implements OnInit, OnDestroy {
     return this.studentStates[studentId]?.dailyRate ?? 0;
   }
 
+  async loadRecordingWindow(): Promise<void> {
+    try {
+      this.activeRecordingWindow =
+        await this.feedingService.getActiveRecordingWindowPromise(
+          this.churchId,
+        );
+    } catch {
+      this.activeRecordingWindow = null;
+    } finally {
+      this.windowLoaded = true;
+      this.cdr.markForCheck();
+    }
+  }
+
   submitPayment(): void {
     if (!this.paymentStudent || !this.paymentAmount || this.paymentAmount <= 0)
       return;
@@ -1089,7 +1113,7 @@ export class FeedingRecord implements OnInit, OnDestroy {
     return result;
   }
 
-  private formatDateLabel(dateStr: string): string {
+  formatDateLabel(dateStr: string): string {
     try {
       const d = new Date(dateStr + 'T00:00:00');
       return d.toLocaleDateString('en-GH', {
@@ -1128,6 +1152,16 @@ export class FeedingRecord implements OnInit, OnDestroy {
     return dateStr === this.today;
   }
 
+  // NEW: is this date allowed for recording?
+  isDateAllowed(dateStr: string): boolean {
+    if (dateStr === this.today) return true; // today = May 15 ✓
+    if (!this.activeRecordingWindow) return false;
+    return (
+      dateStr >= this.activeRecordingWindow.allow_from && // May 14 >= May 14 ✓
+      dateStr <= this.activeRecordingWindow.allow_to // May 14 <= May 14 ✓
+    );
+  }
+
   trackByStudentId(_: number, student: any): string {
     return student.id;
   }
@@ -1135,5 +1169,3 @@ export class FeedingRecord implements OnInit, OnDestroy {
     return i;
   }
 }
-
-

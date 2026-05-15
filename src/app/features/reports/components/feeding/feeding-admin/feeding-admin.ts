@@ -119,6 +119,17 @@ export class FeedingAdmin implements OnInit, OnDestroy {
   unrecordedSelections: Record<string, Set<string>> = {};
   processingAbsent: Record<string, boolean> = {};
 
+  // ── Recording window ──────────────────────────────────────
+  activeWindow: any = null;
+  loadingWindow = false;
+  showWindowModal = false;
+  windowFrom = '';
+  windowTo = '';
+  windowReason = '';
+  savingWindow = false;
+  windowHistory: any[] = [];
+  showWindowHistory = false;
+
   constructor(
     private feedingService: FeedingService,
     private authService: AuthService,
@@ -139,6 +150,7 @@ export class FeedingAdmin implements OnInit, OnDestroy {
     this.loadSettings();
     this.loadPayments();
     this.loadDailySummary();
+    this.loadActiveWindow();
   }
 
   ngOnDestroy(): void {
@@ -776,6 +788,147 @@ export class FeedingAdmin implements OnInit, OnDestroy {
     }
   }
 
+  loadActiveWindow(): void {
+    this.feedingService
+      .getActiveRecordingWindow(this.churchId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (w) => {
+          this.activeWindow = w;
+          this.cdr.markForCheck();
+        },
+      });
+  }
+
+  openWindowModal(): void {
+    // Pre-fill with sensible defaults: yesterday to today
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+    const fmt = (d: Date) => d.toISOString().split('T')[0];
+
+    this.windowFrom = this.activeWindow?.allow_from || fmt(yesterday);
+    this.windowTo = this.activeWindow?.allow_to || fmt(today);
+    this.windowReason = this.activeWindow?.reason || '';
+    this.showWindowModal = true;
+    this.cdr.markForCheck();
+  }
+
+  closeWindowModal(): void {
+    this.showWindowModal = false;
+    this.windowFrom = '';
+    this.windowTo = '';
+    this.windowReason = '';
+  }
+
+  saveWindow(): void {
+    if (!this.windowFrom || !this.windowTo) return;
+    if (this.windowFrom > this.windowTo) {
+      this.errorMessage =
+        '"Allow From" date must be before or equal to "Allow To" date';
+      return;
+    }
+    this.savingWindow = true;
+
+    // If there's an active window, deactivate it first then create new
+    const createNew = () => {
+      this.feedingService
+        .createRecordingWindow(
+          this.churchId,
+          this.windowFrom,
+          this.windowTo,
+          this.windowReason,
+        )
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (w) => {
+            this.activeWindow = w;
+            this.savingWindow = false;
+            this.closeWindowModal();
+            this.showSuccess(
+              `Recording window opened: ${this.formatDateShort(w.allow_from)} – ${this.formatDateShort(w.allow_to)}`,
+            );
+            this.cdr.markForCheck();
+          },
+          error: (err) => {
+            this.savingWindow = false;
+            this.errorMessage = err.message || 'Failed to save window';
+            this.cdr.markForCheck();
+          },
+        });
+    };
+
+    if (this.activeWindow?.id) {
+      this.feedingService
+        .deactivateRecordingWindow(this.activeWindow.id)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: () => createNew(),
+          error: (err) => {
+            this.savingWindow = false;
+            this.errorMessage = err.message || 'Failed to update window';
+            this.cdr.markForCheck();
+          },
+        });
+    } else {
+      createNew();
+    }
+  }
+
+  deactivateWindow(): void {
+    if (!this.activeWindow?.id) return;
+    if (
+      !confirm(
+        'Close this recording window? The teacher will only be able to record for today again.',
+      )
+    )
+      return;
+
+    this.feedingService
+      .deactivateRecordingWindow(this.activeWindow.id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.activeWindow = null;
+          this.showSuccess('Recording window closed');
+          this.cdr.markForCheck();
+        },
+        error: (err) => {
+          this.errorMessage = err.message || 'Failed to close window';
+          this.cdr.markForCheck();
+        },
+      });
+  }
+
+  loadWindowHistory(): void {
+    this.feedingService
+      .getAllRecordingWindows(this.churchId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (windows) => {
+          this.windowHistory = windows;
+          this.showWindowHistory = true;
+          this.cdr.markForCheck();
+        },
+      });
+  }
+
+  formatDateShort(dateStr: string): string {
+    return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-GH', {
+      month: 'short',
+      day: 'numeric',
+    });
+  }
+
+  isWindowActive(): boolean {
+    if (!this.activeWindow) return false;
+    const today = new Date().toISOString().split('T')[0];
+    return (
+      this.activeWindow.allow_from <= today &&
+      this.activeWindow.allow_to >= today
+    );
+  }
+
   closeWeeklyBreakdown(): void {
     this.showWeeklyBreakdownModal = false;
     this.weeklyBreakdownData = null;
@@ -811,3 +964,5 @@ export class FeedingAdmin implements OnInit, OnDestroy {
     return new Date().toISOString().split('T')[0];
   }
 }
+
+

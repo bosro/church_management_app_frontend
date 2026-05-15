@@ -33,6 +33,22 @@
         Toggle attendance to <strong>Absent</strong> if they didn't attend today.</span>
     </div>
 
+    <!-- Recording window notice for teacher -->
+    <div class="recording-window-banner" *ngIf="activeRecordingWindow && windowLoaded">
+      <i class="ri-calendar-event-line"></i>
+      <span>
+        <strong>Backdating enabled:</strong>
+        You can record for
+        <strong>{{ formatDateLabel(activeRecordingWindow.allow_from) }}</strong>
+        –
+        <strong>{{ formatDateLabel(activeRecordingWindow.allow_to) }}</strong>
+        <span *ngIf="activeRecordingWindow.reason">
+          — {{ activeRecordingWindow.reason }}
+        </span>.
+        Use the date picker above to navigate to those dates.
+      </span>
+    </div>
+
     <!-- Filters Row -->
     <div class="feeding-filters">
       <div class="filter-item">
@@ -169,9 +185,9 @@
               <td class="text-center">
                 <button class="attendance-btn" [class.present]="studentStates[student.id]?.isPresent"
                   [class.absent]="!studentStates[student.id]?.isPresent"
-                  [disabled]="studentStates[student.id]?.saving || !isToday(selectedDate)"
+                  [disabled]="studentStates[student.id]?.saving || !isDateAllowed(selectedDate)"
                   (click)="toggleAttendance(student.id)"
-                  [title]="!isToday(selectedDate) ? 'Past record — contact admin to change' : (studentStates[student.id]?.isPresent ? 'Mark Absent' : 'Mark Present')">
+                  [title]="!isDateAllowed(selectedDate) ? 'Past record — contact admin to change' : (studentStates[student.id]?.isPresent ? 'Mark Absent' : 'Mark Present')">
                   <i class="ri-loader-4-line spin" *ngIf="studentStates[student.id]?.saving"></i>
                   <i class="ri-user-follow-line"
                     *ngIf="!studentStates[student.id]?.saving && studentStates[student.id]?.isPresent"></i>
@@ -215,7 +231,6 @@
               </ng-container>
 
               <!-- Status -->
-              <!-- Status -->
               <td class="text-center">
                 <ng-container *ngIf="getPaymentStatus(student.id) === 'prepaid'; else normalChip">
                   <span class="status-chip status-prepaid"
@@ -236,9 +251,9 @@
               <td class="text-center">
                 <div class="action-btns">
                   <button class="btn-record-payment"
-                    [disabled]="!studentStates[student.id]?.isPresent || studentStates[student.id]?.dailyRate === 0 || !isToday(selectedDate)"
+                    [disabled]="!studentStates[student.id]?.isPresent || studentStates[student.id]?.dailyRate === 0 || !isDateAllowed(selectedDate)"
                     (click)="openPaymentModal(student)"
-                    [title]="!isToday(selectedDate) ? 'Past date — contact admin to record payments' : 'Record payment'">
+                    [title]="!isDateAllowed(selectedDate) ? 'Past date — contact admin to record payments' : 'Record payment'">
                     <i class="ri-money-dollar-circle-line"></i>
                     Pay
                   </button>
@@ -397,8 +412,8 @@
         <div class="payment-history-list" *ngIf="studentPayments.length > 0">
           <p class="section-label">Select a payment to edit</p>
           <div class="payment-history-item" *ngFor="let p of studentPayments"
-            [class.selected]="editPayment?.id === p.id" [class.locked]="!isToday(p.payment_date)"
-            (click)="isToday(p.payment_date) ? selectPaymentForEdit(p) : null">
+            [class.selected]="editPayment?.id === p.id" [class.locked]="!isDateAllowed(p.payment_date)"
+            (click)="isDateAllowed(p.payment_date) ? selectPaymentForEdit(p) : null">
             <div class="phi-left">
               <span class="phi-date">{{ p.payment_date | date:'MMM d, y' }}</span>
               <span class="phi-note" *ngIf="p.notes">{{ p.notes }}</span>
@@ -407,11 +422,11 @@
               <span class="phi-amount">{{ formatCurrency(p.amount_paid) }}</span>
               <span class="phi-days">{{ p.days_covered }} day{{ p.days_covered !== 1 ? 's' : '' }}</span>
             </div>
-            <button class="phi-delete" [disabled]="!isToday(p.payment_date)"
-              (click)="$event.stopPropagation(); isToday(p.payment_date) && deletePaymentRecord(p)"
-              [title]="isToday(p.payment_date) ? 'Delete this payment' : 'Past record — contact admin to delete'">
-              <i class="ri-lock-line" *ngIf="!isToday(p.payment_date)"></i>
-              <i class="ri-delete-bin-line" *ngIf="isToday(p.payment_date)"></i>
+            <button class="phi-delete" [disabled]="!isDateAllowed(p.payment_date)"
+              (click)="$event.stopPropagation(); isDateAllowed(p.payment_date) && deletePaymentRecord(p)"
+              [title]="isDateAllowed(p.payment_date) ? 'Delete this payment' : 'Past record — contact admin to delete'">
+              <i class="ri-lock-line" *ngIf="!isDateAllowed(p.payment_date)"></i>
+              <i class="ri-delete-bin-line" *ngIf="isDateAllowed(p.payment_date)"></i>
             </button>
           </div>
         </div>
@@ -426,7 +441,7 @@
         <div class="edit-form" *ngIf="editPayment">
 
           <!-- Past record lock notice -->
-          <div class="past-record-notice" *ngIf="!isToday(editPayment.payment_date)">
+          <div class="past-record-notice" *ngIf="!isDateAllowed(editPayment.payment_date)">
             <i class="ri-lock-2-line"></i>
             <div>
               <strong>Past record — read only</strong>
@@ -436,13 +451,13 @@
           </div>
 
           <!-- In-modal error (only shown for today's editable payments) -->
-          <div *ngIf="editError && isToday(editPayment.payment_date)" class="modal-error-banner">
+          <div *ngIf="editError && isDateAllowed(editPayment.payment_date)" class="modal-error-banner">
             <i class="ri-error-warning-line"></i>{{ editError }}
           </div>
 
-          <p class="section-label" *ngIf="isToday(editPayment.payment_date)">Edit selected payment</p>
+          <p class="section-label" *ngIf="isDateAllowed(editPayment.payment_date)">Edit selected payment</p>
           <!-- rest of edit form only when today -->
-          <ng-container *ngIf="isToday(editPayment.payment_date)">
+          <ng-container *ngIf="isDateAllowed(editPayment.payment_date)">
 
             <div class="rate-info-row" *ngIf="editingStudent">
               <i class="ri-information-line"></i>
@@ -480,7 +495,7 @@
       <button class="btn-cancel" (click)="closeEditModal()" [disabled]="processingEdit">
         Cancel
       </button>
-      <button class="btn-submit-payment" (click)="submitEdit()" *ngIf="isToday(editPayment.payment_date)"
+      <button class="btn-submit-payment" (click)="submitEdit()" *ngIf="isDateAllowed(editPayment.payment_date)"
         [disabled]="!editAmount || editAmount <= 0 || processingEdit">
         <i class="ri-loader-4-line spin" *ngIf="processingEdit"></i>
         <i class="ri-save-line" *ngIf="!processingEdit"></i>
