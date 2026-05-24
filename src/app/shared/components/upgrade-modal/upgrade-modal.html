@@ -1,87 +1,251 @@
-<!-- upgrade-modal.component.html -->
+<!-- src/app/shared/components/upgrade-modal/upgrade-modal.html -->
 <div class="modal-overlay" *ngIf="show" (click)="close()">
-  <div class="modal-content" (click)="$event.stopPropagation()">
-    <div class="modal-header">
-      <div class="header-icon">
-        <i class="ri-vip-crown-line"></i>
-      </div>
-      <button class="close-btn" (click)="close()">
-        <i class="ri-close-line"></i>
-      </button>
-      <h2>Upgrade Your Plan</h2>
-      <p *ngIf="trigger">{{ trigger }}</p>
+  <div class="modal-content upgrade-modal-content" (click)="$event.stopPropagation()">
 
-      <!-- Billing Toggle -->
-      <div class="billing-toggle">
-        <button [class.active]="billingCycle === 'monthly'" (click)="billingCycle = 'monthly'">
-          Monthly
-        </button>
-        <button [class.active]="billingCycle === 'yearly'" (click)="billingCycle = 'yearly'">
-          Yearly
-          <span class="save-badge">Save up to 20%</span>
-        </button>
-      </div>
-    </div>
-
-    <div class="plans-grid">
-      <div *ngFor="let plan of plans" class="plan-card" [class.popular]="plan.id === 'growth'">
-        <div class="popular-badge" *ngIf="plan.id === 'growth'">Most Popular</div>
-
-        <h3>{{ plan.name }}</h3>
-        <div class="price">
-          <span class="amount">GHS {{ getPrice(plan) | number:'1.0-0' }}</span>
-          <span class="period">/month</span>
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- STEP 1: PLAN SELECTION                                      -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <ng-container *ngIf="checkoutStep === 'plans'">
+      <div class="modal-header">
+        <div class="header-icon">
+          <i class="ri-vip-crown-line"></i>
         </div>
-        <p *ngIf="billingCycle === 'yearly'" class="yearly-saving">
-          Save GHS {{ getYearlySaving(plan) | number:'1.0-0' }} per year
-        </p>
-
-        <ul class="features-list">
-          <li>
-            <i class="ri-group-line"></i>
-            {{ formatLimit(plan.max_members) }} members
-          </li>
-          <li>
-            <i class="ri-building-2-line"></i>
-            {{ formatLimit(plan.max_branches) }} branches
-          </li>
-          <li>
-            <i class="ri-user-settings-line"></i>
-            {{ formatLimit(plan.max_users) }} staff users
-          </li>
-          <li>
-            <i class="ri-calendar-event-line"></i>
-            {{ formatLimit(plan.max_events) }} active events
-          </li>
-          <li>
-            <i class="ri-team-line"></i>
-            {{ formatLimit(plan.max_ministries) }} departments
-          </li>
-          <li [class.disabled]="!plan.can_export">
-            <i [class]="plan.can_export ? 'ri-download-line' : 'ri-close-line'"></i>
-            CSV Export
-          </li>
-          <li [class.disabled]="!plan.can_send_communications">
-            <i [class]="plan.can_send_communications ? 'ri-message-3-line' : 'ri-close-line'"></i>
-            SMS & Email
-          </li>
-          <li [class.disabled]="!plan.can_use_reports">
-            <i [class]="plan.can_use_reports ? 'ri-bar-chart-line' : 'ri-close-line'"></i>
-            Advanced Reports
-          </li>
-        </ul>
-
-        <button class="btn-select" (click)="selectPlan(plan)">
-          Get {{ plan.name }}
+        <button class="close-btn" (click)="close()">
+          <i class="ri-close-line"></i>
         </button>
-      </div>
-    </div>
+        <h2>Upgrade Your Plan</h2>
+        <p *ngIf="trigger" class="trigger-text">{{ trigger }}</p>
 
-    <p class="contact-note">
-      <i class="ri-information-line"></i>
-      Payment via bank transfer or mobile money. Contact us to activate.
-    </p>
+        <!-- Billing Toggle -->
+        <div class="billing-toggle">
+          <button [class.active]="billingCycle === 'monthly'" (click)="billingCycle = 'monthly'">
+            Monthly
+          </button>
+          <button [class.active]="billingCycle === 'yearly'" (click)="billingCycle = 'yearly'">
+            Yearly
+            <span class="save-badge">Save up to 20%</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="plans-grid">
+        <div
+          *ngFor="let plan of plans"
+          class="plan-card"
+          [class.popular]="plan.id === 'growth'"
+          [class.current-plan]="plan.id === currentTier">
+
+          <div class="popular-badge" *ngIf="plan.id === 'growth'">Most Popular</div>
+          <div class="current-badge" *ngIf="plan.id === currentTier">Current Plan</div>
+
+          <h3>{{ plan.name }}</h3>
+          <div class="price">
+            <span class="amount">GHS {{ getPrice(plan) | number:'1.0-0' }}</span>
+            <span class="period">/month</span>
+          </div>
+          <p *ngIf="billingCycle === 'yearly'" class="yearly-saving">
+            Save GHS {{ getYearlySaving(plan) | number:'1.0-0' }} per year
+          </p>
+          <p *ngIf="billingCycle === 'monthly'" class="yearly-saving billed-text">
+            Billed monthly
+          </p>
+
+          <ul class="features-list">
+            <li>
+              <i class="ri-group-line"></i>
+              {{ formatLimit(plan.max_members) }} members
+            </li>
+            <li>
+              <i class="ri-building-2-line"></i>
+              {{ formatLimit(plan.max_branches) }} branches
+            </li>
+            <li>
+              <i class="ri-user-settings-line"></i>
+              {{ formatLimit(plan.max_users) }} staff users
+            </li>
+            <li>
+              <i class="ri-calendar-event-line"></i>
+              {{ formatLimit(plan.max_events) }} active events
+            </li>
+            <li>
+              <i class="ri-team-line"></i>
+              {{ formatLimit(plan.max_ministries) }} departments
+            </li>
+            <li [class.disabled]="!plan.can_export">
+              <i [class]="plan.can_export ? 'ri-download-line' : 'ri-close-line'"></i>
+              CSV Export
+            </li>
+            <li [class.disabled]="!plan.can_send_communications">
+              <i [class]="plan.can_send_communications ? 'ri-message-3-line' : 'ri-close-line'"></i>
+              SMS & Email
+            </li>
+            <li [class.disabled]="!plan.can_use_reports">
+              <i [class]="plan.can_use_reports ? 'ri-bar-chart-line' : 'ri-close-line'"></i>
+              Advanced Reports
+            </li>
+          </ul>
+
+          <button
+            class="btn-select"
+            [class.btn-select--current]="plan.id === currentTier"
+            [disabled]="plan.id === currentTier"
+            (click)="selectPlanForCheckout(plan)">
+            {{ plan.id === currentTier ? 'Current Plan' : 'Get ' + plan.name }}
+          </button>
+        </div>
+      </div>
+
+      <p class="contact-note">
+        <i class="ri-lock-line"></i>
+        Secure payment via Paystack. Cancel anytime.
+      </p>
+    </ng-container>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- STEP 2: CHECKOUT                                            -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <ng-container *ngIf="checkoutStep === 'checkout' && selectedPlan">
+      <div class="modal-header checkout-header">
+        <button class="back-btn" (click)="backToPlans()" [disabled]="processing">
+          <i class="ri-arrow-left-line"></i>
+        </button>
+        <div class="header-icon">
+          <i class="ri-secure-payment-line"></i>
+        </div>
+        <button class="close-btn" (click)="close()" [disabled]="processing">
+          <i class="ri-close-line"></i>
+        </button>
+        <h2>Complete Upgrade</h2>
+        <p class="checkout-subtitle">
+          Upgrading to <strong>{{ selectedPlan.name }}</strong> —
+          {{ billingCycle === 'yearly' ? '12 months' : '1 month' }}
+        </p>
+      </div>
+
+      <div class="checkout-body">
+        <!-- Order summary -->
+        <div class="order-summary">
+          <div class="summary-row">
+            <span class="summary-label">Plan</span>
+            <span class="summary-value">{{ selectedPlan.name }}</span>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">Billing</span>
+            <span class="summary-value">{{ billingCycle === 'yearly' ? 'Annual (12 months)' : 'Monthly' }}</span>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">Plan price</span>
+            <span class="summary-value">GHS {{ getTotalPrice() | number:'1.2-2' }}</span>
+          </div>
+
+          <!-- Fee breakdown — only shown when pass_fees_to_payer is true -->
+          <ng-container *ngIf="passFeesToPayer && getFeeAmount() > 0">
+            <div class="summary-row fee-row">
+              <span class="summary-label">Processing fee ({{ totalFeePercent | number:'1.2-2' }}%)</span>
+              <span class="summary-value fee-value">+ GHS {{ getFeeAmount() | number:'1.2-2' }}</span>
+            </div>
+            <div class="summary-divider"></div>
+            <div class="summary-row summary-total">
+              <strong>Total charged</strong>
+              <strong>GHS {{ getChargeAmount() | number:'1.2-2' }}</strong>
+            </div>
+            <p class="fee-note">
+              <i class="ri-shield-check-line"></i>
+              Your church plan activates for the full plan price. The fee covers Paystack processing costs.
+            </p>
+          </ng-container>
+
+          <ng-container *ngIf="!passFeesToPayer || getFeeAmount() === 0">
+            <div class="summary-divider"></div>
+            <div class="summary-row summary-total">
+              <strong>Total charged</strong>
+              <strong>GHS {{ getTotalPrice() | number:'1.2-2' }}</strong>
+            </div>
+          </ng-container>
+        </div>
+
+        <!-- Billing email -->
+        <div class="form-group">
+          <label class="form-label">
+            <i class="ri-mail-line"></i>
+            Billing Email
+          </label>
+          <input
+            type="email"
+            class="form-control"
+            [(ngModel)]="billingEmail"
+            placeholder="your@email.com"
+            [disabled]="processing" />
+          <p class="help-text">Receipt will be sent to this email</p>
+        </div>
+
+        <!-- What you get -->
+        <div class="plan-perks">
+          <h4>What you get with {{ selectedPlan.name }}</h4>
+          <div class="perks-grid">
+            <div class="perk-item">
+              <i class="ri-group-line"></i>
+              <span>{{ formatLimit(selectedPlan.max_members) }} members</span>
+            </div>
+            <div class="perk-item">
+              <i class="ri-building-2-line"></i>
+              <span>{{ formatLimit(selectedPlan.max_branches) }} branches</span>
+            </div>
+            <div class="perk-item" *ngIf="selectedPlan.can_export">
+              <i class="ri-download-line"></i>
+              <span>CSV Export</span>
+            </div>
+            <div class="perk-item" *ngIf="selectedPlan.can_send_communications">
+              <i class="ri-message-3-line"></i>
+              <span>SMS & Email</span>
+            </div>
+            <div class="perk-item" *ngIf="selectedPlan.can_use_reports">
+              <i class="ri-bar-chart-line"></i>
+              <span>Advanced Reports</span>
+            </div>
+            <div class="perk-item" *ngIf="selectedPlan.can_custom_branding">
+              <i class="ri-brush-line"></i>
+              <span>Custom Branding</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Error -->
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i>
+          <span>{{ errorMessage }}</span>
+        </div>
+
+        <!-- Actions -->
+        <div class="checkout-actions">
+          <button
+            class="btn-secondary"
+            (click)="backToPlans()"
+            [disabled]="processing">
+            Back
+          </button>
+          <button
+            class="btn-pay"
+            (click)="proceedToPayment()"
+            [disabled]="processing || !billingEmail">
+            <span *ngIf="!processing">
+              <i class="ri-secure-payment-line"></i>
+              Pay GHS {{ getChargeAmount() | number:'1.2-2' }} via Paystack
+            </span>
+            <span *ngIf="processing">
+              <i class="ri-loader-4-line spin"></i>
+              Redirecting to Paystack...
+            </span>
+          </button>
+        </div>
+
+        <p class="secure-note">
+          <i class="ri-lock-line"></i>
+          You will be redirected to Paystack's secure payment page.
+          Your plan activates immediately after payment is confirmed.
+        </p>
+      </div>
+    </ng-container>
+
   </div>
 </div>
-
-

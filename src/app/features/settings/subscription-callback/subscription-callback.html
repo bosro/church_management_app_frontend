@@ -1,3 +1,4 @@
+<!-- src/app/features/settings/components/subscription-callback/subscription-callback.html -->
 <div class="dashboard-layout">
   <app-sidebar></app-sidebar>
   <div class="dashboard-content">
@@ -11,21 +12,22 @@
             <div class="big-spinner"></div>
           </div>
           <h2>Verifying payment...</h2>
-          <p>Please wait while we confirm your transaction. <strong>Do not close this tab.</strong></p>
+          <p>Please wait while we confirm your subscription payment.</p>
+          <p><strong>Do not close this tab.</strong></p>
           <p class="sub">This usually takes less than 15 seconds.</p>
         </div>
 
         <!-- Success -->
         <div *ngIf="state === 'success'" class="callback-card">
           <div class="icon-circle success-circle">
-            <i class="ri-checkbox-circle-fill"></i>
+            <i class="ri-vip-crown-fill"></i>
           </div>
-          <h2>Payment Successful!</h2>
+          <h2>Plan Upgraded!</h2>
           <p>{{ message }}</p>
-          <p class="sub">Redirecting you to your giving history...</p>
-          <button class="btn-primary" (click)="goHome()">
-            <i class="ri-arrow-left-line"></i>
-            Go to My Giving
+          <p class="sub">Redirecting you to your subscription settings...</p>
+          <button class="btn-primary" (click)="goToSettings()">
+            <i class="ri-settings-3-line"></i>
+            Go to Settings
           </button>
         </div>
 
@@ -37,9 +39,9 @@
           <h2>Payment Not Completed</h2>
           <p>{{ message }}</p>
           <div class="btn-row">
-            <button class="btn-secondary" (click)="goHome()">
+            <button class="btn-secondary" (click)="goToSettings()">
               <i class="ri-home-line"></i>
-              Go Home
+              Go to Settings
             </button>
             <button class="btn-primary" (click)="tryAgain()">
               <i class="ri-refresh-line"></i>
@@ -52,5 +54,3 @@
     </div>
   </div>
 </div>
-
-

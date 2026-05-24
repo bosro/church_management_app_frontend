@@ -32,6 +32,58 @@
           <span>{{ errorMessage }}</span>
         </div>
 
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- SEND PROGRESS BAR — shown while sending or after completion -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <div *ngIf="sendProgress" class="send-progress-card">
+          <div class="progress-header">
+            <div class="progress-title-row">
+              <div class="progress-label">
+                <i class="ri-send-plane-line" *ngIf="!sendProgress.done"></i>
+                <i class="ri-checkbox-circle-line" *ngIf="sendProgress.done && sendProgress.failed === 0"></i>
+                <i class="ri-error-warning-line" *ngIf="sendProgress.done && sendProgress.failed > 0"></i>
+                <span *ngIf="!sendProgress.done">Sending messages...</span>
+                <span *ngIf="sendProgress.done && sendProgress.failed === 0">All messages sent</span>
+                <span *ngIf="sendProgress.done && sendProgress.failed > 0 && sendProgress.sent > 0">Sent with some failures</span>
+                <span *ngIf="sendProgress.done && sendProgress.failed > 0 && sendProgress.sent === 0">Send failed</span>
+              </div>
+              <span class="progress-percent">{{ sendProgress.percent }}%</span>
+            </div>
+
+            <!-- Progress bar track -->
+            <div class="progress-track">
+              <div
+                class="progress-fill"
+                [style.width.%]="sendProgress.percent"
+                [style.background]="getProgressBarColor()"
+                [class.progress-fill--animated]="!sendProgress.done">
+              </div>
+            </div>
+
+            <!-- Counts row -->
+            <div class="progress-counts" *ngIf="sendProgress.total > 0">
+              <div class="count-item count-sent">
+                <i class="ri-check-line"></i>
+                <span>{{ sendProgress.sent }} sent</span>
+              </div>
+              <div class="count-item count-failed" *ngIf="sendProgress.failed > 0">
+                <i class="ri-close-line"></i>
+                <span>{{ sendProgress.failed }} failed</span>
+              </div>
+              <div class="count-item count-total">
+                <i class="ri-group-line"></i>
+                <span>{{ sendProgress.total }} total</span>
+              </div>
+            </div>
+
+            <!-- No logs yet (edge function invoked, logs not written yet) -->
+            <div class="progress-waiting" *ngIf="sendProgress.total === 0 && !sendProgress.done">
+              <i class="ri-loader-4-line spin"></i>
+              <span>Waiting for send to begin...</span>
+            </div>
+          </div>
+        </div>
+
         <div class="form-layout">
           <!-- Main Form -->
           <div class="form-card">
@@ -48,16 +100,13 @@
                       placeholder="e.g., Sunday Service Reminder, Event Announcement"
                       [class.error]="communicationForm.get('title')?.invalid && communicationForm.get('title')?.touched" />
                     <span *ngIf="communicationForm.get('title')?.invalid && communicationForm.get('title')?.touched"
-                      class="error-message">
-                      {{ getErrorMessage('title') }}
-                    </span>
+                      class="error-message">{{ getErrorMessage('title') }}</span>
                   </div>
 
                   <!-- Communication Type -->
                   <div class="form-group">
                     <label for="communication_type">Send Via *</label>
-                    <select id="communication_type" formControlName="communication_type"
-                      [class.error]="communicationForm.get('communication_type')?.invalid && communicationForm.get('communication_type')?.touched">
+                    <select id="communication_type" formControlName="communication_type">
                       <option *ngFor="let type of communicationTypes" [value]="type.value">
                         {{ type.label }}
                       </option>
@@ -67,30 +116,92 @@
                   <!-- Target Audience -->
                   <div class="form-group">
                     <label for="target_audience">Send To *</label>
-                    <select id="target_audience" formControlName="target_audience"
-                      [class.error]="communicationForm.get('target_audience')?.invalid && communicationForm.get('target_audience')?.touched">
+                    <select id="target_audience" formControlName="target_audience">
                       <option *ngFor="let audience of targetAudiences" [value]="audience.value">
                         {{ audience.label }}
                       </option>
                     </select>
                   </div>
 
+                  <!-- ── Single Member Picker (only shown when target = 'member') ── -->
+                  <div class="form-group full-width member-picker-group" *ngIf="isSingleMemberTarget">
+                    <label>Select Member *</label>
+
+                    <!-- Selected member display -->
+                    <div *ngIf="selectedMember" class="selected-member-card">
+                      <div class="selected-member-avatar">
+                        <img *ngIf="selectedMember.photo_url" [src]="selectedMember.photo_url"
+                          [alt]="selectedMember.first_name" />
+                        <div *ngIf="!selectedMember.photo_url" class="avatar-initials">
+                          {{ getMemberInitials(selectedMember) }}
+                        </div>
+                      </div>
+                      <div class="selected-member-info">
+                        <p class="selected-member-name">{{ selectedMember.first_name }} {{ selectedMember.last_name }}</p>
+                        <p class="selected-member-meta" *ngIf="selectedMember.member_number">
+                          {{ selectedMember.member_number }}
+                        </p>
+                      </div>
+                      <button type="button" class="btn-clear-member" (click)="clearSelectedMember()">
+                        <i class="ri-close-line"></i>
+                      </button>
+                    </div>
+
+                    <!-- Search input + dropdown -->
+                    <div class="member-search-wrapper" *ngIf="!selectedMember">
+                      <div class="member-search-input-row">
+                        <i class="ri-search-line member-search-icon"></i>
+                        <input
+                          type="text"
+                          class="member-search-input"
+                          [value]="memberSearchQuery"
+                          (input)="onMemberSearchInput($event)"
+                          (blur)="onMemberSearchBlur()"
+                          placeholder="Search by name or member number..."
+                          autocomplete="off" />
+                        <i class="ri-loader-4-line spin" *ngIf="searchingMembers"></i>
+                      </div>
+
+                      <!-- Dropdown results -->
+                      <div class="member-dropdown" *ngIf="showMemberDropdown && memberSearchResults.length > 0">
+                        <div
+                          *ngFor="let member of memberSearchResults"
+                          class="member-dropdown-item"
+                          (mousedown)="selectMember(member)">
+                          <div class="dropdown-member-avatar">
+                            <img *ngIf="member.photo_url" [src]="member.photo_url" [alt]="member.first_name" />
+                            <div *ngIf="!member.photo_url" class="avatar-initials-sm">
+                              {{ getMemberInitials(member) }}
+                            </div>
+                          </div>
+                          <div class="dropdown-member-info">
+                            <p class="dropdown-member-name">{{ member.first_name }} {{ member.last_name }}</p>
+                            <p class="dropdown-member-meta" *ngIf="member.member_number">{{ member.member_number }}</p>
+                          </div>
+                          <i class="ri-arrow-right-s-line dropdown-arrow"></i>
+                        </div>
+                      </div>
+
+                      <p class="member-search-hint">
+                        Type at least 2 characters to search
+                      </p>
+                    </div>
+                  </div>
+
                   <!-- Message -->
                   <div class="form-group full-width">
                     <label for="message">Message *</label>
-                    <textarea id="message" formControlName="message" placeholder="Type your message here..." rows="6"
+                    <textarea id="message" formControlName="message" placeholder="Type your message here..."
+                      rows="6"
                       [class.error]="communicationForm.get('message')?.invalid && communicationForm.get('message')?.touched"></textarea>
                     <div class="character-count">
                       {{ getCharacterCount() }} characters
                       <span *ngIf="communicationForm.get('communication_type')?.value === 'sms'" class="sms-note">
-                        (SMS: ~{{ Math.ceil(getCharacterCount() / 160) }} message{{ Math.ceil(getCharacterCount() / 160)
-                        > 1 ? 's' : '' }})
+                        (SMS: ~{{ Math.ceil(getCharacterCount() / 160) }} message{{ Math.ceil(getCharacterCount() / 160) > 1 ? 's' : '' }})
                       </span>
                     </div>
                     <span *ngIf="communicationForm.get('message')?.invalid && communicationForm.get('message')?.touched"
-                      class="error-message">
-                      {{ getErrorMessage('message') }}
-                    </span>
+                      class="error-message">{{ getErrorMessage('message') }}</span>
                   </div>
 
                   <!-- Scheduled At -->
@@ -107,12 +218,16 @@
                 <button type="button" class="btn-secondary" (click)="cancel()" [disabled]="loading">
                   Cancel
                 </button>
-                <button type="submit" class="btn-primary" [disabled]="loading">
-                  <span *ngIf="!loading">
+                <button type="submit" class="btn-primary" [disabled]="loading || sending">
+                  <span *ngIf="!loading && !sending">
                     <i class="ri-send-plane-line"></i>
                     {{ communicationForm.get('scheduled_at')?.value ? 'Schedule Message' : 'Send Now' }}
                   </span>
-                  <span *ngIf="loading">
+                  <span *ngIf="loading && !sending">
+                    <i class="ri-loader-4-line spin"></i>
+                    Creating...
+                  </span>
+                  <span *ngIf="sending">
                     <i class="ri-loader-4-line spin"></i>
                     Sending...
                   </span>
@@ -145,7 +260,6 @@
                 {{ '{event_name}' }}, {{ '{amount}' }}
                 in your messages.
               </p>
-
             </div>
           </div>
         </div>
@@ -153,4 +267,3 @@
     </div>
   </div>
 </div>
-

@@ -1,0 +1,166 @@
+// src/app/features/settings/components/subscription-callback/subscription-callback.scss
+// Mirrors your existing payment-callback.component.scss exactly.
+// Copy this file as-is.
+
+.dashboard-layout {
+  display: flex;
+  min-height: 100vh;
+  background: #F9FAFB;
+}
+
+.dashboard-content {
+  margin-left: 280px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  width: calc(100% - 280px);
+
+  @media (max-width: 768px) {
+    margin-left: 0;
+    width: 100%;
+  }
+}
+
+.dashboard-body {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.callback-page {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.callback-card {
+  background: white;
+  border-radius: 16px;
+  padding: 3rem 2rem;
+  text-align: center;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+
+  h2 {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: #111827;
+    margin: 1.5rem 0 1rem;
+  }
+
+  p {
+    font-size: 1rem;
+    color: #6B7280;
+    margin: 0 0 0.5rem;
+    line-height: 1.6;
+  }
+
+  .sub {
+    font-size: 0.875rem;
+    color: #9CA3AF;
+    margin-top: 0.75rem;
+  }
+}
+
+// ── Spinner ───────────────────────────────────────────────────────────────────
+
+.spinner-wrap {
+  display: flex;
+  justify-content: center;
+}
+
+.big-spinner {
+  width: 72px;
+  height: 72px;
+  border: 5px solid #EDE9FE;
+  border-top-color: #5B21B6;
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+
+// ── Icon circles ──────────────────────────────────────────────────────────────
+
+.icon-circle {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+
+  i { font-size: 2.5rem; }
+}
+
+.success-circle {
+  background: linear-gradient(135deg, #DDD6FE 0%, #EDE9FE 100%);
+
+  i { color: #5B21B6; }
+}
+
+.failed-circle {
+  background: #FEE2E2;
+
+  i { color: #DC2626; }
+}
+
+// ── Buttons ───────────────────────────────────────────────────────────────────
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+  padding: 0.875rem 2rem;
+  background: #5B21B6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'Nunito Sans', sans-serif;
+
+  &:hover {
+    background: #6D28D9;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(91, 33, 182, 0.3);
+  }
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+  padding: 0.875rem 1.5rem;
+  background: white;
+  color: #374151;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'Nunito Sans', sans-serif;
+
+  &:hover { background: #F9FAFB; border-color: #D1D5DB; }
+}
+
+.btn-row {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+// ── Spin ──────────────────────────────────────────────────────────────────────
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}

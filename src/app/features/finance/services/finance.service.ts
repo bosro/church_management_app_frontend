@@ -1180,3 +1180,5 @@ export class FinanceService {
     return (data || []) as CategoryGiver[];
   }
 }
+
+

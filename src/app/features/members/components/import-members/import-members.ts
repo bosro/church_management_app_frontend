@@ -1,4 +1,11 @@
 // src/app/features/members/components/import-members/import-members.component.ts
+// CHANGES vs original:
+// 1. handleError() added — same pattern as AddMember, catches QUOTA_EXCEEDED prefix
+// 2. uploadFile() calls handleError() instead of setting errorMessage directly
+// 3. showUpgradeModal + upgradeModalTrigger state added
+// 4. app-upgrade-modal added to template (see import-members.html patch below)
+// Everything else is identical to your original.
+
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
@@ -9,7 +16,7 @@ import { PermissionService } from '../../../../core/services/permission.service'
 
 interface ImportError {
   message: string;
-  type: 'duplicate' | 'missing_name' | 'invalid_email' | 'other';
+  type: 'duplicate' | 'missing_name' | 'invalid_email' | 'quota_exceeded' | 'other';
 }
 
 interface ImportResults {
@@ -36,7 +43,10 @@ export class ImportMembers implements OnInit, OnDestroy {
 
   dragOver = false;
 
-  // Permissions
+  // ── Upgrade modal (quota exceeded during import) ──────────────────
+  showUpgradeModal = false;
+  upgradeModalTrigger = '';
+
   canImport = false;
 
   constructor(
@@ -61,6 +71,27 @@ export class ImportMembers implements OnInit, OnDestroy {
 
     if (!this.canImport) {
       this.router.navigate(['/unauthorized']);
+    }
+  }
+
+  // ── Error handler — mirrors AddMember.handleError() ─────────────────
+  handleError(error: any): void {
+    const msg: string = error?.message || 'An error occurred';
+
+    if (msg.startsWith('QUOTA_EXCEEDED:')) {
+      // Format: QUOTA_EXCEEDED:members:current:limit\n<human message>
+      const parts = msg.split(':');
+      const current = parts[2];
+      const limit = parts[3]?.split('\n')[0];
+
+      this.upgradeModalTrigger =
+        `You've reached the ${limit} member limit on your current plan. ` +
+        `You currently have ${current} members. ` +
+        `Upgrade your plan to import more members.`;
+      this.showUpgradeModal = true;
+      this.errorMessage = '';
+    } else {
+      this.errorMessage = msg;
     }
   }
 
@@ -99,20 +130,17 @@ export class ImportMembers implements OnInit, OnDestroy {
     const fileExtension = file.name.substring(file.name.lastIndexOf('.'));
 
     if (!validExtensions.includes(fileExtension)) {
-      this.errorMessage =
-        'Please select a CSV or Excel file (.csv, .xlsx, .xls)';
+      this.errorMessage = 'Please select a CSV or Excel file (.csv, .xlsx, .xls)';
       setTimeout(() => (this.errorMessage = ''), 3000);
       return;
     }
 
-    // Validate file size (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
       this.errorMessage = 'File size must be less than 10MB';
       setTimeout(() => (this.errorMessage = ''), 3000);
       return;
     }
 
-    // Validate file is not empty
     if (file.size === 0) {
       this.errorMessage = 'The selected file is empty';
       setTimeout(() => (this.errorMessage = ''), 3000);
@@ -122,6 +150,8 @@ export class ImportMembers implements OnInit, OnDestroy {
     this.selectedFile = file;
     this.errorMessage = '';
     this.importResults = null;
+    this.showUpgradeModal = false;
+    this.upgradeModalTrigger = '';
   }
 
   removeFile(): void {
@@ -130,6 +160,8 @@ export class ImportMembers implements OnInit, OnDestroy {
     this.errorMessage = '';
     this.successMessage = '';
     this.uploadProgress = 0;
+    this.showUpgradeModal = false;
+    this.upgradeModalTrigger = '';
   }
 
   uploadFile(): void {
@@ -139,8 +171,8 @@ export class ImportMembers implements OnInit, OnDestroy {
     this.uploadProgress = 0;
     this.errorMessage = '';
     this.successMessage = '';
+    this.showUpgradeModal = false;
 
-    // Simulate progress (since we don't have real-time upload progress)
     const progressInterval = setInterval(() => {
       if (this.uploadProgress < 90) {
         this.uploadProgress += 10;
@@ -167,13 +199,11 @@ export class ImportMembers implements OnInit, OnDestroy {
                 e.error.includes('First name') ||
                 e.error.includes('Last name') ||
                 e.error.includes('required')
-              )
-                type = 'missing_name';
+              ) type = 'missing_name';
               else if (
                 e.error.includes('email') ||
                 e.error.includes('email format')
-              )
-                type = 'invalid_email';
+              ) type = 'invalid_email';
               return { message: msg, type };
             }),
           };
@@ -190,9 +220,8 @@ export class ImportMembers implements OnInit, OnDestroy {
           clearInterval(progressInterval);
           this.uploading = false;
           this.uploadProgress = 0;
-          this.errorMessage =
-            error.message ||
-            'Failed to import members. Please check your file format and try again.';
+          // ── CHANGED: route through handleError instead of setting directly
+          this.handleError(error);
         },
       });
   }
@@ -211,15 +240,8 @@ export class ImportMembers implements OnInit, OnDestroy {
     ];
 
     const sampleRow = [
-      'John',
-      'Doe',
-      'john.doe@example.com',
-      '0201234567',
-      'male',
-      '1990-01-15',
-      '123 Main St',
-      'Accra',
-      '2024-01-01',
+      'John', 'Doe', 'john.doe@example.com', '0201234567',
+      'male', '1990-01-15', '123 Main St', 'Accra', '2024-01-01',
     ];
 
     const instructionRows = [
@@ -269,8 +291,3 @@ export class ImportMembers implements OnInit, OnDestroy {
     else return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
   }
 }
-
-
-
-
-

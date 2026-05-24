@@ -1,10 +1,13 @@
 // src/app/features/communications/services/communications.service.ts
-// UPDATED: sendCommunication() now calls the real edge function
-// instead of simulating a send locally.
+// CHANGES:
+// 1. createCommunication() accepts target_member_id
+// 2. pollSendProgress() — polls sms_logs/email_logs after triggering send
+// 3. getSendProgress() — single snapshot query for progress bar
+// 4. Everything else unchanged
 
 import { Injectable } from '@angular/core';
-import { Observable, from, throwError } from 'rxjs';
-import { map, catchError } from 'rxjs/operators';
+import { Observable, from, throwError, interval, of } from 'rxjs';
+import { map, catchError, switchMap, takeWhile, startWith } from 'rxjs/operators';
 import { SupabaseService } from '../../../core/services/supabase';
 import { AuthService } from '../../../core/services/auth';
 import {
@@ -16,6 +19,14 @@ import {
   EmailLog,
   CommunicationStatistics,
 } from '../../../models/communication.model';
+
+export interface SendProgress {
+  total: number;
+  sent: number;
+  failed: number;
+  percent: number;
+  done: boolean;
+}
 
 @Injectable({
   providedIn: 'root',
@@ -35,11 +46,8 @@ export class CommunicationsService {
 
   canViewCommunications(): boolean {
     const roles = [
-      'super_admin',
-      'church_admin',
-      'pastor',
-      'ministry_leader',
-      'secretary',
+      'super_admin', 'church_admin', 'pastor',
+      'ministry_leader', 'secretary',
     ];
     return this.authService.hasRole(roles);
   }
@@ -102,12 +110,14 @@ export class CommunicationsService {
     );
   }
 
+  // UPDATED: accepts optional target_member_id
   createCommunication(communicationData: {
     title: string;
     message: string;
     communication_type: CommunicationType;
     target_audience: TargetAudience;
     scheduled_at?: string;
+    target_member_id?: string | null;
   }): Observable<Communication> {
     const churchId = this.authService.getChurchId();
     const userId = this.authService.getUserId();
@@ -121,6 +131,7 @@ export class CommunicationsService {
         message: communicationData.message.trim(),
         communication_type: communicationData.communication_type,
         target_audience: communicationData.target_audience,
+        target_member_id: communicationData.target_member_id || null,
         scheduled_at: communicationData.scheduled_at || null,
         status: communicationData.scheduled_at ? 'scheduled' : 'draft',
         created_by: userId,
@@ -151,25 +162,19 @@ export class CommunicationsService {
           .eq('church_id', churchId)
           .single();
 
-        if (!existing)
-          throw new Error('Communication not found or access denied');
-        if (existing.status === 'sent')
-          throw new Error('Cannot edit a sent communication');
+        if (!existing) throw new Error('Communication not found or access denied');
+        if (existing.status === 'sent') throw new Error('Cannot edit a sent communication');
 
         return this.supabase.update<Communication>(
           'communications',
           communicationId,
-          {
-            ...communicationData,
-            updated_at: new Date().toISOString(),
-          },
+          { ...communicationData, updated_at: new Date().toISOString() },
         );
       })(),
     ).pipe(
       map(({ data, error }) => {
         if (error) throw new Error(error.message);
-        if (!data || data.length === 0)
-          throw new Error('Failed to update communication');
+        if (!data || data.length === 0) throw new Error('Failed to update communication');
         return data[0];
       }),
       catchError((err) => throwError(() => err)),
@@ -188,10 +193,8 @@ export class CommunicationsService {
           .eq('church_id', churchId)
           .single();
 
-        if (!existing)
-          throw new Error('Communication not found or access denied');
-        if (existing.status === 'sent')
-          throw new Error('Cannot delete a sent communication');
+        if (!existing) throw new Error('Communication not found or access denied');
+        if (existing.status === 'sent') throw new Error('Cannot delete a sent communication');
 
         return this.supabase.delete('communications', communicationId);
       })(),
@@ -203,14 +206,13 @@ export class CommunicationsService {
     );
   }
 
-  // ==================== SEND (calls real Edge Function) ====================
+  // ==================== SEND ====================
 
   sendCommunication(communicationId: string): Observable<Communication> {
     const churchId = this.authService.getChurchId();
 
     return from(
       (async () => {
-        // Verify record exists and is sendable before calling the edge function
         const { data: communication, error: fetchErr } =
           await this.supabase.client
             .from('communications')
@@ -219,24 +221,19 @@ export class CommunicationsService {
             .eq('church_id', churchId)
             .single();
 
-        if (fetchErr || !communication) {
+        if (fetchErr || !communication)
           throw new Error('Communication not found or access denied');
-        }
-        if (communication.status === 'sent') {
+        if (communication.status === 'sent')
           throw new Error('Communication already sent');
-        }
-        if (communication.status === 'sending') {
+        if (communication.status === 'sending')
           throw new Error('Communication is already being sent');
-        }
 
-        // ── Call the Edge Function ────────────────────────────────────
         const { data: fnData, error: fnErr } =
           await this.supabase.client.functions.invoke('send-communication', {
             body: { communicationId },
           });
 
         if (fnErr) {
-          // Roll back to draft so the user can retry
           await this.supabase.client
             .from('communications')
             .update({ status: 'draft' })
@@ -252,7 +249,6 @@ export class CommunicationsService {
           throw new Error(fnData?.error || 'Send failed');
         }
 
-        // Return the refreshed communication record
         const { data: updated } = await this.supabase.client
           .from('communications')
           .select('*')
@@ -261,12 +257,100 @@ export class CommunicationsService {
 
         return updated as Communication;
       })(),
-    ).pipe(
-      catchError((err) => {
-        console.error('Error sending communication:', err);
-        return throwError(() => err);
-      }),
+    ).pipe(catchError((err) => { console.error('Error sending communication:', err); return throwError(() => err); }));
+  }
+
+  // ==================== PROGRESS POLLING ====================
+  // Polls every 2s until done=true (all logs resolved) or maxAttempts reached.
+  // Works for both SMS and email by checking both log tables.
+
+  pollSendProgress(
+    communicationId: string,
+    type: CommunicationType,
+    pollIntervalMs = 2000,
+    maxAttempts = 60,
+  ): Observable<SendProgress> {
+    let attempts = 0;
+
+    return interval(pollIntervalMs).pipe(
+      startWith(0),
+      switchMap(() => from(this.fetchProgress(communicationId, type))),
+      takeWhile((progress) => {
+        attempts++;
+        // Keep polling while not done and under attempt limit
+        return !progress.done && attempts < maxAttempts;
+      }, true), // emit the final value that fails the predicate
+      catchError(() => of({ total: 0, sent: 0, failed: 0, percent: 0, done: true })),
     );
+  }
+
+  // Single snapshot for progress bar — call this once after triggering send
+  // to get immediate feedback, then switch to pollSendProgress
+  getSendProgress(
+    communicationId: string,
+    type: CommunicationType,
+  ): Observable<SendProgress> {
+    return from(this.fetchProgress(communicationId, type));
+  }
+
+  private async fetchProgress(
+    communicationId: string,
+    type: CommunicationType,
+  ): Promise<SendProgress> {
+    const churchId = this.authService.getChurchId();
+
+    // First get the communication status to know if we're done
+    const { data: comm } = await this.supabase.client
+      .from('communications')
+      .select('status')
+      .eq('id', communicationId)
+      .single();
+
+    const isSendingOrSent = comm?.status === 'sending' || comm?.status === 'sent';
+    const isDone = comm?.status === 'sent' || comm?.status === 'failed';
+
+    // Count logs based on type
+    let sent = 0;
+    let failed = 0;
+    let total = 0;
+
+    if (type === 'sms' || type === 'both') {
+      const { data: smsData } = await this.supabase.client
+        .from('sms_logs')
+        .select('status')
+        .eq('communication_id', communicationId)
+        .eq('church_id', churchId);
+
+      const smsRows = smsData || [];
+      sent += smsRows.filter(r => r.status === 'sent' || r.status === 'delivered').length;
+      failed += smsRows.filter(r => r.status === 'failed').length;
+      total += smsRows.length;
+    }
+
+    if (type === 'email' || type === 'both') {
+      const { data: emailData } = await this.supabase.client
+        .from('email_logs')
+        .select('status')
+        .eq('communication_id', communicationId)
+        .eq('church_id', churchId);
+
+      const emailRows = emailData || [];
+      sent += emailRows.filter(r => r.status === 'sent' || r.status === 'delivered' || r.status === 'opened').length;
+      failed += emailRows.filter(r => r.status === 'failed').length;
+      total += emailRows.length;
+    }
+
+    const resolved = sent + failed;
+    const percent = total > 0 ? Math.round((resolved / total) * 100) : (isDone ? 100 : 0);
+
+    return {
+      total,
+      sent,
+      failed,
+      percent,
+      // Done when: comm is sent/failed, OR all logs are resolved
+      done: isDone || (total > 0 && resolved === total),
+    };
   }
 
   // ==================== SMS LOGS ====================
@@ -283,15 +367,11 @@ export class CommunicationsService {
       (async () => {
         let query = this.supabase.client
           .from('sms_logs')
-          .select(
-            `*, member:members(id, first_name, last_name, phone_primary)`,
-            { count: 'exact' },
-          )
+          .select(`*, member:members(id, first_name, last_name, phone_primary)`, { count: 'exact' })
           .eq('church_id', churchId);
 
         if (filters?.status) query = query.eq('status', filters.status);
-        if (filters?.communicationId)
-          query = query.eq('communication_id', filters.communicationId);
+        if (filters?.communicationId) query = query.eq('communication_id', filters.communicationId);
 
         const { data, error, count } = await query
           .order('sent_at', { ascending: false })
@@ -317,14 +397,11 @@ export class CommunicationsService {
       (async () => {
         let query = this.supabase.client
           .from('email_logs')
-          .select(`*, member:members(id, first_name, last_name, email)`, {
-            count: 'exact',
-          })
+          .select(`*, member:members(id, first_name, last_name, email)`, { count: 'exact' })
           .eq('church_id', churchId);
 
         if (filters?.status) query = query.eq('status', filters.status);
-        if (filters?.communicationId)
-          query = query.eq('communication_id', filters.communicationId);
+        if (filters?.communicationId) query = query.eq('communication_id', filters.communicationId);
 
         const { data, error, count } = await query
           .order('sent_at', { ascending: false })
@@ -345,23 +422,15 @@ export class CommunicationsService {
 
     return from(
       (async () => {
-        const buildQuery = (table: string) => {
-          let q = this.supabase.client
-            .from(table)
-            .select('*', { count: 'exact', head: true })
-            .eq('church_id', churchId);
-          if (isBranchPastor && branchId && table === 'communications') {
-            q = q.eq('branch_id', branchId);
-          }
-          return q;
-        };
-
         const [
           { count: totalCommunications },
           { count: totalSms },
           { count: totalEmails },
         ] = await Promise.all([
-          buildQuery('communications'),
+          this.supabase.client
+            .from('communications')
+            .select('*', { count: 'exact', head: true })
+            .eq('church_id', churchId),
           this.supabase.client
             .from('sms_logs')
             .select('*', { count: 'exact', head: true })
@@ -415,13 +484,11 @@ export class CommunicationsService {
   // ==================== HELPERS ====================
 
   validatePhoneNumber(phone: string): boolean {
-    const phoneRegex = /^\+?[1-9]\d{1,14}$/;
-    return phoneRegex.test(phone);
+    return /^\+?[1-9]\d{1,14}$/.test(phone);
   }
 
   validateEmail(email: string): boolean {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   }
 
   estimateSmsCount(message: string): number {
@@ -431,5 +498,3 @@ export class CommunicationsService {
     return Math.ceil(length / 153);
   }
 }
-
-

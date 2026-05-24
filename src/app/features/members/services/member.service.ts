@@ -858,7 +858,6 @@ export class MemberService {
       raw: false,
     });
 
-    // Filter out completely empty rows (common in exported Excel files)
     const dataRows = rows.filter((row) =>
       Object.values(row).some((v) => v !== '' && v !== null && v !== undefined),
     );
@@ -866,10 +865,12 @@ export class MemberService {
     if (!dataRows.length)
       throw new Error('Excel file is empty or has no data rows');
 
+    // ── PRE-FLIGHT QUOTA CHECK ───────────────────────────────────────────────
+    await this._checkImportQuota(churchId, dataRows.length);
+    // ────────────────────────────────────────────────────────────────────────
+
     const results: ImportResult = { success: 0, failed: 0, errors: [] };
 
-    // ── Pre-load all existing phones + emails for this church
-    // so we can check duplicates in-memory (fast, avoids N DB round trips)
     const { data: existingMembers } = await this.supabase.client
       .from('members')
       .select('email, phone_primary, first_name, last_name, date_of_birth')
@@ -885,7 +886,6 @@ export class MemberService {
         .map((m: any) => m.phone_primary?.trim())
         .filter(Boolean),
     );
-    // NEW: name+DOB set for catching duplicates without email/phone
     const existingNameDob = new Set(
       (existingMembers || [])
         .filter((m: any) => m.date_of_birth)
@@ -895,14 +895,10 @@ export class MemberService {
         ),
     );
 
-    const seenNameDobThisBatch = new Set<string>(); // NEW
-
-    // ── Track phones/emails seen within THIS import batch
-    // so we catch duplicates inside the file itself
+    const seenNameDobThisBatch = new Set<string>();
     const seenPhonesThisBatch = new Set<string>();
     const seenEmailsThisBatch = new Set<string>();
 
-    // ── Column header aliases (handles any capitalisation / spacing)
     const headerAliases: Record<string, string> = {
       'first name': 'first_name',
       first_name: 'first_name',
@@ -940,7 +936,6 @@ export class MemberService {
 
     for (let i = 0; i < dataRows.length; i++) {
       try {
-        // Normalise keys
         const row: Record<string, string> = {};
         Object.entries(dataRows[i]).forEach(([key, val]) => {
           const normalized = key.trim().toLowerCase();
@@ -950,9 +945,8 @@ export class MemberService {
 
         const firstName = row['first_name'];
         const lastName = row['last_name'];
-        if (!firstName || !lastName) {
+        if (!firstName || !lastName)
           throw new Error('First name and last name are required');
-        }
 
         const email = row['email']?.toLowerCase() || undefined;
         const phone = row['phone'] || undefined;
@@ -962,47 +956,35 @@ export class MemberService {
           new Date().toISOString().split('T')[0];
         const gender = row['gender']?.toLowerCase() || undefined;
 
-        if (email && !this.isValidEmail(email)) {
+        if (email && !this.isValidEmail(email))
           throw new Error(`Invalid email format: ${email}`);
-        }
-
-        // Email checks
-        if (email && existingEmails.has(email)) {
+        if (email && existingEmails.has(email))
           throw new Error(
             `Member with email "${email}" already exists — skipped`,
           );
-        }
-        if (email && seenEmailsThisBatch.has(email)) {
+        if (email && seenEmailsThisBatch.has(email))
           throw new Error(
             `Email "${email}" appears more than once in this file — skipped`,
           );
-        }
-
-        // Phone checks
-        if (phone && existingPhones.has(phone)) {
+        if (phone && existingPhones.has(phone))
           throw new Error(
             `Member with phone "${phone}" already exists — skipped`,
           );
-        }
-        if (phone && seenPhonesThisBatch.has(phone)) {
+        if (phone && seenPhonesThisBatch.has(phone))
           throw new Error(
             `Phone "${phone}" appears more than once in this file — skipped`,
           );
-        }
 
-        // Name+DOB checks (NEW)
         if (dob) {
           const nameDobKey = `${firstName.toLowerCase().trim()}|${lastName.toLowerCase().trim()}|${dob}`;
-          if (existingNameDob.has(nameDobKey)) {
+          if (existingNameDob.has(nameDobKey))
             throw new Error(
               `Member "${firstName} ${lastName}" (DOB: ${dob}) already exists — skipped`,
             );
-          }
-          if (seenNameDobThisBatch.has(nameDobKey)) {
+          if (seenNameDobThisBatch.has(nameDobKey))
             throw new Error(
-              `"${firstName} ${lastName}" (DOB: ${dob}) appears more than once in this file — skipped`,
+              `"${firstName} ${lastName}" (DOB: ${dob}) appears more than once — skipped`,
             );
-          }
         }
 
         const memberData: any = {
@@ -1044,7 +1026,6 @@ export class MemberService {
           throw new Error(error.message);
         }
 
-        // Track after successful insert
         if (email) {
           existingEmails.add(email);
           seenEmailsThisBatch.add(email);
@@ -1114,10 +1095,15 @@ export class MemberService {
 
     if (lines.length < 2) throw new Error('CSV file is empty or invalid');
 
+    // Count valid data rows (skip header) for quota check
+    const dataLineCount = lines.length - 1;
+
+    // ── PRE-FLIGHT QUOTA CHECK ───────────────────────────────────────────────
+    await this._checkImportQuota(churchId, dataLineCount);
+    // ────────────────────────────────────────────────────────────────────────
+
     const results: ImportResult = { success: 0, failed: 0, errors: [] };
 
-    // ── Pre-load existing members for duplicate detection
-    // NOW includes first_name, last_name, date_of_birth for name+DOB check
     const { data: existingMembers } = await this.supabase.client
       .from('members')
       .select('email, phone_primary, first_name, last_name, date_of_birth')
@@ -1133,7 +1119,6 @@ export class MemberService {
         .map((m: any) => m.phone_primary?.trim())
         .filter(Boolean),
     );
-    // Name+DOB set — catches duplicates with no email/phone
     const existingNameDob = new Set(
       (existingMembers || [])
         .filter((m: any) => m.date_of_birth)
@@ -1145,7 +1130,7 @@ export class MemberService {
 
     const seenPhonesThisBatch = new Set<string>();
     const seenEmailsThisBatch = new Set<string>();
-    const seenNameDobThisBatch = new Set<string>(); // NEW
+    const seenNameDobThisBatch = new Set<string>();
 
     const headerAliases: Record<string, string> = {
       first_name: 'first_name',
@@ -1202,10 +1187,8 @@ export class MemberService {
 
         const firstName = row['first_name'];
         const lastName = row['last_name'];
-
-        if (!firstName || !lastName) {
+        if (!firstName || !lastName)
           throw new Error('First name and last name are required');
-        }
 
         const email = row['email']?.toLowerCase() || undefined;
         const phone = row['phone'] || undefined;
@@ -1215,47 +1198,35 @@ export class MemberService {
           new Date().toISOString().split('T')[0];
         const gender = row['gender']?.toLowerCase() || undefined;
 
-        if (email && !this.isValidEmail(email)) {
+        if (email && !this.isValidEmail(email))
           throw new Error(`Invalid email format: ${email}`);
-        }
-
-        // Email checks
-        if (email && existingEmails.has(email)) {
+        if (email && existingEmails.has(email))
           throw new Error(
             `Member with email "${email}" already exists in your church — skipped`,
           );
-        }
-        if (email && seenEmailsThisBatch.has(email)) {
+        if (email && seenEmailsThisBatch.has(email))
           throw new Error(
             `Email "${email}" appears more than once in this file — skipped`,
           );
-        }
-
-        // Phone checks
-        if (phone && existingPhones.has(phone)) {
+        if (phone && existingPhones.has(phone))
           throw new Error(
             `Member with phone "${phone}" already exists in your church — skipped`,
           );
-        }
-        if (phone && seenPhonesThisBatch.has(phone)) {
+        if (phone && seenPhonesThisBatch.has(phone))
           throw new Error(
             `Phone "${phone}" appears more than once in this file — skipped`,
           );
-        }
 
-        // Name+DOB checks — prevents re-import of same person
         if (dob) {
           const nameDobKey = `${firstName.toLowerCase().trim()}|${lastName.toLowerCase().trim()}|${dob}`;
-          if (existingNameDob.has(nameDobKey)) {
+          if (existingNameDob.has(nameDobKey))
             throw new Error(
               `Member "${firstName} ${lastName}" (DOB: ${dob}) already exists in your church — skipped`,
             );
-          }
-          if (seenNameDobThisBatch.has(nameDobKey)) {
+          if (seenNameDobThisBatch.has(nameDobKey))
             throw new Error(
               `"${firstName} ${lastName}" (DOB: ${dob}) appears more than once in this file — skipped`,
             );
-          }
         }
 
         const memberData: any = {
@@ -1302,7 +1273,6 @@ export class MemberService {
           throw new Error(error.message);
         }
 
-        // Track after successful insert
         if (email) {
           existingEmails.add(email);
           seenEmailsThisBatch.add(email);
@@ -1692,6 +1662,41 @@ export class MemberService {
   getCellGroups(): Observable<CellGroup[]> {
     return this.cellGroupsService.getActiveCellGroups();
   }
+
+  // ── Paste this new private method anywhere in the MemberService class ─────────
+
+  private async _checkImportQuota(
+    churchId: string,
+    incomingRowCount: number,
+  ): Promise<void> {
+    // 1. Current active member count
+    const { count: currentCount, error: countErr } = await this.supabase.client
+      .from('members')
+      .select('*', { count: 'exact', head: true })
+      .eq('church_id', churchId)
+      .eq('membership_status', 'active');
+
+    if (countErr) return; // don't block import on a count error — fail silently
+
+    // 2. Plan limit via check_quota RPC (same source of truth as everywhere else)
+    const { data: quota } = await this.supabase.client.rpc('check_quota', {
+      p_church_id: churchId,
+      p_resource: 'members',
+    });
+
+    if (!quota || quota.is_unlimited) return; // pro/null limit — always allowed
+
+    const current = Number(currentCount ?? 0);
+    const limit = Number(quota.limit);
+
+    if (current + incomingRowCount > limit) {
+      const remaining = Math.max(0, limit - current);
+      throw new Error(
+        `QUOTA_EXCEEDED:members:${current}:${limit}` +
+          `\nYour plan allows ${limit} members. You currently have ${current} and are importing ${incomingRowCount} rows, ` +
+          `but only ${remaining} slot${remaining !== 1 ? 's' : ''} remain. ` +
+          `Upgrade your plan or reduce the import file to ${remaining} row${remaining !== 1 ? 's' : ''}.`,
+      );
+    }
+  }
 }
-
-
