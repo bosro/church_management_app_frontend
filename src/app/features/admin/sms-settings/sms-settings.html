@@ -1,0 +1,230 @@
+<!-- src/app/features/admin/sms-settings/sms-settings.component.html -->
+<div class="sms-settings-container">
+  <div class="page-header">
+    <div>
+      <h1>SMS Provider Settings</h1>
+      <p class="subtitle">Control which SMS gateway sends messages to church members</p>
+    </div>
+  </div>
+
+  <!-- Alerts -->
+  <div *ngIf="successMessage" class="alert alert-success">
+    <i class="ri-checkbox-circle-line"></i> {{ successMessage }}
+  </div>
+  <div *ngIf="errorMessage" class="alert alert-error">
+    <i class="ri-error-warning-line"></i> {{ errorMessage }}
+  </div>
+
+  <div *ngIf="loading" class="loading-state">
+    <div class="spinner"></div>
+    <p>Loading settings...</p>
+  </div>
+
+  <form *ngIf="!loading" [formGroup]="settingsForm" (ngSubmit)="saveSettings()">
+
+    <!-- ── Provider selection ───────────────────────────────────────── -->
+    <div class="settings-card">
+      <div class="card-header">
+        <i class="ri-router-line"></i>
+        <div>
+          <h3>Active SMS Provider</h3>
+          <p>Choose which provider sends all outgoing SMS messages. Takes effect immediately on next send.</p>
+        </div>
+        <div class="active-badge">
+          <i class="ri-radio-button-line"></i>
+          {{ getProviderStatusLabel() }}
+        </div>
+      </div>
+
+      <div class="provider-grid">
+        <div
+          *ngFor="let p of providers"
+          class="provider-card"
+          [class.provider-card--selected]="selectedProvider === p.value"
+          (click)="selectProvider(p.value)">
+
+          <div class="provider-radio">
+            <div class="radio-dot" [class.radio-dot--active]="selectedProvider === p.value"></div>
+          </div>
+          <div class="provider-icon">
+            <i [class]="p.icon"></i>
+          </div>
+          <div class="provider-info">
+            <h4>{{ p.label }}</h4>
+            <p>{{ p.description }}</p>
+          </div>
+
+          <!-- Active indicator -->
+          <div class="provider-active-pill" *ngIf="selectedProvider === p.value">
+            <i class="ri-checkbox-circle-fill"></i>
+            Active
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Default sender ID ────────────────────────────────────────── -->
+    <div class="settings-card">
+      <div class="card-header">
+        <i class="ri-user-voice-line"></i>
+        <div>
+          <h3>Default Sender ID</h3>
+          <p>Used when a church hasn't set a custom sender ID. This is what recipients see as the sender name.</p>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Default Sender ID</label>
+        <input
+          type="text"
+          class="form-control"
+          formControlName="defaultSenderId"
+          placeholder="CHURCHMAN"
+          maxlength="11" />
+        <small class="help-text">{{ getSenderIdHint() }}</small>
+        <small class="char-count">
+          {{ settingsForm.get('defaultSenderId')?.value?.length || 0 }} / 11 characters
+        </small>
+        <div
+          *ngIf="settingsForm.get('defaultSenderId')?.invalid && settingsForm.get('defaultSenderId')?.touched"
+          class="field-error">
+          Sender ID must be 2–11 characters
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Hubtel credentials note ──────────────────────────────────── -->
+    <div class="settings-card info-card" *ngIf="selectedProvider === 'hubtel'">
+      <div class="card-header">
+        <i class="ri-key-2-line"></i>
+        <div>
+          <h3>Hubtel Credentials</h3>
+          <p>Set these in your Supabase Edge Function secrets — not stored in the database for security.</p>
+        </div>
+        <button type="button" class="btn-toggle-info" (click)="showHubtelInfo = !showHubtelInfo">
+          <i [class]="showHubtelInfo ? 'ri-eye-off-line' : 'ri-eye-line'"></i>
+          {{ showHubtelInfo ? 'Hide' : 'Show' }} setup guide
+        </button>
+      </div>
+
+      <div class="credential-guide" *ngIf="showHubtelInfo">
+        <div class="guide-step">
+          <span class="step-num">1</span>
+          <div>
+            <p>Log in to your Hubtel account and go to <strong>Messaging → Manage → Programmable SMS</strong></p>
+          </div>
+        </div>
+        <div class="guide-step">
+          <span class="step-num">2</span>
+          <div>
+            <p>Click <strong>Details</strong> on your API Key to find your <code>Client ID</code> and <code>Client Secret</code></p>
+          </div>
+        </div>
+        <div class="guide-step">
+          <span class="step-num">3</span>
+          <div>
+            <p>Set these Supabase secrets via CLI:</p>
+            <pre class="code-block">supabase secrets set HUBTEL_CLIENT_ID=your_client_id
+supabase secrets set HUBTEL_CLIENT_SECRET=your_client_secret</pre>
+          </div>
+        </div>
+        <div class="guide-step">
+          <span class="step-num">4</span>
+          <div>
+            <p>Redeploy the edge function:</p>
+            <pre class="code-block">supabase functions deploy send-communication</pre>
+          </div>
+        </div>
+        <div class="guide-note">
+          <i class="ri-information-line"></i>
+          <span>Make sure your Hubtel SMS API account is funded. Top up via Messaging → Manage → Programmable SMS → Add Funds.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── GiantSMS credentials note ────────────────────────────────── -->
+    <div class="settings-card info-card" *ngIf="selectedProvider === 'giantsms'">
+      <div class="card-header">
+        <i class="ri-key-2-line"></i>
+        <div>
+          <h3>GiantSMS Credentials</h3>
+          <p>These are already configured in your Supabase secrets if GiantSMS is currently working.</p>
+        </div>
+        <button type="button" class="btn-toggle-info" (click)="showGiantSmsInfo = !showGiantSmsInfo">
+          <i [class]="showGiantSmsInfo ? 'ri-eye-off-line' : 'ri-eye-line'"></i>
+          {{ showGiantSmsInfo ? 'Hide' : 'Show' }} setup guide
+        </button>
+      </div>
+
+      <div class="credential-guide" *ngIf="showGiantSmsInfo">
+        <div class="guide-step">
+          <span class="step-num">1</span>
+          <div><p>Required secrets: <code>GIANTSMS_USERNAME</code>, <code>GIANTSMS_PASSWORD</code>, <code>GIANTSMS_TOKEN</code>, <code>GIANTSMS_SENDER_ID</code></p></div>
+        </div>
+        <div class="guide-step">
+          <span class="step-num">2</span>
+          <div>
+            <p>The <code>GIANTSMS_SENDER_ID</code> secret is the global fallback. Per-church sender IDs override it — set them on the Churches page.</p>
+          </div>
+        </div>
+        <div class="guide-note">
+          <i class="ri-error-warning-line"></i>
+          <span>GiantSMS sender IDs must be registered and approved on your GiantSMS account before use.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Test SMS ──────────────────────────────────────────────────── -->
+    <div class="settings-card">
+      <div class="card-header">
+        <i class="ri-send-plane-line"></i>
+        <div>
+          <h3>Test SMS Send</h3>
+          <p>Send a test message to verify the selected provider is working correctly.</p>
+        </div>
+      </div>
+
+      <div class="test-sms-row">
+        <div class="form-group flex-1">
+          <label>Test Phone Number</label>
+          <input
+            type="tel"
+            class="form-control"
+            [(ngModel)]="testPhone"
+            [ngModelOptions]="{standalone: true}"
+            placeholder="0241234567"
+            maxlength="13" />
+          <small class="help-text">Enter a Ghana phone number to receive the test SMS</small>
+        </div>
+        <button
+          type="button"
+          class="btn btn-test"
+          (click)="sendTestSms()"
+          [disabled]="testing || !testPhone">
+          <i class="ri-loader-4-line spin" *ngIf="testing"></i>
+          <i class="ri-send-plane-line" *ngIf="!testing"></i>
+          {{ testing ? 'Sending...' : 'Send Test' }}
+        </button>
+      </div>
+
+      <!-- Test result -->
+      <div *ngIf="testResult" class="test-result" [class.test-result--success]="testResult.success" [class.test-result--fail]="!testResult.success">
+        <i [class]="testResult.success ? 'ri-checkbox-circle-line' : 'ri-close-circle-line'"></i>
+        <span>{{ testResult.message }}</span>
+      </div>
+    </div>
+
+    <!-- ── Save ──────────────────────────────────────────────────────── -->
+    <div class="form-actions">
+      <button
+        type="submit"
+        class="btn btn-primary"
+        [disabled]="saving || settingsForm.invalid">
+        <i class="ri-save-line" *ngIf="!saving"></i>
+        <i class="ri-loader-4-line spin" *ngIf="saving"></i>
+        {{ saving ? 'Saving...' : 'Save Settings' }}
+      </button>
+    </div>
+
+  </form>
+</div>
