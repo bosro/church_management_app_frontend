@@ -9,6 +9,7 @@ import { SupabaseService } from '../../../../core/services/supabase';
 import { AuthService } from '../../../../core/services/auth';
 import { EventsService } from '../../../events/services/events'; // ✅ ADD THIS
 import { PermissionService } from '../../../../core/services/permission.service';
+import { FirstLoginService } from '../../../../core/services/first-login.service';
 
 interface UpcomingBirthday {
   id: string;
@@ -36,6 +37,11 @@ interface TeamMember {
 })
 export class Overview implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
+
+
+  // First-login upgrade modal
+  showFirstLoginUpgrade = false;
+  firstLoginUpgradeTrigger = '';
 
   loading = true;
   churchId?: string;
@@ -76,6 +82,7 @@ export class Overview implements OnInit, OnDestroy {
     private eventsService: EventsService, // ✅ ADD THIS
     private router: Router,
     public permissionService: PermissionService,
+       private firstLoginService: FirstLoginService,
   ) {}
 
   ngOnInit(): void {
@@ -109,6 +116,20 @@ export class Overview implements OnInit, OnDestroy {
           this.loading = false;
         }
       });
+
+    setTimeout(() => {
+      this.firstLoginService.checkFirstLoginUpgrade();
+    }, 2000);
+
+    this.firstLoginService.showUpgrade$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((show) => {
+        if (show) {
+          this.firstLoginUpgradeTrigger = this.firstLoginService.upgradeTrigger;
+          this.showFirstLoginUpgrade = true;
+        }
+      });
+
   }
 
   ngOnDestroy(): void {
@@ -116,6 +137,12 @@ export class Overview implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+
+   onFirstLoginUpgradeClosed(): void {
+    this.showFirstLoginUpgrade = false;
+    this.firstLoginService.dismiss();
+  }
+  
   private setPermissions(): void {
     const adminRoles = ['super_admin', 'church_admin', 'pastor'];
     const financeRoles = ['super_admin', 'church_admin', 'finance_officer'];

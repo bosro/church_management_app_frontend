@@ -111,13 +111,14 @@ export class CommunicationsService {
   }
 
   // UPDATED: accepts optional target_member_id
-  createCommunication(communicationData: {
+createCommunication(communicationData: {
     title: string;
     message: string;
     communication_type: CommunicationType;
     target_audience: TargetAudience;
     scheduled_at?: string;
     target_member_id?: string | null;
+    custom_member_ids?: string[] | null;   // ← NEW
   }): Observable<Communication> {
     const churchId = this.authService.getChurchId();
     const userId = this.authService.getUserId();
@@ -132,6 +133,7 @@ export class CommunicationsService {
         communication_type: communicationData.communication_type,
         target_audience: communicationData.target_audience,
         target_member_id: communicationData.target_member_id || null,
+        custom_member_ids: communicationData.custom_member_ids || null,  // ← NEW
         scheduled_at: communicationData.scheduled_at || null,
         status: communicationData.scheduled_at ? 'scheduled' : 'draft',
         created_by: userId,
@@ -139,13 +141,13 @@ export class CommunicationsService {
     ).pipe(
       map(({ data, error }) => {
         if (error) throw new Error(error.message);
-        if (!data || data.length === 0)
-          throw new Error('Failed to create communication');
+        if (!data || data.length === 0) throw new Error('Failed to create communication');
         return data[0];
       }),
       catchError((err) => throwError(() => err)),
     );
   }
+
 
   updateCommunication(
     communicationId: string,

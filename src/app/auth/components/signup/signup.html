@@ -1,4 +1,12 @@
-<!-- src/app/features/auth/components/signup/signup.component.html -->
+<!-- src/app/features/auth/components/signup/signup.html -->
+<!-- CHANGES vs previous version:
+     - Step 3 success screen: clean email confirmation only
+     - Removed Paystack upgrade card entirely
+     - Only ONE "Go to Sign In" button
+     - Both member and admin paths show the same clean confirmation screen
+     - Steps 1 and 2 are IDENTICAL to your existing working code
+-->
+
 <div class="signup-container">
   <div class="signup-card">
     <!-- Header -->
@@ -6,17 +14,17 @@
       <h1>Welcome to Churchman.</h1>
       <h2>
         {{ !signupType ? 'Choose how you want to sign up' :
-        signupType === 'member' ? 'Join Your Church' :
-        currentStep === 1 ? 'Sign Up to get started.' :
-        currentStep === 2 ? 'Complete Your Registration' :
-        'Registration Submitted!' }}
+           signupType === 'member' ? 'Join Your Church' :
+           currentStep === 1 ? 'Sign Up to get started.' :
+           currentStep === 2 ? 'Complete Your Registration' :
+           'Almost there!' }}
       </h2>
       <p class="subtitle">
         {{ !signupType ? 'Select the option that best describes you' :
-        signupType === 'member' ? 'Sign up as a member of an existing church' :
-        currentStep === 1 ? 'Enter your details to proceed further' :
-        currentStep === 2 ? 'Enter your details to proceed further' :
-        'Check your email to complete the process' }}
+           signupType === 'member' ? 'Sign up as a member of an existing church' :
+           currentStep === 1 ? 'Enter your details to proceed further' :
+           currentStep === 2 ? 'Enter your details to proceed further' :
+           'One last step before you can sign in' }}
       </p>
     </div>
 
@@ -26,13 +34,9 @@
       <span>{{ errorMessage }}</span>
     </div>
 
-    <!-- Success Alert -->
-    <div *ngIf="successMessage && currentStep === 3" class="success-alert">
-      <i class="ri-checkbox-circle-line"></i>
-      <span>{{ successMessage }}</span>
-    </div>
-
-    <!-- Signup Type Selection -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- TYPE SELECTION — unchanged                                 -->
+    <!-- ══════════════════════════════════════════════════════════ -->
     <div *ngIf="!signupType" class="signup-type-selection">
       <div class="type-card" (click)="selectSignupType('member')">
         <div class="type-icon member">
@@ -41,14 +45,8 @@
         <h3>Church Member</h3>
         <p>Join an existing church that's already using Churchman</p>
         <div class="type-benefits">
-          <div class="benefit-item">
-            <i class="ri-check-line"></i>
-            <span>Instant access</span>
-          </div>
-          <div class="benefit-item">
-            <i class="ri-check-line"></i>
-            <span>No approval needed</span>
-          </div>
+          <div class="benefit-item"><i class="ri-check-line"></i><span>Instant access</span></div>
+          <div class="benefit-item"><i class="ri-check-line"></i><span>No approval needed</span></div>
         </div>
       </div>
 
@@ -59,14 +57,7 @@
         <h3>Church Admin/Pastor</h3>
         <p>Signup to gain admin access to manage your church</p>
         <div class="type-benefits">
-          <div class="benefit-item">
-            <i class="ri-check-line"></i>
-            <span>Full management access</span>
-          </div>
-          <!-- <div class="benefit-item">
-            <i class="ri-check-line"></i>
-            <span>Admin approval required</span>
-          </div> -->
+          <div class="benefit-item"><i class="ri-check-line"></i><span>Full management access</span></div>
         </div>
       </div>
 
@@ -75,16 +66,16 @@
       </div>
     </div>
 
-    <!-- Member Signup Flow -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- MEMBER SIGNUP FLOW — unchanged                             -->
+    <!-- ══════════════════════════════════════════════════════════ -->
     <form *ngIf="signupType === 'member' && currentStep < 3" [formGroup]="signupForm" class="signup-form">
-      <!-- Back Button -->
       <button type="button" class="btn-back" (click)="backToTypeSelection()">
         <i class="ri-arrow-left-line"></i> Back to selection
       </button>
 
-      <!-- Step 1: Member Basic Info + Church Selection -->
+      <!-- Step 1 -->
       <div *ngIf="currentStep === 1">
-        <!-- Full Name -->
         <div class="form-group">
           <label for="full_name">Full name</label>
           <div class="input-wrapper">
@@ -92,13 +83,11 @@
             <input id="full_name" type="text" formControlName="full_name" placeholder="John Doe"
               [class.error]="signupForm.get('full_name')?.invalid && signupForm.get('full_name')?.touched" />
           </div>
-          <span *ngIf="signupForm.get('full_name')?.invalid && signupForm.get('full_name')?.touched"
-            class="error-message">
+          <span *ngIf="signupForm.get('full_name')?.invalid && signupForm.get('full_name')?.touched" class="error-message">
             {{ getErrorMessage('full_name') }}
           </span>
         </div>
 
-        <!-- Email -->
         <div class="form-group">
           <label for="email">Email</label>
           <div class="input-wrapper">
@@ -112,7 +101,6 @@
           </span>
         </div>
 
-        <!-- Phone -->
         <div class="form-group">
           <label for="phone">Phone</label>
           <div class="input-wrapper">
@@ -125,7 +113,6 @@
           </span>
         </div>
 
-        <!-- Church Selection -->
         <div class="form-group">
           <label for="church_id">Select Your Church</label>
           <div class="input-wrapper select-wrapper">
@@ -141,26 +128,19 @@
             </select>
             <i class="ri-arrow-down-s-line select-icon"></i>
           </div>
-          <span *ngIf="signupForm.get('church_id')?.invalid && signupForm.get('church_id')?.touched"
-            class="error-message">
+          <span *ngIf="signupForm.get('church_id')?.invalid && signupForm.get('church_id')?.touched" class="error-message">
             {{ getErrorMessage('church_id') }}
           </span>
         </div>
 
-        <!-- Buttons -->
         <div class="button-group">
-          <button type="button" class="btn-secondary" (click)="backToTypeSelection()">
-            Cancel
-          </button>
-          <button type="button" class="btn-primary" (click)="nextStep()">
-            Next
-          </button>
+          <button type="button" class="btn-secondary" (click)="backToTypeSelection()">Cancel</button>
+          <button type="button" class="btn-primary" (click)="nextStep()">Next</button>
         </div>
       </div>
 
-      <!-- Step 2: Member Password -->
+      <!-- Step 2 -->
       <div *ngIf="currentStep === 2">
-        <!-- Password -->
         <div class="form-group">
           <label for="password">Password</label>
           <div class="input-wrapper password-wrapper">
@@ -172,13 +152,11 @@
               <i [class]="showPassword ? 'ri-eye-off-line' : 'ri-eye-line'"></i>
             </button>
           </div>
-          <span *ngIf="signupForm.get('password')?.invalid && signupForm.get('password')?.touched"
-            class="error-message">
+          <span *ngIf="signupForm.get('password')?.invalid && signupForm.get('password')?.touched" class="error-message">
             {{ getErrorMessage('password') }}
           </span>
         </div>
 
-        <!-- Confirm Password -->
         <div class="form-group">
           <label for="confirm_password">Confirm Password</label>
           <div class="input-wrapper password-wrapper">
@@ -191,16 +169,11 @@
             </button>
           </div>
           <span *ngIf="signupForm.get('confirm_password')?.invalid && signupForm.get('confirm_password')?.touched"
-            class="error-message">
-            {{ getErrorMessage('confirm_password') }}
-          </span>
+            class="error-message">{{ getErrorMessage('confirm_password') }}</span>
         </div>
 
-        <!-- Buttons -->
         <div class="button-group">
-          <button type="button" class="btn-secondary" (click)="previousStep()">
-            Back
-          </button>
+          <button type="button" class="btn-secondary" (click)="previousStep()">Back</button>
           <button type="button" class="btn-primary" (click)="nextStep()" [disabled]="loading">
             <span *ngIf="!loading">Join Church</span>
             <span *ngIf="loading">Creating Account...</span>
@@ -209,82 +182,71 @@
       </div>
     </form>
 
-    <!-- Admin Signup Flow (Keep existing admin flow) -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- ADMIN SIGNUP FLOW — unchanged                              -->
+    <!-- ══════════════════════════════════════════════════════════ -->
     <form *ngIf="signupType === 'admin' && currentStep < 3" [formGroup]="signupForm" class="signup-form">
-      <!-- Back Button -->
       <button type="button" class="btn-back" (click)="backToTypeSelection()">
         <i class="ri-arrow-left-line"></i> Back to selection
       </button>
 
-      <!-- Step 1: Basic Information -->
+      <!-- Step 1 -->
       <div *ngIf="currentStep === 1">
-        <!-- Full Name -->
         <div class="form-group">
           <label for="full_name">Full name</label>
           <div class="input-wrapper">
             <i class="ri-user-line input-icon"></i>
-            <input id="full_name" type="text" formControlName="full_name" placeholder="Cephas Ntiamoah"
+            <input id="full_name" type="text" formControlName="full_name" placeholder="Your full name"
               [class.error]="signupForm.get('full_name')?.invalid && signupForm.get('full_name')?.touched" />
           </div>
-          <span *ngIf="signupForm.get('full_name')?.invalid && signupForm.get('full_name')?.touched"
-            class="error-message">
+          <span *ngIf="signupForm.get('full_name')?.invalid && signupForm.get('full_name')?.touched" class="error-message">
             {{ getErrorMessage('full_name') }}
           </span>
         </div>
 
-        <!-- Church Name -->
         <div class="form-group">
           <label for="church_name">Church name</label>
           <div class="input-wrapper">
             <i class="ri-building-line input-icon"></i>
-            <input id="church_name" type="text" formControlName="church_name" placeholder="TEST CHURCH 1"
+            <input id="church_name" type="text" formControlName="church_name" placeholder="Your church name"
               [class.error]="signupForm.get('church_name')?.invalid && signupForm.get('church_name')?.touched" />
           </div>
-          <span *ngIf="signupForm.get('church_name')?.invalid && signupForm.get('church_name')?.touched"
-            class="error-message">
+          <span *ngIf="signupForm.get('church_name')?.invalid && signupForm.get('church_name')?.touched" class="error-message">
             {{ getErrorMessage('church_name') }}
           </span>
         </div>
 
-        <!-- Location -->
         <div class="form-group">
           <label for="church_location">Location of Church</label>
           <div class="input-wrapper">
             <i class="ri-map-pin-line input-icon"></i>
-            <input id="church_location" type="text" formControlName="church_location" placeholder="Start typing..."
+            <input id="church_location" type="text" formControlName="church_location" placeholder="City, Region"
               [class.error]="signupForm.get('church_location')?.invalid && signupForm.get('church_location')?.touched" />
           </div>
           <span *ngIf="signupForm.get('church_location')?.invalid && signupForm.get('church_location')?.touched"
-            class="error-message">
-            {{ getErrorMessage('church_location') }}
-          </span>
+            class="error-message">{{ getErrorMessage('church_location') }}</span>
         </div>
 
-        <!-- Position -->
         <div class="form-group">
           <label for="position">Position in Church</label>
           <div class="input-wrapper select-wrapper">
             <select id="position" formControlName="position"
               [class.error]="signupForm.get('position')?.invalid && signupForm.get('position')?.touched">
               <option value="" disabled selected>Select position from dropdown</option>
-              <option *ngFor="let option of positionOptions" [value]="option.value">
-                {{ option.label }}
-              </option>
+              <option *ngFor="let option of positionOptions" [value]="option.value">{{ option.label }}</option>
             </select>
             <i class="ri-arrow-down-s-line select-icon"></i>
           </div>
-          <span *ngIf="signupForm.get('position')?.invalid && signupForm.get('position')?.touched"
-            class="error-message">
+          <span *ngIf="signupForm.get('position')?.invalid && signupForm.get('position')?.touched" class="error-message">
             {{ getErrorMessage('position') }}
           </span>
         </div>
 
-        <!-- Email -->
         <div class="form-group">
           <label for="email">Email</label>
           <div class="input-wrapper">
             <i class="ri-mail-line input-icon"></i>
-            <input id="email" type="email" formControlName="email" placeholder="cephanstianmoah@gmail.com"
+            <input id="email" type="email" formControlName="email" placeholder="your@email.com"
               [class.error]="signupForm.get('email')?.invalid && signupForm.get('email')?.touched" />
           </div>
           <span *ngIf="signupForm.get('email')?.invalid && signupForm.get('email')?.touched" class="error-message">
@@ -292,12 +254,11 @@
           </span>
         </div>
 
-        <!-- Phone -->
         <div class="form-group">
           <label for="phone">Phone</label>
           <div class="input-wrapper">
             <i class="ri-phone-line input-icon"></i>
-            <input id="phone" type="tel" formControlName="phone" placeholder="Start typing..."
+            <input id="phone" type="tel" formControlName="phone" placeholder="0XXXXXXXXX"
               [class.error]="signupForm.get('phone')?.invalid && signupForm.get('phone')?.touched" />
           </div>
           <span *ngIf="signupForm.get('phone')?.invalid && signupForm.get('phone')?.touched" class="error-message">
@@ -305,98 +266,77 @@
           </span>
         </div>
 
-        <!-- Buttons -->
         <div class="button-group">
-          <button type="button" class="btn-secondary" (click)="backToTypeSelection()">
-            Cancel
-          </button>
-          <button type="button" class="btn-primary" (click)="nextStep()">
-            Next
-          </button>
+          <button type="button" class="btn-secondary" (click)="backToTypeSelection()">Cancel</button>
+          <button type="button" class="btn-primary" (click)="nextStep()">Next</button>
         </div>
       </div>
 
-      <!-- Step 2: Additional Details (Keep existing admin step 2) -->
+      <!-- Step 2 -->
       <div *ngIf="currentStep === 2">
-        <!-- Church Size -->
         <div class="form-group">
           <label for="church_size">Church Size</label>
           <div class="input-wrapper select-wrapper">
             <select id="church_size" formControlName="church_size"
               [class.error]="signupForm.get('church_size')?.invalid && signupForm.get('church_size')?.touched">
               <option value="" disabled selected>Select church size from dropdown</option>
-              <option *ngFor="let option of churchSizeOptions" [value]="option.value">
-                {{ option.label }}
-              </option>
+              <option *ngFor="let option of churchSizeOptions" [value]="option.value">{{ option.label }}</option>
             </select>
             <i class="ri-arrow-down-s-line select-icon"></i>
           </div>
-          <span *ngIf="signupForm.get('church_size')?.invalid && signupForm.get('church_size')?.touched"
-            class="error-message">
+          <span *ngIf="signupForm.get('church_size')?.invalid && signupForm.get('church_size')?.touched" class="error-message">
             {{ getErrorMessage('church_size') }}
           </span>
         </div>
 
-        <!-- Password -->
         <div class="form-group">
           <label for="password">Password</label>
           <div class="input-wrapper password-wrapper">
             <i class="ri-lock-line input-icon"></i>
             <input id="password" [type]="showPassword ? 'text' : 'password'" formControlName="password"
-              placeholder="Start typing..."
+              placeholder="Create a password"
               [class.error]="signupForm.get('password')?.invalid && signupForm.get('password')?.touched" />
             <button type="button" class="toggle-password" (click)="togglePasswordVisibility()" tabindex="-1">
               <i [class]="showPassword ? 'ri-eye-off-line' : 'ri-eye-line'"></i>
             </button>
           </div>
-          <span *ngIf="signupForm.get('password')?.invalid && signupForm.get('password')?.touched"
-            class="error-message">
+          <span *ngIf="signupForm.get('password')?.invalid && signupForm.get('password')?.touched" class="error-message">
             {{ getErrorMessage('password') }}
           </span>
         </div>
 
-        <!-- Confirm Password -->
         <div class="form-group">
           <label for="confirm_password">Confirm Password</label>
           <div class="input-wrapper password-wrapper">
             <i class="ri-lock-line input-icon"></i>
             <input id="confirm_password" [type]="showConfirmPassword ? 'text' : 'password'"
-              formControlName="confirm_password" placeholder="Start typing..."
+              formControlName="confirm_password" placeholder="Confirm your password"
               [class.error]="signupForm.get('confirm_password')?.invalid && signupForm.get('confirm_password')?.touched" />
             <button type="button" class="toggle-password" (click)="toggleConfirmPasswordVisibility()" tabindex="-1">
               <i [class]="showConfirmPassword ? 'ri-eye-off-line' : 'ri-eye-line'"></i>
             </button>
           </div>
           <span *ngIf="signupForm.get('confirm_password')?.invalid && signupForm.get('confirm_password')?.touched"
-            class="error-message">
-            {{ getErrorMessage('confirm_password') }}
-          </span>
+            class="error-message">{{ getErrorMessage('confirm_password') }}</span>
         </div>
 
-        <!-- How did you hear about us -->
         <div class="form-group">
           <label for="how_heard">How did you hear about us?</label>
           <div class="input-wrapper select-wrapper">
             <select id="how_heard" formControlName="how_heard"
               [class.error]="signupForm.get('how_heard')?.invalid && signupForm.get('how_heard')?.touched">
               <option value="" disabled selected>Select from dropdown</option>
-              <option *ngFor="let option of howHeardOptions" [value]="option.value">
-                {{ option.label }}
-              </option>
+              <option *ngFor="let option of howHeardOptions" [value]="option.value">{{ option.label }}</option>
             </select>
             <i class="ri-arrow-down-s-line select-icon"></i>
           </div>
-          <span *ngIf="signupForm.get('how_heard')?.invalid && signupForm.get('how_heard')?.touched"
-            class="error-message">
+          <span *ngIf="signupForm.get('how_heard')?.invalid && signupForm.get('how_heard')?.touched" class="error-message">
             {{ getErrorMessage('how_heard') }}
           </span>
         </div>
 
-        <!-- Buttons -->
         <div class="button-group">
-          <button type="button" class="btn-secondary" (click)="previousStep()">
-            Back
-          </button>
+          <button type="button" class="btn-secondary" (click)="previousStep()">Back</button>
           <button type="button" class="btn-primary" (click)="nextStep()" [disabled]="loading">
             <span *ngIf="!loading">Submit</span>
             <span *ngIf="loading">Creating Account...</span>
@@ -405,8 +345,11 @@
       </div>
     </form>
 
-    <!-- Step 3: Success Message (Same for both) -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- STEP 3: EMAIL CONFIRMATION — clean, no payment card        -->
+    <!-- ══════════════════════════════════════════════════════════ -->
     <div *ngIf="currentStep === 3" class="success-step">
+
       <div class="success-icon">
         <i class="ri-mail-send-line"></i>
       </div>
@@ -414,139 +357,51 @@
       <h3>Check Your Email!</h3>
 
       <p class="success-description">
-        We've sent a confirmation link to <strong>{{ signupForm.get('email')?.value }}</strong>
+        We've sent a confirmation link to
+        <strong>{{ signupForm.get('email')?.value }}</strong>
       </p>
 
-      <p class="success-description" *ngIf="signupType === 'member'">
-        Click the link in the email to verify your account. Once verified, you can sign in and start using Churchman!
-      </p>
-
-      <p class="success-description" *ngIf="signupType === 'admin'">
-        Click the link in the email to verify your account. Once verified, you can sign in and start using Churchman!
-      </p>
-
-
-      <!-- <div class="success-steps" *ngIf="signupType === 'admin'">
-        <div class="step-item">
-          <div class="step-number">1</div>
-          <div class="step-text">
-            <strong>Verify Email</strong>
-            <p>Click the link we sent you</p>
+      <!-- Steps to follow -->
+      <div class="confirmation-steps">
+        <div class="conf-step">
+          <div class="conf-step-num">1</div>
+          <div class="conf-step-text">
+            <strong>Check your inbox</strong>
+            <p>Look for an email from Churchman. Check your spam folder if you don't see it.</p>
           </div>
         </div>
-        <div class="step-item">
-          <div class="step-number">2</div>
-          <div class="step-text">
-            <strong>Admin Review</strong>
-            <p>We'll review your request</p>
+        <div class="conf-step">
+          <div class="conf-step-num">2</div>
+          <div class="conf-step-text">
+            <strong>Click the confirmation link</strong>
+            <p>This verifies your email address and activates your account.</p>
           </div>
         </div>
-        <div class="step-item">
-          <div class="step-number">3</div>
-          <div class="step-text">
-            <strong>Get Approved</strong>
-            <p>Receive approval email</p>
+        <div class="conf-step">
+          <div class="conf-step-num">3</div>
+          <div class="conf-step-text">
+            <strong>Sign in to Churchman</strong>
+            <p>Once confirmed, sign in and start managing your
+              {{ signupType === 'member' ? 'church membership' : 'church' }}.
+            </p>
           </div>
         </div>
-      </div> -->
-
-      <!-- ══════════════════════════════════════════════════════════════ -->
-      <!-- PLAN RECOMMENDATION CARD                                       -->
-      <!-- Only shown for admin signups where church_size needs an upgrade -->
-      <!-- ══════════════════════════════════════════════════════════════ -->
-      <div *ngIf="shouldShowUpgradeSuggestion" class="plan-recommendation-card">
-        <div class="rec-header">
-          <div class="rec-icon">
-            <i class="ri-vip-crown-line"></i>
-          </div>
-          <div class="rec-title">
-            <h4>Recommended: {{ recommendedPlan?.planName }} Plan</h4>
-            <p>Based on your church size of {{ selectedChurchSize }} members</p>
-          </div>
-        </div>
-
-        <p class="rec-description">
-          Your free plan supports up to 50 members. To accommodate your church,
-          upgrade to the <strong>{{ recommendedPlan?.planName }}</strong> plan now and get started right away.
-        </p>
-
-        <!-- Billing cycle toggle -->
-        <div class="rec-billing-toggle">
-          <button [class.active]="upgradeBillingCycle === 'monthly'" (click)="upgradeBillingCycle = 'monthly'">
-            Monthly
-          </button>
-          <button [class.active]="upgradeBillingCycle === 'yearly'" (click)="upgradeBillingCycle = 'yearly'">
-            Yearly
-            <span class="save-pill">Save 20%</span>
-          </button>
-        </div>
-
-        <!-- Price summary -->
-        <div class="rec-price-summary">
-          <div class="price-row">
-            <span>Plan price</span>
-            <span>GHS {{ getRecommendedPlanPrice() | number:'1.2-2' }}</span>
-          </div>
-          <div class="price-row fee-row" *ngIf="passFeesToPayer && getRecommendedPlanFee() > 0">
-            <span>Processing fee</span>
-            <span class="fee-amount">+ GHS {{ getRecommendedPlanFee() | number:'1.2-2' }}</span>
-          </div>
-          <div class="price-row price-total">
-            <strong>Total charged</strong>
-            <strong>GHS {{ getRecommendedPlanChargeAmount() | number:'1.2-2' }}</strong>
-          </div>
-        </div>
-
-        <!-- Billing email -->
-        <div class="rec-email-group">
-          <label>Billing Email</label>
-          <input type="email" class="rec-email-input" [(ngModel)]="upgradeBillingEmail" placeholder="your@email.com"
-            [disabled]="upgradeProcessing" />
-        </div>
-
-        <!-- Error -->
-        <div *ngIf="upgradeError" class="rec-error">
-          <i class="ri-error-warning-line"></i>
-          <span>{{ upgradeError }}</span>
-        </div>
-
-        <!-- Actions -->
-        <div class="rec-actions">
-          <button class="btn-upgrade-now" (click)="upgradeAfterSignup()"
-            [disabled]="upgradeProcessing || !upgradeBillingEmail">
-            <span *ngIf="!upgradeProcessing">
-              <i class="ri-secure-payment-line"></i>
-              Pay & Activate {{ recommendedPlan?.planName }}
-            </span>
-            <span *ngIf="upgradeProcessing">
-              <i class="ri-loader-4-line spin"></i>
-              Redirecting to Paystack...
-            </span>
-          </button>
-        </div>
-
-        <p class="rec-skip">
-          You can also upgrade later from
-          <strong>Settings → Subscription</strong> after signing in.
-        </p>
       </div>
-      <!-- ── END PLAN RECOMMENDATION CARD ── -->
 
-      <button class="btn-primary" (click)="goToSignIn()" style="margin-top: 1.5rem;">
+      <button class="btn-primary full-width" (click)="goToSignIn()">
+        <i class="ri-login-circle-line"></i>
         Go to Sign In
       </button>
 
       <p class="resend-note">
-        Didn't receive the email? Check your spam folder or contact support.
+        Didn't receive the email? Check your spam folder or
+        <a href="mailto:support@churchman.app">contact support</a>.
       </p>
 
-      <button class="btn-primary" (click)="goToSignIn()">
-        Go to Sign In
-      </button>
-
-      <p class="resend-note">
-        Didn't receive the email? Check your spam folder or contact support.
-      </p>
     </div>
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- END STEP 3                                                 -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+
   </div>
 </div>

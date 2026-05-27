@@ -832,3 +832,69 @@
   to   { transform: rotate(360deg); }
 }
 .spin { animation: spin 1s linear infinite; display: inline-block; }
+
+
+// Append these styles to your existing signup.component.scss
+// They style the new step 3 confirmation steps layout.
+// The existing .success-step, .success-icon, .success-description,
+// .btn-primary, and .resend-note styles you already have still apply.
+
+// ── Confirmation steps ────────────────────────────────────────────────────────
+
+.confirmation-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin: 1.5rem 0 2rem;
+  text-align: left;
+}
+
+.conf-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+
+  .conf-step-num {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #5B21B6;
+    color: white;
+    font-size: 0.875rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .conf-step-text {
+    flex: 1;
+
+    strong {
+      display: block;
+      font-size: 0.9375rem;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 0.25rem;
+    }
+
+    p {
+      font-size: 0.875rem;
+      color: #6B7280;
+      margin: 0;
+      line-height: 1.5;
+    }
+  }
+}
+
+// ── Full width button variant ─────────────────────────────────────────────────
+
+.btn-primary.full-width {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
