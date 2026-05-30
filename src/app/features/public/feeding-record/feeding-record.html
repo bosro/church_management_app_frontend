@@ -36,7 +36,7 @@
         –
         <strong>{{ formatDateLabel(activeRecordingWindow.allow_to) }}</strong>
         <span *ngIf="activeRecordingWindow.reason"> — {{ activeRecordingWindow.reason }}</span>.
-        Use the date picker to navigate to those dates.
+        Use the date picker above to navigate to those dates.
       </span>
     </div>
 
@@ -66,20 +66,20 @@
       </div>
     </div>
 
-    <!-- Daily Summary Card -->
+    <!-- Daily Summary -->
     <div class="daily-summary" *ngIf="dailySummary">
       <div class="summary-stat present">
         <i class="ri-user-follow-line"></i>
         <div>
           <p class="stat-value">{{ dailySummary.present }}</p>
-          <p class="stat-label">Present</p>
+          <p class="stat-label">Present Today</p>
         </div>
       </div>
       <div class="summary-stat absent">
         <i class="ri-user-unfollow-line"></i>
         <div>
           <p class="stat-value">{{ dailySummary.absent }}</p>
-          <p class="stat-label">Absent</p>
+          <p class="stat-label">Absent Today</p>
         </div>
       </div>
       <div class="summary-stat collected">
@@ -89,46 +89,58 @@
           <p class="stat-label">Collected Today</p>
         </div>
       </div>
+      <div class="summary-stat total">
+        <i class="ri-group-line"></i>
+        <div>
+          <p class="stat-value">{{ totalStudents }}</p>
+          <p class="stat-label">Total Students</p>
+        </div>
+      </div>
     </div>
 
-    <!-- Class + Search Row -->
+    <!-- Class Filter + Search Row -->
     <div class="student-controls">
+
+      <!-- Class filter (optional — filters the already-loaded list) -->
       <div class="class-filter">
         <select [(ngModel)]="selectedClassId" (change)="onClassChange()">
-          <option value="">-- Select a Class --</option>
+          <option value="">All Classes ({{ totalStudents }})</option>
           <option *ngFor="let c of classes" [value]="c.id">{{ c.name }}</option>
         </select>
       </div>
+
+      <!-- Live search (filters client-side, no API call) -->
       <div class="student-search-wrap">
         <i class="ri-search-line"></i>
         <input type="text" [(ngModel)]="searchQuery" (input)="onSearchInput()"
-          placeholder="Search student by name or number..." autocomplete="off" />
-        <div *ngIf="showSearchResults && searchResults.length > 0" class="search-dropdown">
-          <div *ngFor="let s of searchResults" class="search-result-item" (click)="selectStudentFromSearch(s)">
-            <div class="search-avatar">{{ s.first_name[0] }}{{ s.last_name[0] }}</div>
-            <div>
-              <p class="search-name">{{ getStudentName(s) }}</p>
-              <p class="search-meta">{{ s.student_number }} · {{ s.class?.name || '—' }}</p>
-            </div>
-          </div>
-        </div>
-        <div *ngIf="searching" class="search-loading"><i class="ri-loader-4-line spin"></i></div>
+          placeholder="Search by name or student number..." autocomplete="off" />
+        <button *ngIf="searchQuery" class="search-clear" (click)="searchQuery=''; applyClassFilter()">
+          <i class="ri-close-line"></i>
+        </button>
+      </div>
+
+      <!-- Count badge -->
+      <div class="student-count-badge">
+        <i class="ri-group-line"></i> {{ displayCount }}
       </div>
     </div>
 
     <!-- Students Table -->
-    <div class="students-panel" *ngIf="students.length > 0 || loadingStudents">
+    <div class="students-panel">
 
+      <!-- Loading overlay -->
       <div *ngIf="loadingStudents" class="loading-state">
         <div class="spinner"></div>
         <p>Loading students...</p>
       </div>
 
+      <!-- Table -->
       <div *ngIf="!loadingStudents && students.length > 0" class="students-table-wrap">
         <table class="students-table">
           <thead>
             <tr>
               <th>Student</th>
+              <th>Class</th>
               <th class="text-center">Attendance</th>
               <th class="text-right">Daily Rate</th>
               <th class="text-right">Term Total</th>
@@ -142,15 +154,22 @@
             <tr *ngFor="let student of students; trackBy: trackByStudentId"
               [class.row-absent]="!studentStates[student.id]?.isPresent">
 
-              <!-- Student Info -->
+              <!-- Student -->
               <td>
                 <div class="student-cell">
-                  <div class="student-avatar">{{ student.first_name[0] }}{{ student.last_name[0] }}</div>
+                  <div class="student-avatar">
+                    {{ student.first_name[0] }}{{ student.last_name[0] }}
+                  </div>
                   <div>
                     <p class="student-name">{{ getStudentName(student) }}</p>
-                    <p class="student-meta">{{ student.student_number }} · {{ student.class?.name }}</p>
+                    <p class="student-meta">{{ student.student_number }}</p>
                   </div>
                 </div>
+              </td>
+
+              <!-- Class -->
+              <td>
+                <span class="class-badge">{{ student.class?.name || '—' }}</span>
               </td>
 
               <!-- Attendance Toggle -->
@@ -171,46 +190,47 @@
 
               <!-- Daily Rate -->
               <td class="text-right">
-                <ng-container *ngIf="(studentStates[student.id]?.studentFeedingFees?.length ?? 0) > 0; else noFee">
-                  <span class="rate-chip">
+                <span *ngIf="!studentStates[student.id]?.loadingSummary">
+                  <span class="rate-chip" *ngIf="(studentStates[student.id]?.studentFeedingFees?.length ?? 0) > 0">
                     {{ formatCurrency(studentStates[student.id]?.studentFeedingFees?.[0]?.daily_amount || 0) }}
                   </span>
-                </ng-container>
-                <ng-template #noFee>
-                  <span class="no-rate-chip" title="No feeding fee assigned for this term">Not assigned</span>
-                </ng-template>
+                  <span class="no-rate-chip" *ngIf="studentStates[student.id]?.studentFeedingFees?.length === 0">
+                    Not assigned
+                  </span>
+                </span>
+                <span *ngIf="studentStates[student.id]?.loadingSummary" class="skeleton-cell"></span>
               </td>
 
-              <!-- Summary columns with skeleton loading -->
-              <ng-container *ngIf="studentStates[student.id] as state">
-
-                <ng-container *ngIf="!state.loadingSummary">
-
-                  <td class="text-right">
-                    <span *ngIf="state.totalDue > 0">
-                      {{ formatCurrency(state.totalDue) }}
-                    </span>
-
-                    <span *ngIf="!state.totalDue" class="muted">—</span>
-                  </td>
-
-                  <td class="text-right paid-amount">
-                    {{ formatCurrency(state.totalPaid) }}
-                  </td>
-
-                  <td class="text-right" [class.balance-due]="state.totalBalance > 0">
-                    {{ formatCurrency(state.totalBalance) }}
-                  </td>
-
+              <!-- Term Total -->
+              <td class="text-right">
+                <ng-container *ngIf="!studentStates[student.id]?.loadingSummary">
+                  <span *ngIf="(studentStates[student.id]?.totalDue ?? 0) > 0">
+                    {{ formatCurrency(studentStates[student.id]?.totalDue ?? 0) }}
+                  </span>
+                  <span *ngIf="studentStates[student.id]?.totalDue === 0" class="muted">—</span>
                 </ng-container>
+                <span *ngIf="studentStates[student.id]?.loadingSummary" class="skeleton-cell"></span>
+              </td>
 
-              </ng-container>
+              <!-- Paid -->
+              <td class="text-right">
+                <ng-container *ngIf="!studentStates[student.id]?.loadingSummary">
+                  <span class="paid-amount">
+                    {{ formatCurrency(studentStates[student.id]?.totalPaid ?? 0) }}
+                  </span>
+                </ng-container>
+                <span *ngIf="studentStates[student.id]?.loadingSummary" class="skeleton-cell"></span>
+              </td>
 
-              <ng-container *ngIf="studentStates[student.id]?.loadingSummary">
-                <td class="text-right"><span class="skeleton-cell"></span></td>
-                <td class="text-right"><span class="skeleton-cell"></span></td>
-                <td class="text-right"><span class="skeleton-cell"></span></td>
-              </ng-container>
+              <!-- Balance -->
+              <td class="text-right">
+                <ng-container *ngIf="!studentStates[student.id]?.loadingSummary">
+                  <span [class.balance-due]="(studentStates[student.id]?.totalBalance ?? 0) > 0">
+                    {{ formatCurrency(studentStates[student.id]?.totalBalance ?? 0) }}
+                  </span>
+                </ng-container>
+                <span *ngIf="studentStates[student.id]?.loadingSummary" class="skeleton-cell"></span>
+              </td>
 
               <!-- Status -->
               <td class="text-center">
@@ -234,8 +254,12 @@
                       || studentStates[student.id]?.studentFeedingFees?.length === 0
                       || !isDateAllowed(selectedDate)
                       || studentStates[student.id]?.overallStatus === 'paid'" (click)="openPaymentModal(student)"
-                    [title]="!isDateAllowed(selectedDate) ? 'Past date — contact admin' :
-                             studentStates[student.id]?.overallStatus === 'paid' ? 'Fully paid' : 'Record payment'">
+                    [title]="studentStates[student.id]?.studentFeedingFees?.length === 0
+                      ? 'No fee assigned — admin must assign first'
+                      : studentStates[student.id]?.overallStatus === 'paid'
+                        ? 'Fully paid this term'
+                        : !isDateAllowed(selectedDate) ? 'Past date — contact admin'
+                        : 'Record payment'">
                     <i class="ri-money-dollar-circle-line"></i>
                     Pay
                   </button>
@@ -249,22 +273,30 @@
         </table>
       </div>
 
-      <!-- How-to note for teacher -->
+      <!-- How-to hint -->
       <div class="teacher-hint" *ngIf="!loadingStudents && students.length > 0">
         <i class="ri-information-line"></i>
         <span>
           <strong>How it works:</strong>
-          Mark students <em>Present</em> then tap <strong>Pay</strong> to record a payment.
-          Payments are tracked against each student's term total.
+          Mark a student <em>Present</em> then tap <strong>Pay</strong> to record a payment.
           Students showing <em>Not assigned</em> need a feeding fee assigned by the admin first.
         </span>
       </div>
-    </div>
 
-    <!-- Empty state -->
-    <div *ngIf="!loadingStudents && students.length === 0" class="empty-state">
-      <i class="ri-group-line"></i>
-      <p>Select a class or search for a student to begin recording</p>
+      <!-- Empty state when no students at all -->
+      <div *ngIf="!loadingStudents && students.length === 0 && allStudents.length === 0" class="empty-state">
+        <i class="ri-group-line"></i>
+        <p>No students found in the system</p>
+      </div>
+
+      <!-- Empty state when filter returns nothing -->
+      <div *ngIf="!loadingStudents && students.length === 0 && allStudents.length > 0" class="empty-state">
+        <i class="ri-search-line"></i>
+        <p>No students match your filter</p>
+        <button class="btn-clear-filter" (click)="selectedClassId = ''; searchQuery = ''; applyClassFilter()">
+          <i class="ri-close-line"></i> Clear filter
+        </button>
+      </div>
     </div>
 
   </div>
@@ -278,17 +310,19 @@
     <div class="payment-modal-header">
       <div>
         <h3>Record Feeding Payment</h3>
-        <p>{{ getStudentName(paymentStudent) }}</p>
+        <p>{{ getStudentName(paymentStudent) }} · {{ paymentStudent?.class?.name }}</p>
       </div>
       <button class="close-btn" (click)="closePaymentModal()"><i class="ri-close-line"></i></button>
     </div>
 
     <div class="payment-modal-body">
 
-      <!-- Fee Structure info — mirrors school fees record-payment -->
+      <!-- Fee overview (mirrors school fees record-payment) -->
       <div class="fee-overview-card" *ngIf="paymentSff">
         <div class="fee-overview-header">
-          <span class="fee-name-label">{{ paymentSff.feeding_fee_structure?.fee_name || 'Feeding Fee' }}</span>
+          <span class="fee-name-label">
+            {{ paymentSff.feeding_fee_structure?.fee_name || 'Feeding Fee' }}
+          </span>
           <span class="status-chip-sm" [class.status-paid]="paymentSff.status === 'paid'"
             [class.status-partial]="paymentSff.status === 'partial'"
             [class.status-unpaid]="paymentSff.status === 'unpaid'">
@@ -311,40 +345,41 @@
         </div>
         <div class="rate-info-row">
           <i class="ri-information-line"></i>
-          Daily rate: <strong class="rate-value">{{ formatCurrency(paymentSff.daily_amount) }}</strong>
-          &nbsp;×&nbsp; {{ paymentSff.total_days }} school days
+          Daily rate:
+          <strong class="rate-value">{{ formatCurrency(paymentSff.daily_amount) }}</strong>
+          &nbsp;×&nbsp;{{ paymentSff.total_days }} school days
         </div>
       </div>
 
-      <!-- Multiple fees selector (if student has more than one) -->
+      <!-- Multiple fees selector -->
       <div class="form-group"
         *ngIf="paymentStudent && (studentStates[paymentStudent.id]?.studentFeedingFees?.length ?? 0) > 1">
-        <label>Which fee to pay against *</label>
+        <label>Fee to pay against</label>
         <select [(ngModel)]="paymentSff">
-          <option *ngFor="let f of (paymentStudent ? studentStates[paymentStudent.id]?.studentFeedingFees : [])"
-            [ngValue]="f" [disabled]="f.status === 'paid'">
+          <option *ngFor="let f of studentStates[paymentStudent?.id]?.studentFeedingFees" [ngValue]="f"
+            [disabled]="f.status === 'paid'">
             {{ f.feeding_fee_structure?.fee_name || 'Feeding Fee' }}
             — Balance: {{ formatCurrency(f.amount_due - f.amount_paid) }}
           </option>
         </select>
       </div>
 
-      <!-- Amount Input -->
+      <!-- Amount -->
       <div class="form-group">
         <label>Amount to Pay (GHS) *</label>
         <input type="number" [(ngModel)]="paymentAmount" min="0.01" step="0.01"
-          [placeholder]="'Balance: ' + formatCurrency((paymentSff?.amount_due || 0) - (paymentSff?.amount_paid || 0))" />
+          [placeholder]="'Balance: ' + formatCurrency((paymentSff?.amount_due||0)-(paymentSff?.amount_paid||0))" />
 
-        <!-- Days coverage breakdown -->
         <div class="payment-breakdown" *ngIf="paymentAmount > 0 && (paymentSff?.daily_amount || 0) > 0">
           <div>
             <i class="ri-calendar-check-line"></i>
-            Covers <strong>{{ paymentDaysApplied }}</strong> day{{ paymentDaysApplied !== 1 ? 's' : '' }}
+            Covers <strong>{{ paymentDaysApplied }}</strong>
+            day{{ paymentDaysApplied !== 1 ? 's' : '' }}
             ({{ formatCurrency(paymentSff?.daily_amount || 0) }} × {{ paymentDaysApplied }})
           </div>
           <div *ngIf="paymentIsPartial" class="partial-note">
             <i class="ri-error-warning-line"></i>
-            Partial day — {{ formatCurrency(paymentAmount % (paymentSff?.daily_amount || 1)) }} remainder
+            Partial — {{ formatCurrency(paymentAmount % (paymentSff?.daily_amount || 1)) }} remainder
           </div>
         </div>
       </div>
@@ -389,36 +424,41 @@
         <h3>Payment History</h3>
         <p>{{ getStudentName(historyStudent) }} · {{ selectedTerm }} {{ selectedYear }}</p>
       </div>
-      <button class="close-btn" (click)="closeHistoryModal()"><i class="ri-close-line"></i></button>
+      <button class="close-btn" (click)="closeHistoryModal()">
+        <i class="ri-close-line"></i>
+      </button>
     </div>
 
-    <!-- Fee summary at top (mirrors record-payment fee overview) -->
+    <!-- Fee summary -->
     <div class="history-fee-summary"
       *ngIf="historyStudent && (studentStates[historyStudent.id]?.studentFeedingFees?.length ?? 0) > 0">
-      <div *ngFor="let sff of (historyStudent ? studentStates[historyStudent.id]?.studentFeedingFees : [])"
-        class="sff-summary-row">
-        <span class="sff-label">{{ sff.feeding_fee_structure?.fee_name || 'Feeding Fee' }}</span>
+      <div *ngFor="let sff of studentStates[historyStudent?.id]?.studentFeedingFees" class="sff-summary-row">
+        <span class="sff-label">
+          {{ sff.feeding_fee_structure?.fee_name || 'Feeding Fee' }}
+        </span>
         <div class="sff-row-amounts">
-          <span class="sff-rate-label">{{ formatCurrency(sff.daily_amount) }}/day × {{ sff.total_days }} days</span>
+          <span class="sff-rate-label">
+            {{ formatCurrency(sff.daily_amount) }}/day × {{ sff.total_days }} days
+          </span>
           <span>Due: <strong>{{ formatCurrency(sff.amount_due) }}</strong></span>
           <span class="green">Paid: <strong>{{ formatCurrency(sff.amount_paid) }}</strong></span>
           <span [class.red]="(sff.amount_due - sff.amount_paid) > 0">
             Bal: <strong>{{ formatCurrency(sff.amount_due - sff.amount_paid) }}</strong>
           </span>
-          <span class="status-chip-sm" [class.status-paid]="sff.status === 'paid'"
-            [class.status-partial]="sff.status === 'partial'" [class.status-unpaid]="sff.status === 'unpaid'">
+          <span class="status-chip-sm" [class.status-paid]="sff.status==='paid'"
+            [class.status-partial]="sff.status==='partial'" [class.status-unpaid]="sff.status==='unpaid'">
             {{ sff.status | titlecase }}
           </span>
         </div>
       </div>
     </div>
 
-    <!-- No fee assigned notice -->
-    <div class="no-fee-notice" *ngIf="historyStudent
-       && !studentStates[historyStudent.id]?.loadingSummary
-       && (studentStates[historyStudent.id]?.studentFeedingFees?.length ?? 0) === 0">
+    <!-- No fee notice -->
+    <div class="no-fee-notice" *ngIf="!studentStates[historyStudent?.id]?.loadingSummary
+             && studentStates[historyStudent?.id]?.studentFeedingFees?.length === 0">
       <i class="ri-information-line"></i>
-      <span>No feeding fee assigned for {{ selectedTerm }} {{ selectedYear }}. Ask the admin to assign a fee.</span>
+      <span>No feeding fee assigned for {{ selectedTerm }} {{ selectedYear }}.
+        Ask the admin to assign a fee to this student.</span>
     </div>
 
     <!-- Loading -->
@@ -436,8 +476,10 @@
             <p class="history-amount">{{ formatCurrency(p.amount_paid) }}</p>
             <p class="history-date">{{ p.payment_date | date:'EEE, MMM d, y' }}</p>
             <p class="history-meta">
-              <i class="ri-bank-card-line"></i> {{ p.payment_method || 'Cash' }}
-              &nbsp;·&nbsp; {{ p.days_covered }} day{{ p.days_covered !== 1 ? 's' : '' }} applied
+              <i class="ri-bank-card-line"></i>
+              {{ p.payment_method || 'Cash' }}
+              &nbsp;·&nbsp;
+              {{ p.days_covered }} day{{ p.days_covered !== 1 ? 's' : '' }} applied
             </p>
           </div>
         </div>
@@ -447,7 +489,8 @@
             title="Delete this payment">
             <i class="ri-delete-bin-line"></i>
           </button>
-          <span class="history-lock" *ngIf="!isDateAllowed(p.payment_date)" title="Past — contact admin to delete">
+          <span class="history-lock" *ngIf="!isDateAllowed(p.payment_date)"
+            title="Past record — contact admin to delete">
             <i class="ri-lock-line"></i>
           </span>
         </div>
@@ -459,7 +502,6 @@
       <i class="ri-inbox-line"></i>
       <p>No payments recorded yet this term.</p>
     </div>
-
   </div>
 </div>
 
@@ -470,9 +512,9 @@
     <div class="dcm-icon"><i class="ri-delete-bin-2-line"></i></div>
     <h3>Delete Payment?</h3>
     <p>
-      You are about to delete a payment of
-      <strong>{{ formatCurrency(deleteTargetPayment?.amount_paid) }}</strong>.
-      This will reverse the amount from the student's paid total. This cannot be undone.
+      Delete payment of
+      <strong>{{ formatCurrency(deleteTargetPayment?.amount_paid) }}</strong>?
+      This will reverse the amount from the student's paid total. Cannot be undone.
     </p>
     <div class="dcm-actions">
       <button class="btn-cancel" (click)="closeDeleteConfirm()" [disabled]="processingDelete">Cancel</button>

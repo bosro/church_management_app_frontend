@@ -604,33 +604,73 @@
 
 <!-- ══ MODAL: Assign to Class ══════════════════════════════════ -->
 <div class="modal-overlay" *ngIf="showAssignClassModal" (click)="showAssignClassModal = false">
-  <div class="assign-modal" (click)="$event.stopPropagation()">
-    <div class="assign-modal-icon"><i class="ri-user-add-line"></i></div>
-    <h3>Assign to Class</h3>
-    <p>
-      Assign <strong>"{{ assignClassStructure?.fee_name }}"</strong>
-      ({{ formatCurrency(assignClassStructure?.total_amount || 0) }} per student)
-      to all active students in the selected class.
-    </p>
+  <div class="assign-modal" (click)="$event.stopPropagation()" style="max-width:460px;text-align:left;padding:0;">
 
-    <div class="form-group" style="margin:16px 0;">
-      <label>Select Class *</label>
-      <select [(ngModel)]="assignClassId">
-        <option value="">Choose a class...</option>
-        <option *ngFor="let c of classes" [value]="c.id">{{ c.name }}</option>
-      </select>
+    <div style="padding:18px 20px;border-bottom:1px solid #e5e7eb;">
+      <h3 style="font-size:16px;font-weight:700;color:#111827;margin:0 0 4px;">
+        Assign Fee to Class
+      </h3>
+      <p style="font-size:13px;color:#6b7280;margin:0;">
+        <strong>{{ assignClassStructure?.fee_name }}</strong>
+        — {{ formatCurrency(assignClassStructure?.total_amount || 0) }} per student
+        ({{ formatCurrency(assignClassStructure?.daily_amount || 0) }}/day
+        × {{ assignClassStructure?.total_days }} days)
+      </p>
     </div>
 
-    <p class="assign-note">
-      <i class="ri-information-line"></i>
-      Students who already have this fee assigned will not be duplicated.
-    </p>
-    <div class="assign-modal-actions">
-      <button class="btn-cancel" (click)="showAssignClassModal = false" [disabled]="assigningClass">Cancel</button>
-      <button class="btn-confirm-assign" (click)="executeAssignClass()" [disabled]="assigningClass || !assignClassId">
+    <div style="padding:18px 20px;">
+
+      <!-- Info box explaining what this does -->
+      <div style="display:flex;gap:8px;align-items:flex-start;padding:10px 12px;
+                  background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;
+                  font-size:13px;color:#1e40af;margin-bottom:16px;line-height:1.5;">
+        <i class="ri-information-line" style="font-size:16px;flex-shrink:0;margin-top:1px;"></i>
+        <span>
+          This will create a <strong>{{ formatCurrency(assignClassStructure?.amount_due || assignClassStructure?.total_amount || 0) }}</strong>
+          feeding fee record for every active student in the selected class.
+          Students who already have this fee assigned will not be duplicated.
+        </span>
+      </div>
+
+      <div class="form-group">
+        <label>Select Class to Assign To *</label>
+        <select [(ngModel)]="assignClassId"
+          style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;
+                 font-size:14px;font-family:'Nunito Sans',sans-serif;background:white;">
+          <option value="">Choose a class...</option>
+          <option *ngFor="let c of classes" [value]="c.id">{{ c.name }}</option>
+        </select>
+      </div>
+
+      <!-- Show which class the structure is already linked to -->
+      <div *ngIf="assignClassStructure?.class_id"
+        style="font-size:12px;color:#6b7280;display:flex;align-items:center;gap:5px;">
+        <i class="ri-git-branch-line"></i>
+        This fee structure is linked to
+        <strong>{{ assignClassStructure?.class?.name }}</strong>.
+        You can assign it to any class below.
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;padding:14px 20px;border-top:1px solid #e5e7eb;background:#f9fafb;">
+      <button class="btn-cancel"
+        style="flex:1;padding:10px;background:white;color:#374151;border:1px solid #e5e7eb;
+               border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;
+               font-family:'Nunito Sans',sans-serif;"
+        (click)="showAssignClassModal = false"
+        [disabled]="assigningClass">
+        Cancel
+      </button>
+      <button
+        style="flex:2;display:flex;align-items:center;justify-content:center;gap:6px;
+               padding:10px;background:#4f46e5;color:white;border:none;border-radius:8px;
+               font-size:14px;font-weight:700;cursor:pointer;font-family:'Nunito Sans',sans-serif;"
+        (click)="executeAssignClass()"
+        [disabled]="assigningClass || !assignClassId"
+        [style.opacity]="assigningClass || !assignClassId ? '0.6' : '1'">
         <i class="ri-loader-4-line spin" *ngIf="assigningClass"></i>
         <i class="ri-user-add-line" *ngIf="!assigningClass"></i>
-        {{ assigningClass ? 'Assigning...' : 'Yes, Assign to Class' }}
+        {{ assigningClass ? 'Assigning...' : 'Assign to Class' }}
       </button>
     </div>
   </div>

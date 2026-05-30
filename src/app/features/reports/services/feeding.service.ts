@@ -19,6 +19,7 @@ export interface FeedingFeeStructure {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  amount_due?:any
   class?: { id: string; name: string; tier: string | null } | null;
 }
 
