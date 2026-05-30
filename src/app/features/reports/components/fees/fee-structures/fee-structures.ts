@@ -953,3 +953,5 @@ export class FeeStructures implements OnInit, OnDestroy {
     }).format(amount || 0);
   }
 }
+
+
