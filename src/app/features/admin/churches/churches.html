@@ -1,3 +1,9 @@
+<!-- src/app/features/admin/churches/churches.html -->
+<!-- CHANGES vs original:
+     1. Edit modal has new SMS Sender ID form-group added after Enabled Features
+     2. Everything else is identical to your original
+-->
+
 <div class="churches-container">
   <!-- Header -->
   <div class="page-header">
@@ -68,6 +74,14 @@
           <span class="label">Phone:</span>
           <span class="value">{{ church.contact_phone }}</span>
         </div>
+        <!-- Show SMS sender ID if set -->
+        <div class="detail-item" *ngIf="church.sms_sender_id">
+          <span class="label">SMS Sender:</span>
+          <span class="value sender-id-pill">
+            <i class="ri-message-3-line"></i>
+            {{ church.sms_sender_id }}
+          </span>
+        </div>
         <div class="detail-item">
           <span class="label">Created:</span>
           <span class="value">{{ formatDate(church.created_at!) }}</span>
@@ -109,7 +123,9 @@
   </div>
 </div>
 
-<!-- Create Modal -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- Create Modal — unchanged from original                        -->
+<!-- ══════════════════════════════════════════════════════════════ -->
 <div class="modal-overlay" *ngIf="showCreateModal" (click)="closeCreateModal()">
   <div class="modal-content" (click)="$event.stopPropagation()">
     <div class="modal-header">
@@ -174,7 +190,9 @@
   </div>
 </div>
 
-<!-- Edit Modal -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- Edit Modal — SMS Sender ID field added after Enabled Features -->
+<!-- ══════════════════════════════════════════════════════════════ -->
 <div class="modal-overlay" *ngIf="showEditModal" (click)="closeEditModal()">
   <div class="modal-content" (click)="$event.stopPropagation()">
     <div class="modal-header">
@@ -224,7 +242,6 @@
       <div class="form-group">
         <label>Enabled Features</label>
         <div class="feature-toggles">
-
           <label class="checkbox-label">
             <input type="checkbox" [checked]="churchForm.enabled_features.includes('reports')"
               (change)="toggleFeature('reports', $event)" />
@@ -251,12 +268,52 @@
               Job Hub
             </span>
           </label>
-
         </div>
-        <small class="help-text">
-          Enable or disable feature modules for this church
-        </small>
+        <small class="help-text">Enable or disable feature modules for this church</small>
       </div>
+
+      <!-- ══════════════════════════════════════════════════════ -->
+      <!-- NEW: SMS Sender ID field                              -->
+      <!-- ══════════════════════════════════════════════════════ -->
+      <div class="form-group sms-sender-group">
+        <label for="edit-sms-sender">
+          <i class="ri-message-3-line"></i>
+          Custom SMS Sender ID
+          <span class="optional-badge">Optional</span>
+        </label>
+        <div class="sender-input-wrapper">
+          <input
+            id="edit-sms-sender"
+            type="text"
+            class="form-control"
+            [(ngModel)]="churchForm.sms_sender_id"
+            [placeholder]="defaultSenderId + ' (platform default)'"
+            maxlength="11" />
+          <span class="sender-char-count" [class.char-limit]="senderIdCharCount >= 10">
+            {{ senderIdCharCount }}/11
+          </span>
+        </div>
+        <div class="sender-help">
+          <p class="help-text">
+            When set, this name appears as the SMS sender for this church's messages instead of
+            <strong>{{ defaultSenderId }}</strong>.
+            Max 11 characters. Leave blank to use the platform default.
+          </p>
+          <div class="sender-provider-notes">
+            <span class="provider-note provider-note--hubtel">
+              <i class="ri-checkbox-circle-line"></i>
+              Hubtel: any name works immediately
+            </span>
+            <span class="provider-note provider-note--giant">
+              <i class="ri-time-line"></i>
+              GiantSMS: must be pre-approved on account
+            </span>
+          </div>
+        </div>
+      </div>
+      <!-- ══════════════════════════════════════════════════════ -->
+      <!-- END NEW FIELD                                         -->
+      <!-- ══════════════════════════════════════════════════════ -->
 
       <div *ngIf="errorMessage" class="alert alert-error">
         <i class="ri-error-warning-line"></i>
@@ -276,8 +333,7 @@
   </div>
 </div>
 
-
-<!-- Subscription Modal -->
+<!-- Subscription Modal — unchanged from original -->
 <div class="modal-overlay" *ngIf="showSubscriptionModal" (click)="closeSubscriptionModal()">
   <div class="modal-content modal-lg" (click)="$event.stopPropagation()">
     <div class="modal-header">

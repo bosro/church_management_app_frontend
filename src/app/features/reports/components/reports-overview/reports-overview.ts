@@ -372,3 +372,5 @@ export class ReportsOverview implements OnInit, OnDestroy {
     this.loadStatistics();
   }
 }
+
+

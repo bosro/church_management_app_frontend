@@ -26,11 +26,18 @@
       <button (click)="errorMessage = ''"><i class="ri-close-line"></i></button>
     </div>
 
-    <!-- Pre-paid students alert — shown when any student has advance days -->
-    <div class="feeding-alert warning prepaid-notice" *ngIf="hasPrepaidStudents">
-      <i class="ri-calendar-check-line"></i>
-      <span>Some students have advance payments covering today — their <strong>Pay</strong> button is disabled. Use the
-        edit (pencil) button to view or adjust their payment history.</span>
+    <!-- Recording window notice -->
+    <div class="recording-window-banner" *ngIf="activeRecordingWindow && windowLoaded">
+      <i class="ri-calendar-event-line"></i>
+      <span>
+        <strong>Backdating enabled:</strong>
+        You can record for
+        <strong>{{ formatDateLabel(activeRecordingWindow.allow_from) }}</strong>
+        –
+        <strong>{{ formatDateLabel(activeRecordingWindow.allow_to) }}</strong>
+        <span *ngIf="activeRecordingWindow.reason"> — {{ activeRecordingWindow.reason }}</span>.
+        Use the date picker to navigate to those dates.
+      </span>
     </div>
 
     <!-- Filters Row -->
@@ -51,7 +58,6 @@
           <option *ngFor="let y of academicYears" [value]="y">{{ y }}</option>
         </select>
       </div>
-
       <div class="filter-item" *ngIf="!feedingFilter.isConfirmed">
         <label>&nbsp;</label>
         <button class="tcb-confirm-small" (click)="confirmTermYear()">
@@ -106,19 +112,8 @@
             </div>
           </div>
         </div>
-        <div *ngIf="searching" class="search-loading">
-          <i class="ri-loader-4-line spin"></i>
-        </div>
+        <div *ngIf="searching" class="search-loading"><i class="ri-loader-4-line spin"></i></div>
       </div>
-    </div>
-
-    <div class="active-students-banner" *ngIf="isShowingActiveStudents && !selectedClassId">
-      <i class="ri-history-line"></i>
-      Showing students with activity today — select a class to view all
-    </div>
-    <div class="active-students-banner all-mode" *ngIf="!isShowingActiveStudents && !selectedClassId">
-      <i class="ri-team-line"></i>
-      Showing all students (no activity recorded yet today)
     </div>
 
     <!-- Students Table -->
@@ -136,9 +131,8 @@
               <th>Student</th>
               <th class="text-center">Attendance</th>
               <th class="text-right">Daily Rate</th>
-              <th class="text-right">Days Present</th>
-              <th class="text-right">Total Owed</th>
-              <th class="text-right">Total Paid</th>
+              <th class="text-right">Term Total</th>
+              <th class="text-right">Paid</th>
               <th class="text-right">Balance</th>
               <th class="text-center">Status</th>
               <th class="text-center">Actions</th>
@@ -148,12 +142,10 @@
             <tr *ngFor="let student of students; trackBy: trackByStudentId"
               [class.row-absent]="!studentStates[student.id]?.isPresent">
 
-              <!-- Student -->
+              <!-- Student Info -->
               <td>
                 <div class="student-cell">
-                  <div class="student-avatar">
-                    {{ student.first_name[0] }}{{ student.last_name[0] }}
-                  </div>
+                  <div class="student-avatar">{{ student.first_name[0] }}{{ student.last_name[0] }}</div>
                   <div>
                     <p class="student-name">{{ getStudentName(student) }}</p>
                     <p class="student-meta">{{ student.student_number }} · {{ student.class?.name }}</p>
@@ -161,12 +153,13 @@
                 </div>
               </td>
 
-              <!-- Attendance toggle -->
+              <!-- Attendance Toggle -->
               <td class="text-center">
                 <button class="attendance-btn" [class.present]="studentStates[student.id]?.isPresent"
-                  [class.absent]="!studentStates[student.id]?.isPresent" [disabled]="studentStates[student.id]?.saving"
+                  [class.absent]="!studentStates[student.id]?.isPresent"
+                  [disabled]="studentStates[student.id]?.saving || !isDateAllowed(selectedDate)"
                   (click)="toggleAttendance(student.id)"
-                  [title]="studentStates[student.id]?.isPresent ? 'Mark Absent' : 'Mark Present'">
+                  [title]="!isDateAllowed(selectedDate) ? 'Past record — contact admin to change' : ''">
                   <i class="ri-loader-4-line spin" *ngIf="studentStates[student.id]?.saving"></i>
                   <i class="ri-user-follow-line"
                     *ngIf="!studentStates[student.id]?.saving && studentStates[student.id]?.isPresent"></i>
@@ -176,68 +169,78 @@
                 </button>
               </td>
 
-              <!-- Daily rate chip -->
+              <!-- Daily Rate -->
               <td class="text-right">
-                <ng-container *ngIf="studentDailyRate(student.id) > 0; else noRate">
-                  <span class="rate-chip">{{ formatCurrency(studentDailyRate(student.id)) }}</span>
+                <ng-container *ngIf="(studentStates[student.id]?.studentFeedingFees?.length ?? 0) > 0; else noFee">
+                  <span class="rate-chip">
+                    {{ formatCurrency(studentStates[student.id]?.studentFeedingFees?.[0]?.daily_amount || 0) }}
+                  </span>
                 </ng-container>
-                <ng-template #noRate>
-                  <span class="no-rate-chip" title="No rate configured for this class">Not set</span>
+                <ng-template #noFee>
+                  <span class="no-rate-chip" title="No feeding fee assigned for this term">Not assigned</span>
                 </ng-template>
               </td>
 
-              <!-- Summary data -->
-              <ng-container
-                *ngIf="!studentStates[student.id]?.loadingSummary && studentStates[student.id]?.summary as summary">
-                <td class="text-right">{{ summary.presentDays }}</td>
-                <td class="text-right">{{ formatCurrency(summary.totalOwed) }}</td>
-                <td class="text-right paid-amount">{{ formatCurrency(summary.totalPaid) }}</td>
-                <td class="text-right" [class.balance-due]="summary.balance > 0">
-                  {{ formatCurrency(summary.balance) }}
-                </td>
+              <!-- Summary columns with skeleton loading -->
+              <ng-container *ngIf="studentStates[student.id] as state">
+
+                <ng-container *ngIf="!state.loadingSummary">
+
+                  <td class="text-right">
+                    <span *ngIf="state.totalDue > 0">
+                      {{ formatCurrency(state.totalDue) }}
+                    </span>
+
+                    <span *ngIf="!state.totalDue" class="muted">—</span>
+                  </td>
+
+                  <td class="text-right paid-amount">
+                    {{ formatCurrency(state.totalPaid) }}
+                  </td>
+
+                  <td class="text-right" [class.balance-due]="state.totalBalance > 0">
+                    {{ formatCurrency(state.totalBalance) }}
+                  </td>
+
+                </ng-container>
+
               </ng-container>
+
               <ng-container *ngIf="studentStates[student.id]?.loadingSummary">
                 <td class="text-right"><span class="skeleton-cell"></span></td>
                 <td class="text-right"><span class="skeleton-cell"></span></td>
                 <td class="text-right"><span class="skeleton-cell"></span></td>
-                <td class="text-right"><span class="skeleton-cell"></span></td>
-              </ng-container>
-              <ng-container *ngIf="!studentStates[student.id]?.loadingSummary && !studentStates[student.id]?.summary">
-                <td class="text-right">—</td>
-                <td class="text-right">—</td>
-                <td class="text-right">—</td>
-                <td class="text-right">—</td>
               </ng-container>
 
               <!-- Status -->
               <td class="text-center">
-                <ng-container *ngIf="getPaymentStatus(student.id) === 'prepaid'; else normalChip">
-                  <span class="status-chip status-prepaid"
-                    [title]="getPrepaidDaysRemaining(student.id) + ' advance day(s) already paid'">
-                    Pre-paid
-                    <span class="prepaid-days-badge">{{ getPrepaidDaysRemaining(student.id) }}d</span>
+                <ng-container *ngIf="!studentStates[student.id]?.loadingSummary">
+                  <span *ngIf="studentStates[student.id]?.studentFeedingFees?.length === 0"
+                    class="status-chip status-none">Not assigned</span>
+                  <span *ngIf="(studentStates[student.id]?.studentFeedingFees?.length ?? 0) > 0" class="status-chip"
+                    [class.status-paid]="studentStates[student.id]?.overallStatus === 'paid'"
+                    [class.status-partial]="studentStates[student.id]?.overallStatus === 'partial'"
+                    [class.status-unpaid]="studentStates[student.id]?.overallStatus === 'unpaid'">
+                    {{ studentStates[student.id]?.overallStatus | titlecase }}
                   </span>
                 </ng-container>
-                <ng-template #normalChip>
-                  <span class="status-chip" [ngClass]="'status-' + getPaymentStatus(student.id)">
-                    {{ getPaymentStatus(student.id) | titlecase }}
-                  </span>
-                </ng-template>
+                <span *ngIf="studentStates[student.id]?.loadingSummary" class="skeleton-cell"></span>
               </td>
 
               <!-- Actions -->
               <td class="text-center">
                 <div class="action-btns">
-                  <button class="btn-record-payment"
-                    [disabled]="!studentStates[student.id]?.isPresent || studentStates[student.id]?.dailyRate === 0 || isPrepaidToday(student.id)"
-                    (click)="openPaymentModal(student)"
-                    [title]="isPrepaidToday(student.id) ? 'Already covered by advance payment' : 'Record payment'">
+                  <button class="btn-record-payment" [disabled]="!studentStates[student.id]?.isPresent
+                      || studentStates[student.id]?.studentFeedingFees?.length === 0
+                      || !isDateAllowed(selectedDate)
+                      || studentStates[student.id]?.overallStatus === 'paid'" (click)="openPaymentModal(student)"
+                    [title]="!isDateAllowed(selectedDate) ? 'Past date — contact admin' :
+                             studentStates[student.id]?.overallStatus === 'paid' ? 'Fully paid' : 'Record payment'">
                     <i class="ri-money-dollar-circle-line"></i>
-                    {{ isPrepaidToday(student.id) ? 'Covered' : 'Pay' }}
+                    Pay
                   </button>
-                  <button class="btn-edit-payment" [disabled]="!studentStates[student.id]?.summary?.hasPayment"
-                    (click)="openEditModal(student)" title="View / edit payments">
-                    <i class="ri-edit-line"></i>
+                  <button class="btn-history" (click)="openHistoryModal(student)" title="View payment history">
+                    <i class="ri-history-line"></i>
                   </button>
                 </div>
               </td>
@@ -245,16 +248,17 @@
           </tbody>
         </table>
       </div>
-    </div>
 
-    <div class="pagination-bar" *ngIf="!selectedClassId && !isShowingActiveStudents && totalPages > 1">
-      <button [disabled]="currentPage === 1" (click)="goToPage(currentPage - 1)">
-        <i class="ri-arrow-left-s-line"></i>
-      </button>
-      <span>Page {{ currentPage }} of {{ totalPages }}</span>
-      <button [disabled]="currentPage === totalPages" (click)="goToPage(currentPage + 1)">
-        <i class="ri-arrow-right-s-line"></i>
-      </button>
+      <!-- How-to note for teacher -->
+      <div class="teacher-hint" *ngIf="!loadingStudents && students.length > 0">
+        <i class="ri-information-line"></i>
+        <span>
+          <strong>How it works:</strong>
+          Mark students <em>Present</em> then tap <strong>Pay</strong> to record a payment.
+          Payments are tracked against each student's term total.
+          Students showing <em>Not assigned</em> need a feeding fee assigned by the admin first.
+        </span>
+      </div>
     </div>
 
     <!-- Empty state -->
@@ -266,67 +270,90 @@
   </div>
 </div>
 
-<!-- ── Create Payment Modal ──────────────────────────────── -->
+
+<!-- ══ MODAL: Record Payment ═══════════════════════════════════ -->
 <div class="modal-overlay" *ngIf="showPaymentModal" (click)="closePaymentModal()">
   <div class="payment-modal" (click)="$event.stopPropagation()">
+
     <div class="payment-modal-header">
       <div>
-        <h3>Record Payment</h3>
+        <h3>Record Feeding Payment</h3>
         <p>{{ getStudentName(paymentStudent) }}</p>
       </div>
-      <button class="close-btn" (click)="closePaymentModal()">
-        <i class="ri-close-line"></i>
-      </button>
+      <button class="close-btn" (click)="closePaymentModal()"><i class="ri-close-line"></i></button>
     </div>
 
     <div class="payment-modal-body">
-      <!-- Student summary -->
-      <div class="payment-summary-row" *ngIf="paymentStudent && studentStates[paymentStudent.id]?.summary as summary">
-        <div class="ps-item">
-          <span>Days Present</span>
-          <strong>{{ summary.presentDays }}</strong>
+
+      <!-- Fee Structure info — mirrors school fees record-payment -->
+      <div class="fee-overview-card" *ngIf="paymentSff">
+        <div class="fee-overview-header">
+          <span class="fee-name-label">{{ paymentSff.feeding_fee_structure?.fee_name || 'Feeding Fee' }}</span>
+          <span class="status-chip-sm" [class.status-paid]="paymentSff.status === 'paid'"
+            [class.status-partial]="paymentSff.status === 'partial'"
+            [class.status-unpaid]="paymentSff.status === 'unpaid'">
+            {{ paymentSff.status | titlecase }}
+          </span>
         </div>
-        <div class="ps-item">
-          <span>Total Owed</span>
-          <strong>{{ formatCurrency(summary.totalOwed) }}</strong>
+        <div class="fee-overview-stats">
+          <div class="fee-stat">
+            <span>Term Total</span>
+            <strong>{{ formatCurrency(paymentSff.amount_due) }}</strong>
+          </div>
+          <div class="fee-stat paid">
+            <span>Paid So Far</span>
+            <strong>{{ formatCurrency(paymentSff.amount_paid) }}</strong>
+          </div>
+          <div class="fee-stat" [class.outstanding]="(paymentSff.amount_due - paymentSff.amount_paid) > 0">
+            <span>Remaining</span>
+            <strong>{{ formatCurrency(paymentSff.amount_due - paymentSff.amount_paid) }}</strong>
+          </div>
         </div>
-        <div class="ps-item">
-          <span>Total Paid</span>
-          <strong class="paid">{{ formatCurrency(summary.totalPaid) }}</strong>
-        </div>
-        <div class="ps-item" [class.balance-highlight]="summary.balance > 0">
-          <span>Balance</span>
-          <strong [style.color]="summary.balance > 0 ? '#DC2626' : '#059669'">
-            {{ formatCurrency(summary.balance) }}
-          </strong>
+        <div class="rate-info-row">
+          <i class="ri-information-line"></i>
+          Daily rate: <strong class="rate-value">{{ formatCurrency(paymentSff.daily_amount) }}</strong>
+          &nbsp;×&nbsp; {{ paymentSff.total_days }} school days
         </div>
       </div>
 
-      <!-- Daily rate info -->
-      <div class="rate-info-row" *ngIf="paymentStudent">
-        <i class="ri-information-line"></i>
-        Daily rate for <strong>{{ paymentStudent?.class?.name }}</strong>:
-        <strong class="rate-value">{{ formatCurrency(studentDailyRate(paymentStudent?.id)) }}</strong>
+      <!-- Multiple fees selector (if student has more than one) -->
+      <div class="form-group"
+        *ngIf="paymentStudent && (studentStates[paymentStudent.id]?.studentFeedingFees?.length ?? 0) > 1">
+        <label>Which fee to pay against *</label>
+        <select [(ngModel)]="paymentSff">
+          <option *ngFor="let f of (paymentStudent ? studentStates[paymentStudent.id]?.studentFeedingFees : [])"
+            [ngValue]="f" [disabled]="f.status === 'paid'">
+            {{ f.feeding_fee_structure?.fee_name || 'Feeding Fee' }}
+            — Balance: {{ formatCurrency(f.amount_due - f.amount_paid) }}
+          </option>
+        </select>
       </div>
 
-      <!-- Amount input -->
+      <!-- Amount Input -->
       <div class="form-group">
         <label>Amount to Pay (GHS) *</label>
         <input type="number" [(ngModel)]="paymentAmount" min="0.01" step="0.01"
-          [placeholder]="'Daily rate: ' + formatCurrency(studentDailyRate(paymentStudent?.id))" />
+          [placeholder]="'Balance: ' + formatCurrency((paymentSff?.amount_due || 0) - (paymentSff?.amount_paid || 0))" />
 
-        <!-- Payment breakdown -->
-        <div class="payment-breakdown" *ngIf="paymentAmount > 0 && studentDailyRate(paymentStudent?.id) > 0">
-          <div *ngIf="paymentDaysCovered > 0">
+        <!-- Days coverage breakdown -->
+        <div class="payment-breakdown" *ngIf="paymentAmount > 0 && (paymentSff?.daily_amount || 0) > 0">
+          <div>
             <i class="ri-calendar-check-line"></i>
-            Covers <strong>{{ paymentDaysCovered }}</strong> day{{ paymentDaysCovered !== 1 ? 's' : '' }}
-            ({{ formatCurrency(studentDailyRate(paymentStudent?.id)) }} × {{ paymentDaysCovered }})
+            Covers <strong>{{ paymentDaysApplied }}</strong> day{{ paymentDaysApplied !== 1 ? 's' : '' }}
+            ({{ formatCurrency(paymentSff?.daily_amount || 0) }} × {{ paymentDaysApplied }})
           </div>
           <div *ngIf="paymentIsPartial" class="partial-note">
             <i class="ri-error-warning-line"></i>
-            Partial day — {{ formatCurrency(paymentAmount % studentDailyRate(paymentStudent?.id)) }} remainder
+            Partial day — {{ formatCurrency(paymentAmount % (paymentSff?.daily_amount || 1)) }} remainder
           </div>
         </div>
+      </div>
+
+      <div class="form-group">
+        <label>Payment Method</label>
+        <select [(ngModel)]="paymentMethod">
+          <option *ngFor="let m of paymentMethods" [value]="m">{{ m }}</option>
+        </select>
       </div>
 
       <div class="form-group">
@@ -341,9 +368,7 @@
     </div>
 
     <div class="payment-modal-footer">
-      <button class="btn-cancel" (click)="closePaymentModal()" [disabled]="processingPayment">
-        Cancel
-      </button>
+      <button class="btn-cancel" (click)="closePaymentModal()" [disabled]="processingPayment">Cancel</button>
       <button class="btn-submit-payment" (click)="submitPayment()"
         [disabled]="!paymentAmount || paymentAmount <= 0 || processingPayment">
         <i class="ri-loader-4-line spin" *ngIf="processingPayment"></i>
@@ -354,102 +379,107 @@
   </div>
 </div>
 
-<!-- ── Edit / View Payments Modal ──────────────────────────── -->
-<div class="modal-overlay" *ngIf="showEditModal" (click)="closeEditModal()">
-  <div class="edit-modal" (click)="$event.stopPropagation()">
+
+<!-- ══ MODAL: Payment History ══════════════════════════════════ -->
+<div class="modal-overlay" *ngIf="showHistoryModal" (click)="closeHistoryModal()">
+  <div class="history-modal" (click)="$event.stopPropagation()">
+
     <div class="payment-modal-header">
       <div>
         <h3>Payment History</h3>
-        <p>{{ getStudentName(editingStudent) }}</p>
+        <p>{{ getStudentName(historyStudent) }} · {{ selectedTerm }} {{ selectedYear }}</p>
       </div>
-      <button class="close-btn" (click)="closeEditModal()">
-        <i class="ri-close-line"></i>
-      </button>
+      <button class="close-btn" (click)="closeHistoryModal()"><i class="ri-close-line"></i></button>
     </div>
 
-    <div class="edit-modal-body">
-
-      <!-- Loading -->
-      <div *ngIf="loadingStudentPayments" class="loading-state" style="padding: 32px;">
-        <div class="spinner"></div>
-        <p>Loading payments...</p>
+    <!-- Fee summary at top (mirrors record-payment fee overview) -->
+    <div class="history-fee-summary"
+      *ngIf="historyStudent && (studentStates[historyStudent.id]?.studentFeedingFees?.length ?? 0) > 0">
+      <div *ngFor="let sff of (historyStudent ? studentStates[historyStudent.id]?.studentFeedingFees : [])"
+        class="sff-summary-row">
+        <span class="sff-label">{{ sff.feeding_fee_structure?.fee_name || 'Feeding Fee' }}</span>
+        <div class="sff-row-amounts">
+          <span class="sff-rate-label">{{ formatCurrency(sff.daily_amount) }}/day × {{ sff.total_days }} days</span>
+          <span>Due: <strong>{{ formatCurrency(sff.amount_due) }}</strong></span>
+          <span class="green">Paid: <strong>{{ formatCurrency(sff.amount_paid) }}</strong></span>
+          <span [class.red]="(sff.amount_due - sff.amount_paid) > 0">
+            Bal: <strong>{{ formatCurrency(sff.amount_due - sff.amount_paid) }}</strong>
+          </span>
+          <span class="status-chip-sm" [class.status-paid]="sff.status === 'paid'"
+            [class.status-partial]="sff.status === 'partial'" [class.status-unpaid]="sff.status === 'unpaid'">
+            {{ sff.status | titlecase }}
+          </span>
+        </div>
       </div>
-
-      <ng-container *ngIf="!loadingStudentPayments">
-
-        <!-- Payment list -->
-        <div class="payment-history-list" *ngIf="studentPayments.length > 0">
-          <p class="section-label">Select a payment to edit</p>
-          <div class="payment-history-item" *ngFor="let p of studentPayments"
-            [class.selected]="editPayment?.id === p.id" (click)="selectPaymentForEdit(p)">
-            <div class="phi-left">
-              <span class="phi-date">{{ p.payment_date | date:'MMM d, y' }}</span>
-              <span class="phi-note" *ngIf="p.notes">{{ p.notes }}</span>
-            </div>
-            <div class="phi-right">
-              <span class="phi-amount">{{ formatCurrency(p.amount_paid) }}</span>
-              <span class="phi-days">{{ p.days_covered }} day{{ p.days_covered !== 1 ? 's' : '' }}</span>
-            </div>
-            <button class="phi-delete" (click)="$event.stopPropagation(); deletePaymentRecord(p)"
-              title="Delete this payment">
-              <i class="ri-delete-bin-line"></i>
-            </button>
-          </div>
-        </div>
-
-        <!-- No payments -->
-        <div *ngIf="studentPayments.length === 0" class="empty-state" style="padding: 32px;">
-          <i class="ri-inbox-line"></i>
-          <p>No payments recorded for this term</p>
-        </div>
-
-        <!-- Edit form -->
-        <div class="edit-form" *ngIf="editPayment">
-          <!-- In-modal error -->
-          <div *ngIf="editError" class="modal-error-banner">
-            <i class="ri-error-warning-line"></i>{{ editError }}
-          </div>
-          <p class="section-label">Edit selected payment</p>
-
-          <div class="rate-info-row" *ngIf="editingStudent">
-            <i class="ri-information-line"></i>
-            Daily rate: <strong class="rate-value">{{ formatCurrency(studentDailyRate(editingStudent?.id)) }}</strong>
-          </div>
-
-          <div class="form-group">
-            <label>Amount (GHS) *</label>
-            <input type="number" [(ngModel)]="editAmount" min="0.01" step="0.01" />
-            <div class="payment-breakdown" *ngIf="editAmount > 0 && studentDailyRate(editingStudent?.id) > 0">
-              <div>
-                <i class="ri-calendar-check-line"></i>
-                Covers <strong>{{ editDaysCovered }}</strong> day{{ editDaysCovered !== 1 ? 's' : '' }}
-              </div>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label>Payment Date</label>
-            <input type="date" [(ngModel)]="editDate" [max]="today" />
-          </div>
-
-          <div class="form-group">
-            <label>Notes</label>
-            <input type="text" [(ngModel)]="editNotes" placeholder="Optional note" />
-          </div>
-        </div>
-
-      </ng-container>
     </div>
 
-    <div class="payment-modal-footer" *ngIf="!loadingStudentPayments && editPayment">
-      <button class="btn-cancel" (click)="closeEditModal()" [disabled]="processingEdit">
-        Cancel
-      </button>
-      <button class="btn-submit-payment" (click)="submitEdit()"
-        [disabled]="!editAmount || editAmount <= 0 || processingEdit">
-        <i class="ri-loader-4-line spin" *ngIf="processingEdit"></i>
-        <i class="ri-save-line" *ngIf="!processingEdit"></i>
-        {{ processingEdit ? 'Saving...' : 'Save Changes' }}
+    <!-- No fee assigned notice -->
+    <div class="no-fee-notice" *ngIf="historyStudent
+       && !studentStates[historyStudent.id]?.loadingSummary
+       && (studentStates[historyStudent.id]?.studentFeedingFees?.length ?? 0) === 0">
+      <i class="ri-information-line"></i>
+      <span>No feeding fee assigned for {{ selectedTerm }} {{ selectedYear }}. Ask the admin to assign a fee.</span>
+    </div>
+
+    <!-- Loading -->
+    <div *ngIf="loadingHistory" class="loading-state" style="padding:32px;">
+      <div class="spinner"></div>
+      <p>Loading payments...</p>
+    </div>
+
+    <!-- Payment list -->
+    <div class="history-list" *ngIf="!loadingHistory && historyPayments.length > 0">
+      <div *ngFor="let p of historyPayments" class="history-item">
+        <div class="history-item-left">
+          <div class="history-icon"><i class="ri-money-dollar-circle-line"></i></div>
+          <div>
+            <p class="history-amount">{{ formatCurrency(p.amount_paid) }}</p>
+            <p class="history-date">{{ p.payment_date | date:'EEE, MMM d, y' }}</p>
+            <p class="history-meta">
+              <i class="ri-bank-card-line"></i> {{ p.payment_method || 'Cash' }}
+              &nbsp;·&nbsp; {{ p.days_covered }} day{{ p.days_covered !== 1 ? 's' : '' }} applied
+            </p>
+          </div>
+        </div>
+        <div class="history-item-right">
+          <p class="history-notes" *ngIf="p.notes">{{ p.notes }}</p>
+          <button class="btn-delete-payment" *ngIf="isDateAllowed(p.payment_date)" (click)="promptDeletePayment(p)"
+            title="Delete this payment">
+            <i class="ri-delete-bin-line"></i>
+          </button>
+          <span class="history-lock" *ngIf="!isDateAllowed(p.payment_date)" title="Past — contact admin to delete">
+            <i class="ri-lock-line"></i>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty -->
+    <div *ngIf="!loadingHistory && historyPayments.length === 0" class="history-empty">
+      <i class="ri-inbox-line"></i>
+      <p>No payments recorded yet this term.</p>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ══ MODAL: Delete Confirm ═══════════════════════════════════ -->
+<div class="modal-overlay" *ngIf="showDeleteConfirm" (click)="closeDeleteConfirm()">
+  <div class="delete-confirm-modal" (click)="$event.stopPropagation()">
+    <div class="dcm-icon"><i class="ri-delete-bin-2-line"></i></div>
+    <h3>Delete Payment?</h3>
+    <p>
+      You are about to delete a payment of
+      <strong>{{ formatCurrency(deleteTargetPayment?.amount_paid) }}</strong>.
+      This will reverse the amount from the student's paid total. This cannot be undone.
+    </p>
+    <div class="dcm-actions">
+      <button class="btn-cancel" (click)="closeDeleteConfirm()" [disabled]="processingDelete">Cancel</button>
+      <button class="btn-delete-confirm" (click)="confirmDeletePayment()" [disabled]="processingDelete">
+        <i class="ri-loader-4-line spin" *ngIf="processingDelete"></i>
+        <i class="ri-delete-bin-line" *ngIf="!processingDelete"></i>
+        {{ processingDelete ? 'Deleting...' : 'Yes, Delete' }}
       </button>
     </div>
   </div>

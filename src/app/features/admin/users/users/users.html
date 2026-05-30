@@ -105,14 +105,23 @@
           <td>{{ formatDate(user.created_at) }}</td>
           <td>
             <div class="action-buttons">
-              <!-- ✅ NEW: Edit button -->
               <button class="btn-icon btn-edit" (click)="openEditModal(user)" title="Edit User">
                 <i class="ri-edit-line"></i>
+              </button>
+
+              <button *ngIf="!user.church_id && isAdminRole(user.role)" class="btn-icon btn-provision"
+                (click)="openProvisionModal(user)" title="Provision Church">
+                <i class="ri-building-2-line"></i>
               </button>
 
               <button class="btn-icon" [class.btn-activate]="!user.is_active" [class.btn-deactivate]="user.is_active"
                 (click)="toggleUserStatus(user)" [title]="user.is_active ? 'Deactivate' : 'Activate'">
                 <i [class]="user.is_active ? 'ri-close-circle-line' : 'ri-checkbox-circle-line'"></i>
+              </button>
+
+              <button *ngIf="user.role !== 'super_admin'" class="btn-icon btn-delete" (click)="openDeleteModal(user)"
+                title="Delete User Permanently">
+                <i class="ri-delete-bin-line"></i>
               </button>
             </div>
           </td>
@@ -130,96 +139,190 @@
 
 
   <!-- Edit User Modal -->
-<div class="modal-overlay" *ngIf="showEditModal" (click)="closeEditModal()">
-  <div class="modal-content" (click)="$event.stopPropagation()">
-    <div class="modal-header">
-      <h2>Edit User</h2>
-      <button class="close-btn" (click)="closeEditModal()">
-        <i class="ri-close-line"></i>
-      </button>
-    </div>
+  <div class="modal-overlay" *ngIf="showEditModal" (click)="closeEditModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>Edit User</h2>
+        <button class="close-btn" (click)="closeEditModal()">
+          <i class="ri-close-line"></i>
+        </button>
+      </div>
 
-    <div class="modal-body" *ngIf="selectedUser">
-      <!-- User Info -->
-      <div class="user-info-section">
-        <div class="user-avatar-large">
-          {{ selectedUser.full_name.charAt(0).toUpperCase() }}
+      <div class="modal-body" *ngIf="selectedUser">
+        <!-- User Info -->
+        <div class="user-info-section">
+          <div class="user-avatar-large">
+            {{ selectedUser.full_name.charAt(0).toUpperCase() }}
+          </div>
+          <div class="user-details-large">
+            <h3>{{ selectedUser.full_name }}</h3>
+            <p>{{ selectedUser.email }}</p>
+          </div>
         </div>
-        <div class="user-details-large">
-          <h3>{{ selectedUser.full_name }}</h3>
-          <p>{{ selectedUser.email }}</p>
+
+        <!-- Role Selection -->
+        <div class="form-group">
+          <label for="edit-role">User Role *</label>
+          <select id="edit-role" [(ngModel)]="editForm.role" class="form-control">
+            <option *ngFor="let role of roleOptions" [value]="role.value" [disabled]="role.value === 'all'">
+              {{ role.label }}
+            </option>
+          </select>
+          <small class="help-text">
+            Changing role will affect user's access permissions
+          </small>
+        </div>
+
+        <!-- Church Assignment -->
+        <div class="form-group">
+          <label for="edit-church">Assign to Church</label>
+          <select id="edit-church" [(ngModel)]="editForm.church_id" class="form-control">
+            <option value="">No Church (Super Admin only)</option>
+            <option *ngFor="let church of churches" [value]="church.id">
+              {{ church.name }} - {{ church.location || church.city }}
+            </option>
+          </select>
+          <small class="help-text">
+            Leave blank for super admin users
+          </small>
+        </div>
+
+        <!-- Active Status -->
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" [(ngModel)]="editForm.is_active" class="checkbox-input" />
+            <span>Active User</span>
+          </label>
+          <small class="help-text">
+            Inactive users cannot log in
+          </small>
+        </div>
+
+        <div *ngIf="errorMessage" class="alert alert-error">
+          <i class="ri-error-warning-line"></i>
+          <span>{{ errorMessage }}</span>
         </div>
       </div>
 
-      <!-- Role Selection -->
-      <div class="form-group">
-        <label for="edit-role">User Role *</label>
-        <select
-          id="edit-role"
-          [(ngModel)]="editForm.role"
-          class="form-control"
-        >
-          <option
-            *ngFor="let role of roleOptions"
-            [value]="role.value"
-            [disabled]="role.value === 'all'"
-          >
-            {{ role.label }}
-          </option>
-        </select>
-        <small class="help-text">
-          Changing role will affect user's access permissions
-        </small>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeEditModal()" [disabled]="processing">
+          Cancel
+        </button>
+        <button class="btn btn-primary" (click)="updateUser()" [disabled]="processing">
+          <i class="ri-save-line"></i>
+          {{ processing ? 'Updating...' : 'Update User' }}
+        </button>
       </div>
-
-      <!-- Church Assignment -->
-      <div class="form-group">
-        <label for="edit-church">Assign to Church</label>
-        <select
-          id="edit-church"
-          [(ngModel)]="editForm.church_id"
-          class="form-control"
-        >
-          <option value="">No Church (Super Admin only)</option>
-          <option *ngFor="let church of churches" [value]="church.id">
-            {{ church.name }} - {{ church.location || church.city }}
-          </option>
-        </select>
-        <small class="help-text">
-          Leave blank for super admin users
-        </small>
-      </div>
-
-      <!-- Active Status -->
-      <div class="form-group">
-        <label class="checkbox-label">
-          <input
-            type="checkbox"
-            [(ngModel)]="editForm.is_active"
-            class="checkbox-input"
-          />
-          <span>Active User</span>
-        </label>
-        <small class="help-text">
-          Inactive users cannot log in
-        </small>
-      </div>
-
-      <div *ngIf="errorMessage" class="alert alert-error">
-        <i class="ri-error-warning-line"></i>
-        <span>{{ errorMessage }}</span>
-      </div>
-    </div>
-
-    <div class="modal-footer">
-      <button class="btn btn-secondary" (click)="closeEditModal()" [disabled]="processing">
-        Cancel
-      </button>
-      <button class="btn btn-primary" (click)="updateUser()" [disabled]="processing">
-        <i class="ri-save-line"></i>
-        {{ processing ? 'Updating...' : 'Update User' }}
-      </button>
     </div>
   </div>
-</div>
+
+  <!-- Provision Church Modal -->
+  <div class="modal-overlay" *ngIf="showProvisionModal" (click)="closeProvisionModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>Provision Church</h2>
+        <button class="close-btn" (click)="closeProvisionModal()">
+          <i class="ri-close-line"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <p class="modal-description">
+          This user has no church assigned. Create and link a church for them.
+        </p>
+
+        <div class="form-group">
+          <label>Church Name *</label>
+          <input type="text" [(ngModel)]="provisionForm.church_name" class="form-control"
+            placeholder="e.g. Grace Chapel" />
+        </div>
+
+        <div class="form-group">
+          <label>Location</label>
+          <input type="text" [(ngModel)]="provisionForm.church_location" class="form-control"
+            placeholder="e.g. Accra, Ghana" />
+        </div>
+
+        <div class="form-group">
+          <label>Church Size (optional)</label>
+          <select [(ngModel)]="provisionForm.church_size" class="form-control">
+            <option value="">Select size...</option>
+            <option value="1-50">1-50 members</option>
+            <option value="51-200">51-200 members</option>
+            <option value="201-500">201-500 members</option>
+            <option value="501-1000">501-1000 members</option>
+            <option value="1000+">1000+ members</option>
+          </select>
+        </div>
+
+        <div *ngIf="errorMessage" class="alert alert-error">
+          <i class="ri-error-warning-line"></i>
+          <span>{{ errorMessage }}</span>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeProvisionModal()" [disabled]="provisioning">
+          Cancel
+        </button>
+        <button class="btn btn-primary" (click)="provisionChurch()" [disabled]="provisioning">
+          <i class="ri-building-add-line"></i>
+          {{ provisioning ? 'Creating...' : 'Create & Link Church' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete User Modal -->
+  <div class="modal-overlay" *ngIf="showDeleteModal" (click)="closeDeleteModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>Delete User Permanently</h2>
+        <button class="close-btn" (click)="closeDeleteModal()">
+          <i class="ri-close-line"></i>
+        </button>
+      </div>
+
+      <div class="modal-body" *ngIf="userToDelete">
+        <div class="delete-warning">
+          <i class="ri-error-warning-line"></i>
+          <div>
+            <strong>This action cannot be undone.</strong>
+            <p>You are about to permanently delete:</p>
+          </div>
+        </div>
+
+        <div class="delete-user-info">
+          <div class="user-avatar">
+            {{ userToDelete.full_name.charAt(0).toUpperCase() }}
+          </div>
+          <div>
+            <strong>{{ userToDelete.full_name }}</strong>
+            <p>{{ userToDelete.email }}</p>
+            <p>{{ userToDelete.church?.name || 'No Church' }} · {{ userToDelete.role }}</p>
+          </div>
+        </div>
+
+        <p class="delete-note">
+          This will remove their account, profile, signup records, and permissions.
+          Their member record (if any) will be kept but unlinked.
+        </p>
+
+        <div *ngIf="errorMessage" class="alert alert-error">
+          <i class="ri-error-warning-line"></i>
+          <span>{{ errorMessage }}</span>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeDeleteModal()" [disabled]="deleting">
+          Cancel
+        </button>
+        <button class="btn btn-danger" (click)="confirmDeleteUser()" [disabled]="deleting">
+          <i class="ri-delete-bin-line"></i>
+          {{ deleting ? 'Deleting...' : 'Delete Permanently' }}
+        </button>
+      </div>
+    </div>
+  </div>
 </div>

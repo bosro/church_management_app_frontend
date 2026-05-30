@@ -79,10 +79,17 @@ export class Sidebar implements OnInit {
           active: false,
           roles: ['super_admin'],
         },
-         {
+        {
           icon: 'ri-money-dollar-circle-line',
           label: 'Finance',
           route: '/main/admin/finance',
+          active: false,
+          roles: ['super_admin'],
+        },
+        {
+          icon: 'ri-router-line',
+          label: 'SMS Settings',
+          route: '/main/admin/sms-settings',
           active: false,
           roles: ['super_admin'],
         },

@@ -49,6 +49,19 @@ export class Users implements OnInit {
     { value: 'inactive', label: 'Inactive' },
   ];
 
+  showProvisionModal = false;
+  provisionUserId = '';
+  provisionForm = {
+    church_name: '',
+    church_location: 'Ghana',
+    church_size: '',
+  };
+  provisioning = false;
+
+  showDeleteModal = false;
+  userToDelete: UserWithChurch | null = null;
+  deleting = false;
+
   constructor(
     private adminService: AdminService,
     private authService: AuthService,
@@ -220,6 +233,106 @@ export class Users implements OnInit {
     return roleMap[role] || 'badge-default';
   }
 
+  // Add these methods
+  openProvisionModal(user: UserWithChurch): void {
+    this.provisionUserId = user.id;
+    this.provisionForm = {
+      church_name: '',
+      church_location: 'Ghana',
+      church_size: '',
+    };
+    this.showProvisionModal = true;
+    this.errorMessage = '';
+  }
+
+  closeProvisionModal(): void {
+    this.showProvisionModal = false;
+    this.provisionUserId = '';
+  }
+
+  provisionChurch(): void {
+    if (!this.provisionForm.church_name.trim()) {
+      this.errorMessage = 'Church name is required';
+      return;
+    }
+
+    this.provisioning = true;
+    this.errorMessage = '';
+
+    this.adminService
+      .provisionChurchForUser(
+        this.provisionUserId,
+        this.provisionForm.church_name,
+        this.provisionForm.church_location,
+        this.provisionForm.church_size || undefined,
+      )
+      .subscribe({
+        next: (result) => {
+          if (result?.success === false) {
+            this.errorMessage = result.message || 'Failed to provision church';
+          } else {
+            this.successMessage = 'Church created and linked successfully!';
+            this.closeProvisionModal();
+            this.loadUsers();
+            setTimeout(() => (this.successMessage = ''), 3000);
+          }
+          this.provisioning = false;
+        },
+        error: (error) => {
+          this.errorMessage = error.message || 'Failed to provision church';
+          this.provisioning = false;
+        },
+      });
+  }
+
+  isAdminRole(role: string): boolean {
+    return [
+      'church_admin',
+      'pastor',
+      'ministry_leader',
+      'elder',
+      'finance_officer',
+    ].includes(role);
+  }
+
+  openDeleteModal(user: UserWithChurch): void {
+    // Prevent deleting super_admin accounts
+    if (user.role === 'super_admin') {
+      this.errorMessage = 'Super admin accounts cannot be deleted.';
+      setTimeout(() => (this.errorMessage = ''), 3000);
+      return;
+    }
+    this.userToDelete = user;
+    this.showDeleteModal = true;
+    this.errorMessage = '';
+  }
+
+  closeDeleteModal(): void {
+    this.showDeleteModal = false;
+    this.userToDelete = null;
+  }
+
+  confirmDeleteUser(): void {
+    if (!this.userToDelete) return;
+
+    this.deleting = true;
+    this.errorMessage = '';
+
+    this.adminService.deleteUserCompletely(this.userToDelete.id).subscribe({
+      next: () => {
+        this.successMessage = `User deleted successfully.`;
+        this.deleting = false;
+        this.closeDeleteModal();
+        this.loadUsers();
+        setTimeout(() => (this.successMessage = ''), 3000);
+      },
+      error: (error) => {
+        this.errorMessage = error.message || 'Failed to delete user';
+        this.deleting = false;
+      },
+    });
+  }
+
   formatDate(date: string): string {
     return new Date(date).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -236,14 +349,3 @@ export class Users implements OnInit {
     return this.users.filter((u) => !u.is_active).length;
   }
 }
-
-
-
-
-
-
-
-
-
-
-

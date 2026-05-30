@@ -13,6 +13,7 @@ import { Users }               from './users/users/users';
 import { Churches }            from './churches/churches';
 import { Plans }               from './plans/plans';
 import { Finance } from './admin-layout/finance/finance';
+import { SmsSettings } from './sms-settings/sms-settings';
 
 const routes: Routes = [
   {
@@ -26,7 +27,8 @@ const routes: Routes = [
       { path: 'users',            component: Users               },
       { path: 'churches',         component: Churches            },
       { path: 'plans',            component: Plans               },
-      { path: 'finance',          component: Finance   }, // ← NEW
+      { path: 'finance',          component: Finance   }, 
+      { path: 'sms-settings', component: SmsSettings },
       { path: '',                 redirectTo: 'dashboard', pathMatch: 'full' },
     ],
   },
@@ -40,7 +42,8 @@ const routes: Routes = [
     Users,
     Churches,
     Plans,
-    Finance,   // ← NEW
+    Finance,
+    SmsSettings,   // ← NEW
   ],
   imports: [
     CommonModule,

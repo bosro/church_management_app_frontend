@@ -34,43 +34,49 @@ export class PaymentForm implements OnInit, OnDestroy {
   paymentForm!: FormGroup;
 
   paymentMethods = [
-    {
-      value: 'paystack',
-      label: 'Pay Online (Card / MoMo)',
-      icon: 'ri-secure-payment-line',
-      isOnline: true,
-    },
-    {
-      value: 'mobile_money',
-      label: 'Mobile Money (Manual)',
-      icon: 'ri-smartphone-line',
-      isOnline: false,
-    },
-    {
-      value: 'cash',
-      label: 'Cash',
-      icon: 'ri-money-dollar-circle-line',
-      isOnline: false,
-    },
-    {
-      value: 'bank_transfer',
-      label: 'Bank Transfer',
-      icon: 'ri-bank-line',
-      isOnline: false,
-    },
-    {
-      value: 'card',
-      label: 'Card (Manual)',
-      icon: 'ri-bank-card-line',
-      isOnline: false,
-    },
-    {
-      value: 'cheque',
-      label: 'Cheque',
-      icon: 'ri-file-list-line',
-      isOnline: false,
-    },
-  ];
+  {
+    value: 'paystack',
+    label: 'Pay Online (Card / MoMo)',
+    subtitle: 'Processed via Paystack portal',
+    icon: 'ri-secure-payment-line',
+    isOnline: true,
+  },
+  {
+    value: 'mobile_money',
+    label: 'Mobile Money (Manual)',
+    subtitle: 'Record only — not charged online',
+    icon: 'ri-smartphone-line',
+    isOnline: false,
+  },
+  {
+    value: 'cash',
+    label: 'Cash',
+    subtitle: 'Record only — not charged online',
+    icon: 'ri-money-dollar-circle-line',
+    isOnline: false,
+  },
+  {
+    value: 'bank_transfer',
+    label: 'Bank Transfer',
+    subtitle: 'Record only — not charged online',
+    icon: 'ri-bank-line',
+    isOnline: false,
+  },
+  {
+    value: 'card',
+    label: 'Card (Manual)',
+    subtitle: 'Record only — not charged online',
+    icon: 'ri-bank-card-line',
+    isOnline: false,
+  },
+  {
+    value: 'cheque',
+    label: 'Cheque',
+    subtitle: 'Record only — not charged online',
+    icon: 'ri-file-list-line',
+    isOnline: false,
+  },
+];
 
   // ── Platform fee settings (loaded from Supabase) ─────────
   paystackFeePercent = 1.95; // default — overridden from platform_settings

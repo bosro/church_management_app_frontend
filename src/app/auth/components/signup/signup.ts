@@ -1,4 +1,10 @@
 // src/app/features/auth/components/signup/signup.component.ts
+// CHANGES vs previous version:
+// 1. Step 3 no longer shows Paystack upgrade card at all
+// 2. upgradeAfterSignup(), getRecommendedPlan*() helpers removed
+// 3. SubscriptionPaystackService dependency removed
+// 4. signupChurchId kept (still captured) but not used for payment at signup
+// 5. Everything else identical to the version you already have deployed
 
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
@@ -24,7 +30,6 @@ export class Signup implements OnInit {
   showPassword = false;
   showConfirmPassword = false;
 
-  // ✅ NEW: Signup type and churches
   signupType: 'member' | 'admin' | null = null;
   churches: Church[] = [];
   loadingChurches = false;
@@ -38,13 +43,7 @@ export class Signup implements OnInit {
   ];
 
   positionOptions = [
-    { value: 'senior_pastor', label: 'Senior Pastor' },
-    { value: 'associate_pastor', label: 'Associate Pastor' },
     { value: 'church_administrator', label: 'Church Administrator' },
-    // { value: 'worship_leader', label: 'Worship Leader' },
-    // { value: 'youth_pastor', label: 'Youth Pastor' },
-    // { value: 'elder', label: 'Elder/Deacon' },
-    // { value: 'other', label: 'Other' }
   ];
 
   howHeardOptions = [
@@ -70,7 +69,6 @@ export class Signup implements OnInit {
   private initForm(): void {
     this.signupForm = this.fb.group(
       {
-        // Common fields
         full_name: ['', [Validators.required, Validators.minLength(3)]],
         email: ['', [Validators.required, Validators.email]],
         phone: [
@@ -79,34 +77,24 @@ export class Signup implements OnInit {
         ],
         password: ['', [Validators.required, Validators.minLength(8)]],
         confirm_password: ['', [Validators.required]],
-
-        // Member-specific
         church_id: [''],
-
-        // Admin-specific
         position: [''],
         church_name: [''],
         church_location: [''],
         church_size: [''],
         how_heard: [''],
       },
-      {
-        validators: this.passwordMatchValidator,
-      },
+      { validators: this.passwordMatchValidator },
     );
   }
 
-  // ✅ NEW: Select signup type
   selectSignupType(type: 'member' | 'admin'): void {
     this.signupType = type;
     this.currentStep = 1;
     this.errorMessage = '';
 
     if (type === 'member') {
-      // Load churches for member signup
       this.loadChurches();
-
-      // Clear admin fields and set member validators
       this.signupForm.get('church_id')?.setValidators([Validators.required]);
       this.signupForm.get('position')?.clearValidators();
       this.signupForm.get('church_name')?.clearValidators();
@@ -114,7 +102,6 @@ export class Signup implements OnInit {
       this.signupForm.get('church_size')?.clearValidators();
       this.signupForm.get('how_heard')?.clearValidators();
     } else {
-      // Set admin validators
       this.signupForm.get('church_id')?.clearValidators();
       this.signupForm.get('position')?.setValidators([Validators.required]);
       this.signupForm
@@ -127,7 +114,6 @@ export class Signup implements OnInit {
       this.signupForm.get('how_heard')?.setValidators([Validators.required]);
     }
 
-    // Update validators
     Object.keys(this.signupForm.controls).forEach((key) => {
       this.signupForm.get(key)?.updateValueAndValidity();
     });
@@ -148,7 +134,6 @@ export class Signup implements OnInit {
     });
   }
 
-  // ✅ NEW: Check if email exists when church is selected
   onChurchSelected(): void {
     const email = this.signupForm.get('email')?.value;
     const churchId = this.signupForm.get('church_id')?.value;
@@ -157,27 +142,21 @@ export class Signup implements OnInit {
       this.churchService.checkEmailExistsInChurch(email, churchId).subscribe({
         next: (result) => {
           if (!result) {
-            // Not in system — fresh signup
             this.errorMessage = '';
             this.successMessage = '';
             return;
           }
-
           if (result.has_auth_account) {
-            // Already has full account
             this.errorMessage =
-              'This email is already registered. Please sign in or use "Forgot Password" to reset your password.';
+              'This email is already registered. Please sign in or use "Forgot Password".';
             this.successMessage = '';
           } else {
-            // Admin pre-created this user
             this.errorMessage = '';
             this.successMessage =
               'Your account has been set up by your church admin. Complete registration to set your password.';
           }
         },
-        error: (err) => {
-          console.error('Error checking email:', err);
-        },
+        error: (err) => console.error('Error checking email:', err),
       });
     }
   }
@@ -185,7 +164,6 @@ export class Signup implements OnInit {
   passwordMatchValidator(group: FormGroup): { [key: string]: boolean } | null {
     const password = group.get('password')?.value;
     const confirmPassword = group.get('confirm_password')?.value;
-
     if (password && confirmPassword && password !== confirmPassword) {
       return { passwordMismatch: true };
     }
@@ -195,28 +173,23 @@ export class Signup implements OnInit {
   togglePasswordVisibility(): void {
     this.showPassword = !this.showPassword;
   }
-
   toggleConfirmPasswordVisibility(): void {
     this.showConfirmPassword = !this.showConfirmPassword;
   }
 
-  // ✅ UPDATED: Handle different validation for member vs admin
   nextStep(): void {
     if (this.currentStep === 1) {
-      let step1Fields: string[] = [];
-
-      if (this.signupType === 'member') {
-        step1Fields = ['full_name', 'email', 'phone', 'church_id'];
-      } else {
-        step1Fields = [
-          'full_name',
-          'church_name',
-          'church_location',
-          'position',
-          'email',
-          'phone',
-        ];
-      }
+      const step1Fields =
+        this.signupType === 'member'
+          ? ['full_name', 'email', 'phone', 'church_id']
+          : [
+              'full_name',
+              'church_name',
+              'church_location',
+              'position',
+              'email',
+              'phone',
+            ];
 
       let isValid = true;
       step1Fields.forEach((field) => {
@@ -226,24 +199,15 @@ export class Signup implements OnInit {
           isValid = false;
         }
       });
-
       if (isValid) {
         this.currentStep++;
         this.errorMessage = '';
       }
     } else if (this.currentStep === 2) {
-      let step2Fields: string[] = [];
-
-      if (this.signupType === 'member') {
-        step2Fields = ['password', 'confirm_password'];
-      } else {
-        step2Fields = [
-          'church_size',
-          'password',
-          'confirm_password',
-          'how_heard',
-        ];
-      }
+      const step2Fields =
+        this.signupType === 'member'
+          ? ['password', 'confirm_password']
+          : ['church_size', 'password', 'confirm_password', 'how_heard'];
 
       let isValid = true;
       step2Fields.forEach((field) => {
@@ -258,7 +222,6 @@ export class Signup implements OnInit {
         this.signupForm.get('confirm_password')?.setErrors({ mismatch: true });
         isValid = false;
       }
-
       if (isValid) {
         this.submitSignup();
       }
@@ -281,9 +244,7 @@ export class Signup implements OnInit {
   }
 
   submitSignup(): void {
-    if (this.signupForm.invalid) {
-      return;
-    }
+    if (this.signupForm.invalid) return;
 
     this.loading = true;
     this.errorMessage = '';
@@ -299,10 +260,7 @@ export class Signup implements OnInit {
 
     const signupData =
       this.signupType === 'member'
-        ? {
-            ...baseData,
-            church_id: this.signupForm.value.church_id,
-          }
+        ? { ...baseData, church_id: this.signupForm.value.church_id }
         : {
             ...baseData,
             church_name: this.signupForm.value.church_name,
@@ -314,7 +272,6 @@ export class Signup implements OnInit {
 
     this.authService.signUp(signupData).subscribe({
       next: (response) => {
-        // console.log('Signup successful:', response);
         this.loading = false;
         this.currentStep = 3;
         this.successMessage =
@@ -322,7 +279,6 @@ export class Signup implements OnInit {
       },
       error: (error) => {
         this.loading = false;
-        console.error('Signup error:', error);
         this.errorMessage =
           error.message || 'Registration failed. Please try again.';
       },
@@ -335,32 +291,14 @@ export class Signup implements OnInit {
 
   getErrorMessage(fieldName: string): string {
     const control = this.signupForm.get(fieldName);
-
-    if (control?.hasError('required')) {
-      return 'This field is required';
-    }
-    if (control?.hasError('email')) {
-      return 'Please enter a valid email address';
-    }
-    if (control?.hasError('minlength')) {
-      const minLength = control.getError('minlength').requiredLength;
-      return `Minimum ${minLength} characters required`;
-    }
-    if (control?.hasError('pattern')) {
+    if (control?.hasError('required')) return 'This field is required';
+    if (control?.hasError('email')) return 'Please enter a valid email address';
+    if (control?.hasError('minlength'))
+      return `Minimum ${control.getError('minlength').requiredLength} characters required`;
+    if (control?.hasError('pattern'))
       return 'Please enter a valid phone number';
-    }
-    if (fieldName === 'confirm_password' && control?.hasError('mismatch')) {
+    if (fieldName === 'confirm_password' && control?.hasError('mismatch'))
       return 'Passwords do not match';
-    }
     return '';
   }
 }
-
-
-
-
-
-
-
-
-

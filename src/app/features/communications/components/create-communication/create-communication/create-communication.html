@@ -1,18 +1,15 @@
 <!-- src/app/features/communications/components/create-communication/create-communication.component.html -->
 <div class="dashboard-layout">
   <app-sidebar></app-sidebar>
-
   <div class="dashboard-content">
     <app-header></app-header>
-
     <div class="dashboard-body">
       <div class="create-communication-container">
+
         <!-- Page Header -->
         <div class="page-header">
           <div class="header-left">
-            <button class="back-btn" (click)="cancel()">
-              <i class="ri-arrow-left-line"></i>
-            </button>
+            <button class="back-btn" (click)="cancel()"><i class="ri-arrow-left-line"></i></button>
             <div>
               <h1>New Message</h1>
               <p class="subtitle">Send SMS or email to your members</p>
@@ -20,137 +17,279 @@
           </div>
         </div>
 
-        <!-- Success Message -->
+        <!-- Success -->
         <div *ngIf="successMessage" class="success-alert">
           <i class="ri-checkbox-circle-line"></i>
           <span>{{ successMessage }}</span>
         </div>
 
-        <!-- Error Message -->
+        <!-- Error -->
         <div *ngIf="errorMessage" class="error-alert">
           <i class="ri-error-warning-line"></i>
           <span>{{ errorMessage }}</span>
         </div>
 
+        <!-- Progress bar -->
+        <div *ngIf="sendProgress" class="send-progress-card">
+          <div class="progress-header">
+            <div class="progress-title-row">
+              <div class="progress-label">
+                <i class="ri-send-plane-line" *ngIf="!sendProgress.done"></i>
+                <i class="ri-checkbox-circle-line" *ngIf="sendProgress.done && sendProgress.failed === 0"></i>
+                <i class="ri-error-warning-line" *ngIf="sendProgress.done && sendProgress.failed > 0"></i>
+                <span *ngIf="!sendProgress.done">Sending messages...</span>
+                <span *ngIf="sendProgress.done && sendProgress.failed === 0">All messages sent</span>
+                <span *ngIf="sendProgress.done && sendProgress.failed > 0 && sendProgress.sent > 0">Sent with some failures</span>
+                <span *ngIf="sendProgress.done && sendProgress.failed > 0 && sendProgress.sent === 0">Send failed</span>
+              </div>
+              <span class="progress-percent">{{ sendProgress.percent }}%</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill"
+                [style.width.%]="sendProgress.percent"
+                [style.background]="getProgressBarColor()"
+                [class.progress-fill--animated]="!sendProgress.done">
+              </div>
+            </div>
+            <div class="progress-counts" *ngIf="sendProgress.total > 0">
+              <div class="count-item count-sent"><i class="ri-check-line"></i><span>{{ sendProgress.sent }} sent</span></div>
+              <div class="count-item count-failed" *ngIf="sendProgress.failed > 0"><i class="ri-close-line"></i><span>{{ sendProgress.failed }} failed</span></div>
+              <div class="count-item count-total"><i class="ri-group-line"></i><span>{{ sendProgress.total }} total</span></div>
+            </div>
+            <div class="progress-waiting" *ngIf="sendProgress.total === 0 && !sendProgress.done">
+              <i class="ri-loader-4-line spin"></i>
+              <span>Waiting for send to begin...</span>
+            </div>
+          </div>
+        </div>
+
         <div class="form-layout">
-          <!-- Main Form -->
+          <!-- Main form -->
           <div class="form-card">
             <form [formGroup]="communicationForm" (ngSubmit)="onSubmit()">
-              <!-- Message Details -->
               <div class="form-section">
                 <h3>Message Details</h3>
-
                 <div class="form-grid">
+
                   <!-- Title -->
                   <div class="form-group full-width">
                     <label for="title">Message Title *</label>
                     <input id="title" type="text" formControlName="title"
-                      placeholder="e.g., Sunday Service Reminder, Event Announcement"
+                      placeholder="e.g., Sunday Service Reminder"
                       [class.error]="communicationForm.get('title')?.invalid && communicationForm.get('title')?.touched" />
                     <span *ngIf="communicationForm.get('title')?.invalid && communicationForm.get('title')?.touched"
-                      class="error-message">
-                      {{ getErrorMessage('title') }}
-                    </span>
+                      class="error-message">{{ getErrorMessage('title') }}</span>
                   </div>
 
-                  <!-- Communication Type -->
+                  <!-- Type -->
                   <div class="form-group">
                     <label for="communication_type">Send Via *</label>
-                    <select id="communication_type" formControlName="communication_type"
-                      [class.error]="communicationForm.get('communication_type')?.invalid && communicationForm.get('communication_type')?.touched">
-                      <option *ngFor="let type of communicationTypes" [value]="type.value">
-                        {{ type.label }}
-                      </option>
+                    <select id="communication_type" formControlName="communication_type">
+                      <option *ngFor="let type of communicationTypes" [value]="type.value">{{ type.label }}</option>
                     </select>
                   </div>
 
-                  <!-- Target Audience -->
+                  <!-- Audience -->
                   <div class="form-group">
                     <label for="target_audience">Send To *</label>
-                    <select id="target_audience" formControlName="target_audience"
-                      [class.error]="communicationForm.get('target_audience')?.invalid && communicationForm.get('target_audience')?.touched">
+                    <select id="target_audience" formControlName="target_audience">
                       <option *ngFor="let audience of targetAudiences" [value]="audience.value">
                         {{ audience.label }}
                       </option>
                     </select>
                   </div>
 
+                  <!-- ── SINGLE MEMBER PICKER ── -->
+                  <div class="form-group full-width member-picker-group" *ngIf="isSingleMemberTarget">
+                    <label>Select Member *</label>
+                    <div *ngIf="selectedMember" class="selected-member-card">
+                      <div class="selected-member-avatar">
+                        <img *ngIf="selectedMember.photo_url" [src]="selectedMember.photo_url" [alt]="selectedMember.first_name" />
+                        <div *ngIf="!selectedMember.photo_url" class="avatar-initials">{{ getMemberInitials(selectedMember) }}</div>
+                      </div>
+                      <div class="selected-member-info">
+                        <p class="selected-member-name">{{ selectedMember.first_name }} {{ selectedMember.last_name }}</p>
+                        <p class="selected-member-meta" *ngIf="selectedMember.member_number">{{ selectedMember.member_number }}</p>
+                      </div>
+                      <button type="button" class="btn-clear-member" (click)="clearSelectedMember()">
+                        <i class="ri-close-line"></i>
+                      </button>
+                    </div>
+                    <div class="member-search-wrapper" *ngIf="!selectedMember">
+                      <div class="member-search-input-row">
+                        <i class="ri-search-line member-search-icon"></i>
+                        <input type="text" class="member-search-input"
+                          [value]="memberSearchQuery"
+                          (input)="onMemberSearchInput($event)"
+                          (blur)="onMemberSearchBlur()"
+                          placeholder="Search by name or member number..."
+                          autocomplete="off" />
+                        <i class="ri-loader-4-line spin" *ngIf="searchingMembers"></i>
+                      </div>
+                      <div class="member-dropdown" *ngIf="showMemberDropdown && memberSearchResults.length > 0">
+                        <div *ngFor="let member of memberSearchResults" class="member-dropdown-item"
+                          (mousedown)="selectMember(member)">
+                          <div class="dropdown-member-avatar">
+                            <img *ngIf="member.photo_url" [src]="member.photo_url" [alt]="member.first_name" />
+                            <div *ngIf="!member.photo_url" class="avatar-initials-sm">{{ getMemberInitials(member) }}</div>
+                          </div>
+                          <div class="dropdown-member-info">
+                            <p class="dropdown-member-name">{{ member.first_name }} {{ member.last_name }}</p>
+                            <p class="dropdown-member-meta" *ngIf="member.member_number">{{ member.member_number }}</p>
+                          </div>
+                          <i class="ri-arrow-right-s-line dropdown-arrow"></i>
+                        </div>
+                      </div>
+                      <p class="member-search-hint">Type at least 2 characters to search</p>
+                    </div>
+                  </div>
+
+                  <!-- ══════════════════════════════════════════════════ -->
+                  <!-- CUSTOM LIST MULTI-SELECT                          -->
+                  <!-- ══════════════════════════════════════════════════ -->
+                  <div class="form-group full-width custom-list-group" *ngIf="isCustomTarget">
+                    <label>
+                      Build Custom Recipient List *
+                      <span class="list-count-badge" *ngIf="customListCount > 0">
+                        {{ customListCount }} member{{ customListCount > 1 ? 's' : '' }} added
+                      </span>
+                    </label>
+
+                    <!-- Search input -->
+                    <div class="member-search-wrapper">
+                      <div class="member-search-input-row">
+                        <i class="ri-search-line member-search-icon"></i>
+                        <input type="text" class="member-search-input"
+                          [value]="customSearchQuery"
+                          (input)="onCustomSearchInput($event)"
+                          (blur)="onCustomSearchBlur()"
+                          placeholder="Search members to add..."
+                          autocomplete="off" />
+                        <i class="ri-loader-4-line spin" *ngIf="searchingCustom"></i>
+                      </div>
+
+                      <!-- Search results dropdown -->
+                      <div class="member-dropdown" *ngIf="showCustomDropdown && customSearchResults.length > 0">
+                        <div *ngFor="let member of customSearchResults" class="member-dropdown-item"
+                          (mousedown)="addToCustomList(member)">
+                          <div class="dropdown-member-avatar">
+                            <img *ngIf="member.photo_url" [src]="member.photo_url" [alt]="member.first_name" />
+                            <div *ngIf="!member.photo_url" class="avatar-initials-sm">{{ getMemberInitials(member) }}</div>
+                          </div>
+                          <div class="dropdown-member-info">
+                            <p class="dropdown-member-name">{{ member.first_name }} {{ member.last_name }}</p>
+                            <p class="dropdown-member-meta" *ngIf="member.member_number">{{ member.member_number }}</p>
+                          </div>
+                          <i class="ri-add-circle-line dropdown-add-icon"></i>
+                        </div>
+                      </div>
+                      <p class="member-search-hint">Type at least 2 characters to search and add members</p>
+                    </div>
+
+                    <!-- Selected members list -->
+                    <div *ngIf="customSelectedMembers.length > 0" class="custom-member-list">
+                      <div class="custom-list-header">
+                        <span class="custom-list-title">
+                          <i class="ri-group-line"></i>
+                          Recipients ({{ customListCount }})
+                        </span>
+                        <button type="button" class="btn-clear-list" (click)="clearCustomList()">
+                          <i class="ri-delete-bin-line"></i>
+                          Clear all
+                        </button>
+                      </div>
+                      <div class="custom-member-chips">
+                        <div *ngFor="let member of customSelectedMembers" class="member-chip">
+                          <div class="chip-avatar">
+                            <img *ngIf="member.photo_url" [src]="member.photo_url" [alt]="member.first_name" />
+                            <div *ngIf="!member.photo_url" class="chip-initials">{{ getMemberInitials(member) }}</div>
+                          </div>
+                          <div class="chip-info">
+                            <span class="chip-name">{{ member.first_name }} {{ member.last_name }}</span>
+                            <span class="chip-meta" *ngIf="member.member_number">{{ member.member_number }}</span>
+                          </div>
+                          <button type="button" class="chip-remove" (click)="removeFromCustomList(member.id)"
+                            title="Remove {{ member.first_name }}">
+                            <i class="ri-close-line"></i>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Empty state -->
+                    <div *ngIf="customSelectedMembers.length === 0" class="custom-list-empty">
+                      <i class="ri-user-add-line"></i>
+                      <p>No members added yet. Search above to add recipients.</p>
+                    </div>
+                  </div>
+                  <!-- ══════════════════════════════════════════════════ -->
+                  <!-- END CUSTOM LIST                                    -->
+                  <!-- ══════════════════════════════════════════════════ -->
+
                   <!-- Message -->
                   <div class="form-group full-width">
                     <label for="message">Message *</label>
-                    <textarea id="message" formControlName="message" placeholder="Type your message here..." rows="6"
+                    <textarea id="message" formControlName="message" placeholder="Type your message here..."
+                      rows="6"
                       [class.error]="communicationForm.get('message')?.invalid && communicationForm.get('message')?.touched"></textarea>
                     <div class="character-count">
                       {{ getCharacterCount() }} characters
                       <span *ngIf="communicationForm.get('communication_type')?.value === 'sms'" class="sms-note">
-                        (SMS: ~{{ Math.ceil(getCharacterCount() / 160) }} message{{ Math.ceil(getCharacterCount() / 160)
-                        > 1 ? 's' : '' }})
+                        (SMS: ~{{ Math.ceil(getCharacterCount() / 160) }} message{{ Math.ceil(getCharacterCount() / 160) > 1 ? 's' : '' }})
                       </span>
                     </div>
                     <span *ngIf="communicationForm.get('message')?.invalid && communicationForm.get('message')?.touched"
-                      class="error-message">
-                      {{ getErrorMessage('message') }}
-                    </span>
+                      class="error-message">{{ getErrorMessage('message') }}</span>
                   </div>
 
-                  <!-- Scheduled At -->
+                  <!-- Schedule -->
                   <div class="form-group full-width">
                     <label for="scheduled_at">Schedule (Optional)</label>
                     <input id="scheduled_at" type="datetime-local" formControlName="scheduled_at" />
                     <p class="help-text">Leave empty to send immediately</p>
                   </div>
+
                 </div>
               </div>
 
-              <!-- Form Actions -->
+              <!-- Actions -->
               <div class="form-actions">
-                <button type="button" class="btn-secondary" (click)="cancel()" [disabled]="loading">
-                  Cancel
-                </button>
-                <button type="submit" class="btn-primary" [disabled]="loading">
-                  <span *ngIf="!loading">
+                <button type="button" class="btn-secondary" (click)="cancel()" [disabled]="loading">Cancel</button>
+                <button type="submit" class="btn-primary" [disabled]="loading || sending">
+                  <span *ngIf="!loading && !sending">
                     <i class="ri-send-plane-line"></i>
                     {{ communicationForm.get('scheduled_at')?.value ? 'Schedule Message' : 'Send Now' }}
                   </span>
-                  <span *ngIf="loading">
-                    <i class="ri-loader-4-line spin"></i>
-                    Sending...
+                  <span *ngIf="loading && !sending">
+                    <i class="ri-loader-4-line spin"></i> Creating...
+                  </span>
+                  <span *ngIf="sending">
+                    <i class="ri-loader-4-line spin"></i> Sending...
                   </span>
                 </button>
               </div>
             </form>
           </div>
 
-          <!-- Templates Sidebar -->
+          <!-- Templates sidebar -->
           <div class="templates-sidebar">
             <h3>Message Templates</h3>
             <p class="sidebar-hint">Click to use a template</p>
-
             <div class="templates-list">
               <div *ngFor="let template of messageTemplates" class="template-card" (click)="applyTemplate(template)">
                 <h4>{{ template.name }}</h4>
                 <p>{{ template.message }}</p>
-                <span class="use-template">
-                  <i class="ri-add-circle-line"></i>
-                  Use Template
-                </span>
+                <span class="use-template"><i class="ri-add-circle-line"></i> Use Template</span>
               </div>
             </div>
-
             <div class="template-info">
               <i class="ri-information-line"></i>
-              <p>
-                You can use variables like
-                {{ '{name}' }}, {{ '{date}' }}, {{ '{time}' }},
-                {{ '{event_name}' }}, {{ '{amount}' }}
-                in your messages.
-              </p>
-
+              <p>Use {{ '{name}' }}, {{ '{date}' }}, {{ '{event_name}' }}, {{ '{amount}' }} as variables.</p>
             </div>
           </div>
         </div>
+
       </div>
     </div>
   </div>
 </div>
-

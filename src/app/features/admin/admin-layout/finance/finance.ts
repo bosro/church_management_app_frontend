@@ -51,6 +51,9 @@ export interface WithdrawalRequest {
   paystack_transfer_code?: string;
   created_at: string;
   church?: { name: string };
+  withdrawal_type?: string
+  momo_number?: string | number
+  momo_provider?: string
 }
 
 @Component({
@@ -80,6 +83,72 @@ export class Finance implements OnInit, OnDestroy {
   get platformNetBalance(): number { return this.churchStats.reduce((s, c) => s + c.net_balance, 0); }
   get activeChurches(): number { return this.churchStats.length; }
   get pendingWithdrawals(): WithdrawalRequest[] { return this.withdrawalRequests.filter((r) => r.status === 'pending'); }
+
+  // ── Withdrawal filters + pagination ──────────────────────
+  withdrawalFilterStatus = '';
+  withdrawalFilterChurch = '';
+  withdrawalPage         = 1;
+  withdrawalPageSize     = 10;
+
+  get filteredWithdrawals(): WithdrawalRequest[] {
+    return this.withdrawalRequests.filter((r) => {
+      const statusMatch = !this.withdrawalFilterStatus || r.status === this.withdrawalFilterStatus;
+      const churchMatch = !this.withdrawalFilterChurch ||
+        (r.church?.name || '').toLowerCase().includes(this.withdrawalFilterChurch.toLowerCase());
+      return statusMatch && churchMatch;
+    });
+  }
+  get withdrawalTotalPages(): number {
+    return Math.max(1, Math.ceil(this.filteredWithdrawals.length / this.withdrawalPageSize));
+  }
+  get pagedWithdrawals(): WithdrawalRequest[] {
+    const start = (this.withdrawalPage - 1) * this.withdrawalPageSize;
+    return this.filteredWithdrawals.slice(start, start + this.withdrawalPageSize);
+  }
+  onWithdrawalFilterChange(): void { this.withdrawalPage = 1; }
+
+  // ── Recent transactions filters + pagination ───────────
+  txnFilterChurch = '';
+  txnFilterMethod = '';
+  txnPage         = 1;
+  txnPageSize     = 10;
+
+  get filteredTransactions(): RecentTransaction[] {
+    return this.recentTransactions.filter((t) => {
+      const churchMatch = !this.txnFilterChurch ||
+        t.church_name.toLowerCase().includes(this.txnFilterChurch.toLowerCase());
+      const methodMatch = !this.txnFilterMethod || t.payment_method === this.txnFilterMethod;
+      return churchMatch && methodMatch;
+    });
+  }
+  get txnTotalPages(): number {
+    return Math.max(1, Math.ceil(this.filteredTransactions.length / this.txnPageSize));
+  }
+  get pagedTransactions(): RecentTransaction[] {
+    const start = (this.txnPage - 1) * this.txnPageSize;
+    return this.filteredTransactions.slice(start, start + this.txnPageSize);
+  }
+  onTxnFilterChange(): void { this.txnPage = 1; }
+
+  // ── Church breakdown filters + pagination ───────────────
+  churchFilterName = '';
+  churchPage       = 1;
+  churchPageSize   = 10;
+
+  get filteredChurchStats(): ChurchGivingStat[] {
+    return this.churchStats.filter((c) =>
+      !this.churchFilterName ||
+      c.church_name.toLowerCase().includes(this.churchFilterName.toLowerCase())
+    );
+  }
+  get churchTotalPages(): number {
+    return Math.max(1, Math.ceil(this.filteredChurchStats.length / this.churchPageSize));
+  }
+  get pagedChurchStats(): ChurchGivingStat[] {
+    const start = (this.churchPage - 1) * this.churchPageSize;
+    return this.filteredChurchStats.slice(start, start + this.churchPageSize);
+  }
+  onChurchFilterChange(): void { this.churchPage = 1; }
 
   // Withdrawal detail modal
   showWithdrawalModal = false;

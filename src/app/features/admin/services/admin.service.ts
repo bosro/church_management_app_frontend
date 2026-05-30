@@ -365,4 +365,44 @@ export class AdminService {
       }),
     );
   }
+
+  provisionChurchForUser(
+    userId: string,
+    churchName: string,
+    churchLocation: string = 'Ghana',
+    churchSize?: string,
+  ): Observable<any> {
+    return from(
+      this.supabase.client.rpc('provision_church_for_user', {
+        p_user_id: userId,
+        p_church_name: churchName,
+        p_church_location: churchLocation,
+        p_church_size: churchSize || null,
+        p_admin_id: this.supabase.currentUser?.id,
+      }),
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw error;
+        return data;
+      }),
+    );
+  }
+
+  deleteUserCompletely(userId: string): Observable<any> {
+    const adminId = this.supabase.currentUser?.id;
+
+    return from(
+      this.supabase.client.rpc('delete_user_completely', {
+        p_user_id: userId,
+        p_admin_id: adminId,
+      }),
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw error;
+        if (data?.success === false) throw new Error(data.message);
+        return data;
+      }),
+      catchError((err) => throwError(() => err)),
+    );
+  }
 }

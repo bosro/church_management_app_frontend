@@ -1,7 +1,7 @@
 // src/app/models/communication.model.ts
 export type CommunicationType = 'sms' | 'email' | 'both';
 export type CommunicationStatus = 'draft' | 'scheduled' | 'sending' | 'sent' | 'failed';
-export type TargetAudience = 'all' | 'members' | 'groups' | 'custom';
+export type TargetAudience = 'all' | 'members' | 'member' | 'groups' | 'custom';
 
 export interface Communication {
   id: string;

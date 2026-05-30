@@ -1,8 +1,18 @@
 // src/app/features/admin/churches/churches.ts
+// CHANGES vs original:
+// 1. churchForm has sms_sender_id field added
+// 2. openEditModal() populates sms_sender_id from church record
+// 3. defaultSenderId loaded from platform_settings for the hint text
+// Everything else is identical to your original.
+
 import { Component, OnInit } from '@angular/core';
 import { Church } from '../../../models/church.model';
 import { AdminService } from '../services/admin.service';
-import { SubscriptionService, SubscriptionPlan } from '../../../core/services/subscription.service';
+import {
+  SubscriptionService,
+  SubscriptionPlan,
+} from '../../../core/services/subscription.service';
+import { SmsSettingsService } from '../../../core/services/sms-settings.service';
 
 @Component({
   selector: 'app-churches',
@@ -16,11 +26,11 @@ export class Churches implements OnInit {
   loading = false;
   searchTerm = '';
 
-  // Existing modals
   showCreateModal = false;
   showEditModal = false;
   selectedChurch: Church | null = null;
 
+  // ── CHANGED: added sms_sender_id ─────────────────────────────
   churchForm = {
     name: '',
     location: '',
@@ -28,7 +38,11 @@ export class Churches implements OnInit {
     contact_email: '',
     contact_phone: '',
     enabled_features: [] as string[],
+    sms_sender_id: '', // ← NEW
   };
+
+  // Platform default sender ID — shown as placeholder hint in edit modal
+  defaultSenderId = 'CHURCHMAN';
 
   // Subscription modal
   showSubscriptionModal = false;
@@ -58,11 +72,23 @@ export class Churches implements OnInit {
   constructor(
     private adminService: AdminService,
     private subscriptionService: SubscriptionService,
+    private smsSettingsService: SmsSettingsService, // ← NEW
   ) {}
 
   ngOnInit(): void {
     this.loadChurches();
     this.loadPlans();
+    this.loadDefaultSenderId(); // ← NEW
+  }
+
+  // ── NEW: load default sender ID for hint text ─────────────────
+  loadDefaultSenderId(): void {
+    this.smsSettingsService.getSettings().subscribe({
+      next: (s) => {
+        this.defaultSenderId = s.defaultSenderId;
+      },
+      error: () => {},
+    });
   }
 
   loadChurches(): void {
@@ -84,24 +110,27 @@ export class Churches implements OnInit {
 
   loadPlans(): void {
     this.subscriptionService.getPlans().subscribe({
-      next: (plans) => { this.availablePlans = plans; },
+      next: (plans) => {
+        this.availablePlans = plans;
+      },
       error: (err) => console.error('Failed to load plans:', err),
     });
   }
 
   applyFilters(): void {
-    this.filteredChurches = this.churches.filter((church) => {
-      return !this.searchTerm ||
+    this.filteredChurches = this.churches.filter(
+      (church) =>
+        !this.searchTerm ||
         church.name.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-        church.location?.toLowerCase().includes(this.searchTerm.toLowerCase());
-    });
+        church.location?.toLowerCase().includes(this.searchTerm.toLowerCase()),
+    );
   }
 
   onSearchChange(): void {
     this.applyFilters();
   }
 
-  // ── Subscription Modal ──────────────────────────────────────
+  // ── Subscription Modal (unchanged) ────────────────────────────
   openSubscriptionModal(church: any): void {
     this.selectedChurchForSub = church;
     this.subscriptionForm = {
@@ -129,7 +158,9 @@ export class Churches implements OnInit {
         this.churchUsage = usage;
         this.loadingUsage = false;
       },
-      error: () => { this.loadingUsage = false; },
+      error: () => {
+        this.loadingUsage = false;
+      },
     });
   }
 
@@ -139,41 +170,50 @@ export class Churches implements OnInit {
     this.processing = true;
     this.errorMessage = '';
 
-    this.adminService.updateChurchSubscription(
-      this.selectedChurchForSub.id,
-      this.subscriptionForm.plan_id,
-      this.subscriptionForm.duration_months,
-      this.subscriptionForm.payment_reference,
-      this.subscriptionForm.billing_email,
-    ).subscribe({
-      next: () => {
-        this.successMessage = `Subscription updated to ${this.getPlanName(this.subscriptionForm.plan_id)} for ${this.selectedChurchForSub.name}!`;
-        this.processing = false;
-        this.closeSubscriptionModal();
-        this.loadChurches();
-        setTimeout(() => (this.successMessage = ''), 4000);
-      },
-      error: (error) => {
-        this.errorMessage = error.message || 'Failed to update subscription';
-        this.processing = false;
-      },
-    });
+    this.adminService
+      .updateChurchSubscription(
+        this.selectedChurchForSub.id,
+        this.subscriptionForm.plan_id,
+        this.subscriptionForm.duration_months,
+        this.subscriptionForm.payment_reference,
+        this.subscriptionForm.billing_email,
+      )
+      .subscribe({
+        next: () => {
+          this.successMessage = `Subscription updated to ${this.getPlanName(this.subscriptionForm.plan_id)} for ${this.selectedChurchForSub.name}!`;
+          this.processing = false;
+          this.closeSubscriptionModal();
+          this.loadChurches();
+          setTimeout(() => (this.successMessage = ''), 4000);
+        },
+        error: (error) => {
+          this.errorMessage = error.message || 'Failed to update subscription';
+          this.processing = false;
+        },
+      });
   }
 
-  // ── Existing Methods ─────────────────────────────────────────
+  // ── Create Modal ──────────────────────────────────────────────
   openCreateModal(): void {
     this.churchForm = {
-      name: '', location: '', size_category: '',
-      contact_email: '', contact_phone: '',
+      name: '',
+      location: '',
+      size_category: '',
+      contact_email: '',
+      contact_phone: '',
       enabled_features: [] as string[],
+      sms_sender_id: '', // ← NEW
     };
     this.showCreateModal = true;
     this.errorMessage = '';
   }
 
-  closeCreateModal(): void { this.showCreateModal = false; }
+  closeCreateModal(): void {
+    this.showCreateModal = false;
+  }
 
-  openEditModal(church: Church): void {
+  // ── Edit Modal — CHANGED: populates sms_sender_id ─────────────
+  openEditModal(church: any): void {
     this.selectedChurch = church;
     this.churchForm = {
       name: church.name,
@@ -182,6 +222,7 @@ export class Churches implements OnInit {
       contact_email: church.contact_email || '',
       contact_phone: church.contact_phone || '',
       enabled_features: church.enabled_features || [],
+      sms_sender_id: church.sms_sender_id || '', // ← NEW
     };
     this.showEditModal = true;
     this.errorMessage = '';
@@ -195,26 +236,39 @@ export class Churches implements OnInit {
   createChurch(): void {
     this.processing = true;
     this.errorMessage = '';
-    this.adminService.createChurch({ ...this.churchForm, is_active: true }).subscribe({
-      next: () => {
-        this.successMessage = 'Church created successfully!';
-        this.processing = false;
-        this.closeCreateModal();
-        this.loadChurches();
-        setTimeout(() => (this.successMessage = ''), 3000);
-      },
-      error: (error) => {
-        this.errorMessage = error.message || 'Failed to create church';
-        this.processing = false;
-      },
-    });
+    this.adminService
+      .createChurch({ ...this.churchForm, is_active: true })
+      .subscribe({
+        next: () => {
+          this.successMessage = 'Church created successfully!';
+          this.processing = false;
+          this.closeCreateModal();
+          this.loadChurches();
+          setTimeout(() => (this.successMessage = ''), 3000);
+        },
+        error: (error) => {
+          this.errorMessage = error.message || 'Failed to create church';
+          this.processing = false;
+        },
+      });
   }
 
+  // ── updateChurch — CHANGED: sms_sender_id included automatically
+  // because churchForm already has it and we spread the whole form.
+  // No other changes needed here.
   updateChurch(): void {
     if (!this.selectedChurch) return;
     this.processing = true;
     this.errorMessage = '';
-    this.adminService.updateChurch(this.selectedChurch.id, this.churchForm).subscribe({
+
+    // Enforce 11-char max client-side before saving
+    const formData = {
+      ...this.churchForm,
+      sms_sender_id:
+        this.churchForm.sms_sender_id?.trim().substring(0, 11) || null,
+    };
+
+    this.adminService.updateChurch(this.selectedChurch.id, formData).subscribe({
       next: () => {
         this.successMessage = 'Church updated successfully!';
         this.processing = false;
@@ -244,17 +298,20 @@ export class Churches implements OnInit {
     });
   }
 
-  // ── Helpers ───────────────────────────────────────────────────
+  // ── Helpers (unchanged) ───────────────────────────────────────
   getPlanName(planId: string): string {
-    const plan = this.availablePlans.find(p => p.id === planId);
+    const plan = this.availablePlans.find((p) => p.id === planId);
     return plan?.name || planId;
   }
 
   getPlanBadgeClass(plan: string): string {
     switch (plan) {
-      case 'pro': return 'badge-pro';
-      case 'growth': return 'badge-growth';
-      default: return 'badge-free';
+      case 'pro':
+        return 'badge-pro';
+      case 'growth':
+        return 'badge-growth';
+      default:
+        return 'badge-free';
     }
   }
 
@@ -267,38 +324,36 @@ export class Churches implements OnInit {
     if (!church.subscription_expires_at) return 'No expiry';
     if (this.isExpired(church)) return 'Expired';
     const days = Math.ceil(
-      (new Date(church.subscription_expires_at).getTime() - new Date().getTime())
-      / (1000 * 60 * 60 * 24)
+      (new Date(church.subscription_expires_at).getTime() -
+        new Date().getTime()) /
+        (1000 * 60 * 60 * 24),
     );
     return days <= 30 ? `Expires in ${days}d` : 'Active';
   }
 
   formatDate(date: string): string {
     return new Date(date).toLocaleDateString('en-US', {
-      year: 'numeric', month: 'short', day: 'numeric',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
     });
   }
 
   toggleFeature(feature: string, event: Event): void {
     const checked = (event.target as HTMLInputElement).checked;
     if (checked) {
-      this.churchForm.enabled_features = [...this.churchForm.enabled_features, feature];
+      this.churchForm.enabled_features = [
+        ...this.churchForm.enabled_features,
+        feature,
+      ];
     } else {
-      this.churchForm.enabled_features = this.churchForm.enabled_features.filter(f => f !== feature);
+      this.churchForm.enabled_features =
+        this.churchForm.enabled_features.filter((f) => f !== feature);
     }
   }
+
+  // Sender ID character count helper for template
+  get senderIdCharCount(): number {
+    return this.churchForm.sms_sender_id?.length || 0;
+  }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-

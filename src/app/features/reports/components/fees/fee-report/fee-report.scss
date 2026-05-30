@@ -180,13 +180,17 @@
 }
 
 // ─── Summary Cards ────────────────────────────────────────
+// ─── Summary Cards ────────────────────────────────────────
 .summary-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(4, 1fr); // ← Force 4 equal columns on desktop
   gap: 16px;
   margin-bottom: 24px;
 
-  // ← ADD this entire block:
+  @media (max-width: 1024px) {
+    grid-template-columns: repeat(2, 1fr); // 2x2 on tablet
+  }
+
   @media (max-width: 640px) {
     grid-template-columns: repeat(2, 1fr);
     gap: 10px;
@@ -196,61 +200,60 @@
     background: white;
     border: 1px solid #e5e7eb;
     border-radius: 12px;
-    padding: 20px;
+    padding: 16px; // ← Reduce from 20px to give text more room
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 12px; // ← Reduce from 16px
     transition: all 0.2s;
-    min-width: 0; // ← ADD
-
-    // ← ADD this block:
-    @media (max-width: 640px) {
-      padding: 12px;
-      gap: 10px;
-      align-items: flex-start;
-      flex-direction: column; // stack icon above text on tiny screens
-    }
+    min-width: 0;
+    overflow: hidden; // ← ADD: clip anything that overflows the card
 
     .card-icon {
-      width: 48px;
-      height: 48px;
+      width: 44px; // ← Slightly smaller
+      height: 44px;
       border-radius: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
-      flex-shrink: 0; // ← ADD
+      flex-shrink: 0;
       i {
-        font-size: 22px;
+        font-size: 20px;
       }
     }
 
-    // ← ADD this block:
     > div {
       min-width: 0;
       flex: 1;
+      overflow: hidden; // ← ADD
     }
 
     .card-label {
-      font-size: 13px;
+      font-size: 12px; // ← Reduce slightly
       color: #6b7280;
       margin: 0 0 4px;
-      // ← ADD:
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
 
     .card-value {
-      font-size: 22px;
+      font-size: 20px; // ← Reduce from 22px
       font-weight: 700;
       color: #111827;
       margin: 0;
-      // ← ADD:
-      word-break: break-word;
+      white-space: nowrap; // ← ADD: prevent "75,715. 00" line break
+      overflow: hidden; // ← ADD
+      text-overflow: ellipsis; // ← ADD: fallback if still too long
 
-      // ← ADD:
+      @media (max-width: 1200px) {
+        font-size: 17px; // ← Scale down on medium screens
+      }
+
       @media (max-width: 640px) {
-        font-size: 16px;
+        font-size: 14px;
+        white-space: normal; // ← Allow wrap on mobile
+        word-break: break-word;
+        overflow-wrap: break-word;
       }
 
       &.paid {
@@ -261,12 +264,27 @@
       }
     }
 
+    // ── Mobile: stack icon above text ──
+    @media (max-width: 640px) {
+      padding: 12px;
+      gap: 8px;
+      flex-direction: column;
+      align-items: flex-start;
+
+      .card-icon {
+        width: 36px;
+        height: 36px;
+        i {
+          font-size: 16px;
+        }
+      }
+    }
+
     &.card-active {
       border-color: #4f46e5;
       box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
       transform: translateY(-2px);
     }
-
     &:hover {
       border-color: #c7d2fe;
       transform: translateY(-1px);
@@ -717,18 +735,23 @@
     margin-bottom: 16px;
 
     .summary-card {
-      padding: 14px 12px;
-      gap: 10px;
-      min-width: 0;
-      align-items: flex-start;
+      // existing styles stay the same, just ADD:
+      align-items: flex-start; // ← CHANGE from `align-items: center`
+      //   (or keep center and fix the icon instead)
 
       .card-icon {
-        width: 40px;
-        height: 40px;
-        min-width: 40px;
-        border-radius: 10px;
+        width: 48px;
+        height: 48px;
+        min-height: 48px; // ← ADD: prevent stretching
+        max-height: 48px; // ← ADD: hard cap
+        align-self: center; // ← ADD: ignore the flex-stretch on this element only
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
         i {
-          font-size: 18px;
+          font-size: 22px;
         }
       }
 
@@ -1003,5 +1026,3 @@
     }
   }
 }
-
-
