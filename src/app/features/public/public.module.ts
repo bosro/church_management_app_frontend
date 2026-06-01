@@ -10,6 +10,7 @@ import { MemberRegistration } from './member-registration/member-registration';
 import { FeedingRecord } from './feeding-record/feeding-record';
 import { PublicStudentRegistration } from './public-student-registration/public-student-registration';
 import { GivingThankYouPage } from './giving-thank-you/giving-thank-you';
+import { CommitmentForm } from '../building-campaign/components/commitment-form/commitment-form';
 
 const routes: Routes = [
   {
@@ -32,6 +33,10 @@ const routes: Routes = [
   {
     path: 'student-register/:token',
     component: PublicStudentRegistration,
+  },
+   {
+    path: 'building-campaign/:churchId',
+    component: CommitmentForm,
   },
 ];
 

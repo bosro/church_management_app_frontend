@@ -1,331 +1,349 @@
 <!-- src/app/features/building-campaign/components/commitment-form/commitment-form.component.html -->
-<div class="dashboard-layout">
-  <app-sidebar></app-sidebar>
 
+<!-- PUBLIC layout (no sidebar/header) -->
+<div *ngIf="isPublic" class="public-form-layout">
+  <div class="public-form-body">
+    <ng-container [ngTemplateOutlet]="formContent"></ng-container>
+  </div>
+</div>
+
+<!-- ADMIN layout (with sidebar/header) -->
+<div *ngIf="!isPublic" class="dashboard-layout">
+  <app-sidebar></app-sidebar>
   <div class="dashboard-content">
     <app-header></app-header>
-
     <div class="dashboard-body">
-      <div class="form-container">
-
-        <!-- ══ SUCCESS STATE ══════════════════════════════════ -->
-        <div *ngIf="submitted" class="success-card">
-          <div class="success-icon">
-            <i class="ri-checkbox-circle-fill"></i>
-          </div>
-          <h2>Commitment Received!</h2>
-          <p>
-            Thank you for your willing heart. Your commitment to <strong>"The Rich Church"</strong>
-            building campaign has been recorded and received with gratitude.
-          </p>
-          <div class="verse-block">
-            <i class="ri-double-quotes-l"></i>
-            <span>God loves a cheerful giver.</span>
-            <cite>— 2 Corinthians 9:7</cite>
-          </div>
-          <div class="success-actions">
-            <button class="btn-primary" (click)="submitAnother()">
-              <i class="ri-add-line"></i> Submit Another Commitment
-            </button>
-            <button class="btn-secondary" routerLink="/main/building-campaign">
-              <i class="ri-home-line"></i> Back to Dashboard
-            </button>
-          </div>
-        </div>
-
-        <!-- ══ FORM STATE ═════════════════════════════════════ -->
-        <ng-container *ngIf="!submitted">
-
-          <!-- Page Header -->
-          <div class="page-header">
-            <div class="campaign-badge">
-              <i class="ri-building-4-line"></i>
-              <span>Building Campaign</span>
-            </div>
-            <h1>My Willing Heart</h1>
-            <p class="page-subtitle">
-              "The Rich Church" Commitment Card · JirehLife Chapel
-            </p>
-          </div>
-
-          <!-- Error -->
-          <div *ngIf="errorMessage" class="error-alert">
-            <i class="ri-error-warning-line"></i>
-            <span>{{ errorMessage }}</span>
-          </div>
-
-          <form [formGroup]="form" (ngSubmit)="onSubmit()">
-
-            <!-- ── SECTION 1: Who is committing ──────────────── -->
-            <div class="form-card">
-              <div class="card-header">
-                <div class="card-title-row">
-                  <div class="step-badge">1</div>
-                  <h3>Your Details</h3>
-                </div>
-              </div>
-
-              <!-- Type Toggle -->
-              <div class="type-toggle">
-                <button type="button"
-                  [class.active]="pledgerType === 'member'"
-                  (click)="setPledgerType('member')">
-                  <i class="ri-user-line"></i> I am a Member
-                </button>
-                <button type="button"
-                  [class.active]="pledgerType === 'visitor'"
-                  (click)="setPledgerType('visitor')">
-                  <i class="ri-user-add-line"></i> Visitor / Guest
-                </button>
-              </div>
-
-              <!-- Member search -->
-              <ng-container *ngIf="pledgerType === 'member'">
-                <div *ngIf="!selectedMember" class="member-search">
-                  <div class="search-wrap">
-                    <i class="ri-search-line"></i>
-                    <input type="text" [formControl]="searchControl"
-                      placeholder="Search your name, phone, or member number…" />
-                    <i *ngIf="searching" class="ri-loader-4-line spin search-spin"></i>
-                  </div>
-                  <div class="search-results" *ngIf="searchResults.length > 0">
-                    <div *ngFor="let m of searchResults" class="result-item" (click)="selectMember(m)">
-                      <div class="avatar-sm">
-                        <img *ngIf="m.photo_url" [src]="m.photo_url" [alt]="getMemberName(m)" />
-                        <span *ngIf="!m.photo_url">{{ getMemberInitials(m) }}</span>
-                      </div>
-                      <div class="result-info">
-                        <span class="result-name">{{ getMemberName(m) }}</span>
-                        <span class="result-meta">{{ m.member_number }}</span>
-                      </div>
-                      <i class="ri-arrow-right-circle-line"></i>
-                    </div>
-                  </div>
-                </div>
-
-                <div *ngIf="selectedMember" class="selected-member">
-                  <div class="avatar-md">
-                    <img *ngIf="selectedMember.photo_url" [src]="selectedMember.photo_url" />
-                    <span *ngIf="!selectedMember.photo_url">{{ getMemberInitials(selectedMember) }}</span>
-                  </div>
-                  <div class="selected-info">
-                    <span class="selected-name">{{ getMemberName(selectedMember) }}</span>
-                    <span class="selected-meta">{{ selectedMember.member_number }}</span>
-                  </div>
-                  <button type="button" class="btn-remove" (click)="removeMember()">
-                    <i class="ri-close-line"></i>
-                  </button>
-                </div>
-              </ng-container>
-
-              <!-- Visitor fields -->
-              <ng-container *ngIf="pledgerType === 'visitor'">
-                <div class="form-grid two-col">
-                  <div class="form-group">
-                    <label>Full Name <span class="req">*</span></label>
-                    <input type="text" formControlName="visitor_name"
-                      placeholder="e.g. Kwame Asante"
-                      [class.has-error]="form.get('visitor_name')?.invalid && form.get('visitor_name')?.touched" />
-                  </div>
-                  <div class="form-group">
-                    <label>Phone / Contact <span class="req">*</span></label>
-                    <input type="tel" formControlName="visitor_contact"
-                      placeholder="e.g. 0244 123 456"
-                      [class.has-error]="form.get('visitor_contact')?.invalid && form.get('visitor_contact')?.touched" />
-                  </div>
-                </div>
-              </ng-container>
-            </div>
-
-            <!-- ── SECTION 2: Pledge Amount ───────────────────── -->
-            <div class="form-card">
-              <div class="card-header">
-                <div class="card-title-row">
-                  <div class="step-badge">2</div>
-                  <h3>My Commitment Amount</h3>
-                </div>
-              </div>
-
-              <div class="form-grid two-col">
-                <div class="form-group">
-                  <label>Total Pledge Amount (GHS) <span class="req">*</span></label>
-                  <div class="input-prefix">
-                    <span>GH₵</span>
-                    <input type="number" formControlName="total_pledge_amount"
-                      placeholder="0.00" min="1" step="0.01"
-                      [class.has-error]="form.get('total_pledge_amount')?.invalid && form.get('total_pledge_amount')?.touched" />
-                  </div>
-                  <span class="field-error" *ngIf="form.get('total_pledge_amount')?.touched">
-                    {{ getError('total_pledge_amount') }}
-                  </span>
-                </div>
-
-                <div class="form-group">
-                  <label>Initial / Part Payment (GHS)</label>
-                  <div class="input-prefix">
-                    <span>GH₵</span>
-                    <input type="number" formControlName="initial_payment"
-                      placeholder="0.00" min="0" step="0.01"
-                      [class.has-error]="form.get('initial_payment')?.invalid && form.get('initial_payment')?.touched" />
-                  </div>
-                  <span class="field-hint">Leave as 0 if paying all via instalments</span>
-                  <span class="field-error" *ngIf="form.get('initial_payment')?.touched">
-                    {{ getError('initial_payment') }}
-                  </span>
-                </div>
-              </div>
-
-              <!-- Breakdown preview -->
-              <div class="breakdown-box" *ngIf="(form.get('total_pledge_amount')?.value || 0) > 0">
-                <div class="breakdown-row">
-                  <span><i class="ri-money-dollar-circle-line"></i> Total Pledge</span>
-                  <strong>{{ formatCurrency(+form.get('total_pledge_amount')?.value || 0) }}</strong>
-                </div>
-                <div class="breakdown-row deduct">
-                  <span><i class="ri-arrow-down-circle-line"></i> Initial Payment</span>
-                  <strong>− {{ formatCurrency(+form.get('initial_payment')?.value || 0) }}</strong>
-                </div>
-                <div class="breakdown-divider"></div>
-                <div class="breakdown-row total">
-                  <span><i class="ri-exchange-funds-line"></i> Remaining to spread</span>
-                  <strong>{{ formatCurrency(remainingAfterInitial) }}</strong>
-                </div>
-              </div>
-            </div>
-
-            <!-- ── SECTION 3: Instalment Schedule ────────────── -->
-            <div class="form-card">
-              <div class="card-header">
-                <div class="card-title-row">
-                  <div class="step-badge">3</div>
-                  <h3>Payment Schedule</h3>
-                </div>
-                <p class="card-sub">How would you like to spread the remaining amount?</p>
-              </div>
-
-              <div class="form-group">
-                <label>Frequency <span class="req">*</span></label>
-                <div class="freq-toggle">
-                  <button type="button"
-                    [class.active]="form.get('instalment_frequency')?.value === 'weekly'"
-                    (click)="setFrequency('weekly')">
-                    <i class="ri-calendar-line"></i> Weekly
-                  </button>
-                  <button type="button"
-                    [class.active]="form.get('instalment_frequency')?.value === 'monthly'"
-                    (click)="setFrequency('monthly')">
-                    <i class="ri-calendar-2-line"></i> Monthly
-                  </button>
-                </div>
-              </div>
-
-              <div class="form-grid two-col">
-                <div class="form-group">
-                  <label>Number of {{ frequencyLabelPlural }} <span class="req">*</span></label>
-                  <input type="number" formControlName="instalment_count"
-                    placeholder="e.g. 12" min="1"
-                    [class.has-error]="form.get('instalment_count')?.invalid && form.get('instalment_count')?.touched" />
-                  <span class="field-error" *ngIf="form.get('instalment_count')?.touched">
-                    {{ getError('instalment_count') }}
-                  </span>
-                </div>
-
-                <!-- Computed instalment -->
-                <div class="form-group">
-                  <label>Amount per {{ frequencyLabel }}</label>
-                  <div class="computed-field">
-                    <i class="ri-calculator-line"></i>
-                    <span *ngIf="instalmentPreview > 0">{{ formatCurrency(instalmentPreview) }}</span>
-                    <span *ngIf="instalmentPreview <= 0" class="placeholder">Calculated automatically</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Schedule summary pill -->
-              <div class="schedule-summary"
-                *ngIf="instalmentPreview > 0 && (form.get('instalment_count')?.value || 0) > 0">
-                <i class="ri-calendar-check-line"></i>
-                <span>
-                  <strong>{{ formatCurrency(instalmentPreview) }}</strong>
-                  every {{ frequencyLabel }} for
-                  <strong>{{ form.get('instalment_count')?.value }} {{ frequencyLabelPlural }}</strong>
-                  — total remaining:
-                  <strong>{{ formatCurrency(remainingAfterInitial) }}</strong>
-                </span>
-              </div>
-            </div>
-
-            <!-- ── SECTION 4: Payment channel ────────────────── -->
-            <div class="form-card">
-              <div class="card-header">
-                <div class="card-title-row">
-                  <div class="step-badge">4</div>
-                  <h3>Payment Channel</h3>
-                </div>
-              </div>
-
-              <!-- Bank info cards -->
-              <div class="bank-cards">
-                <div class="bank-card">
-                  <div class="bank-card-label">Bank Transfer</div>
-                  <div class="bank-row"><span>Bank</span><strong>GT Bank</strong></div>
-                  <div class="bank-row"><span>Account No.</span><strong>3224001020021</strong></div>
-                  <div class="bank-row"><span>Name</span><strong>JirehLife Chapel — Lapaz</strong></div>
-                </div>
-                <div class="bank-card">
-                  <div class="bank-card-label">Mobile Money (MTN)</div>
-                  <div class="bank-row"><span>General Giving</span><strong>0245 770 206</strong></div>
-                  <div class="bank-row"><span>JirehLife Chapel</span><strong>0245 770 415</strong></div>
-                </div>
-              </div>
-
-              <div class="form-group" style="margin-top: 1.25rem">
-                <label>Preferred Payment Method</label>
-                <select formControlName="payment_method">
-                  <option value="">— Select one (optional) —</option>
-                  <option *ngFor="let pm of paymentMethods" [value]="pm">{{ pm }}</option>
-                </select>
-              </div>
-
-              <div class="form-group">
-                <label>Notes (optional)</label>
-                <textarea formControlName="notes" rows="2"
-                  placeholder="Any additional notes…"></textarea>
-              </div>
-            </div>
-
-            <!-- ── CONSENT + SUBMIT ───────────────────────────── -->
-            <div class="form-card consent-card">
-              <label class="consent-label" [class.checked]="form.get('consent')?.value">
-                <input type="checkbox" formControlName="consent" />
-                <div class="checkbox-visual">
-                  <i class="ri-check-line"></i>
-                </div>
-                <span>
-                  I have a willing heart and commit to participate in
-                  <strong>"The Rich Church"</strong> building campaign.
-                  I understand this is a faith commitment to God and to this church.
-                </span>
-              </label>
-
-              <button type="submit" class="submit-btn" [disabled]="submitting">
-                <span *ngIf="!submitting">
-                  <i class="ri-heart-line"></i> Submit My Commitment
-                </span>
-                <span *ngIf="submitting">
-                  <i class="ri-loader-4-line spin"></i> Submitting…
-                </span>
-              </button>
-
-              <p class="footer-note">
-                Questions? Call <strong>0244 564 343</strong> or <strong>0245 770 206</strong>
-              </p>
-            </div>
-
-          </form>
-        </ng-container>
-
-      </div>
+      <ng-container [ngTemplateOutlet]="formContent"></ng-container>
     </div>
   </div>
 </div>
+
+<!-- Shared form content -->
+<ng-template #formContent>
+  <div class="form-container">
+
+    <!-- ══ SUCCESS STATE ══════════════════════════════════ -->
+    <div *ngIf="submitted" class="success-card">
+      <div class="success-icon">
+        <i class="ri-checkbox-circle-fill"></i>
+      </div>
+      <h2>Commitment Received!</h2>
+      <p>
+        Thank you for your willing heart. Your commitment to <strong>"The Rich Church"</strong>
+        building campaign has been recorded and received with gratitude.
+      </p>
+      <div class="verse-block">
+        <i class="ri-double-quotes-l"></i>
+        <span>God loves a cheerful giver.</span>
+        <cite>— 2 Corinthians 9:7</cite>
+      </div>
+      <div class="success-actions">
+        <button class="btn-primary" (click)="submitAnother()">
+          <i class="ri-add-line"></i> Submit Another Commitment
+        </button>
+        <button *ngIf="!isPublic" class="btn-secondary" routerLink="/main/building-campaign">
+          <i class="ri-home-line"></i> Back to Dashboard
+        </button>
+      </div>
+    </div>
+
+    <!-- ══ FORM STATE ═════════════════════════════════════ -->
+    <ng-container *ngIf="!submitted">
+
+      <div class="page-header">
+        <button class="back-btn" (click)="goBack()">
+          <i class="ri-arrow-left-line"></i>
+        </button>
+        <div class="campaign-badge">
+          <i class="ri-building-4-line"></i>
+          <span>Building Campaign</span>
+        </div>
+        <h1>My Willing Heart</h1>
+        <p class="page-subtitle">
+          "The Rich Church" Commitment Card · JirehLife Chapel
+        </p>
+      </div>
+
+      <div *ngIf="errorMessage" class="error-alert">
+        <i class="ri-error-warning-line"></i>
+        <span>{{ errorMessage }}</span>
+      </div>
+
+      <form [formGroup]="form" (ngSubmit)="onSubmit()">
+
+        <!-- ── SECTION 1: Who is committing ──────────────── -->
+        <div class="form-card">
+          <div class="card-header">
+            <div class="card-title-row">
+              <div class="step-badge">1</div>
+              <h3>Your Details</h3>
+            </div>
+          </div>
+
+          <!-- PUBLIC: simple name + phone only -->
+          <ng-container *ngIf="isPublic">
+            <div class="form-grid two-col">
+              <div class="form-group">
+                <label>Full Name <span class="req">*</span></label>
+                <input type="text" formControlName="visitor_name" placeholder="e.g. Kwame Asante"
+                  [class.has-error]="form.get('visitor_name')?.invalid && form.get('visitor_name')?.touched" />
+                <span class="field-error" *ngIf="form.get('visitor_name')?.touched">
+                  {{ getError('visitor_name') }}
+                </span>
+              </div>
+              <div class="form-group">
+                <label>Phone Number <span class="req">*</span></label>
+                <input type="tel" formControlName="visitor_contact" placeholder="e.g. 0244 123 456"
+                  [class.has-error]="form.get('visitor_contact')?.invalid && form.get('visitor_contact')?.touched" />
+                <span class="field-error" *ngIf="form.get('visitor_contact')?.touched">
+                  {{ getError('visitor_contact') }}
+                </span>
+              </div>
+            </div>
+          </ng-container>
+
+          <!-- ADMIN: member search or visitor toggle (your original markup) -->
+          <ng-container *ngIf="!isPublic">
+            <div class="type-toggle">
+              <button type="button" [class.active]="pledgerType === 'member'" (click)="setPledgerType('member')">
+                <i class="ri-user-line"></i> I am a Member
+              </button>
+              <button type="button" [class.active]="pledgerType === 'visitor'" (click)="setPledgerType('visitor')">
+                <i class="ri-user-add-line"></i> Visitor / Guest
+              </button>
+            </div>
+
+            <ng-container *ngIf="pledgerType === 'member'">
+              <div *ngIf="!selectedMember" class="member-search">
+                <div class="search-wrap">
+                  <i class="ri-search-line"></i>
+                  <input type="text" [formControl]="searchControl"
+                    placeholder="Search your name, phone, or member number…" />
+                  <i *ngIf="searching" class="ri-loader-4-line spin search-spin"></i>
+                </div>
+                <div class="search-results" *ngIf="searchResults.length > 0">
+                  <div *ngFor="let m of searchResults" class="result-item" (click)="selectMember(m)">
+                    <div class="avatar-sm">
+                      <img *ngIf="m.photo_url" [src]="m.photo_url" [alt]="getMemberName(m)" />
+                      <span *ngIf="!m.photo_url">{{ getMemberInitials(m) }}</span>
+                    </div>
+                    <div class="result-info">
+                      <span class="result-name">{{ getMemberName(m) }}</span>
+                      <span class="result-meta">{{ m.member_number }}</span>
+                    </div>
+                    <i class="ri-arrow-right-circle-line"></i>
+                  </div>
+                </div>
+              </div>
+
+              <div *ngIf="selectedMember" class="selected-member">
+                <div class="avatar-md">
+                  <img *ngIf="selectedMember.photo_url" [src]="selectedMember.photo_url" />
+                  <span *ngIf="!selectedMember.photo_url">{{ getMemberInitials(selectedMember) }}</span>
+                </div>
+                <div class="selected-info">
+                  <span class="selected-name">{{ getMemberName(selectedMember) }}</span>
+                  <span class="selected-meta">{{ selectedMember.member_number }}</span>
+                </div>
+                <button type="button" class="btn-remove" (click)="removeMember()">
+                  <i class="ri-close-line"></i>
+                </button>
+              </div>
+            </ng-container>
+
+            <ng-container *ngIf="pledgerType === 'visitor'">
+              <div class="form-grid two-col">
+                <div class="form-group">
+                  <label>Full Name <span class="req">*</span></label>
+                  <input type="text" formControlName="visitor_name" placeholder="e.g. Kwame Asante"
+                    [class.has-error]="form.get('visitor_name')?.invalid && form.get('visitor_name')?.touched" />
+                </div>
+                <div class="form-group">
+                  <label>Phone / Contact <span class="req">*</span></label>
+                  <input type="tel" formControlName="visitor_contact" placeholder="e.g. 0244 123 456"
+                    [class.has-error]="form.get('visitor_contact')?.invalid && form.get('visitor_contact')?.touched" />
+                </div>
+              </div>
+            </ng-container>
+          </ng-container>
+        </div>
+
+        <!-- ── SECTION 2: Pledge Amount ───────────────────── -->
+        <div class="form-card">
+          <div class="card-header">
+            <div class="card-title-row">
+              <div class="step-badge">2</div>
+              <h3>My Commitment Amount</h3>
+            </div>
+          </div>
+
+          <div class="form-grid two-col">
+            <div class="form-group">
+              <label>Total Pledge Amount (GHS) <span class="req">*</span></label>
+              <div class="input-prefix">
+                <span>GH₵</span>
+                <input type="number" formControlName="total_pledge_amount" placeholder="0.00" min="1" step="0.01"
+                  [class.has-error]="form.get('total_pledge_amount')?.invalid && form.get('total_pledge_amount')?.touched" />
+              </div>
+              <span class="field-error" *ngIf="form.get('total_pledge_amount')?.touched">
+                {{ getError('total_pledge_amount') }}
+              </span>
+            </div>
+
+            <div class="form-group">
+              <label>Initial / Part Payment (GHS)</label>
+              <div class="input-prefix">
+                <span>GH₵</span>
+                <input type="number" formControlName="initial_payment" placeholder="0.00" min="0" step="0.01"
+                  [class.has-error]="form.get('initial_payment')?.invalid && form.get('initial_payment')?.touched" />
+              </div>
+              <span class="field-hint">Leave as 0 if paying all via instalments</span>
+              <span class="field-error" *ngIf="form.get('initial_payment')?.touched">
+                {{ getError('initial_payment') }}
+              </span>
+            </div>
+          </div>
+
+          <div class="breakdown-box" *ngIf="(form.get('total_pledge_amount')?.value || 0) > 0">
+            <div class="breakdown-row">
+              <span><i class="ri-money-dollar-circle-line"></i> Total Pledge</span>
+              <strong>{{ formatCurrency(+form.get('total_pledge_amount')?.value || 0) }}</strong>
+            </div>
+            <div class="breakdown-row deduct">
+              <span><i class="ri-arrow-down-circle-line"></i> Initial Payment</span>
+              <strong>− {{ formatCurrency(+form.get('initial_payment')?.value || 0) }}</strong>
+            </div>
+            <div class="breakdown-divider"></div>
+            <div class="breakdown-row total">
+              <span><i class="ri-exchange-funds-line"></i> Remaining to spread</span>
+              <strong>{{ formatCurrency(remainingAfterInitial) }}</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── SECTION 3: Instalment Schedule ────────────── -->
+        <div class="form-card">
+          <div class="card-header">
+            <div class="card-title-row">
+              <div class="step-badge">3</div>
+              <h3>Payment Schedule</h3>
+            </div>
+            <p class="card-sub">How would you like to spread the remaining amount?</p>
+          </div>
+
+          <div class="form-group">
+            <label>Frequency <span class="req">*</span></label>
+            <div class="freq-toggle">
+              <button type="button" [class.active]="form.get('instalment_frequency')?.value === 'weekly'"
+                (click)="setFrequency('weekly')">
+                <i class="ri-calendar-line"></i> Weekly
+              </button>
+              <button type="button" [class.active]="form.get('instalment_frequency')?.value === 'monthly'"
+                (click)="setFrequency('monthly')">
+                <i class="ri-calendar-2-line"></i> Monthly
+              </button>
+            </div>
+          </div>
+
+          <div class="form-grid two-col">
+            <div class="form-group">
+              <label>Number of {{ frequencyLabelPlural }} <span class="req">*</span></label>
+              <input type="number" formControlName="instalment_count" placeholder="e.g. 12" min="1"
+                [class.has-error]="form.get('instalment_count')?.invalid && form.get('instalment_count')?.touched" />
+              <span class="field-error" *ngIf="form.get('instalment_count')?.touched">
+                {{ getError('instalment_count') }}
+              </span>
+            </div>
+
+            <div class="form-group">
+              <label>Amount per {{ frequencyLabel }}</label>
+              <div class="computed-field">
+                <i class="ri-calculator-line"></i>
+                <span *ngIf="instalmentPreview > 0">{{ formatCurrency(instalmentPreview) }}</span>
+                <span *ngIf="instalmentPreview <= 0" class="placeholder">Calculated automatically</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="schedule-summary" *ngIf="instalmentPreview > 0 && (form.get('instalment_count')?.value || 0) > 0">
+            <i class="ri-calendar-check-line"></i>
+            <span>
+              <strong>{{ formatCurrency(instalmentPreview) }}</strong>
+              every {{ frequencyLabel }} for
+              <strong>{{ form.get('instalment_count')?.value }} {{ frequencyLabelPlural }}</strong>
+              — total remaining:
+              <strong>{{ formatCurrency(remainingAfterInitial) }}</strong>
+            </span>
+          </div>
+        </div>
+
+        <!-- ── SECTION 4: Payment channel ────────────────── -->
+        <div class="form-card">
+          <div class="card-header">
+            <div class="card-title-row">
+              <div class="step-badge">4</div>
+              <h3>Payment Channel</h3>
+            </div>
+          </div>
+
+          <div class="bank-cards">
+            <div class="bank-card">
+              <div class="bank-card-label">Bank Transfer</div>
+              <div class="bank-row"><span>Bank</span><strong>GT Bank</strong></div>
+              <div class="bank-row"><span>Account No.</span><strong>3224001020021</strong></div>
+              <div class="bank-row"><span>Name</span><strong>JirehLife Chapel — Lapaz</strong></div>
+            </div>
+            <div class="bank-card">
+              <div class="bank-card-label">Mobile Money (MTN)</div>
+              <div class="bank-row"><span>General Giving</span><strong>0245 770 206</strong></div>
+              <div class="bank-row"><span>JirehLife Chapel</span><strong>0245 770 415</strong></div>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top: 1.25rem">
+            <label>Preferred Payment Method</label>
+            <select formControlName="payment_method">
+              <option value="">— Select one (optional) —</option>
+              <option *ngFor="let pm of paymentMethods" [value]="pm">{{ pm }}</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Notes (optional)</label>
+            <textarea formControlName="notes" rows="2" placeholder="Any additional notes…"></textarea>
+          </div>
+        </div>
+
+        <!-- ── CONSENT + SUBMIT ───────────────────────────── -->
+        <div class="form-card consent-card">
+          <label class="consent-label" [class.checked]="form.get('consent')?.value">
+            <input type="checkbox" formControlName="consent" />
+            <div class="checkbox-visual">
+              <i class="ri-check-line"></i>
+            </div>
+            <span>
+              I have a willing heart and commit to participate in
+              <strong>"The Rich Church"</strong> building campaign.
+              I understand this is a faith commitment to God and to this church.
+            </span>
+          </label>
+
+          <button type="submit" class="submit-btn" [disabled]="submitting">
+            <span *ngIf="!submitting">
+              <i class="ri-heart-line"></i> Submit My Commitment
+            </span>
+            <span *ngIf="submitting">
+              <i class="ri-loader-4-line spin"></i> Submitting…
+            </span>
+          </button>
+
+          <p class="footer-note">
+            Questions? Call <strong>0244 564 343</strong> or <strong>0245 770 206</strong>
+          </p>
+        </div>
+
+      </form>
+    </ng-container>
+
+  </div>
+</ng-template>

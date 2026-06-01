@@ -49,6 +49,8 @@ export class CommitmentForm implements OnInit, OnDestroy {
     'Cash / Offering Box',
   ];
 
+  isPublic = false;
+
   // Computed preview
   get instalmentPreview(): number {
     const total = +this.form?.get('total_pledge_amount')?.value || 0;
@@ -77,7 +79,7 @@ export class CommitmentForm implements OnInit, OnDestroy {
   }
 
   churchIdFromUrl = '';
-
+  churchIdFromRoute = '';
   constructor(
     private fb: FormBuilder,
     private campaignService: BuildingCampaignService,
@@ -88,15 +90,14 @@ export class CommitmentForm implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    this.churchIdFromRoute = this.route.snapshot.paramMap.get('churchId') || '';
+    // If churchId is in the route params, we're on the public link
+    this.isPublic = !!this.churchIdFromRoute;
     this.initForm();
     this.setupMemberSearch();
 
-    this.churchIdFromUrl =
-      this.route.snapshot.queryParamMap.get('church') || '';
-    // Auto-detect current user if they're a member
     const role = this.authService.getCurrentUserRole();
     if (role === 'member') {
-      // Pre-select the logged-in member
       this.pledgerType = 'member';
     }
   }
@@ -209,16 +210,27 @@ export class CommitmentForm implements OnInit, OnDestroy {
   onSubmit(): void {
     this.errorMessage = '';
 
-    if (this.pledgerType === 'member' && !this.selectedMember) {
-      this.errorMessage = 'Please select a member.';
-      return;
-    }
-    if (this.pledgerType === 'visitor') {
+    // PUBLIC route: validate name + phone directly
+    if (this.isPublic) {
       const name = this.form.get('visitor_name')?.value?.trim();
       const contact = this.form.get('visitor_contact')?.value?.trim();
       if (!name || !contact) {
-        this.errorMessage = 'Please enter your full name and contact number.';
+        this.errorMessage = 'Please enter your full name and phone number.';
         return;
+      }
+    } else {
+      // ADMIN route: validate member selection or visitor fields
+      if (this.pledgerType === 'member' && !this.selectedMember) {
+        this.errorMessage = 'Please select a member.';
+        return;
+      }
+      if (this.pledgerType === 'visitor') {
+        const name = this.form.get('visitor_name')?.value?.trim();
+        const contact = this.form.get('visitor_contact')?.value?.trim();
+        if (!name || !contact) {
+          this.errorMessage = 'Please enter your full name and contact number.';
+          return;
+        }
       }
     }
 
@@ -244,7 +256,7 @@ export class CommitmentForm implements OnInit, OnDestroy {
     this.submitting = true;
 
     const dto: any = {
-      church_id: this.churchIdFromUrl || undefined, // pass explicitly
+      church_id: this.churchIdFromRoute || undefined,
       total_pledge_amount: total,
       initial_payment: initial,
       instalment_frequency: v.instalment_frequency,
@@ -254,7 +266,10 @@ export class CommitmentForm implements OnInit, OnDestroy {
       campaign_name: 'The Rich Church',
     };
 
-    if (this.pledgerType === 'member') {
+    if (this.isPublic) {
+      dto.visitor_name = v.visitor_name.trim();
+      dto.visitor_contact = v.visitor_contact.trim();
+    } else if (this.pledgerType === 'member') {
       dto.member_id = this.selectedMember!.id;
     } else {
       dto.visitor_name = v.visitor_name.trim();
@@ -311,5 +326,14 @@ export class CommitmentForm implements OnInit, OnDestroy {
       style: 'currency',
       currency: 'GHS',
     }).format(n || 0);
+  }
+
+  goBack(): void {
+    if (this.isPublic) {
+      // On public form, just go back in browser history
+      window.history.back();
+    } else {
+      this.router.navigate(['/main/building-campaign']);
+    }
   }
 }

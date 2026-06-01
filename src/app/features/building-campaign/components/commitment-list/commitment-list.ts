@@ -57,6 +57,8 @@ export class CommitmentsList implements OnInit, OnDestroy {
   showDeleteConfirm = false;
   deleting = false;
 
+  viewMode: 'table' | 'card' = 'table';
+
   constructor(
     private campaignService: BuildingCampaignService,
     private router: Router,
@@ -64,14 +66,14 @@ export class CommitmentsList implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    this.viewMode = window.innerWidth < 768 ? 'card' : 'table';
     // Build the shareable form URL — strip any ?/# params from current URL
     const base =
       window.location.origin + window.location.pathname.replace(/\/+$/, '');
     // The form lives at /main/building-campaign/new
     const churchId = this.authService.getChurchId();
     this.formUrl =
-      base.replace(/\/main\/building-campaign.*$/, '') +
-      `/main/building-campaign/new?church=${churchId}`;
+      window.location.origin + `/public/building-campaign/${churchId}`;
 
     this.loadStats();
     this.loadCommitments();
@@ -191,6 +193,10 @@ export class CommitmentsList implements OnInit, OnDestroy {
 
   closeQrModal(): void {
     this.showQrModal = false;
+  }
+
+  setViewMode(mode: 'table' | 'card'): void {
+    this.viewMode = mode;
   }
 
   private drawQr(): void {

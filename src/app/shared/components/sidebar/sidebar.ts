@@ -143,7 +143,7 @@ export class Sidebar implements OnInit {
     },
     {
       icon: 'ri-building-4-line',
-      label: 'Building Campaign',
+      label: 'Giving Campaign',
       route: '/main/building-campaign',
       active: false,
       roles: [
