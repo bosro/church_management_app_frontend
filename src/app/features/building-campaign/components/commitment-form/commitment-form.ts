@@ -1,12 +1,20 @@
-
-
 // src/app/features/building-campaign/components/commitment-form/commitment-form.component.ts
 
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { FormBuilder, FormGroup, Validators, FormControl } from '@angular/forms';
-import { Router } from '@angular/router';
+import {
+  FormBuilder,
+  FormGroup,
+  Validators,
+  FormControl,
+} from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Subject } from 'rxjs';
-import { takeUntil, debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
+import {
+  takeUntil,
+  debounceTime,
+  distinctUntilChanged,
+  switchMap,
+} from 'rxjs/operators';
 import { MemberService } from '../../../members/services/member.service';
 import { AuthService } from '../../../../core/services/auth';
 import { Member } from '../../../../models/member.model';
@@ -57,12 +65,18 @@ export class CommitmentForm implements OnInit, OnDestroy {
   }
 
   get frequencyLabel(): string {
-    return this.form?.get('instalment_frequency')?.value === 'weekly' ? 'week' : 'month';
+    return this.form?.get('instalment_frequency')?.value === 'weekly'
+      ? 'week'
+      : 'month';
   }
 
   get frequencyLabelPlural(): string {
-    return this.form?.get('instalment_frequency')?.value === 'weekly' ? 'weeks' : 'months';
+    return this.form?.get('instalment_frequency')?.value === 'weekly'
+      ? 'weeks'
+      : 'months';
   }
+
+  churchIdFromUrl = '';
 
   constructor(
     private fb: FormBuilder,
@@ -70,12 +84,15 @@ export class CommitmentForm implements OnInit, OnDestroy {
     private memberService: MemberService,
     private router: Router,
     private authService: AuthService,
+    private route: ActivatedRoute,
   ) {}
 
   ngOnInit(): void {
     this.initForm();
     this.setupMemberSearch();
 
+    this.churchIdFromUrl =
+      this.route.snapshot.queryParamMap.get('church') || '';
     // Auto-detect current user if they're a member
     const role = this.authService.getCurrentUserRole();
     if (role === 'member') {
@@ -101,7 +118,10 @@ export class CommitmentForm implements OnInit, OnDestroy {
 
       // Schedule
       instalment_frequency: ['weekly', Validators.required],
-      instalment_count: ['', [Validators.required, Validators.min(1), Validators.max(260)]],
+      instalment_count: [
+        '',
+        [Validators.required, Validators.min(1), Validators.max(260)],
+      ],
 
       // Payment
       payment_method: [''],
@@ -110,11 +130,13 @@ export class CommitmentForm implements OnInit, OnDestroy {
     });
 
     // Validate initial_payment <= total_pledge_amount
-    this.form.get('total_pledge_amount')?.valueChanges
-      .pipe(takeUntil(this.destroy$))
+    this.form
+      .get('total_pledge_amount')
+      ?.valueChanges.pipe(takeUntil(this.destroy$))
       .subscribe(() => this.validateInitialPayment());
-    this.form.get('initial_payment')?.valueChanges
-      .pipe(takeUntil(this.destroy$))
+    this.form
+      .get('initial_payment')
+      ?.valueChanges.pipe(takeUntil(this.destroy$))
       .subscribe(() => this.validateInitialPayment());
   }
 
@@ -132,19 +154,30 @@ export class CommitmentForm implements OnInit, OnDestroy {
   }
 
   private setupMemberSearch(): void {
-    this.searchControl.valueChanges.pipe(
-      debounceTime(300),
-      distinctUntilChanged(),
-      switchMap((q) => {
-        if (!q || q.length < 2) { this.searchResults = []; return []; }
-        this.searching = true;
-        return this.memberService.searchMembers(q);
-      }),
-      takeUntil(this.destroy$),
-    ).subscribe({
-      next: (members) => { this.searchResults = members; this.searching = false; },
-      error: () => { this.searching = false; this.searchResults = []; },
-    });
+    this.searchControl.valueChanges
+      .pipe(
+        debounceTime(300),
+        distinctUntilChanged(),
+        switchMap((q) => {
+          if (!q || q.length < 2) {
+            this.searchResults = [];
+            return [];
+          }
+          this.searching = true;
+          return this.memberService.searchMembers(q);
+        }),
+        takeUntil(this.destroy$),
+      )
+      .subscribe({
+        next: (members) => {
+          this.searchResults = members;
+          this.searching = false;
+        },
+        error: () => {
+          this.searching = false;
+          this.searchResults = [];
+        },
+      });
   }
 
   selectMember(member: Member): void {
@@ -153,7 +186,9 @@ export class CommitmentForm implements OnInit, OnDestroy {
     this.searchResults = [];
   }
 
-  removeMember(): void { this.selectedMember = null; }
+  removeMember(): void {
+    this.selectedMember = null;
+  }
 
   setPledgerType(type: 'member' | 'visitor'): void {
     this.pledgerType = type;
@@ -175,13 +210,15 @@ export class CommitmentForm implements OnInit, OnDestroy {
     this.errorMessage = '';
 
     if (this.pledgerType === 'member' && !this.selectedMember) {
-      this.errorMessage = 'Please select a member.'; return;
+      this.errorMessage = 'Please select a member.';
+      return;
     }
     if (this.pledgerType === 'visitor') {
       const name = this.form.get('visitor_name')?.value?.trim();
       const contact = this.form.get('visitor_contact')?.value?.trim();
       if (!name || !contact) {
-        this.errorMessage = 'Please enter your full name and contact number.'; return;
+        this.errorMessage = 'Please enter your full name and contact number.';
+        return;
       }
     }
 
@@ -196,15 +233,18 @@ export class CommitmentForm implements OnInit, OnDestroy {
     const initial = +v.initial_payment;
 
     if (initial > total) {
-      this.errorMessage = 'Initial payment cannot exceed the total pledge.'; return;
+      this.errorMessage = 'Initial payment cannot exceed the total pledge.';
+      return;
     }
     if (!v.consent) {
-      this.errorMessage = 'Please tick the commitment checkbox.'; return;
+      this.errorMessage = 'Please tick the commitment checkbox.';
+      return;
     }
 
     this.submitting = true;
 
     const dto: any = {
+      church_id: this.churchIdFromUrl || undefined, // pass explicitly
       total_pledge_amount: total,
       initial_payment: initial,
       instalment_frequency: v.instalment_frequency,
@@ -221,7 +261,8 @@ export class CommitmentForm implements OnInit, OnDestroy {
       dto.visitor_contact = v.visitor_contact.trim();
     }
 
-    this.campaignService.createCommitment(dto)
+    this.campaignService
+      .createCommitment(dto)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
@@ -231,19 +272,26 @@ export class CommitmentForm implements OnInit, OnDestroy {
         },
         error: (err) => {
           this.submitting = false;
-          this.errorMessage = err.message || 'Could not save your commitment. Please try again.';
+          this.errorMessage =
+            err.message || 'Could not save your commitment. Please try again.';
         },
       });
   }
 
   submitAnother(): void {
     this.submitted = false;
-    this.form.reset({ instalment_frequency: 'weekly', initial_payment: 0, consent: false });
+    this.form.reset({
+      instalment_frequency: 'weekly',
+      initial_payment: 0,
+      consent: false,
+    });
     this.selectedMember = null;
     this.pledgerType = 'member';
   }
 
-  getMemberName(m: Member): string { return `${m.first_name} ${m.last_name}`; }
+  getMemberName(m: Member): string {
+    return `${m.first_name} ${m.last_name}`;
+  }
   getMemberInitials(m: Member): string {
     return `${m.first_name[0]}${m.last_name[0]}`.toUpperCase();
   }
@@ -259,6 +307,9 @@ export class CommitmentForm implements OnInit, OnDestroy {
   }
 
   formatCurrency(n: number): string {
-    return new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS' }).format(n || 0);
+    return new Intl.NumberFormat('en-GH', {
+      style: 'currency',
+      currency: 'GHS',
+    }).format(n || 0);
   }
 }

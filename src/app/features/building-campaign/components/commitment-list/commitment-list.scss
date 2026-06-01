@@ -29,6 +29,71 @@
   .header-actions { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
 }
 
+// ── Share card ────────────────────────────────────────────────
+.share-card {
+  display: flex; align-items: flex-start; gap: 1.25rem;
+  background: #1e1040;          // deep purple/dark — matches your existing app's dark accents
+  border-radius: 14px; padding: 1.5rem 1.75rem; margin-bottom: 1.75rem;
+  @media (max-width: 680px) { flex-direction: column; }
+
+  .share-card-icon {
+    width: 48px; height: 48px; flex-shrink: 0;
+    background: rgba(167, 139, 250, 0.15); border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    i { font-size: 1.5rem; color: #a78bfa; }
+  }
+
+  .share-card-body { flex: 1; min-width: 0; }
+
+  .share-label {
+    font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; color: rgba(167, 139, 250, 0.8);
+    margin: 0 0 0.375rem;
+  }
+
+  .share-hint {
+    font-size: 0.8125rem; color: rgba(255,255,255,0.5);
+    margin: 0 0 1rem; line-height: 1.5;
+  }
+
+  .share-url-row {
+    display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;
+  }
+
+  .share-url-box {
+    display: flex; align-items: center; gap: 0.625rem;
+    background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px; padding: 0.625rem 1rem;
+    flex: 1; min-width: 200px; max-width: 520px; overflow: hidden;
+    i { font-size: 1rem; color: rgba(255,255,255,0.4); flex-shrink: 0; }
+    span {
+      font-family: monospace; font-size: 0.8125rem;
+      color: rgba(255,255,255,0.75);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+  }
+
+  .share-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+  .share-btn {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    padding: 0.6rem 1.1rem; border-radius: 7px; border: none;
+    font-family: 'Nunito Sans', sans-serif; font-size: 0.8125rem;
+    font-weight: 700; cursor: pointer; transition: all 0.2s;
+    white-space: nowrap;
+    i { font-size: 1rem; }
+    &.copy {
+      background: #fff; color: #111827;
+      &:hover { opacity: 0.88; }
+    }
+    &.qr {
+      background: rgba(167, 139, 250, 0.18); color: #c4b5fd;
+      border: 1px solid rgba(167, 139, 250, 0.3);
+      &:hover { background: rgba(167, 139, 250, 0.28); }
+    }
+  }
+}
+
 .btn-primary, .btn-secondary {
   display: flex; align-items: center; gap: 0.5rem;
   padding: 0.75rem 1.25rem; border-radius: 8px; border: none;
@@ -198,6 +263,19 @@ tr:last-child td { border-bottom: none; }
   p { font-size: 0.9375rem; color: #6b7280; margin: 0 0 1.5rem; }
 }
 
+// ── Actions cell (view + delete per row) ─────────────────────
+.actions-cell {
+  display: flex; align-items: center; gap: 0.375rem; white-space: nowrap;
+}
+
+.btn-delete-row {
+  width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
+  background: transparent; border: 1px solid #e5e7eb; border-radius: 6px;
+  cursor: pointer; transition: all 0.2s;
+  i { font-size: 0.9375rem; color: #9ca3af; }
+  &:hover { border-color: #fca5a5; background: #fee2e2; i { color: #dc2626; } }
+}
+
 // ── Pagination ────────────────────────────────────────────────
 .pagination {
   display: flex; justify-content: space-between; align-items: center;
@@ -216,3 +294,110 @@ tr:last-child td { border-bottom: none; }
     }
   }
 }
+
+// ── Shared modal overlay ──────────────────────────────────────
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6);
+  z-index: 9999; display: flex; align-items: center;
+  justify-content: center; padding: 1rem;
+  animation: fadeIn 0.15s ease;
+}
+
+.modal-box {
+  background: #fff; border-radius: 16px; padding: 2rem;
+  width: 100%; box-shadow: 0 24px 64px rgba(0,0,0,0.2);
+  animation: slideUp 0.2s ease;
+}
+
+// ── QR modal ──────────────────────────────────────────────────
+.qr-modal {
+  max-width: 400px;
+  .modal-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 0.625rem;
+    .modal-title-row {
+      display: flex; align-items: center; gap: 0.625rem;
+      i { font-size: 1.375rem; color: #5b21b6; }
+      h3 { font-size: 1.125rem; font-weight: 800; color: #111827; margin: 0; }
+    }
+    .modal-close {
+      width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+      background: #f3f4f6; border: none; border-radius: 7px; cursor: pointer;
+      i { font-size: 1.1rem; color: #6b7280; }
+      &:hover { background: #e5e7eb; }
+    }
+  }
+  .modal-sub {
+    font-size: 0.8125rem; color: #6b7280; line-height: 1.6;
+    margin: 0 0 1.25rem;
+  }
+  .qr-canvas-wrap {
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid #e5e7eb; border-radius: 10px;
+    padding: 1rem; margin-bottom: 1rem; min-height: 260px;
+    background: #fafafa;
+    canvas { display: block; border-radius: 6px; }
+    .qr-loading {
+      display: flex; flex-direction: column; align-items: center; gap: 0.75rem;
+      color: #9ca3af; font-size: 0.875rem;
+      i { font-size: 2rem; }
+    }
+  }
+  .qr-url-preview {
+    display: flex; align-items: center; gap: 0.5rem;
+    background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px;
+    padding: 0.625rem 0.875rem; margin-bottom: 1.25rem;
+    i { font-size: 1rem; color: #9ca3af; flex-shrink: 0; }
+    span {
+      font-family: monospace; font-size: 0.78rem; color: #6b7280;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+  }
+}
+
+// ── Delete confirm modal ──────────────────────────────────────
+.confirm-modal {
+  max-width: 380px; text-align: center;
+  .confirm-icon {
+    width: 60px; height: 60px; background: #fef3c7; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 1.125rem;
+    i { font-size: 1.875rem; color: #d97706; }
+  }
+  h3 { font-size: 1.25rem; font-weight: 800; color: #111827; margin: 0 0 0.625rem; }
+  p { font-size: 0.875rem; color: #6b7280; line-height: 1.65; margin: 0 0 1.5rem; strong { color: #111827; } }
+}
+
+// ── Shared modal action row ───────────────────────────────────
+.modal-actions {
+  display: flex; gap: 0.625rem; justify-content: center; flex-wrap: wrap;
+  button {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    padding: 0.75rem 1.375rem; border-radius: 8px; border: none;
+    font-family: 'Nunito Sans', sans-serif; font-size: 0.9rem;
+    font-weight: 700; cursor: pointer; transition: all 0.2s;
+    i { font-size: 1rem; }
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
+  }
+  .btn-primary { background: #5b21b6; color: #fff; &:hover:not(:disabled) { background: #6d28d9; } }
+  .btn-secondary {
+    background: #f3f4f6; color: #374151; border: 1px solid #e5e7eb;
+    &:hover:not(:disabled) { background: #e5e7eb; }
+  }
+  .btn-ghost {
+    background: transparent; color: #6b7280; border: 1px solid #e5e7eb;
+    &:hover { background: #f9fafb; }
+  }
+  .btn-danger { background: #dc2626; color: #fff; &:hover:not(:disabled) { background: #b91c1c; } }
+}
+
+// ── Animations ────────────────────────────────────────────────
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
+.spin { animation: spin 0.9s linear infinite; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+

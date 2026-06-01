@@ -1,4 +1,3 @@
-
 // src/app/features/building-campaign/building-campaign.module.ts
 // FINAL version — replace the earlier draft with this one
 
@@ -8,20 +7,27 @@ import { RouterModule, Routes } from '@angular/router';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { PermissionGuard } from '../../core/guards/permission.guard';
 import { CommitmentDetail } from './components/commitment-detail/commitment-detail';
-import { CommitmentList } from './components/commitment-list/commitment-list';
+import {
+  CommitmentsList,
+} from './components/commitment-list/commitment-list';
 import { CommitmentForm } from './components/commitment-form/commitment-form';
 import { SharedModule } from '../../shared/shared-module';
-
 
 // ── Tiny pipe so the list template can do [a, b] | min ───────
 @Pipe({ name: 'min', standalone: false })
 export class MinPipe implements PipeTransform {
-  transform(value: number[]): number { return Math.min(...value); }
+  transform(value: number[]): number {
+    return Math.min(...value);
+  }
 }
 
 const ADMIN_ROLES = [
-  'super_admin', 'church_admin', 'pastor',
-  'senior_pastor', 'associate_pastor', 'finance_officer',
+  'super_admin',
+  'church_admin',
+  'pastor',
+  'senior_pastor',
+  'associate_pastor',
+  'finance_officer',
 ];
 
 const routes: Routes = [
@@ -33,7 +39,7 @@ const routes: Routes = [
   // Admin list — staff only
   {
     path: '',
-    component: CommitmentList,
+    component: CommitmentsList,
     canActivate: [PermissionGuard],
     data: { roles: ADMIN_ROLES },
   },
@@ -47,11 +53,7 @@ const routes: Routes = [
 ];
 
 @NgModule({
-  declarations: [
-      CommitmentDetail,
-    CommitmentList,
-    CommitmentForm
-  ],
+  declarations: [CommitmentDetail, CommitmentsList, CommitmentForm],
   imports: [
     CommonModule,
     FormsModule,

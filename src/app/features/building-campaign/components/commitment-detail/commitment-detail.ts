@@ -199,3 +199,5 @@ export class CommitmentDetail implements OnInit, OnDestroy {
     return new Date(s).toLocaleDateString('en-GH', { day: 'numeric', month: 'short', year: 'numeric' });
   }
 }
+
+

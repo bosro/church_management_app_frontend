@@ -67,6 +67,7 @@ export interface BuildingCampaignStats {
 }
 
 export interface CreateCommitmentDto {
+  church_id?: string;
   // Identity (one of these required)
   member_id?: string;
   visitor_name?: string;

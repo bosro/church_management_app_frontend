@@ -98,36 +98,45 @@ export class BuildingCampaignService {
   }
 
   createCommitment(dto: CreateCommitmentDto): Observable<BuildingCommitment> {
-    const churchId = this.getChurchId();
-    return from(
-      this.supabase.client
-        .from('building_commitments')
-        .insert({
-          church_id: churchId,
-          member_id: dto.member_id || null,
-          visitor_name: dto.visitor_name || null,
-          visitor_contact: dto.visitor_contact || null,
-          total_pledge_amount: dto.total_pledge_amount,
-          initial_payment: dto.initial_payment,
-          instalment_frequency: dto.instalment_frequency,
-          instalment_count: dto.instalment_count,
-          currency: dto.currency,
-          payment_method: dto.payment_method || null,
-          campaign_name: dto.campaign_name || 'The Rich Church',
-          notes: dto.notes || null,
-          // Record initial payment as amount_paid if > 0
-          amount_paid: dto.initial_payment,
-        })
-        .select()
-        .single(),
-    ).pipe(
-      map(({ data, error }) => {
-        if (error) throw new Error(error.message);
-        return data as BuildingCommitment;
-      }),
-      catchError((err) => throwError(() => err)),
-    );
+  let churchId: string;
+  try {
+    churchId = dto.church_id || this.getChurchId();
+  } catch {
+    if (dto.church_id) {
+      churchId = dto.church_id;
+    } else {
+      return throwError(() => new Error('Church not identified. Please use the shared link.'));
+    }
   }
+
+  return from(
+    this.supabase.client
+      .from('building_commitments')
+      .insert({
+        church_id: churchId,
+        member_id: dto.member_id || null,
+        visitor_name: dto.visitor_name || null,
+        visitor_contact: dto.visitor_contact || null,
+        total_pledge_amount: dto.total_pledge_amount,
+        initial_payment: dto.initial_payment,
+        instalment_frequency: dto.instalment_frequency,
+        instalment_count: dto.instalment_count,
+        currency: dto.currency || 'GHS',
+        payment_method: dto.payment_method || null,
+        campaign_name: dto.campaign_name || 'The Rich Church',
+        notes: dto.notes || null,
+        amount_paid: dto.initial_payment,
+      })
+      .select()
+      .single(),
+  ).pipe(
+    map(({ data, error }) => {
+      if (error) throw new Error(error.message);
+      return data as BuildingCommitment;
+    }),
+    catchError((err) => throwError(() => err)),
+  );
+}
 
   deleteCommitment(id: string): Observable<void> {
     const churchId = this.getChurchId();

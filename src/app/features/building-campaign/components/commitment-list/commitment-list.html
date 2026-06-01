@@ -6,7 +6,7 @@
     <div class="dashboard-body">
       <div class="list-container">
 
-        <!-- Page header -->
+        <!-- ── Page header ─────────────────────────────────── -->
         <div class="page-header">
           <div class="header-left">
             <div class="campaign-icon"><i class="ri-building-4-line"></i></div>
@@ -30,7 +30,40 @@
           <i class="ri-error-warning-line"></i> {{ errorMessage }}
         </div>
 
-        <!-- ── Stats ────────────────────────────────────────── -->
+        <!-- ══════════════════════════════════════════════════
+             SHARE CARD — pastor copies link or generates QR
+             so members can fill the form on their own phones
+        ═══════════════════════════════════════════════════ -->
+        <div class="share-card">
+          <div class="share-card-icon">
+            <i class="ri-share-line"></i>
+          </div>
+          <div class="share-card-body">
+            <p class="share-label">Member Commitment Form Link</p>
+            <p class="share-hint">
+              Share this link or QR code with members so they can fill the commitment form
+              themselves. Their submissions appear instantly in this tracker.
+            </p>
+            <div class="share-url-row">
+              <div class="share-url-box">
+                <i class="ri-links-line"></i>
+                <span>{{ formUrl }}</span>
+              </div>
+              <div class="share-actions">
+                <button class="share-btn copy" (click)="copyLink()">
+                  <i [class]="copyLabel === 'Copied!' ? 'ri-check-line' : 'ri-file-copy-line'"></i>
+                  {{ copyLabel }}
+                </button>
+                <button class="share-btn qr" (click)="openQrModal()">
+                  <i class="ri-qr-code-line"></i>
+                  QR Code
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Stats ──────────────────────────────────────── -->
         <div class="stats-grid" *ngIf="!loadingStats && stats">
           <div class="stat-card">
             <div class="stat-icon" style="background:#ede9fe;color:#5b21b6">
@@ -74,7 +107,7 @@
           </div>
         </div>
 
-        <!-- Progress bar -->
+        <!-- Collection progress bar -->
         <div class="campaign-progress" *ngIf="stats && stats.total_pledged > 0">
           <div class="progress-header">
             <span class="progress-label">Collection Progress</span>
@@ -133,7 +166,9 @@
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let c of commitments; let i = index" (click)="viewDetail(c.id)" class="clickable-row">
+              <tr *ngFor="let c of commitments; let i = index"
+                  (click)="viewDetail(c.id)"
+                  class="clickable-row">
                 <td class="row-num">{{ (currentPage - 1) * pageSize + i + 1 }}</td>
                 <td>
                   <div class="pledger-cell">
@@ -173,9 +208,14 @@
                   </span>
                 </td>
                 <td class="text-muted">{{ formatDate(c.submitted_at) }}</td>
-                <td>
-                  <button class="btn-view" (click)="$event.stopPropagation(); viewDetail(c.id)">
+
+                <!-- Actions: view + delete -->
+                <td class="actions-cell" (click)="$event.stopPropagation()">
+                  <button class="btn-view" (click)="viewDetail(c.id)" title="View detail">
                     <i class="ri-eye-line"></i>
+                  </button>
+                  <button class="btn-delete-row" (click)="confirmDelete($event, c)" title="Delete">
+                    <i class="ri-delete-bin-line"></i>
                   </button>
                 </td>
               </tr>
@@ -208,6 +248,70 @@
         </div>
 
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     QR CODE MODAL
+═══════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" *ngIf="showQrModal" (click)="closeQrModal()">
+  <div class="modal-box qr-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div class="modal-title-row">
+        <i class="ri-qr-code-line"></i>
+        <h3>Commitment Form QR Code</h3>
+      </div>
+      <button class="modal-close" (click)="closeQrModal()"><i class="ri-close-line"></i></button>
+    </div>
+    <p class="modal-sub">
+      Members scan this with their phone camera to open and fill the commitment form directly.
+      Submissions appear instantly in this dashboard.
+    </p>
+    <div class="qr-canvas-wrap">
+      <div *ngIf="qrLoading" class="qr-loading">
+        <i class="ri-loader-4-line spin"></i>
+        <span>Generating…</span>
+      </div>
+      <canvas #qrCanvas [style.display]="qrLoading ? 'none' : 'block'"></canvas>
+    </div>
+    <div class="qr-url-preview">
+      <i class="ri-links-line"></i>
+      <span>{{ formUrl }}</span>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-primary" (click)="downloadQr()">
+        <i class="ri-download-2-line"></i> Download QR
+      </button>
+      <button class="btn-secondary" (click)="copyLink()">
+        <i [class]="copyLabel === 'Copied!' ? 'ri-check-line' : 'ri-file-copy-line'"></i>
+        {{ copyLabel }}
+      </button>
+      <button class="btn-ghost" (click)="closeQrModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     DELETE CONFIRM MODAL
+═══════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" *ngIf="showDeleteConfirm" (click)="cancelDelete()">
+  <div class="modal-box confirm-modal" (click)="$event.stopPropagation()">
+    <div class="confirm-icon">
+      <i class="ri-error-warning-line"></i>
+    </div>
+    <h3>Delete Commitment?</h3>
+    <p>
+      This will permanently remove the commitment from
+      <strong>{{ deletingName }}</strong> along with all its payment records.
+      This cannot be undone.
+    </p>
+    <div class="modal-actions">
+      <button class="btn-secondary" (click)="cancelDelete()" [disabled]="deleting">Cancel</button>
+      <button class="btn-danger" (click)="doDelete()" [disabled]="deleting">
+        <span *ngIf="!deleting"><i class="ri-delete-bin-line"></i> Delete</span>
+        <span *ngIf="deleting"><i class="ri-loader-4-line spin"></i> Deleting…</span>
+      </button>
     </div>
   </div>
 </div>
