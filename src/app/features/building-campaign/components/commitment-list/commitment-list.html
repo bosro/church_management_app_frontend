@@ -1,0 +1,213 @@
+<!-- src/app/features/building-campaign/components/commitments-list/commitments-list.component.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+  <div class="dashboard-content">
+    <app-header></app-header>
+    <div class="dashboard-body">
+      <div class="list-container">
+
+        <!-- Page header -->
+        <div class="page-header">
+          <div class="header-left">
+            <div class="campaign-icon"><i class="ri-building-4-line"></i></div>
+            <div>
+              <h1>Building Campaign</h1>
+              <p class="subtitle">"The Rich Church" · Commitment Tracker</p>
+            </div>
+          </div>
+          <div class="header-actions">
+            <button class="btn-secondary" (click)="exportCSV()" [disabled]="!commitments.length">
+              <i class="ri-download-2-line"></i> Export CSV
+            </button>
+            <button class="btn-primary" (click)="newCommitment()">
+              <i class="ri-add-line"></i> New Commitment
+            </button>
+          </div>
+        </div>
+
+        <!-- Error -->
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i> {{ errorMessage }}
+        </div>
+
+        <!-- ── Stats ────────────────────────────────────────── -->
+        <div class="stats-grid" *ngIf="!loadingStats && stats">
+          <div class="stat-card">
+            <div class="stat-icon" style="background:#ede9fe;color:#5b21b6">
+              <i class="ri-group-line"></i>
+            </div>
+            <div class="stat-info">
+              <p class="stat-label">Total Commitments</p>
+              <h3 class="stat-value">{{ stats.total_commitments }}</h3>
+              <p class="stat-meta">{{ stats.member_commitments }} members · {{ stats.visitor_commitments }} visitors</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background:#d1fae5;color:#059669">
+              <i class="ri-money-dollar-circle-line"></i>
+            </div>
+            <div class="stat-info">
+              <p class="stat-label">Total Pledged</p>
+              <h3 class="stat-value">{{ formatCurrency(stats.total_pledged) }}</h3>
+              <p class="stat-meta">Across all commitments</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background:#dbeafe;color:#2563eb">
+              <i class="ri-wallet-3-line"></i>
+            </div>
+            <div class="stat-info">
+              <p class="stat-label">Collected</p>
+              <h3 class="stat-value">{{ formatCurrency(stats.total_collected) }}</h3>
+              <p class="stat-meta">{{ formatCurrency(stats.total_outstanding) }} outstanding</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background:#fef3c7;color:#d97706">
+              <i class="ri-checkbox-circle-line"></i>
+            </div>
+            <div class="stat-info">
+              <p class="stat-label">Fulfilled</p>
+              <h3 class="stat-value">{{ stats.fulfilled_count }}</h3>
+              <p class="stat-meta">{{ stats.weekly_commitments }} weekly · {{ stats.monthly_commitments }} monthly</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Progress bar -->
+        <div class="campaign-progress" *ngIf="stats && stats.total_pledged > 0">
+          <div class="progress-header">
+            <span class="progress-label">Collection Progress</span>
+            <span class="progress-pct">
+              {{ formatCurrency(stats.total_collected) }} of {{ formatCurrency(stats.total_pledged) }}
+              ({{ stats.total_pledged > 0 ? ((stats.total_collected / stats.total_pledged) * 100 | number:'1.0-0') : 0 }}%)
+            </span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill"
+              [style.width.%]="stats.total_pledged > 0 ? (stats.total_collected / stats.total_pledged * 100) : 0">
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Filters ─────────────────────────────────────── -->
+        <div class="filter-bar">
+          <div class="search-wrap">
+            <i class="ri-search-line"></i>
+            <input type="text" [formControl]="searchControl" placeholder="Search by name or contact…" />
+          </div>
+          <select [(ngModel)]="frequencyFilter" (change)="onFilterChange()">
+            <option value="">All frequencies</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+          </select>
+          <select [(ngModel)]="statusFilter" (change)="onFilterChange()">
+            <option value="">All statuses</option>
+            <option value="pending">Pending</option>
+            <option value="fulfilled">Fulfilled</option>
+          </select>
+          <button class="btn-icon" (click)="loadCommitments()" title="Refresh">
+            <i class="ri-refresh-line"></i>
+          </button>
+        </div>
+
+        <!-- ── Table ──────────────────────────────────────── -->
+        <div *ngIf="loading" class="loading-wrap">
+          <app-loading-spinner message="Loading commitments…"></app-loading-spinner>
+        </div>
+
+        <div *ngIf="!loading" class="table-card">
+          <table *ngIf="commitments.length > 0">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Name</th>
+                <th>Contact</th>
+                <th>Total Pledge</th>
+                <th>Initial</th>
+                <th>Instalment</th>
+                <th>Progress</th>
+                <th>Status</th>
+                <th>Date</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let c of commitments; let i = index" (click)="viewDetail(c.id)" class="clickable-row">
+                <td class="row-num">{{ (currentPage - 1) * pageSize + i + 1 }}</td>
+                <td>
+                  <div class="pledger-cell">
+                    <div class="pledger-avatar">
+                      <img *ngIf="c.member?.photo_url" [src]="c.member!.photo_url" [alt]="getPledgerName(c)" />
+                      <span *ngIf="!c.member?.photo_url">{{ getPledgerName(c).charAt(0) }}</span>
+                    </div>
+                    <div>
+                      <span class="pledger-name">{{ getPledgerName(c) }}</span>
+                      <span class="pledger-type" [class.is-member]="!!c.member_id">
+                        {{ c.member_id ? 'Member' : 'Visitor' }}
+                      </span>
+                    </div>
+                  </div>
+                </td>
+                <td class="text-muted">{{ getPledgerContact(c) }}</td>
+                <td class="amount-cell">{{ formatCurrency(c.total_pledge_amount) }}</td>
+                <td class="text-muted">{{ formatCurrency(c.initial_payment) }}</td>
+                <td>
+                  <span class="instalment-pill">
+                    {{ formatCurrency(c.instalment_amount) }}/{{ c.instalment_frequency === 'weekly' ? 'wk' : 'mo' }}
+                    <span class="inst-count">× {{ c.instalment_count }}</span>
+                  </span>
+                </td>
+                <td>
+                  <div class="progress-mini">
+                    <div class="progress-mini-bar">
+                      <div class="progress-mini-fill" [style.width.%]="getProgressPct(c)"></div>
+                    </div>
+                    <span class="progress-mini-pct">{{ getProgressPct(c) }}%</span>
+                  </div>
+                </td>
+                <td>
+                  <span class="status-badge" [class.fulfilled]="c.is_fulfilled">
+                    <i [class]="c.is_fulfilled ? 'ri-checkbox-circle-fill' : 'ri-time-line'"></i>
+                    {{ c.is_fulfilled ? 'Fulfilled' : 'Pending' }}
+                  </span>
+                </td>
+                <td class="text-muted">{{ formatDate(c.submitted_at) }}</td>
+                <td>
+                  <button class="btn-view" (click)="$event.stopPropagation(); viewDetail(c.id)">
+                    <i class="ri-eye-line"></i>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div *ngIf="commitments.length === 0" class="empty-state">
+            <i class="ri-building-4-line"></i>
+            <p>No commitments found</p>
+            <button class="btn-primary" (click)="newCommitment()">
+              <i class="ri-add-line"></i> Record First Commitment
+            </button>
+          </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination" *ngIf="totalPages > 1">
+          <span class="page-info">
+            Showing {{ (currentPage - 1) * pageSize + 1 }}–{{ getPageEnd() }} of {{ totalCount }}
+          </span>
+          <div class="page-btns">
+            <button (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 1">
+              <i class="ri-arrow-left-s-line"></i>
+            </button>
+            <span>{{ currentPage }} / {{ totalPages }}</span>
+            <button (click)="goToPage(currentPage + 1)" [disabled]="currentPage === totalPages">
+              <i class="ri-arrow-right-s-line"></i>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>

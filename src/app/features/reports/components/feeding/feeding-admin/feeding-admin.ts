@@ -332,8 +332,11 @@ export class FeedingAdmin implements OnInit, OnDestroy {
             ? this.structureForm.selectedClassIds
             : [null];
 
+        let totalAssigned = 0;
+
         for (const classId of classIds) {
-          await this.feedingService
+          // Step 1: create the structure
+          const created = await this.feedingService
             .createFeedingFeeStructure({
               class_id: classId,
               fee_name: this.structureForm.fee_name,
@@ -343,14 +346,40 @@ export class FeedingAdmin implements OnInit, OnDestroy {
               term: this.structureForm.term,
             })
             .toPromise();
+
+          // Step 2: auto-assign to all students in the class
+          if (classId && created?.id) {
+            try {
+              const count = await this.feedingService
+                .assignFeedingFeeToClass(
+                  created.id,
+                  classId,
+                  this.structureForm.academic_year,
+                  this.structureForm.term,
+                )
+                .toPromise();
+              totalAssigned += (count as number) || 0;
+            } catch (assignErr) {
+              console.warn('Auto-assign failed for class', classId, assignErr);
+            }
+          }
         }
 
         const classCount = this.structureForm.selectedClassIds.length;
-        this.showSuccess(
-          classCount > 1
-            ? `Fee structure created for ${classCount} classes!`
-            : 'Fee structure created!',
-        );
+        if (classCount > 0 && totalAssigned > 0) {
+          this.showSuccess(
+            `Fee structure created and automatically assigned to ${totalAssigned} student(s) across ${classCount} class(es)!`,
+          );
+        } else if (classCount > 0 && totalAssigned === 0) {
+          this.showSuccess(
+            `Fee structure created for ${classCount} class(es). No students were found — make sure students are enrolled in those classes.`,
+          );
+        } else {
+          this.showSuccess('Fee structure created!');
+        }
+
+        this.loadStudentFeedingFees();
+        this.loadStats();
       }
 
       this.savingStructure = false;

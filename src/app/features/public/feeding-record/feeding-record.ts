@@ -10,16 +10,12 @@ import {
 import { FeedingFilterService } from '../../reports/services/feeding-filter.service';
 
 interface StudentState {
-  isPresent: boolean;
-  attendanceId: string | null;
-  saving: boolean;
   studentFeedingFees: StudentFeedingFee[];
   totalDue: number;
   totalPaid: number;
   totalBalance: number;
   overallStatus: 'unpaid' | 'partial' | 'paid';
   loadingSummary: boolean;
-  error: string;
 }
 
 @Component({
@@ -42,22 +38,19 @@ export class FeedingRecord implements OnInit, OnDestroy {
   academicYears = generateAcademicYears();
 
   classes: any[] = [];
-  selectedClassId = ''; // '' = show all
+  selectedClassId = '';
 
-  // All students loaded once on init
   allStudents: any[] = [];
-  students: any[] = []; // filtered view
+  students: any[] = [];
   loadingStudents = false;
   totalStudents = 0;
 
   searchQuery = '';
-  searchResults: any[] = [];
-  searching = false;
-  showSearchResults = false;
 
   studentStates: { [studentId: string]: StudentState } = {};
 
-  dailySummary: any = null;
+  // Daily payments collected today
+  dailyCollected = 0;
 
   errorMessage = '';
   successMessage = '';
@@ -71,7 +64,7 @@ export class FeedingRecord implements OnInit, OnDestroy {
   paymentMethod = 'Cash';
   processingPayment = false;
 
-  // ── Payment history modal ─────────────────────────────────────
+  // ── History modal ─────────────────────────────────────────────
   showHistoryModal = false;
   historyStudent: any = null;
   historyPayments: any[] = [];
@@ -107,12 +100,12 @@ export class FeedingRecord implements OnInit, OnDestroy {
 
     this.loadSchoolInfo();
     this.loadClasses();
-    this.loadAllStudents(); // ← load ALL students on init
-    this.loadDailySummary();
+    this.loadAllStudents();
+    this.loadDailyCollected();
     this.loadRecordingWindow();
 
     this.searchSubject
-      .pipe(debounceTime(300), distinctUntilChanged(), takeUntil(this.destroy$))
+      .pipe(debounceTime(250), distinctUntilChanged(), takeUntil(this.destroy$))
       .subscribe((q) => this.applySearch(q));
   }
 
@@ -121,7 +114,7 @@ export class FeedingRecord implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  // ── School Info ───────────────────────────────────────────────
+  // ── School info ───────────────────────────────────────────────
 
   private async loadSchoolInfo(): Promise<void> {
     const { data } = await (this.feedingService as any).supabase.client
@@ -147,7 +140,7 @@ export class FeedingRecord implements OnInit, OnDestroy {
       });
   }
 
-  // ── Load ALL students (default view) ─────────────────────────
+  // ── Load all students ─────────────────────────────────────────
 
   async loadAllStudents(): Promise<void> {
     this.loadingStudents = true;
@@ -175,98 +168,54 @@ export class FeedingRecord implements OnInit, OnDestroy {
     }
   }
 
-  // Apply class filter to already-loaded allStudents
   applyClassFilter(): void {
-    if (this.selectedClassId) {
-      this.students = this.allStudents.filter(
-        (s) => s.class_id === this.selectedClassId,
-      );
-    } else {
-      this.students = [...this.allStudents];
-    }
+    this.students = this.selectedClassId
+      ? this.allStudents.filter((s) => s.class_id === this.selectedClassId)
+      : [...this.allStudents];
 
-    // Init states for any new students
     this.students.forEach((s) => {
       if (!this.studentStates[s.id]) {
         this.studentStates[s.id] = this.defaultState();
       }
     });
 
-    // Load attendance + fees for visible students
-    if (this.students.length) {
-      this.loadAttendanceAndSummaries(this.students);
-    }
+    if (this.students.length) this.loadFeeStates(this.students);
     this.cdr.markForCheck();
   }
 
   onClassChange(): void {
-    this.applyClassFilter();
-    // Clear search when class changes
     this.searchQuery = '';
-    this.showSearchResults = false;
+    this.applyClassFilter();
   }
 
   private defaultState(): StudentState {
     return {
-      isPresent: true,
-      attendanceId: null,
-      saving: false,
       studentFeedingFees: [],
       totalDue: 0,
       totalPaid: 0,
       totalBalance: 0,
       overallStatus: 'unpaid',
       loadingSummary: true,
-      error: '',
     };
   }
 
-  // ── Load attendance + fees for visible students ───────────────
+  // ── Load fee states (no attendance) ──────────────────────────
 
-  private async loadAttendanceAndSummaries(students: any[]): Promise<void> {
+  private async loadFeeStates(students: any[]): Promise<void> {
     if (!students.length) return;
     const studentIds = students.map((s) => s.id);
 
-    // Mark all as loading
     studentIds.forEach((sid) => {
-      if (this.studentStates[sid]) {
+      if (this.studentStates[sid])
         this.studentStates[sid].loadingSummary = true;
-      }
     });
     this.cdr.markForCheck();
 
     try {
-      // 1. Attendance for today
-      const attendance = await this.feedingService.getAttendancePromise(
-        this.churchId,
-        this.selectedDate,
-        this.selectedYear,
-        this.selectedTerm,
-      );
-      const attMap: { [sid: string]: any } = {};
-      attendance.forEach((r: any) => (attMap[r.student_id] = r));
-
-      studentIds.forEach((sid) => {
-        if (!this.studentStates[sid])
-          this.studentStates[sid] = this.defaultState();
-        const rec = attMap[sid];
-        if (rec) {
-          this.studentStates[sid].isPresent = rec.is_present;
-          this.studentStates[sid].attendanceId = rec.id;
-        } else {
-          this.studentStates[sid].isPresent = true;
-          this.studentStates[sid].attendanceId = null;
-        }
-      });
-
-      this.cdr.markForCheck();
-
-      // 2. student_feeding_fees for each student in chunks of 50
-      const chunkSize = 50;
+      // Load in chunks of 50 to avoid URL length limits
       const allSffs: any[] = [];
-
-      for (let i = 0; i < studentIds.length; i += chunkSize) {
-        const chunk = studentIds.slice(i, i + chunkSize);
+      for (let i = 0; i < studentIds.length; i += 50) {
+        const chunk = studentIds.slice(i, i + 50);
         const { data } = await (this.feedingService as any).supabase.client
           .from('student_feeding_fees')
           .select(
@@ -276,50 +225,46 @@ export class FeedingRecord implements OnInit, OnDestroy {
           .eq('academic_year', this.selectedYear)
           .eq('term', this.selectedTerm)
           .in('student_id', chunk);
-
         if (data) allSffs.push(...data);
       }
 
       // Group by student
-      const sffByStudent: { [sid: string]: any[] } = {};
-      allSffs.forEach((sff) => {
-        if (!sffByStudent[sff.student_id]) sffByStudent[sff.student_id] = [];
-        sffByStudent[sff.student_id].push(sff);
+      const byStudent: { [sid: string]: any[] } = {};
+      allSffs.forEach((f) => {
+        if (!byStudent[f.student_id]) byStudent[f.student_id] = [];
+        byStudent[f.student_id].push(f);
       });
 
       studentIds.forEach((sid) => {
         if (!this.studentStates[sid]) return;
-        const fees = sffByStudent[sid] || [];
+        const fees = byStudent[sid] || [];
         const totalDue = fees.reduce(
-          (sum: number, f: any) => sum + Number(f.amount_due),
+          (s: number, f: any) => s + Number(f.amount_due),
           0,
         );
         const totalPaid = fees.reduce(
-          (sum: number, f: any) => sum + Number(f.amount_paid),
+          (s: number, f: any) => s + Number(f.amount_paid),
           0,
         );
 
-        let overallStatus: 'unpaid' | 'partial' | 'paid' = 'unpaid';
+        let status: 'unpaid' | 'partial' | 'paid' = 'unpaid';
         if (fees.length > 0) {
-          if (fees.every((f: any) => f.status === 'paid'))
-            overallStatus = 'paid';
-          else if (
-            fees.some((f: any) => f.status === 'partial' || f.status === 'paid')
-          )
-            overallStatus = 'partial';
+          if (fees.every((f: any) => f.status === 'paid')) status = 'paid';
+          else if (fees.some((f: any) => f.amount_paid > 0)) status = 'partial';
         }
 
-        this.studentStates[sid].studentFeedingFees = fees;
-        this.studentStates[sid].totalDue = totalDue;
-        this.studentStates[sid].totalPaid = totalPaid;
-        this.studentStates[sid].totalBalance = totalDue - totalPaid;
-        this.studentStates[sid].overallStatus = overallStatus;
-        this.studentStates[sid].loadingSummary = false;
+        this.studentStates[sid] = {
+          studentFeedingFees: fees,
+          totalDue,
+          totalPaid,
+          totalBalance: totalDue - totalPaid,
+          overallStatus: status,
+          loadingSummary: false,
+        };
       });
 
       this.cdr.markForCheck();
     } catch (err: any) {
-      console.error('Failed to load summaries', err);
       studentIds.forEach((sid) => {
         if (this.studentStates[sid])
           this.studentStates[sid].loadingSummary = false;
@@ -328,119 +273,60 @@ export class FeedingRecord implements OnInit, OnDestroy {
     }
   }
 
-  private async refreshStudent(student: any): Promise<void> {
-    if (this.studentStates[student.id]) {
-      this.studentStates[student.id].loadingSummary = true;
-    }
+  private async refreshStudent(studentId: string): Promise<void> {
+    const student = this.allStudents.find((s) => s.id === studentId);
+    if (!student) return;
+    if (this.studentStates[studentId])
+      this.studentStates[studentId].loadingSummary = true;
     this.cdr.markForCheck();
-    await this.loadAttendanceAndSummaries([student]);
-    await this.refreshDailySummary();
+    await this.loadFeeStates([student]);
+    await this.refreshDailyCollected();
   }
 
-  // ── Date / Term / Year ────────────────────────────────────────
-
-  onDateChange(): void {
-    const ids = this.students.map((s) => s.id);
-    ids.forEach((sid) => {
-      if (this.studentStates[sid]) {
-        this.studentStates[sid].isPresent = true;
-        this.studentStates[sid].attendanceId = null;
-        this.studentStates[sid].loadingSummary = true;
-      }
-    });
-    this.cdr.markForCheck();
-    if (this.students.length) this.loadAttendanceAndSummaries(this.students);
-    this.loadDailySummary();
-  }
+  // ── Term/Year change ──────────────────────────────────────────
 
   onTermYearChange(): void {
     this.feedingFilter.setBoth(this.selectedTerm, this.selectedYear);
-    // Reset all summaries
+    // Reset all states
     Object.keys(this.studentStates).forEach((sid) => {
-      this.studentStates[sid].studentFeedingFees = [];
-      this.studentStates[sid].totalDue = 0;
-      this.studentStates[sid].totalPaid = 0;
-      this.studentStates[sid].totalBalance = 0;
-      this.studentStates[sid].loadingSummary = true;
+      this.studentStates[sid] = this.defaultState();
     });
-    if (this.students.length) this.loadAttendanceAndSummaries(this.students);
-    this.loadDailySummary();
+    if (this.students.length) this.loadFeeStates(this.students);
+    this.loadDailyCollected();
+  }
+
+  onDateChange(): void {
+    this.loadDailyCollected();
   }
 
   confirmTermYear(): void {
     this.feedingFilter.setBoth(this.selectedTerm, this.selectedYear);
   }
 
-  // ── Daily Summary ─────────────────────────────────────────────
+  // ── Daily collected amount ────────────────────────────────────
 
-  loadDailySummary(): void {
-    this.feedingService
-      .getDailySummary(
-        this.churchId,
-        this.selectedDate,
-        this.selectedYear,
-        this.selectedTerm,
-      )
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (s) => {
-          this.dailySummary = s;
-          this.cdr.markForCheck();
-        },
-      });
-  }
-
-  private async refreshDailySummary(): Promise<void> {
+  async loadDailyCollected(): Promise<void> {
     try {
-      const s = await this.feedingService.getDailySummaryPromise(
-        this.churchId,
-        this.selectedDate,
-        this.selectedYear,
-        this.selectedTerm,
+      const { data } = await (this.feedingService as any).supabase.client
+        .from('feeding_payments')
+        .select('amount_paid')
+        .eq('church_id', this.churchId)
+        .eq('payment_date', this.selectedDate)
+        .eq('academic_year', this.selectedYear)
+        .eq('term', this.selectedTerm);
+      this.dailyCollected = (data || []).reduce(
+        (s: number, p: any) => s + Number(p.amount_paid),
+        0,
       );
-      this.dailySummary = s;
       this.cdr.markForCheck();
     } catch {}
   }
 
-  // ── Attendance toggle ─────────────────────────────────────────
-
-  toggleAttendance(studentId: string): void {
-    const state = this.studentStates[studentId];
-    if (!state || state.saving) return;
-
-    const prev = state.isPresent;
-    state.isPresent = !state.isPresent;
-    state.saving = true;
-    this.cdr.markForCheck();
-
-    this.feedingService
-      .upsertAttendance({
-        church_id: this.churchId,
-        student_id: studentId,
-        attendance_date: this.selectedDate,
-        academic_year: this.selectedYear,
-        term: this.selectedTerm,
-        is_present: state.isPresent,
-      })
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (rec) => {
-          state.attendanceId = rec?.id || state.attendanceId;
-          state.saving = false;
-          this.cdr.markForCheck();
-          this.refreshDailySummary();
-        },
-        error: (err) => {
-          state.isPresent = prev;
-          state.saving = false;
-          state.error = err.message || 'Failed to update attendance';
-          this.cdr.markForCheck();
-        },
-      });
+  private async refreshDailyCollected(): Promise<void> {
+    await this.loadDailyCollected();
   }
 
-  // ── Search ────────────────────────────────────────────────────
+  // ── Search (client-side) ──────────────────────────────────────
 
   onSearchInput(): void {
     this.searchSubject.next(this.searchQuery);
@@ -448,72 +334,29 @@ export class FeedingRecord implements OnInit, OnDestroy {
 
   private applySearch(query: string): void {
     if (!query || query.length < 1) {
-      // Reset to class-filtered view
       this.applyClassFilter();
-      this.showSearchResults = false;
       return;
     }
-
     const q = query.toLowerCase();
     this.students = this.allStudents.filter((s) => {
       const name = `${s.first_name} ${s.last_name}`.toLowerCase();
       const num = (s.student_number || '').toLowerCase();
-      // Also respect class filter if one is active
       const classMatch = this.selectedClassId
         ? s.class_id === this.selectedClassId
         : true;
       return classMatch && (name.includes(q) || num.includes(q));
     });
-
-    // Init states for any students not yet loaded
     this.students.forEach((s) => {
-      if (!this.studentStates[s.id]) {
+      if (!this.studentStates[s.id])
         this.studentStates[s.id] = this.defaultState();
-      }
     });
-
-    if (this.students.length) this.loadAttendanceAndSummaries(this.students);
+    if (this.students.length) this.loadFeeStates(this.students);
     this.cdr.markForCheck();
   }
 
-  // Keep old search dropdown for finding students NOT in current class filter
-  doExternalSearch(query: string): void {
-    if (!query || query.length < 2) {
-      this.searchResults = [];
-      this.showSearchResults = false;
-      return;
-    }
-    this.searching = true;
-    this.feedingService
-      .searchStudents(this.churchId, query)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (results) => {
-          this.searchResults = results;
-          this.showSearchResults = true;
-          this.searching = false;
-          this.cdr.markForCheck();
-        },
-        error: () => {
-          this.searching = false;
-          this.cdr.markForCheck();
-        },
-      });
-  }
-
-  selectStudentFromSearch(student: any): void {
-    this.showSearchResults = false;
+  clearSearch(): void {
     this.searchQuery = '';
-    if (!this.allStudents.find((s) => s.id === student.id)) {
-      this.allStudents = [student, ...this.allStudents];
-    }
-    if (!this.students.find((s) => s.id === student.id)) {
-      this.students = [student, ...this.students];
-    }
-    if (!this.studentStates[student.id]) {
-      this.studentStates[student.id] = this.defaultState();
-    }
-    this.loadAttendanceAndSummaries([student]);
+    this.applyClassFilter();
   }
 
   // ── Payment Modal ─────────────────────────────────────────────
@@ -521,18 +364,15 @@ export class FeedingRecord implements OnInit, OnDestroy {
   openPaymentModal(student: any, sff?: StudentFeedingFee): void {
     this.paymentStudent = student;
     const state = this.studentStates[student.id];
+    const fees = state?.studentFeedingFees || [];
 
-    if (sff) {
-      this.paymentSff = sff;
-    } else {
-      const fees = state?.studentFeedingFees || [];
-      this.paymentSff =
-        fees.find((f) => f.status !== 'paid') || fees[0] || null;
-    }
+    this.paymentSff =
+      sff || fees.find((f) => f.status !== 'paid') || fees[0] || null;
 
     const balance = this.paymentSff
       ? Number(this.paymentSff.amount_due) - Number(this.paymentSff.amount_paid)
       : 0;
+    // Default to the outstanding balance; if fully paid default to daily rate
     this.paymentAmount =
       balance > 0 ? balance : this.paymentSff?.daily_amount || 0;
     this.paymentNotes = '';
@@ -556,14 +396,17 @@ export class FeedingRecord implements OnInit, OnDestroy {
 
   get paymentIsPartial(): boolean {
     const rate = this.paymentSff?.daily_amount || 0;
-    if (!rate) return false;
-    return this.paymentAmount % rate !== 0;
+    return rate > 0 && this.paymentAmount % rate !== 0;
   }
 
   submitPayment(): void {
-    if (!this.paymentStudent || !this.paymentAmount || this.paymentAmount <= 0)
+    if (
+      !this.paymentStudent ||
+      !this.paymentAmount ||
+      this.paymentAmount <= 0 ||
+      !this.paymentSff
+    )
       return;
-    if (!this.paymentSff) return;
     if (this.processingPayment) return;
 
     this.processingPayment = true;
@@ -587,34 +430,11 @@ export class FeedingRecord implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
-          // Auto mark present if not already
-          const state = this.studentStates[studentId];
-          if (!state?.attendanceId) {
-            this.feedingService
-              .upsertAttendance({
-                church_id: this.churchId,
-                student_id: studentId,
-                attendance_date: this.selectedDate,
-                academic_year: this.selectedYear,
-                term: this.selectedTerm,
-                is_present: true,
-              })
-              .pipe(takeUntil(this.destroy$))
-              .subscribe({
-                next: (rec) => {
-                  if (state) {
-                    state.isPresent = true;
-                    state.attendanceId = rec?.id || null;
-                  }
-                },
-              });
-          }
           this.processingPayment = false;
           this.closePaymentModal();
           this.successMessage = `Payment of ${this.formatCurrency(amount)} recorded!`;
           setTimeout(() => (this.successMessage = ''), 4000);
-          const student = this.allStudents.find((s) => s.id === studentId);
-          if (student) this.refreshStudent(student);
+          this.refreshStudent(studentId);
           this.cdr.markForCheck();
         },
         error: (err) => {
@@ -625,7 +445,7 @@ export class FeedingRecord implements OnInit, OnDestroy {
       });
   }
 
-  // ── Payment History ───────────────────────────────────────────
+  // ── History Modal ─────────────────────────────────────────────
 
   async openHistoryModal(student: any): Promise<void> {
     this.historyStudent = student;
@@ -689,10 +509,7 @@ export class FeedingRecord implements OnInit, OnDestroy {
           );
           this.successMessage = 'Payment deleted';
           setTimeout(() => (this.successMessage = ''), 3000);
-          const student = this.allStudents.find(
-            (s) => s.id === payment.student_id,
-          );
-          if (student) this.refreshStudent(student);
+          this.refreshStudent(payment.student_id);
           this.cdr.markForCheck();
         },
         error: (err) => {
@@ -730,9 +547,9 @@ export class FeedingRecord implements OnInit, OnDestroy {
 
   // ── Helpers ───────────────────────────────────────────────────
 
-  getStudentName(student: any): string {
-    if (!student) return '';
-    return `${student.first_name} ${student.middle_name || ''} ${student.last_name}`.trim();
+  getStudentName(s: any): string {
+    if (!s) return '';
+    return `${s.first_name} ${s.middle_name || ''} ${s.last_name}`.trim();
   }
 
   formatCurrency(amount: number): string {
@@ -742,15 +559,15 @@ export class FeedingRecord implements OnInit, OnDestroy {
     }).format(amount || 0);
   }
 
-  formatDateLabel(dateStr: string): string {
+  formatDateLabel(d: string): string {
     try {
-      return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-GH', {
+      return new Date(d + 'T00:00:00').toLocaleDateString('en-GH', {
         weekday: 'short',
         month: 'short',
         day: 'numeric',
       });
     } catch {
-      return dateStr;
+      return d;
     }
   }
 
@@ -759,13 +576,14 @@ export class FeedingRecord implements OnInit, OnDestroy {
   }
 
   get displayCount(): string {
-    const filtered = this.students.length;
-    const total = this.allStudents.length;
-    if (filtered === total) return `${total} student${total !== 1 ? 's' : ''}`;
-    return `${filtered} of ${total} student${total !== 1 ? 's' : ''}`;
+    const f = this.students.length;
+    const t = this.allStudents.length;
+    return f === t
+      ? `${t} student${t !== 1 ? 's' : ''}`
+      : `${f} of ${t} students`;
   }
 
-  trackByStudentId(_: number, student: any): string {
-    return student.id;
+  trackById(_: number, s: any): string {
+    return s.id;
   }
 }

@@ -287,7 +287,26 @@ const routes: Routes = [
         loadChildren: () =>
           import('./job-hub/job-hub-module').then((m) => m.JobHubModule),
       },
-
+      {
+        path: 'building-campaign',
+        canActivate: [PermissionGuard],
+        data: {
+          requiresFeature: 'reports',
+          permission: 'reports.view',
+          roles: [
+            'super_admin',
+            'church_admin',
+            'pastor',
+            'senior_pastor',
+            'associate_pastor',
+            'finance_officer',
+          ],
+        },
+        loadChildren: () =>
+          import('./building-campaign/building-campaign-module').then(
+            (m) => m.BuildingCampaignModule,
+          ),
+      },
       // Reports (school management)
       {
         path: 'reports',
@@ -324,7 +343,3 @@ const routes: Routes = [
   imports: [CommonModule, RouterModule.forChild(routes), ReactiveFormsModule],
 })
 export class FeaturesModule {}
-
-
-
-
