@@ -421,6 +421,14 @@
 .fee-table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed; // ← add this
+
+   // Add explicit column widths
+  th:nth-child(1) { width: 35%; }  // Fee Name
+  th:nth-child(2) { width: 20%; }  // Daily Rate
+  th:nth-child(3) { width: 15%; }  // School Days
+  th:nth-child(4) { width: 18%; }  // Term Total
+  th:nth-child(5) { width: 12%; }  // Actions
 
   thead {
     background: #f9fafb;
@@ -2411,3 +2419,5 @@
     }
   }
 }
+
+

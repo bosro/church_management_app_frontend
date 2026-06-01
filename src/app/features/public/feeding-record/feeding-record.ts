@@ -426,6 +426,7 @@ export class FeedingRecord implements OnInit, OnDestroy {
         daysApplied,
         paymentMethod: this.paymentMethod,
         notes: this.paymentNotes || undefined,
+         churchId: this.churchId,
       })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
@@ -587,3 +588,7 @@ export class FeedingRecord implements OnInit, OnDestroy {
     return s.id;
   }
 }
+
+
+
+

@@ -303,6 +303,29 @@
   width: 100%;
   border-collapse: collapse;
   min-width: 700px;
+  table-layout: fixed;
+
+  th:nth-child(1) {
+    width: 28%;
+  } // Student
+  th:nth-child(2) {
+    width: 10%;
+  } // Class
+  th:nth-child(3) {
+    width: 14%;
+  } // Term Total
+  th:nth-child(4) {
+    width: 12%;
+  } // Paid
+  th:nth-child(5) {
+    width: 12%;
+  } // Balance
+  th:nth-child(6) {
+    width: 12%;
+  } // Status
+  th:nth-child(7) {
+    width: 12%;
+  } // Actions
 
   thead {
     background: #f9fafb;

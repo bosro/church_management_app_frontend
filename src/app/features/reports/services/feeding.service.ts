@@ -19,7 +19,7 @@ export interface FeedingFeeStructure {
   is_active: boolean;
   created_at: string;
   updated_at: string;
-  amount_due?:any
+  amount_due?: any;
   class?: { id: string; name: string; tier: string | null } | null;
 }
 
@@ -446,10 +446,13 @@ export class FeedingService {
     daysApplied: number;
     paymentMethod?: string;
     notes?: string;
+    churchId?: string; // ← already in the interface
   }): Observable<string> {
+    const churchId = payment.churchId || this.churchId; // ← prefer the passed-in one
+
     return from(
       this.supabase.client.rpc('record_feeding_payment', {
-        p_church_id: this.churchId,
+        p_church_id: churchId, // ← was: this.churchId
         p_student_id: payment.studentId,
         p_student_feeding_fee_id: payment.studentFeedingFeeId,
         p_amount: payment.amount,
