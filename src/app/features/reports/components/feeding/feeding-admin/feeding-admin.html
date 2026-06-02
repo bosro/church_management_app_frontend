@@ -118,6 +118,12 @@
             (click)="activeTab = 'payments'; loadPayments()">
             <i class="ri-money-dollar-circle-line"></i> Payment Records
           </button>
+          <button class="tab-btn tab-btn-expenses" (click)="router.navigate(['main/reports/fees/feeding-expenses'])">
+            <i class="ri-receipt-line"></i> Expenses
+            <span class="expenses-tab-badge" *ngIf="expensesSummary && expensesSummary.expense_count > 0">
+              {{ expensesSummary.expense_count }}
+            </span>
+          </button>
         </div>
 
         <!-- ══ TAB: FEE STRUCTURES ══════════════════════════════ -->
@@ -281,6 +287,67 @@
                     <i class="ri-history-line"></i> View history
                   </button>
                 </ng-container>
+              </div>
+            </div>
+
+            <div class="side-card expenses-nav-card">
+              <div class="side-card-header">
+                <i class="ri-receipt-line"></i>
+                <h3>Feeding Expenses</h3>
+              </div>
+              <div class="side-card-body">
+
+                <!-- Loading shimmer -->
+                <div *ngIf="loadingExpensesSummary" class="expenses-card-loading">
+                  <div class="shimmer-line"></div>
+                  <div class="shimmer-line shimmer-short"></div>
+                </div>
+
+                <!-- Summary when loaded -->
+                <ng-container *ngIf="!loadingExpensesSummary && expensesSummary">
+                  <div class="expenses-mini-stats">
+                    <div class="ems-item">
+                      <span class="ems-label">Collected</span>
+                      <span class="ems-value ems-collected">{{ formatCurrency(expensesSummary.total_collected) }}</span>
+                    </div>
+                    <div class="ems-item">
+                      <span class="ems-label">Spent</span>
+                      <span class="ems-value ems-spent">{{ formatCurrency(expensesSummary.total_expenses) }}</span>
+                    </div>
+                    <div class="ems-item">
+                      <span class="ems-label">Balance</span>
+                      <span class="ems-value" [class.ems-positive]="expensesSummary.net_balance >= 0"
+                        [class.ems-negative]="expensesSummary.net_balance < 0">
+                        {{ formatCurrency(expensesSummary.net_balance) }}
+                      </span>
+                    </div>
+                    <div class="ems-item">
+                      <span class="ems-label">Records</span>
+                      <span class="ems-value">{{ expensesSummary.expense_count }}</span>
+                    </div>
+                  </div>
+
+                  <!-- Progress bar: spent vs collected -->
+                  <div class="expenses-progress" *ngIf="expensesSummary.total_collected > 0">
+                    <div class="expenses-progress-track">
+                      <div class="expenses-progress-fill" [style.width.%]="getExpensesSpentPercent()"
+                        [class.over-budget]="expensesSummary.net_balance < 0">
+                      </div>
+                    </div>
+                    <span class="expenses-progress-label">
+                      {{ getExpensesSpentPercent() }}% of collected funds spent
+                    </span>
+                  </div>
+                </ng-container>
+
+                <!-- Empty state -->
+                <ng-container *ngIf="!loadingExpensesSummary && !expensesSummary">
+                  <p class="link-desc">Record and track how feeding fee funds are being spent each term.</p>
+                </ng-container>
+
+                <button class="btn-view-expenses" (click)="router.navigate(['main/reports/feeding-expenses'])">
+                  <i class="ri-arrow-right-line"></i> View &amp; Manage Expenses
+                </button>
               </div>
             </div>
 

@@ -193,14 +193,13 @@ export class FeedingService {
 
   deleteFeedingFeeStructure(id: string): Observable<void> {
     return from(
-      this.supabase.client
-        .from('feeding_fee_structures')
-        .update({ is_active: false, updated_at: new Date().toISOString() })
-        .eq('id', id)
-        .eq('church_id', this.churchId),
+      this.supabase.client.rpc('delete_feeding_fee_structure_safe', {
+        p_fee_structure_id: id,
+        p_church_id: this.churchId,
+      }),
     ).pipe(
       map(({ error }) => {
-        if (error) throw error;
+        if (error) throw new Error(error.message);
       }),
     );
   }

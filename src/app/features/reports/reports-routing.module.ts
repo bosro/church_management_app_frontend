@@ -25,6 +25,8 @@ import { ImportStudents } from './components/add-student/import-students/import-
 import { FeedingAdmin } from './components/feeding/feeding-admin/feeding-admin';
 import { ReceiptsList } from './components/fees/receipts-list/receipts-list';
 import { StudentRegistrationLinks } from './components/students/student-registration-links/student-registration-links';
+import { SchoolExpenses } from './components/fees/school-expenses/school-expenses';
+import { FeedingExpenses } from './components/feeding/feeding-expenses/feeding-expenses';
 
 const routes: Routes = [
   {
@@ -132,6 +134,16 @@ const routes: Routes = [
     },
   },
   {
+    path: 'fees/expenses',
+    component: SchoolExpenses,
+    canActivate: [PermissionGuard],
+    data: {
+      roles: ['super_admin', 'church_admin'],
+      permission: 'school.fees',
+      requiresFeature: 'reports',
+    },
+  },
+  {
     path: 'fees/record/:studentId',
     component: RecordPayment,
     canActivate: [PermissionGuard],
@@ -164,6 +176,16 @@ const routes: Routes = [
   {
     path: 'fees/feeding-admin',
     component: FeedingAdmin,
+    canActivate: [PermissionGuard],
+    data: {
+      roles: ['super_admin', 'church_admin'],
+      permission: 'school.manage',
+      requiresFeature: 'reports',
+    },
+  },
+  {
+    path: 'fees/feeding-expenses',
+    component: FeedingExpenses,
     canActivate: [PermissionGuard],
     data: {
       roles: ['super_admin', 'church_admin'],

@@ -423,12 +423,22 @@
   border-collapse: collapse;
   table-layout: fixed; // ← add this
 
-   // Add explicit column widths
-  th:nth-child(1) { width: 35%; }  // Fee Name
-  th:nth-child(2) { width: 20%; }  // Daily Rate
-  th:nth-child(3) { width: 15%; }  // School Days
-  th:nth-child(4) { width: 18%; }  // Term Total
-  th:nth-child(5) { width: 12%; }  // Actions
+  // Add explicit column widths
+  th:nth-child(1) {
+    width: 35%;
+  } // Fee Name
+  th:nth-child(2) {
+    width: 20%;
+  } // Daily Rate
+  th:nth-child(3) {
+    width: 15%;
+  } // School Days
+  th:nth-child(4) {
+    width: 18%;
+  } // Term Total
+  th:nth-child(5) {
+    width: 12%;
+  } // Actions
 
   thead {
     background: #f9fafb;
@@ -641,10 +651,13 @@
 // ─── Side Cards Row ───────────────────────────────────────────
 .side-cards-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr; // ← was 1fr 1fr
   gap: 16px;
   margin-top: 20px;
 
+  @media (max-width: 1100px) {
+    grid-template-columns: 1fr 1fr;
+  }
   @media (max-width: 860px) {
     grid-template-columns: 1fr;
   }
@@ -2420,4 +2433,159 @@
   }
 }
 
+// ── Expenses tab badge ────────────────────────────────────────
+.tab-btn-expenses {
+  position: relative;
 
+  .expenses-tab-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    background: #059669;
+    color: white;
+    border-radius: 100px;
+    font-size: 10px;
+    font-weight: 700;
+    margin-left: 5px;
+    line-height: 1;
+  }
+}
+
+// ── Expenses navigation card ──────────────────────────────────
+.expenses-nav-card {
+  .side-card-header {
+    i {
+      color: #059669;
+    }
+  }
+}
+
+// Mini stat grid inside the card
+.expenses-mini-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 12px;
+  margin-bottom: 12px;
+
+  .ems-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .ems-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: #9ca3af;
+  }
+
+  .ems-value {
+    font-size: 13px;
+    font-weight: 800;
+    color: #111827;
+    white-space: nowrap;
+  }
+
+  .ems-collected {
+    color: #059669;
+  }
+  .ems-spent {
+    color: #dc2626;
+  }
+  .ems-positive {
+    color: #059669;
+  }
+  .ems-negative {
+    color: #dc2626;
+  }
+}
+
+// Progress bar
+.expenses-progress {
+  margin-bottom: 12px;
+
+  .expenses-progress-track {
+    height: 6px;
+    background: #f3f4f6;
+    border-radius: 100px;
+    overflow: hidden;
+    margin-bottom: 4px;
+
+    .expenses-progress-fill {
+      height: 100%;
+      border-radius: 100px;
+      background: linear-gradient(90deg, #059669, #10b981);
+      transition: width 0.4s ease;
+
+      &.over-budget {
+        background: linear-gradient(90deg, #dc2626, #ef4444);
+      }
+    }
+  }
+
+  .expenses-progress-label {
+    font-size: 11px;
+    color: #9ca3af;
+    font-weight: 600;
+  }
+}
+
+// Loading shimmer inside card
+.expenses-card-loading {
+  margin-bottom: 12px;
+
+  .shimmer-line {
+    height: 12px;
+    background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+    background-size: 200% 100%;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    animation: shimmer 1.4s infinite;
+
+    &.shimmer-short {
+      width: 60%;
+    }
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+// Navigate button
+.btn-view-expenses {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 9px 14px;
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #6ee7b7;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: "Nunito Sans", sans-serif;
+  transition: all 0.2s;
+  i {
+    font-size: 15px;
+  }
+
+  &:hover {
+    background: #059669;
+    color: white;
+    border-color: #059669;
+  }
+}

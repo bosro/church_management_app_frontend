@@ -478,15 +478,21 @@
         </div>
         <div class="history-item-right">
           <p class="history-notes" *ngIf="p.notes">{{ p.notes }}</p>
-          <button class="btn-delete-payment"
-            *ngIf="isDateAllowed(p.payment_date)"
-            (click)="promptDeletePayment(p)"
-            title="Delete this payment">
-            <i class="ri-delete-bin-line"></i>
-          </button>
+          <div class="history-item-actions" *ngIf="isDateAllowed(p.payment_date)">
+            <button class="btn-edit-payment"
+              (click)="openEditPayment(p)"
+              title="Edit this payment">
+              <i class="ri-edit-line"></i>
+            </button>
+            <button class="btn-delete-payment"
+              (click)="promptDeletePayment(p)"
+              title="Delete this payment">
+              <i class="ri-delete-bin-line"></i>
+            </button>
+          </div>
           <span class="history-lock"
             *ngIf="!isDateAllowed(p.payment_date)"
-            title="Past record — contact admin to delete">
+            title="Past record — contact admin to edit or delete">
             <i class="ri-lock-line"></i>
           </span>
         </div>
@@ -525,3 +531,68 @@
     </div>
   </div>
 </div>
+
+
+<!-- ══ MODAL: Edit Payment (Teacher) ══════════════════════════ -->
+<div class="modal-overlay" *ngIf="showEditPaymentModal" (click)="closeEditPaymentModal()">
+  <div class="payment-modal" (click)="$event.stopPropagation()">
+
+    <div class="payment-modal-header">
+      <div>
+        <h3>Edit Payment</h3>
+        <p>{{ getStudentName(historyStudent) }} · {{ editTargetPayment?.payment_date | date:'EEE, MMM d, y' }}</p>
+      </div>
+      <button class="close-btn" (click)="closeEditPaymentModal()">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+
+    <div class="payment-modal-body">
+
+      <div class="form-group">
+        <label>Amount (GHS) *</label>
+        <input type="number" [(ngModel)]="editPaymentAmount" min="0.01" step="0.01" />
+        <!-- Days coverage breakdown -->
+        <div class="payment-breakdown"
+          *ngIf="editPaymentAmount > 0 && (editTargetSff?.daily_amount || 0) > 0">
+          <div>
+            <i class="ri-calendar-check-line"></i>
+            Covers <strong>{{ editPaymentDaysApplied }}</strong>
+            day{{ editPaymentDaysApplied !== 1 ? 's' : '' }}
+            ({{ formatCurrency(editTargetSff?.daily_amount || 0) }} × {{ editPaymentDaysApplied }})
+          </div>
+          <div *ngIf="editPaymentIsPartial" class="partial-note">
+            <i class="ri-error-warning-line"></i>
+            Partial day — {{ formatCurrency(editPaymentAmount % (editTargetSff?.daily_amount || 1)) }} remainder
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Payment Method</label>
+        <select [(ngModel)]="editPaymentMethod">
+          <option *ngFor="let m of paymentMethods" [value]="m">{{ m }}</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Notes (Optional)</label>
+        <input type="text" [(ngModel)]="editPaymentNotes"
+          placeholder="e.g. correction, weekly payment, etc." />
+      </div>
+
+    </div>
+
+    <div class="payment-modal-footer">
+      <button class="btn-cancel" (click)="closeEditPaymentModal()"
+        [disabled]="processingEdit">Cancel</button>
+      <button class="btn-submit-payment" (click)="confirmEditPayment()"
+        [disabled]="!editPaymentAmount || editPaymentAmount <= 0 || processingEdit">
+        <i class="ri-loader-4-line spin" *ngIf="processingEdit"></i>
+        <i class="ri-save-line" *ngIf="!processingEdit"></i>
+        {{ processingEdit ? 'Saving...' : 'Save ' + formatCurrency(editPaymentAmount) }}
+      </button>
+    </div>
+  </div>
+</div>
+

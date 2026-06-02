@@ -14,6 +14,7 @@ import {
   generateAcademicYears,
 } from '../../../../../models/school.model';
 import { FeedingFilterService } from '../../../services/feeding-filter.service';
+import { SupabaseService } from '../../../../../core/services/supabase';
 
 @Component({
   selector: 'app-feeding-admin',
@@ -127,12 +128,22 @@ export class FeedingAdmin implements OnInit, OnDestroy {
 
   paymentMethods = ['Cash', 'Mobile Money', 'Bank Transfer', 'Cheque'];
 
+  expensesSummary: {
+    total_collected: number;
+    total_expenses: number;
+    net_balance: number;
+    expense_count: number;
+  } | null = null;
+
+  loadingExpensesSummary = false;
+
   constructor(
     private feedingService: FeedingService,
     private authService: AuthService,
     private cdr: ChangeDetectorRef,
     public router: Router,
     private feedingFilter: FeedingFilterService,
+    private supabase: SupabaseService, // ← ADD THIS
   ) {}
 
   ngOnInit(): void {
@@ -148,6 +159,7 @@ export class FeedingAdmin implements OnInit, OnDestroy {
     this.loadDailySummary();
     this.loadStats();
     this.loadActiveWindow();
+    this.loadExpensesSummary();
   }
 
   ngOnDestroy(): void {
@@ -179,6 +191,42 @@ export class FeedingAdmin implements OnInit, OnDestroy {
           this.cdr.markForCheck();
         },
       });
+  }
+
+  loadExpensesSummary(): void {
+    this.loadingExpensesSummary = true;
+    const churchId = this.authService.getChurchId() || '';
+
+    this.supabase.client
+      .rpc('get_feeding_expenses_summary', {
+        p_church_id: churchId,
+        p_academic_year: this.selectedYear,
+        p_term: this.selectedTerm,
+      })
+      .then(({ data, error }) => {
+        this.loadingExpensesSummary = false;
+        if (error) {
+          this.cdr.markForCheck();
+          return;
+        }
+        if (Array.isArray(data) && data.length > 0) {
+          this.expensesSummary = data[0];
+        } else {
+          this.expensesSummary = data;
+        }
+        this.cdr.markForCheck();
+      });
+  }
+
+  getExpensesSpentPercent(): number {
+    if (!this.expensesSummary || this.expensesSummary.total_collected === 0)
+      return 0;
+    const pct = Math.round(
+      (this.expensesSummary.total_expenses /
+        this.expensesSummary.total_collected) *
+        100,
+    );
+    return Math.min(pct, 100); // cap at 100 for the bar width; label still shows real %
   }
 
   loadFeeStructures(): void {

@@ -81,6 +81,14 @@ export class FeedingRecord implements OnInit, OnDestroy {
 
   paymentMethods = ['Cash', 'Mobile Money', 'Bank Transfer', 'Cheque'];
 
+  showEditPaymentModal = false;
+  editTargetPayment: any = null;
+  editTargetSff: StudentFeedingFee | null = null;
+  editPaymentAmount = 0;
+  editPaymentMethod = 'Cash';
+  editPaymentNotes = '';
+  processingEdit = false;
+
   constructor(
     private feedingService: FeedingService,
     private route: ActivatedRoute,
@@ -359,6 +367,94 @@ export class FeedingRecord implements OnInit, OnDestroy {
     this.applyClassFilter();
   }
 
+  // ── Edit Payment (Teacher) ────────────────────────────────────
+
+  openEditPayment(payment: any): void {
+    this.editTargetPayment = payment;
+    this.editPaymentAmount = Number(payment.amount_paid);
+    this.editPaymentMethod = payment.payment_method || 'Cash';
+    this.editPaymentNotes = payment.notes || '';
+    // Find the matching SFF so we can show the days-coverage breakdown
+    const state = this.studentStates[this.historyStudent?.id];
+    this.editTargetSff =
+      state?.studentFeedingFees?.find(
+        (f) => f.id === payment.student_feeding_fee_id,
+      ) ||
+      state?.studentFeedingFees?.[0] ||
+      null;
+    this.showEditPaymentModal = true;
+  }
+
+  closeEditPaymentModal(): void {
+    this.showEditPaymentModal = false;
+    this.editTargetPayment = null;
+    this.editTargetSff = null;
+    this.editPaymentAmount = 0;
+    this.editPaymentNotes = '';
+    this.processingEdit = false;
+  }
+
+  get editPaymentDaysApplied(): number {
+    const rate = this.editTargetSff?.daily_amount || 0;
+    if (!rate || !this.editPaymentAmount) return 0;
+    return Math.floor(this.editPaymentAmount / rate);
+  }
+
+  get editPaymentIsPartial(): boolean {
+    const rate = this.editTargetSff?.daily_amount || 0;
+    return rate > 0 && this.editPaymentAmount % rate !== 0;
+  }
+
+  confirmEditPayment(): void {
+    if (
+      !this.editTargetPayment ||
+      !this.editPaymentAmount ||
+      this.editPaymentAmount <= 0
+    )
+      return;
+    if (this.processingEdit) return;
+
+    this.processingEdit = true;
+    const rate = this.editTargetSff?.daily_amount || 0;
+    const daysApplied =
+      rate > 0 ? Math.max(0, Math.floor(this.editPaymentAmount / rate)) : 1;
+
+    this.feedingService
+      .updateFeedingPayment(this.editTargetPayment.id, {
+        amount_paid: this.editPaymentAmount,
+        days_covered: daysApplied,
+        payment_method: this.editPaymentMethod,
+        notes: this.editPaymentNotes || undefined,
+      })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.processingEdit = false;
+          // Update the payment in the local history list so it reflects immediately
+          this.historyPayments = this.historyPayments.map((p) =>
+            p.id === this.editTargetPayment.id
+              ? {
+                  ...p,
+                  amount_paid: this.editPaymentAmount,
+                  days_covered: daysApplied,
+                  payment_method: this.editPaymentMethod,
+                  notes: this.editPaymentNotes || null,
+                }
+              : p,
+          );
+          this.closeEditPaymentModal();
+          this.successMessage = `Payment updated to ${this.formatCurrency(this.editPaymentAmount)}`;
+          setTimeout(() => (this.successMessage = ''), 4000);
+          this.refreshStudent(this.editTargetPayment.student_id);
+          this.cdr.markForCheck();
+        },
+        error: (err) => {
+          this.processingEdit = false;
+          this.errorMessage = err.message || 'Failed to update payment';
+          this.cdr.markForCheck();
+        },
+      });
+  }
   // ── Payment Modal ─────────────────────────────────────────────
 
   openPaymentModal(student: any, sff?: StudentFeedingFee): void {
@@ -426,7 +522,7 @@ export class FeedingRecord implements OnInit, OnDestroy {
         daysApplied,
         paymentMethod: this.paymentMethod,
         notes: this.paymentNotes || undefined,
-         churchId: this.churchId,
+        churchId: this.churchId,
       })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
@@ -588,7 +684,3 @@ export class FeedingRecord implements OnInit, OnDestroy {
     return s.id;
   }
 }
-
-
-
-

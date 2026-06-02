@@ -19,6 +19,7 @@ import { MemberService } from '../../../members/services/member.service';
 import { AuthService } from '../../../../core/services/auth';
 import { Member } from '../../../../models/member.model';
 import { BuildingCampaignService } from '../../services/building-campaign.service';
+import { SupabaseService } from '../../../../core/services/supabase';
 
 @Component({
   selector: 'app-commitment-form',
@@ -50,6 +51,14 @@ export class CommitmentForm implements OnInit, OnDestroy {
   ];
 
   isPublic = false;
+
+  showPaymentOption = false;
+  payNow = false;
+  initialPaymentAmount: number = 0;
+  payerEmail = '';
+  paymentLoading = false;
+  paymentError = '';
+  submittedCommitmentId = '';
 
   // Computed preview
   get instalmentPreview(): number {
@@ -87,6 +96,7 @@ export class CommitmentForm implements OnInit, OnDestroy {
     private router: Router,
     private authService: AuthService,
     private route: ActivatedRoute,
+    private supabase: SupabaseService,
   ) {}
 
   ngOnInit(): void {
@@ -179,6 +189,62 @@ export class CommitmentForm implements OnInit, OnDestroy {
           this.searchResults = [];
         },
       });
+  }
+
+  // Call this after successful commitment submission instead of navigating away
+  onCommitmentSubmitted(commitmentId: string, initialAmount: number): void {
+    this.submittedCommitmentId = commitmentId;
+    this.initialPaymentAmount = initialAmount;
+    this.showPaymentOption = true; // show the payment step
+  }
+
+  async initiatePayment(): Promise<void> {
+    if (!this.initialPaymentAmount || this.initialPaymentAmount <= 0) return;
+    this.paymentLoading = true;
+    this.paymentError = '';
+
+    const supabaseUrl =
+      (this.supabase.client as any).supabaseUrl ??
+      (this.supabase.client as any).rest?.url?.replace('/rest/v1', '') ??
+      '';
+
+    try {
+      const res = await fetch(
+        `${supabaseUrl}/functions/v1/paystack-initialize-public`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            church_id: this.churchIdFromRoute || this.authService.getChurchId(),
+            commitment_id: this.submittedCommitmentId,
+            amount: this.initialPaymentAmount,
+            payer_name:
+              this.form.value.visitor_name ||
+              (this.selectedMember
+                ? `${this.selectedMember.first_name} ${this.selectedMember.last_name}`
+                : 'Anonymous'),
+            payer_contact: this.form.value.visitor_contact || '',
+            payer_email: this.payerEmail || undefined,
+          }),
+        },
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        this.paymentError = data.error || 'Could not initiate payment';
+        this.paymentLoading = false;
+        return;
+      }
+      // Redirect to Paystack
+      window.location.href = data.authorization_url;
+    } catch (e: any) {
+      this.paymentError = e.message || 'Unexpected error';
+      this.paymentLoading = false;
+    }
+  }
+
+  skipPayment(): void {
+    // Navigate to success/thank you page
+    this.router.navigate(['/public/building-campaign/thank-you']);
   }
 
   selectMember(member: Member): void {
@@ -280,9 +346,17 @@ export class CommitmentForm implements OnInit, OnDestroy {
       .createCommitment(dto)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: () => {
+        next: (commitment) => {
+          // ← capture the returned commitment
           this.submitting = false;
           this.submitted = true;
+
+          // If there's an initial payment amount, show the payment step
+          const initial = +this.form.value.initial_payment || 0;
+          if (initial > 0 && this.isPublic) {
+            this.onCommitmentSubmitted(commitment.id, initial);
+          }
+
           window.scrollTo({ top: 0, behavior: 'smooth' });
         },
         error: (err) => {

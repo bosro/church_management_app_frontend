@@ -551,3 +551,5 @@ export class GivingList implements OnInit, OnDestroy {
     this.location.back();
   }
 }
+
+

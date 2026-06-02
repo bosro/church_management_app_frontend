@@ -11,6 +11,7 @@ import { FeedingRecord } from './feeding-record/feeding-record';
 import { PublicStudentRegistration } from './public-student-registration/public-student-registration';
 import { GivingThankYouPage } from './giving-thank-you/giving-thank-you';
 import { CommitmentForm } from '../building-campaign/components/commitment-form/commitment-form';
+import { BuildingCampaignPaymentCallback } from './building-campaign-payment-callback/building-campaign-payment-callback';
 
 const routes: Routes = [
   {
@@ -18,6 +19,10 @@ const routes: Routes = [
     component: GivingThankYouPage,
     // No canActivate — anyone who paid via a payment link lands here
   },
+  {
+  path: 'building-campaign/payment-callback',
+  component: BuildingCampaignPaymentCallback,
+},
   {
     path: 'link-checkin/:token',
     component: LinkCheckin,
@@ -46,7 +51,8 @@ const routes: Routes = [
     MemberRegistration,
     FeedingRecord,
     PublicStudentRegistration,
-    GivingThankYouPage
+    GivingThankYouPage,
+    BuildingCampaignPaymentCallback
   ],
   imports: [
     CommonModule,
