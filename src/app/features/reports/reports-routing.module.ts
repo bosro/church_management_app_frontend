@@ -134,7 +134,7 @@ const routes: Routes = [
     },
   },
   {
-    path: 'fees/expenses',
+    path: 'fees/school-expenses',
     component: SchoolExpenses,
     canActivate: [PermissionGuard],
     data: {

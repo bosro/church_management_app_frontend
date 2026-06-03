@@ -313,7 +313,7 @@
                 <div *ngIf="m.type === 'video'" class="preview-video"
                   (click)="openLightbox(m.preview, 'video')">
                   <i class="ri-play-circle-fill"></i>
-                  <span>{{ m.file?.name || 'Video' }}</span>
+                  <span>{{ m.file.name || 'Video' }}</span>
                 </div>
 
                 <div *ngIf="m.uploading" class="preview-uploading">

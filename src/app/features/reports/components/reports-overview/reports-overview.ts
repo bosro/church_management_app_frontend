@@ -172,7 +172,7 @@ export class ReportsOverview implements OnInit, OnDestroy {
   }
 
   goToSchoolExpenses(): void {
-    this.router.navigate(['main/reports/school-expenses']);
+    this.router.navigate(['main/reports/fees/school-expenses']);
   }
 
   formatCurrency(amount: number): string {
