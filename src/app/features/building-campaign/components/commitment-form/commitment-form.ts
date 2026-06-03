@@ -203,17 +203,26 @@ export class CommitmentForm implements OnInit, OnDestroy {
     this.paymentLoading = true;
     this.paymentError = '';
 
+    const supabaseClient = this.supabase.client as any;
     const supabaseUrl =
-      (this.supabase.client as any).supabaseUrl ??
-      (this.supabase.client as any).rest?.url?.replace('/rest/v1', '') ??
+      supabaseClient.supabaseUrl ??
+      supabaseClient.rest?.url?.replace('/rest/v1', '') ??
       '';
+
+    // Get the anon key — it's stored on the client instance
+    const anonKey =
+      supabaseClient.supabaseKey ?? supabaseClient.headers?.apikey ?? '';
 
     try {
       const res = await fetch(
         `${supabaseUrl}/functions/v1/paystack-initialize-public`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            apikey: anonKey, // ← fixes the auth error
+            Authorization: `Bearer ${anonKey}`, // ← Supabase expects both
+          },
           body: JSON.stringify({
             church_id: this.churchIdFromRoute || this.authService.getChurchId(),
             commitment_id: this.submittedCommitmentId,
@@ -234,7 +243,6 @@ export class CommitmentForm implements OnInit, OnDestroy {
         this.paymentLoading = false;
         return;
       }
-      // Redirect to Paystack
       window.location.href = data.authorization_url;
     } catch (e: any) {
       this.paymentError = e.message || 'Unexpected error';
@@ -243,6 +251,7 @@ export class CommitmentForm implements OnInit, OnDestroy {
   }
 
   skipPayment(): void {
+    this.showPaymentOption = false;
     // Navigate to success/thank you page
     this.router.navigate(['/public/building-campaign/thank-you']);
   }

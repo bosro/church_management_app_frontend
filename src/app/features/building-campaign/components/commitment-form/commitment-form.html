@@ -23,30 +23,80 @@
   <div class="form-container">
 
     <!-- ══ SUCCESS STATE ══════════════════════════════════ -->
-    <div *ngIf="submitted" class="success-card">
-      <div class="success-icon">
-        <i class="ri-checkbox-circle-fill"></i>
-      </div>
-      <h2>Commitment Received!</h2>
-      <p>
-        Thank you for your willing heart. Your commitment to <strong>"The Rich Church"</strong>
-        building campaign has been recorded and received with gratitude.
-      </p>
-      <div class="verse-block">
-        <i class="ri-double-quotes-l"></i>
-        <span>God loves a cheerful giver.</span>
-        <cite>— 2 Corinthians 9:7</cite>
-      </div>
-      <div class="success-actions">
-        <button class="btn-primary" (click)="submitAnother()">
-          <i class="ri-add-line"></i> Submit Another Commitment
-        </button>
-        <button *ngIf="!isPublic" class="btn-secondary" routerLink="/main/building-campaign">
-          <i class="ri-home-line"></i> Back to Dashboard
-        </button>
-      </div>
-    </div>
+    <!-- ══ SUCCESS / PAYMENT STATE ══════════════════════════════════ -->
+<div *ngIf="submitted" class="success-card">
 
+  <!-- Payment option — shown first if there's an initial amount -->
+  <ng-container *ngIf="showPaymentOption; else thankYouBlock">
+    <div class="success-icon">
+      <i class="ri-checkbox-circle-fill" style="color:#059669"></i>
+    </div>
+    <h2>Commitment Recorded!</h2>
+    <p class="payment-step-sub">
+      Would you like to make your initial payment of
+      <strong>{{ formatCurrency(initialPaymentAmount) }}</strong> right now via mobile money or card?
+    </p>
+
+    <div class="payment-form">
+      <div class="form-group">
+        <label>Email address <span style="color:#9ca3af;font-weight:400;">(optional — for your receipt)</span></label>
+        <input type="email" [(ngModel)]="payerEmail" [ngModelOptions]="{standalone: true}"
+          placeholder="your@email.com" />
+      </div>
+
+      <div *ngIf="paymentError" class="error-alert" style="margin-top:0.75rem;">
+        <i class="ri-error-warning-line"></i> {{ paymentError }}
+      </div>
+
+      <div class="payment-actions">
+        <button class="submit-btn" (click)="initiatePayment()" [disabled]="paymentLoading"
+          style="margin-top:1rem;">
+          <span *ngIf="!paymentLoading">
+            <i class="ri-secure-payment-line"></i>
+            Pay {{ formatCurrency(initialPaymentAmount) }} now
+          </span>
+          <span *ngIf="paymentLoading">
+            <i class="ri-loader-4-line spin"></i> Redirecting to Paystack…
+          </span>
+        </button>
+        <button class="btn-skip" (click)="skipPayment()" style="margin-top:0.5rem;">
+          I'll pay later
+        </button>
+      </div>
+
+      <p class="payment-secure-note">
+        <i class="ri-lock-2-line"></i>
+        Secured by Paystack · No card details stored on this site
+      </p>
+    </div>
+  </ng-container>
+
+  <!-- Thank you block — shown after skipping or when no initial payment -->
+  <ng-template #thankYouBlock>
+    <div class="success-icon">
+      <i class="ri-checkbox-circle-fill"></i>
+    </div>
+    <h2>Commitment Received!</h2>
+    <p>
+      Thank you for your willing heart. Your commitment to <strong>"The Rich Church"</strong>
+      building campaign has been recorded and received with gratitude.
+    </p>
+    <div class="verse-block">
+      <i class="ri-double-quotes-l"></i>
+      <span>God loves a cheerful giver.</span>
+      <cite>— 2 Corinthians 9:7</cite>
+    </div>
+    <div class="success-actions">
+      <button class="btn-primary" (click)="submitAnother()">
+        <i class="ri-add-line"></i> Submit Another Commitment
+      </button>
+      <button *ngIf="!isPublic" class="btn-secondary" routerLink="/main/building-campaign">
+        <i class="ri-home-line"></i> Back to Dashboard
+      </button>
+    </div>
+  </ng-template>
+
+</div>
     <!-- ══ FORM STATE ═════════════════════════════════════ -->
     <ng-container *ngIf="!submitted">
 
@@ -348,44 +398,4 @@
   </div>
 </ng-template>
 
-<!-- Payment Step — shown after commitment is saved -->
-<div *ngIf="showPaymentOption" class="payment-step">
-  <div class="payment-step-icon">
-    <i class="ri-checkbox-circle-line"></i>
-  </div>
-  <h2>Commitment recorded!</h2>
-  <p class="payment-step-sub">
-    Would you like to make your initial payment of
-    <strong>GHS {{ initialPaymentAmount | number:'1.2-2' }}</strong> right now via mobile money or card?
-  </p>
 
-  <div class="payment-form">
-    <div class="form-group">
-      <label>Email address (optional — for your receipt)</label>
-      <input type="email" [(ngModel)]="payerEmail" placeholder="your@email.com" class="form-input" />
-    </div>
-
-    <div *ngIf="paymentError" class="error-alert">
-      <i class="ri-error-warning-line"></i> {{ paymentError }}
-    </div>
-
-    <div class="payment-actions">
-      <button class="btn-pay" (click)="initiatePayment()" [disabled]="paymentLoading">
-        <span *ngIf="!paymentLoading">
-          <i class="ri-secure-payment-line"></i> Pay GHS {{ initialPaymentAmount | number:'1.2-2' }} now
-        </span>
-        <span *ngIf="paymentLoading">
-          <i class="ri-loader-4-line spin"></i> Redirecting to Paystack…
-        </span>
-      </button>
-      <button class="btn-skip" (click)="skipPayment()">
-        I'll pay later
-      </button>
-    </div>
-
-    <p class="payment-secure-note">
-      <i class="ri-lock-2-line"></i>
-      Payments are processed securely via Paystack. No card details are stored on this site.
-    </p>
-  </div>
-</div>
