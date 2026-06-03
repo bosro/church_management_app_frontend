@@ -16,6 +16,8 @@ import {
   DEFAULT_GRADING_SCALE,
   StudentReportCard,
   FeeStatement,
+  SchoolExpensesSummary,
+  SchoolExpense,
 } from '../../../models/school.model';
 import { ImportResult } from '../../../models/member.model';
 import * as XLSX from 'xlsx';
@@ -2266,7 +2268,8 @@ export class SchoolService {
         return (data || []).map((row: any) => ({
           studentFeeId: row.id,
           studentId: row.student_id,
-          studentName: `${row.student?.first_name || ''} ${row.student?.last_name || ''}`.trim(),
+          studentName:
+            `${row.student?.first_name || ''} ${row.student?.last_name || ''}`.trim(),
           studentNumber: row.student?.student_number || '',
           className: row.student?.class?.name || '—',
           amountDue: Number(row.amount_due),
@@ -2278,9 +2281,152 @@ export class SchoolService {
     );
   }
 
+  getSchoolExpenses(
+    page: number = 1,
+    pageSize: number = 20,
+    filters?: {
+      academicYear?: string;
+      term?: string;
+      startDate?: string;
+      endDate?: string;
+    },
+  ): Observable<{ data: SchoolExpense[]; count: number }> {
+    return from(this._fetchSchoolExpenses(page, pageSize, filters));
+  }
+
+  private async _fetchSchoolExpenses(
+    page: number,
+    pageSize: number,
+    filters?: any,
+  ): Promise<{ data: SchoolExpense[]; count: number }> {
+    const offset = (page - 1) * pageSize;
+
+    let query = this.supabase.client
+      .from('school_expenses')
+      .select('*', { count: 'exact' })
+      .eq('church_id', this.churchId);
+
+    if (filters?.academicYear)
+      query = query.eq('academic_year', filters.academicYear);
+    if (filters?.term) query = query.eq('term', filters.term);
+    if (filters?.startDate)
+      query = query.gte('expense_date', filters.startDate);
+    if (filters?.endDate) query = query.lte('expense_date', filters.endDate);
+
+    const { data, error, count } = await query
+      .order('expense_date', { ascending: false })
+      .order('created_at', { ascending: false })
+      .range(offset, offset + pageSize - 1);
+
+    if (error) throw new Error(error.message);
+    return { data: (data || []) as SchoolExpense[], count: count || 0 };
+  }
+
+  createSchoolExpense(expenseData: {
+    academic_year: string;
+    term: string;
+    amount: number;
+    currency: string;
+    expense_date: string;
+    title: string;
+    description?: string;
+    receipt_reference?: string;
+    receipt_media_urls?: string[];
+  }): Observable<SchoolExpense> {
+    const userId = this.authService.getUserId();
+    if (!userId) throw new Error('User not authenticated');
+
+    return from(
+      this.supabase.client
+        .from('school_expenses')
+        .insert({
+          church_id: this.churchId,
+          academic_year: expenseData.academic_year,
+          term: expenseData.term,
+          amount: expenseData.amount,
+          currency: expenseData.currency,
+          expense_date: expenseData.expense_date,
+          title: expenseData.title,
+          description: expenseData.description || null,
+          receipt_reference: expenseData.receipt_reference || null,
+          receipt_media_urls: expenseData.receipt_media_urls || [],
+          recorded_by: userId,
+        })
+        .select()
+        .single(),
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw new Error(error.message);
+        return data as SchoolExpense;
+      }),
+    );
+  }
+
+  updateSchoolExpense(
+    expenseId: string,
+    expenseData: Partial<SchoolExpense>,
+  ): Observable<SchoolExpense> {
+    return from(
+      this.supabase.client
+        .from('school_expenses')
+        .update({
+          academic_year: expenseData.academic_year,
+          term: expenseData.term,
+          amount: expenseData.amount,
+          currency: expenseData.currency,
+          expense_date: expenseData.expense_date,
+          title: expenseData.title,
+          description: expenseData.description,
+          receipt_reference: expenseData.receipt_reference,
+          receipt_media_urls: expenseData.receipt_media_urls,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', expenseId)
+        .eq('church_id', this.churchId)
+        .select()
+        .single(),
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw new Error(error.message);
+        return data as SchoolExpense;
+      }),
+    );
+  }
+
+  deleteSchoolExpense(expenseId: string): Observable<void> {
+    return from(
+      this.supabase.client
+        .from('school_expenses')
+        .delete()
+        .eq('id', expenseId)
+        .eq('church_id', this.churchId),
+    ).pipe(
+      map(({ error }) => {
+        if (error) throw new Error(error.message);
+      }),
+    );
+  }
+
+  getSchoolExpensesSummary(
+    academicYear: string,
+    term: string,
+  ): Observable<SchoolExpensesSummary | null> {
+    return from(
+      this.supabase.client.rpc('get_school_expenses_summary', {
+        p_church_id: this.churchId,
+        p_academic_year: academicYear,
+        p_term: term,
+      }),
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw new Error(error.message);
+        if (Array.isArray(data) && data.length > 0)
+          return data[0] as SchoolExpensesSummary;
+        return data as SchoolExpensesSummary;
+      }),
+    );
+  }
 }
-
-
 
 
 

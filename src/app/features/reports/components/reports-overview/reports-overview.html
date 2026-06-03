@@ -221,9 +221,75 @@
                 <i class="ri-bar-chart-line"></i>
                 <span>Fee Report</span>
               </div>
+              <div class="action-card" (click)="goToSchoolExpenses()">
+                <i class="ri-receipt-line"></i>
+                <span>School Expenses</span>
+              </div>
+
             </div>
           </div>
 
+
+          <!-- School Expenses -->
+          <div class="action-group expenses-action-group" *ngIf="permissionService.school.fees">
+            <h3 class="group-title">
+              <i class="ri-receipt-line"></i>
+              School Expenses
+            </h3>
+            <div class="action-cards">
+
+              <!-- Loading shimmer -->
+              <div *ngIf="loadingSchoolExpenses" class="expenses-shimmer">
+                <div class="shimmer-row"></div>
+                <div class="shimmer-row shimmer-short"></div>
+              </div>
+
+              <!-- Mini summary when loaded -->
+              <ng-container *ngIf="!loadingSchoolExpenses && schoolExpensesSummary">
+                <div class="expenses-inline-stats">
+                  <div class="eis-item">
+                    <span class="eis-label">Collected</span>
+                    <span class="eis-value eis-collected">{{ formatCurrency(schoolExpensesSummary.total_collected)
+                      }}</span>
+                  </div>
+                  <div class="eis-item">
+                    <span class="eis-label">Spent</span>
+                    <span class="eis-value eis-spent">{{ formatCurrency(schoolExpensesSummary.total_expenses) }}</span>
+                  </div>
+                  <div class="eis-item">
+                    <span class="eis-label">Balance</span>
+                    <span class="eis-value" [class.eis-positive]="schoolExpensesSummary.net_balance >= 0"
+                      [class.eis-negative]="schoolExpensesSummary.net_balance < 0">
+                      {{ formatCurrency(schoolExpensesSummary.net_balance) }}
+                    </span>
+                  </div>
+                  <div class="eis-item">
+                    <span class="eis-label">Records</span>
+                    <span class="eis-value">{{ schoolExpensesSummary.expense_count }}</span>
+                  </div>
+                </div>
+
+                <!-- Spent-vs-collected progress bar -->
+                <div class="expenses-inline-progress" *ngIf="schoolExpensesSummary.total_collected > 0">
+                  <div class="eip-track">
+                    <div class="eip-fill" [style.width.%]="getSchoolExpensesSpentPercent()"
+                      [class.eip-over]="schoolExpensesSummary.net_balance < 0">
+                    </div>
+                  </div>
+                  <span class="eip-label">
+                    {{ getSchoolExpensesSpentPercent() }}% of collected fees spent
+                  </span>
+                </div>
+              </ng-container>
+
+              <!-- Navigate action card -->
+              <div class="action-card action-card-expenses" (click)="goToSchoolExpenses()">
+                <i class="ri-arrow-right-line"></i>
+                <span>View &amp; Manage Expenses</span>
+              </div>
+
+            </div>
+          </div>
           <!-- Exams -->
           <!-- <div class="action-group"
                *ngIf="permissionService.school.exams">
@@ -269,6 +335,3 @@
     </div>
   </div>
 </div>
-
-
-

@@ -29,6 +29,10 @@
             <button class="btn-primary" (click)="recordGiving()">
               <i class="ri-add-line"></i><span>Record Giving</span>
             </button>
+            <button class="btn-primary" *ngIf="permissionService.isAdmin || permissionService.finance.manage"
+              (click)="viewWithdrawals()">
+              <i class="ri-bank-card-line"></i><span>Withdrawals</span>
+            </button>
           </div>
         </div>
 

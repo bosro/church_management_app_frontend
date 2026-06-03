@@ -704,6 +704,124 @@
 
 
 
+expenses-action-group {
+  .group-title {
+    i { color: #059669 !important; }
+  }
+}
+
+// Mini stats grid inside the action-group card
+.expenses-inline-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 10px;
+  padding: 10px 14px;
+  background: #f9fafb;
+  border-radius: 8px;
+  margin-bottom: 8px;
+
+  .eis-item {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .eis-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: #9ca3af;
+  }
+
+  .eis-value {
+    font-size: 12px;
+    font-weight: 800;
+    color: #111827;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .eis-collected { color: #059669; }
+  .eis-spent     { color: #dc2626; }
+  .eis-positive  { color: #059669; }
+  .eis-negative  { color: #dc2626; }
+}
+
+// Progress bar
+.expenses-inline-progress {
+  padding: 0 14px 8px;
+
+  .eip-track {
+    height: 5px;
+    background: #f3f4f6;
+    border-radius: 100px;
+    overflow: hidden;
+    margin-bottom: 4px;
+
+    .eip-fill {
+      height: 100%;
+      border-radius: 100px;
+      background: linear-gradient(90deg, #4f46e5, #818cf8);
+      transition: width 0.4s ease;
+
+      &.eip-over {
+        background: linear-gradient(90deg, #dc2626, #ef4444);
+      }
+    }
+  }
+
+  .eip-label {
+    font-size: 10px;
+    color: #9ca3af;
+    font-weight: 600;
+  }
+}
+
+// Navigate button — styled as a standout action-card
+.action-card-expenses {
+  background: #ecfdf5 !important;
+  border: 1px solid #6ee7b7 !important;
+  color: #059669 !important;
+  font-weight: 600 !important;
+
+  i { color: #059669 !important; }
+
+  &:hover {
+    background: #059669 !important;
+    color: white !important;
+    border-color: #059669 !important;
+    transform: translateX(4px);
+
+    i { color: white !important; }
+  }
+}
+
+// Loading shimmer
+.expenses-shimmer {
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  .shimmer-row {
+    height: 10px;
+    border-radius: 6px;
+    background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s infinite;
+
+    &.shimmer-short { width: 55%; }
+  }
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+
 
 
 

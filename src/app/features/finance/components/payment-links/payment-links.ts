@@ -286,3 +286,5 @@ export class PaymentLinks implements OnInit, OnDestroy {
     this.location.back();
   }
 }
+
+

@@ -9,8 +9,12 @@ import {
   FeedingPayment,
 } from '../../../services/feeding.service';
 import { AuthService } from '../../../../../core/services/auth';
-import { TERMS, generateAcademicYears } from '../../../../../models/school.model';
+import {
+  TERMS,
+  generateAcademicYears,
+} from '../../../../../models/school.model';
 import { FeedingFilterService } from '../../../services/feeding-filter.service';
+import { SupabaseService } from '../../../../../core/services/supabase';
 
 @Component({
   selector: 'app-feeding-admin',
@@ -124,12 +128,22 @@ export class FeedingAdmin implements OnInit, OnDestroy {
 
   paymentMethods = ['Cash', 'Mobile Money', 'Bank Transfer', 'Cheque'];
 
+  expensesSummary: {
+    total_collected: number;
+    total_expenses: number;
+    net_balance: number;
+    expense_count: number;
+  } | null = null;
+
+  loadingExpensesSummary = false;
+
   constructor(
     private feedingService: FeedingService,
     private authService: AuthService,
     private cdr: ChangeDetectorRef,
     public router: Router,
     private feedingFilter: FeedingFilterService,
+    private supabase: SupabaseService, // ← ADD THIS
   ) {}
 
   ngOnInit(): void {
@@ -145,6 +159,7 @@ export class FeedingAdmin implements OnInit, OnDestroy {
     this.loadDailySummary();
     this.loadStats();
     this.loadActiveWindow();
+    this.loadExpensesSummary();
   }
 
   ngOnDestroy(): void {
@@ -167,14 +182,57 @@ export class FeedingAdmin implements OnInit, OnDestroy {
   }
 
   loadClasses(): void {
-    this.feedingService.getClasses(this.churchId)
+    this.feedingService
+      .getClasses(this.churchId)
       .pipe(takeUntil(this.destroy$))
-      .subscribe({ next: (c) => { this.classes = c; this.cdr.markForCheck(); } });
+      .subscribe({
+        next: (c) => {
+          this.classes = c;
+          this.cdr.markForCheck();
+        },
+      });
+  }
+
+  loadExpensesSummary(): void {
+    this.loadingExpensesSummary = true;
+    const churchId = this.authService.getChurchId() || '';
+
+    this.supabase.client
+      .rpc('get_feeding_expenses_summary', {
+        p_church_id: churchId,
+        p_academic_year: this.selectedYear,
+        p_term: this.selectedTerm,
+      })
+      .then(({ data, error }) => {
+        this.loadingExpensesSummary = false;
+        if (error) {
+          this.cdr.markForCheck();
+          return;
+        }
+        if (Array.isArray(data) && data.length > 0) {
+          this.expensesSummary = data[0];
+        } else {
+          this.expensesSummary = data;
+        }
+        this.cdr.markForCheck();
+      });
+  }
+
+  getExpensesSpentPercent(): number {
+    if (!this.expensesSummary || this.expensesSummary.total_collected === 0)
+      return 0;
+    const pct = Math.round(
+      (this.expensesSummary.total_expenses /
+        this.expensesSummary.total_collected) *
+        100,
+    );
+    return Math.min(pct, 100); // cap at 100 for the bar width; label still shows real %
   }
 
   loadFeeStructures(): void {
     this.loadingStructures = true;
-    this.feedingService.getFeedingFeeStructures(this.selectedYear, this.selectedTerm)
+    this.feedingService
+      .getFeedingFeeStructures(this.selectedYear, this.selectedTerm)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (structures) => {
@@ -190,7 +248,10 @@ export class FeedingAdmin implements OnInit, OnDestroy {
       });
   }
 
-  get groupedFeeStructures(): { class: any; structures: FeedingFeeStructure[] }[] {
+  get groupedFeeStructures(): {
+    class: any;
+    structures: FeedingFeeStructure[];
+  }[] {
     const groups: { [key: string]: FeedingFeeStructure[] } = {};
     this.feeStructures.forEach((s) => {
       const key = s.class_id || '__general__';
@@ -198,9 +259,10 @@ export class FeedingAdmin implements OnInit, OnDestroy {
       groups[key].push(s);
     });
     return Object.keys(groups).map((key) => ({
-      class: key === '__general__'
-        ? { id: '__general__', name: 'General (All Classes)' }
-        : groups[key][0].class || { id: key, name: 'Unknown Class' },
+      class:
+        key === '__general__'
+          ? { id: '__general__', name: 'General (All Classes)' }
+          : groups[key][0].class || { id: key, name: 'Unknown Class' },
       structures: groups[key],
     }));
   }
@@ -236,15 +298,22 @@ export class FeedingAdmin implements OnInit, OnDestroy {
   }
 
   get previewTotal(): number {
-    return (this.structureForm.daily_amount || 0) * (this.structureForm.total_days || 0);
+    return (
+      (this.structureForm.daily_amount || 0) *
+      (this.structureForm.total_days || 0)
+    );
   }
 
   toggleClassSelection(classId: string): void {
     const idx = this.structureForm.selectedClassIds.indexOf(classId);
     if (idx === -1) {
-      this.structureForm.selectedClassIds = [...this.structureForm.selectedClassIds, classId];
+      this.structureForm.selectedClassIds = [
+        ...this.structureForm.selectedClassIds,
+        classId,
+      ];
     } else {
-      this.structureForm.selectedClassIds = this.structureForm.selectedClassIds.filter(id => id !== classId);
+      this.structureForm.selectedClassIds =
+        this.structureForm.selectedClassIds.filter((id) => id !== classId);
     }
   }
 
@@ -256,23 +325,32 @@ export class FeedingAdmin implements OnInit, OnDestroy {
     if (this.structureForm.selectedClassIds.length === this.classes.length) {
       this.structureForm.selectedClassIds = [];
     } else {
-      this.structureForm.selectedClassIds = this.classes.map(c => c.id);
+      this.structureForm.selectedClassIds = this.classes.map((c) => c.id);
     }
   }
 
   get allClassesSelected(): boolean {
-    return this.classes.length > 0 &&
-      this.structureForm.selectedClassIds.length === this.classes.length;
+    return (
+      this.classes.length > 0 &&
+      this.structureForm.selectedClassIds.length === this.classes.length
+    );
   }
 
   get someClassesSelected(): boolean {
-    return this.structureForm.selectedClassIds.length > 0 &&
-      this.structureForm.selectedClassIds.length < this.classes.length;
+    return (
+      this.structureForm.selectedClassIds.length > 0 &&
+      this.structureForm.selectedClassIds.length < this.classes.length
+    );
   }
 
   async saveStructure(): Promise<void> {
-    if (!this.structureForm.fee_name || !this.structureForm.daily_amount || !this.structureForm.total_days) {
-      this.errorMessage = 'Fee name, daily amount, and number of days are required';
+    if (
+      !this.structureForm.fee_name ||
+      !this.structureForm.daily_amount ||
+      !this.structureForm.total_days
+    ) {
+      this.errorMessage =
+        'Fee name, daily amount, and number of days are required';
       return;
     }
     this.savingStructure = true;
@@ -281,39 +359,75 @@ export class FeedingAdmin implements OnInit, OnDestroy {
     try {
       if (this.editingStructure) {
         const classId = this.structureForm.selectedClassIds[0] || null;
-        await this.feedingService.updateFeedingFeeStructure(this.editingStructure.id, {
-          class_id: classId,
-          fee_name: this.structureForm.fee_name,
-          daily_amount: this.structureForm.daily_amount,
-          total_days: this.structureForm.total_days,
-          academic_year: this.structureForm.academic_year,
-          term: this.structureForm.term,
-        }).toPromise();
-
-        await this.syncStudentFeesAfterEdit(this.editingStructure.id);
-        this.showSuccess('Fee structure updated! Unpaid student fees have been synced automatically.');
-      } else {
-        const classIds = this.structureForm.selectedClassIds.length > 0
-          ? this.structureForm.selectedClassIds
-          : [null];
-
-        for (const classId of classIds) {
-          await this.feedingService.createFeedingFeeStructure({
+        await this.feedingService
+          .updateFeedingFeeStructure(this.editingStructure.id, {
             class_id: classId,
             fee_name: this.structureForm.fee_name,
             daily_amount: this.structureForm.daily_amount,
             total_days: this.structureForm.total_days,
             academic_year: this.structureForm.academic_year,
             term: this.structureForm.term,
-          }).toPromise();
+          })
+          .toPromise();
+
+        await this.syncStudentFeesAfterEdit(this.editingStructure.id);
+        this.showSuccess(
+          'Fee structure updated! Unpaid student fees have been synced automatically.',
+        );
+      } else {
+        const classIds =
+          this.structureForm.selectedClassIds.length > 0
+            ? this.structureForm.selectedClassIds
+            : [null];
+
+        let totalAssigned = 0;
+
+        for (const classId of classIds) {
+          // Step 1: create the structure
+          const created = await this.feedingService
+            .createFeedingFeeStructure({
+              class_id: classId,
+              fee_name: this.structureForm.fee_name,
+              daily_amount: this.structureForm.daily_amount,
+              total_days: this.structureForm.total_days,
+              academic_year: this.structureForm.academic_year,
+              term: this.structureForm.term,
+            })
+            .toPromise();
+
+          // Step 2: auto-assign to all students in the class
+          if (classId && created?.id) {
+            try {
+              const count = await this.feedingService
+                .assignFeedingFeeToClass(
+                  created.id,
+                  classId,
+                  this.structureForm.academic_year,
+                  this.structureForm.term,
+                )
+                .toPromise();
+              totalAssigned += (count as number) || 0;
+            } catch (assignErr) {
+              console.warn('Auto-assign failed for class', classId, assignErr);
+            }
+          }
         }
 
         const classCount = this.structureForm.selectedClassIds.length;
-        this.showSuccess(
-          classCount > 1
-            ? `Fee structure created for ${classCount} classes!`
-            : 'Fee structure created!',
-        );
+        if (classCount > 0 && totalAssigned > 0) {
+          this.showSuccess(
+            `Fee structure created and automatically assigned to ${totalAssigned} student(s) across ${classCount} class(es)!`,
+          );
+        } else if (classCount > 0 && totalAssigned === 0) {
+          this.showSuccess(
+            `Fee structure created for ${classCount} class(es). No students were found — make sure students are enrolled in those classes.`,
+          );
+        } else {
+          this.showSuccess('Fee structure created!');
+        }
+
+        this.loadStudentFeedingFees();
+        this.loadStats();
       }
 
       this.savingStructure = false;
@@ -346,7 +460,8 @@ export class FeedingAdmin implements OnInit, OnDestroy {
   executeDeleteStructure(): void {
     if (!this.structureToDelete) return;
     this.deletingStructure = true;
-    this.feedingService.deleteFeedingFeeStructure(this.structureToDelete.id)
+    this.feedingService
+      .deleteFeedingFeeStructure(this.structureToDelete.id)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
@@ -369,7 +484,7 @@ export class FeedingAdmin implements OnInit, OnDestroy {
 
   openAssignClass(structure: FeedingFeeStructure): void {
     this.assignClassStructure = structure;
-    this.assignClassId = structure.class_id || '';
+    this.assignClassId = ''; // always blank so admin consciously picks
     this.showAssignClassModal = true;
   }
 
@@ -377,26 +492,34 @@ export class FeedingAdmin implements OnInit, OnDestroy {
     if (!this.assignClassStructure || !this.assignClassId) return;
     this.assigningClass = true;
 
-    this.feedingService.assignFeedingFeeToClass(
-      this.assignClassStructure.id,
-      this.assignClassId,
-      this.selectedYear,
-      this.selectedTerm,
-    ).pipe(takeUntil(this.destroy$)).subscribe({
-      next: () => {
-        this.assigningClass = false;
-        this.showAssignClassModal = false;
-        this.showSuccess('Feeding fee assigned to all students in class!');
-        this.loadStudentFeedingFees();
-        this.loadStats();
-        this.cdr.markForCheck();
-      },
-      error: (err) => {
-        this.assigningClass = false;
-        this.errorMessage = err.message || 'Failed to assign';
-        this.cdr.markForCheck();
-      },
-    });
+    this.feedingService
+      .assignFeedingFeeToClass(
+        this.assignClassStructure.id,
+        this.assignClassId,
+        this.selectedYear,
+        this.selectedTerm,
+      )
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.assigningClass = false;
+          this.showAssignClassModal = false;
+          const className =
+            this.classes.find((c) => c.id === this.assignClassId)?.name ||
+            'class';
+          this.showSuccess(
+            `Feeding fee assigned to all students in ${className}!`,
+          );
+          this.loadStudentFeedingFees();
+          this.loadStats();
+          this.cdr.markForCheck();
+        },
+        error: (err) => {
+          this.assigningClass = false;
+          this.errorMessage = err.message || 'Failed to assign fee to class';
+          this.cdr.markForCheck();
+        },
+      });
   }
 
   // ── Assign to individual student ──────────────────────────────
@@ -418,7 +541,8 @@ export class FeedingAdmin implements OnInit, OnDestroy {
       return;
     }
     this.searchingStudents = true;
-    this.feedingService.searchStudents(this.churchId, this.studentSearchQuery)
+    this.feedingService
+      .searchStudents(this.churchId, this.studentSearchQuery)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (results) => {
@@ -426,7 +550,10 @@ export class FeedingAdmin implements OnInit, OnDestroy {
           this.searchingStudents = false;
           this.cdr.markForCheck();
         },
-        error: () => { this.searchingStudents = false; this.cdr.markForCheck(); },
+        error: () => {
+          this.searchingStudents = false;
+          this.cdr.markForCheck();
+        },
       });
   }
 
@@ -438,7 +565,8 @@ export class FeedingAdmin implements OnInit, OnDestroy {
   }
 
   get assignPreviewAmount(): number {
-    if (this.useCustomAmount && this.assignCustomAmount) return this.assignCustomAmount;
+    if (this.useCustomAmount && this.assignCustomAmount)
+      return this.assignCustomAmount;
     return this.assignStudentStructure?.total_amount || 0;
   }
 
@@ -446,30 +574,35 @@ export class FeedingAdmin implements OnInit, OnDestroy {
     if (!this.assignStudentStructure || !this.selectedStudentId) return;
     this.assigningStudent = true;
 
-    const customAmt = this.useCustomAmount && this.assignCustomAmount
-      ? this.assignCustomAmount : undefined;
+    const customAmt =
+      this.useCustomAmount && this.assignCustomAmount
+        ? this.assignCustomAmount
+        : undefined;
 
-    this.feedingService.assignFeedingFeeToStudent(
-      this.selectedStudentId,
-      this.assignStudentStructure.id,
-      this.selectedYear,
-      this.selectedTerm,
-      customAmt,
-    ).pipe(takeUntil(this.destroy$)).subscribe({
-      next: () => {
-        this.assigningStudent = false;
-        this.showAssignStudentModal = false;
-        this.showSuccess('Feeding fee assigned to student!');
-        this.loadStudentFeedingFees();
-        this.loadStats();
-        this.cdr.markForCheck();
-      },
-      error: (err) => {
-        this.assigningStudent = false;
-        this.errorMessage = err.message || 'Failed to assign';
-        this.cdr.markForCheck();
-      },
-    });
+    this.feedingService
+      .assignFeedingFeeToStudent(
+        this.selectedStudentId,
+        this.assignStudentStructure.id,
+        this.selectedYear,
+        this.selectedTerm,
+        customAmt,
+      )
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.assigningStudent = false;
+          this.showAssignStudentModal = false;
+          this.showSuccess('Feeding fee assigned to student!');
+          this.loadStudentFeedingFees();
+          this.loadStats();
+          this.cdr.markForCheck();
+        },
+        error: (err) => {
+          this.assigningStudent = false;
+          this.errorMessage = err.message || 'Failed to assign';
+          this.cdr.markForCheck();
+        },
+      });
   }
 
   // ── View assigned students ────────────────────────────────────
@@ -481,27 +614,33 @@ export class FeedingAdmin implements OnInit, OnDestroy {
     this.showAssignedStudentsModal = true;
     this.loadingAssignedStudents = true;
 
-    this.feedingService.getStudentsAssignedToFeedingFeeStructure(
-      structure.id, this.selectedYear, this.selectedTerm,
-    ).pipe(takeUntil(this.destroy$)).subscribe({
-      next: (students) => {
-        this.assignedStudentsList = students;
-        this.loadingAssignedStudents = false;
-        this.cdr.markForCheck();
-      },
-      error: (err) => {
-        this.errorMessage = err.message;
-        this.loadingAssignedStudents = false;
-        this.cdr.markForCheck();
-      },
-    });
+    this.feedingService
+      .getStudentsAssignedToFeedingFeeStructure(
+        structure.id,
+        this.selectedYear,
+        this.selectedTerm,
+      )
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (students) => {
+          this.assignedStudentsList = students;
+          this.loadingAssignedStudents = false;
+          this.cdr.markForCheck();
+        },
+        error: (err) => {
+          this.errorMessage = err.message;
+          this.loadingAssignedStudents = false;
+          this.cdr.markForCheck();
+        },
+      });
   }
 
   unassignStudent(studentFeedingFeeId: string, studentName: string): void {
     this.unassigningId = studentFeedingFeeId;
     this.unassignError = '';
 
-    this.feedingService.unassignStudentFeedingFee(studentFeedingFeeId)
+    this.feedingService
+      .unassignStudentFeedingFee(studentFeedingFeeId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
@@ -527,18 +666,23 @@ export class FeedingAdmin implements OnInit, OnDestroy {
     this.loadingStudentFees = true;
     const obs$ = this.showOutstandingOnly
       ? this.feedingService.getOutstandingStudentFeedingFees(
-          this.selectedYear, this.selectedTerm,
+          this.selectedYear,
+          this.selectedTerm,
           this.selectedClassFilter || undefined,
         )
-      : this.feedingService.getAllStudentFeedingFees(this.selectedYear, this.selectedTerm);
+      : this.feedingService.getAllStudentFeedingFees(
+          this.selectedYear,
+          this.selectedTerm,
+        );
 
     obs$.pipe(takeUntil(this.destroy$)).subscribe({
       next: (fees) => {
         let result = fees;
         if (this.selectedClassFilter && !this.showOutstandingOnly) {
-          result = fees.filter((f: any) =>
-            f.student?.class?.id === this.selectedClassFilter ||
-            (f.student as any)?.class_id === this.selectedClassFilter,
+          result = fees.filter(
+            (f: any) =>
+              f.student?.class?.id === this.selectedClassFilter ||
+              (f.student as any)?.class_id === this.selectedClassFilter,
           );
         }
         this.studentFeedingFees = result;
@@ -564,7 +708,10 @@ export class FeedingAdmin implements OnInit, OnDestroy {
     this.cdr.markForCheck();
     try {
       this.studentDetail = await this.feedingService.getStudentTermDetail(
-        this.churchId, studentId, this.selectedYear, this.selectedTerm,
+        this.churchId,
+        studentId,
+        this.selectedYear,
+        this.selectedTerm,
       );
     } catch (err: any) {
       this.errorMessage = err.message || 'Failed to load';
@@ -582,7 +729,10 @@ export class FeedingAdmin implements OnInit, OnDestroy {
     this.cdr.markForCheck();
     try {
       this.studentDetail = await this.feedingService.getStudentTermDetail(
-        this.churchId, payment.student.id, this.selectedYear, this.selectedTerm,
+        this.churchId,
+        payment.student.id,
+        this.selectedYear,
+        this.selectedTerm,
       );
     } catch (err: any) {
       this.errorMessage = err.message || 'Failed to load';
@@ -596,28 +746,54 @@ export class FeedingAdmin implements OnInit, OnDestroy {
 
   loadPayments(): void {
     this.loadingPayments = true;
-    this.feedingService.getAllPayments(
-      this.selectedYear, this.selectedTerm,
-      this.selectedDate || undefined,
-    ).pipe(takeUntil(this.destroy$)).subscribe({
-      next: (p) => { this.payments = p as any; this.loadingPayments = false; this.cdr.markForCheck(); },
-      error: () => { this.loadingPayments = false; this.cdr.markForCheck(); },
-    });
+    this.feedingService
+      .getAllPayments(
+        this.selectedYear,
+        this.selectedTerm,
+        this.selectedDate || undefined,
+      )
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (p) => {
+          this.payments = p as any;
+          this.loadingPayments = false;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.loadingPayments = false;
+          this.cdr.markForCheck();
+        },
+      });
   }
 
   loadDailySummary(): void {
     if (!this.selectedDate) return;
-    this.feedingService.getDailySummary(
-      this.churchId, this.selectedDate, this.selectedYear, this.selectedTerm,
-    ).pipe(takeUntil(this.destroy$)).subscribe({
-      next: (s) => { this.dailySummary = s; this.cdr.markForCheck(); },
-    });
+    this.feedingService
+      .getDailySummary(
+        this.churchId,
+        this.selectedDate,
+        this.selectedYear,
+        this.selectedTerm,
+      )
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (s) => {
+          this.dailySummary = s;
+          this.cdr.markForCheck();
+        },
+      });
   }
 
   loadStats(): void {
-    this.feedingService.getFeedingStatistics(this.selectedYear, this.selectedTerm)
+    this.feedingService
+      .getFeedingStatistics(this.selectedYear, this.selectedTerm)
       .pipe(takeUntil(this.destroy$))
-      .subscribe({ next: (s) => { this.stats = s; this.cdr.markForCheck(); } });
+      .subscribe({
+        next: (s) => {
+          this.stats = s;
+          this.cdr.markForCheck();
+        },
+      });
   }
 
   openEditPayment(payment: any): void {
@@ -630,36 +806,50 @@ export class FeedingAdmin implements OnInit, OnDestroy {
   }
 
   savePaymentEdit(): void {
-    if (!this.editingPayment || !this.editPaymentAmount || this.editPaymentAmount <= 0) return;
+    if (
+      !this.editingPayment ||
+      !this.editPaymentAmount ||
+      this.editPaymentAmount <= 0
+    )
+      return;
     this.savingPayment = true;
 
-    this.feedingService.updateFeedingPayment(this.editingPayment.id, {
-      amount_paid: this.editPaymentAmount,
-      days_covered: this.editingPayment.days_covered,
-      payment_date: this.editPaymentDate,
-      payment_method: this.editPaymentMethod,
-      notes: this.editPaymentNotes || undefined,
-    }).pipe(takeUntil(this.destroy$)).subscribe({
-      next: () => {
-        this.savingPayment = false;
-        this.showEditPaymentModal = false;
-        this.showSuccess('Payment updated');
-        this.loadPayments();
-        this.loadStudentFeedingFees();
-        this.loadStats();
-        this.cdr.markForCheck();
-      },
-      error: (err) => {
-        this.savingPayment = false;
-        this.errorMessage = err.message || 'Failed to update';
-        this.cdr.markForCheck();
-      },
-    });
+    this.feedingService
+      .updateFeedingPayment(this.editingPayment.id, {
+        amount_paid: this.editPaymentAmount,
+        days_covered: this.editingPayment.days_covered,
+        payment_date: this.editPaymentDate,
+        payment_method: this.editPaymentMethod,
+        notes: this.editPaymentNotes || undefined,
+      })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.savingPayment = false;
+          this.showEditPaymentModal = false;
+          this.showSuccess('Payment updated');
+          this.loadPayments();
+          this.loadStudentFeedingFees();
+          this.loadStats();
+          this.cdr.markForCheck();
+        },
+        error: (err) => {
+          this.savingPayment = false;
+          this.errorMessage = err.message || 'Failed to update';
+          this.cdr.markForCheck();
+        },
+      });
   }
 
   deletePayment(payment: any): void {
-    if (!confirm(`Delete payment of ${this.formatCurrency(payment.amount_paid)}? This cannot be undone.`)) return;
-    this.feedingService.deleteFeedingPayment(payment.id)
+    if (
+      !confirm(
+        `Delete payment of ${this.formatCurrency(payment.amount_paid)}? This cannot be undone.`,
+      )
+    )
+      return;
+    this.feedingService
+      .deleteFeedingPayment(payment.id)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
@@ -669,16 +859,25 @@ export class FeedingAdmin implements OnInit, OnDestroy {
           this.loadStats();
           this.cdr.markForCheck();
         },
-        error: (err) => { this.errorMessage = err.message || 'Failed to delete'; this.cdr.markForCheck(); },
+        error: (err) => {
+          this.errorMessage = err.message || 'Failed to delete';
+          this.cdr.markForCheck();
+        },
       });
   }
 
   // ── Recording window ──────────────────────────────────────────
 
   loadActiveWindow(): void {
-    this.feedingService.getActiveRecordingWindow(this.churchId)
+    this.feedingService
+      .getActiveRecordingWindow(this.churchId)
       .pipe(takeUntil(this.destroy$))
-      .subscribe({ next: (w) => { this.activeWindow = w; this.cdr.markForCheck(); } });
+      .subscribe({
+        next: (w) => {
+          this.activeWindow = w;
+          this.cdr.markForCheck();
+        },
+      });
   }
 
   openWindowModal(): void {
@@ -701,28 +900,44 @@ export class FeedingAdmin implements OnInit, OnDestroy {
     this.savingWindow = true;
 
     const createNew = () => {
-      this.feedingService.createRecordingWindow(
-        this.churchId, this.windowFrom, this.windowTo, this.windowReason,
-      ).pipe(takeUntil(this.destroy$)).subscribe({
-        next: (w) => {
-          this.activeWindow = w;
-          this.savingWindow = false;
-          this.showWindowModal = false;
-          this.showSuccess(`Window: ${this.formatDateShort(w.allow_from)} – ${this.formatDateShort(w.allow_to)}`);
-          this.cdr.markForCheck();
-        },
-        error: (err) => {
-          this.savingWindow = false;
-          this.errorMessage = err.message || 'Failed to save window';
-          this.cdr.markForCheck();
-        },
-      });
+      this.feedingService
+        .createRecordingWindow(
+          this.churchId,
+          this.windowFrom,
+          this.windowTo,
+          this.windowReason,
+        )
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (w) => {
+            this.activeWindow = w;
+            this.savingWindow = false;
+            this.showWindowModal = false;
+            this.showSuccess(
+              `Window: ${this.formatDateShort(w.allow_from)} – ${this.formatDateShort(w.allow_to)}`,
+            );
+            this.cdr.markForCheck();
+          },
+          error: (err) => {
+            this.savingWindow = false;
+            this.errorMessage = err.message || 'Failed to save window';
+            this.cdr.markForCheck();
+          },
+        });
     };
 
     if (this.activeWindow?.id) {
-      this.feedingService.deactivateRecordingWindow(this.activeWindow.id)
+      this.feedingService
+        .deactivateRecordingWindow(this.activeWindow.id)
         .pipe(takeUntil(this.destroy$))
-        .subscribe({ next: () => createNew(), error: (err) => { this.savingWindow = false; this.errorMessage = err.message; this.cdr.markForCheck(); } });
+        .subscribe({
+          next: () => createNew(),
+          error: (err) => {
+            this.savingWindow = false;
+            this.errorMessage = err.message;
+            this.cdr.markForCheck();
+          },
+        });
     } else {
       createNew();
     }
@@ -731,33 +946,52 @@ export class FeedingAdmin implements OnInit, OnDestroy {
   deactivateWindow(): void {
     if (!this.activeWindow?.id) return;
     if (!confirm('Close this recording window?')) return;
-    this.feedingService.deactivateRecordingWindow(this.activeWindow.id)
+    this.feedingService
+      .deactivateRecordingWindow(this.activeWindow.id)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: () => { this.activeWindow = null; this.showSuccess('Recording window closed'); this.cdr.markForCheck(); },
-        error: (err) => { this.errorMessage = err.message; this.cdr.markForCheck(); },
+        next: () => {
+          this.activeWindow = null;
+          this.showSuccess('Recording window closed');
+          this.cdr.markForCheck();
+        },
+        error: (err) => {
+          this.errorMessage = err.message;
+          this.cdr.markForCheck();
+        },
       });
   }
 
   loadWindowHistory(): void {
-    this.feedingService.getAllRecordingWindows(this.churchId)
+    this.feedingService
+      .getAllRecordingWindows(this.churchId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (windows) => { this.windowHistory = windows; this.showWindowHistory = true; this.cdr.markForCheck(); },
+        next: (windows) => {
+          this.windowHistory = windows;
+          this.showWindowHistory = true;
+          this.cdr.markForCheck();
+        },
       });
   }
 
   isWindowActive(): boolean {
     if (!this.activeWindow) return false;
     const today = new Date().toISOString().split('T')[0];
-    return this.activeWindow.allow_from <= today && this.activeWindow.allow_to >= today;
+    return (
+      this.activeWindow.allow_from <= today &&
+      this.activeWindow.allow_to >= today
+    );
   }
 
   copyLink(): void {
     navigator.clipboard.writeText(this.publicLink).then(() => {
       this.linkCopied = true;
       this.cdr.markForCheck();
-      setTimeout(() => { this.linkCopied = false; this.cdr.markForCheck(); }, 2500);
+      setTimeout(() => {
+        this.linkCopied = false;
+        this.cdr.markForCheck();
+      }, 2500);
     });
   }
 
@@ -767,14 +1001,22 @@ export class FeedingAdmin implements OnInit, OnDestroy {
   }
 
   formatCurrency(amount: number): string {
-    return new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS' }).format(amount || 0);
+    return new Intl.NumberFormat('en-GH', {
+      style: 'currency',
+      currency: 'GHS',
+    }).format(amount || 0);
   }
 
   formatDateShort(dateStr: string): string {
-    return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-GH', { month: 'short', day: 'numeric' });
+    return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-GH', {
+      month: 'short',
+      day: 'numeric',
+    });
   }
 
-  get today(): string { return new Date().toISOString().split('T')[0]; }
+  get today(): string {
+    return new Date().toISOString().split('T')[0];
+  }
 
   get collectionRate(): number {
     if (!this.stats || this.stats.total_due === 0) return 0;
@@ -782,13 +1024,21 @@ export class FeedingAdmin implements OnInit, OnDestroy {
   }
 
   get totalCollectedToday(): number {
-    return this.payments.reduce((s: number, p: any) => s + Number(p.amount_paid), 0);
+    return this.payments.reduce(
+      (s: number, p: any) => s + Number(p.amount_paid),
+      0,
+    );
   }
 
-  trackById(_: number, item: any): string { return item.id; }
+  trackById(_: number, item: any): string {
+    return item.id;
+  }
 
   private showSuccess(msg: string): void {
     this.successMessage = msg;
-    setTimeout(() => { this.successMessage = ''; this.cdr.markForCheck(); }, 3500);
+    setTimeout(() => {
+      this.successMessage = '';
+      this.cdr.markForCheck();
+    }, 3500);
   }
 }

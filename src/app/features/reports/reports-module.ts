@@ -31,6 +31,8 @@ import {
   TotalFieldPipe,
   TotalPresentDaysPipe,
 } from '../../core/pipes/feeding-summary.pipe';
+import { FeedingExpenses } from './components/feeding/feeding-expenses/feeding-expenses';
+import { SchoolExpenses } from './components/fees/school-expenses/school-expenses';
 
 @NgModule({
   declarations: [
@@ -59,6 +61,8 @@ import {
     SettingScopePipe,
     TotalFieldPipe,
     TotalPresentDaysPipe,
+    FeedingExpenses,
+    SchoolExpenses
   ],
   imports: [CommonModule, ReportsRoutingModule, QrCodeComponent],
 })

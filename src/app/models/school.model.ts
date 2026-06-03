@@ -212,3 +212,28 @@ export function currentAcademicYear(): string {
   // If we're in the second half of the year, we're still in y/y+1
   return `${y}/${y + 1}`;
 }
+
+
+export interface SchoolExpense {
+  id: string;
+  church_id: string;
+  academic_year: string;
+  term: string;
+  amount: number;
+  currency: string;
+  expense_date: string;
+  title: string;
+  description?: string;
+  receipt_reference?: string;
+  receipt_media_urls?: string[];
+  recorded_by: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface SchoolExpensesSummary {
+  total_collected: number;
+  total_expenses: number;
+  net_balance: number;
+  expense_count: number;
+}

@@ -9,6 +9,8 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { PdfBrandingService } from '../../../../core/services/pdf-branding.service';
 import { SchoolFilterService } from '../../services/school-filter.service';
+import { SupabaseService } from '../../../../core/services/supabase';
+import { AuthService } from '../../../../core/services/auth';
 
 @Component({
   selector: 'app-reports-overview',
@@ -26,6 +28,15 @@ export class ReportsOverview implements OnInit, OnDestroy {
   terms = TERMS;
   academicYears: string[] = generateAcademicYears();
   exporting = false;
+
+  schoolExpensesSummary: {
+    total_collected: number;
+    total_expenses: number;
+    net_balance: number;
+    expense_count: number;
+  } | null = null;
+
+  loadingSchoolExpenses = false;
 
   // Delegate to service so template bindings work
   get currentTerm(): string {
@@ -48,10 +59,13 @@ export class ReportsOverview implements OnInit, OnDestroy {
     public router: Router,
     private pdfBranding: PdfBrandingService,
     public schoolFilter: SchoolFilterService,
+    private supabase: SupabaseService,
+    private authService: AuthService,
   ) {}
 
   ngOnInit(): void {
     this.loadStatistics();
+    this.loadSchoolExpensesSummary();
   }
 
   ngOnDestroy(): void {
@@ -78,10 +92,12 @@ export class ReportsOverview implements OnInit, OnDestroy {
 
   onTermChange(): void {
     this.loadStatistics();
+    this.loadSchoolExpensesSummary();
   }
 
   onYearChange(): void {
     this.loadStatistics();
+    this.loadSchoolExpensesSummary();
   }
 
   // ── Navigation ───────────────────────────────────────────
@@ -118,6 +134,45 @@ export class ReportsOverview implements OnInit, OnDestroy {
     return Math.round(
       (this.statistics.total_fees_paid / this.statistics.total_fees_due) * 100,
     );
+  }
+
+  loadSchoolExpensesSummary(): void {
+    this.loadingSchoolExpenses = true;
+    const churchId = this.authService.getChurchId() || '';
+
+    this.supabase.client
+      .rpc('get_school_expenses_summary', {
+        p_church_id: churchId,
+        p_academic_year: this.currentAcademicYear,
+        p_term: this.currentTerm,
+      })
+      .then(({ data, error }) => {
+        this.loadingSchoolExpenses = false;
+        if (error) return;
+        if (Array.isArray(data) && data.length > 0) {
+          this.schoolExpensesSummary = data[0];
+        } else {
+          this.schoolExpensesSummary = data;
+        }
+      });
+  }
+
+  getSchoolExpensesSpentPercent(): number {
+    if (
+      !this.schoolExpensesSummary ||
+      this.schoolExpensesSummary.total_collected === 0
+    )
+      return 0;
+    const pct = Math.round(
+      (this.schoolExpensesSummary.total_expenses /
+        this.schoolExpensesSummary.total_collected) *
+        100,
+    );
+    return Math.min(pct, 100);
+  }
+
+  goToSchoolExpenses(): void {
+    this.router.navigate(['main/reports/fees/school-expenses']);
   }
 
   formatCurrency(amount: number): string {
@@ -370,7 +425,6 @@ export class ReportsOverview implements OnInit, OnDestroy {
   confirmTermYear(): void {
     this.schoolFilter.setBoth(this.currentTerm, this.currentAcademicYear);
     this.loadStatistics();
+    this.loadSchoolExpensesSummary();
   }
 }
-
-
