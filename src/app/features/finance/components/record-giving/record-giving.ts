@@ -287,3 +287,5 @@ export class RecordGiving implements OnInit, OnDestroy {
     return `${member.first_name[0]}${member.last_name[0]}`.toUpperCase();
   }
 }
+
+

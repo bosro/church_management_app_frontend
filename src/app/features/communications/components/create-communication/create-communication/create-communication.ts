@@ -439,3 +439,5 @@ export class CreateCommunication implements OnInit, OnDestroy {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }
+
+

@@ -305,7 +305,13 @@
                 </div>
               </td>
               <td class="reason-col">{{ req.reason || '—' }}</td>
-              <td class="date-col">{{ req.created_at | date:'MMM d, y' }}</td>
+              <!-- In the withdrawal requests table, replace the date td -->
+              <td class="date-col">
+                {{ req.created_at | date:'MMM d, y' }}
+                <span style="display:block;font-size:0.75rem;color:#9ca3af;">
+                  {{ req.created_at | date:'h:mm a' }}
+                </span>
+              </td>
               <td>
                 <span class="status-badge" [ngClass]="getStatusClass(req.status)">
                   {{ req.status | titlecase }}
@@ -470,7 +476,12 @@
                   <span>{{ txn.payment_method | titlecase }}</span>
                 </div>
               </td>
-              <td class="date-col">{{ txn.transaction_date | date:'MMM d, y' }}</td>
+              <td class="date-col">
+                {{ txn.transaction_date | date:'MMM d, y' }}
+                <span style="display:block;font-size:0.75rem;color:#9ca3af;" *ngIf="txn.created_at">
+                  {{ txn.created_at | date:'h:mm a' }}
+                </span>
+              </td>
             </tr>
             <tr *ngIf="filteredTransactions.length === 0">
               <td colspan="6">
@@ -527,20 +538,48 @@
         </div>
         <div class="detail-item">
           <span class="detail-label">Amount</span>
-          <span class="detail-value amount-big">{{ formatCurrency(selectedWithdrawal.amount,
-            selectedWithdrawal.currency) }}</span>
+          <span class="detail-value amount-big">
+            {{ formatCurrency(selectedWithdrawal.amount, selectedWithdrawal.currency) }}
+          </span>
         </div>
         <div class="detail-item">
-          <span class="detail-label">Bank</span>
-          <span class="detail-value">{{ selectedWithdrawal.bank_name }}</span>
+          <span class="detail-label">Transfer Type</span>
+          <span class="detail-value">
+            {{ selectedWithdrawal.withdrawal_type === 'mobile_money' ? 'Mobile Money' : 'Bank Transfer' }}
+          </span>
         </div>
-        <div class="detail-item">
-          <span class="detail-label">Account Number</span>
-          <span class="detail-value mono">{{ selectedWithdrawal.account_number }}</span>
-        </div>
+
+        <!-- Bank fields -->
+        <ng-container *ngIf="selectedWithdrawal.withdrawal_type !== 'mobile_money'">
+          <div class="detail-item">
+            <span class="detail-label">Bank</span>
+            <span class="detail-value">{{ selectedWithdrawal.bank_name }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Account Number</span>
+            <span class="detail-value mono">{{ selectedWithdrawal.account_number }}</span>
+          </div>
+        </ng-container>
+
+        <!-- MoMo fields -->
+        <ng-container *ngIf="selectedWithdrawal.withdrawal_type === 'mobile_money'">
+          <div class="detail-item">
+            <span class="detail-label">MoMo Provider</span>
+            <span class="detail-value">{{ selectedWithdrawal.momo_provider }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">MoMo Number</span>
+            <span class="detail-value mono">{{ selectedWithdrawal.momo_number }}</span>
+          </div>
+        </ng-container>
+
         <div class="detail-item">
           <span class="detail-label">Account Name</span>
           <span class="detail-value">{{ selectedWithdrawal.account_name }}</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">Requested</span>
+          <span class="detail-value">{{ selectedWithdrawal.created_at | date:'MMM d, y · h:mm a' }}</span>
         </div>
         <div class="detail-item full">
           <span class="detail-label">Reason</span>
@@ -581,5 +620,3 @@
     </div>
   </div>
 </div>
-
-

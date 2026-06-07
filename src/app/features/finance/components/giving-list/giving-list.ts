@@ -60,6 +60,7 @@ export class GivingList implements OnInit, OnDestroy {
   endDateControl = new FormControl('');
   categoryControl = new FormControl('');
   paymentMethodControl = new FormControl('');
+  paystackOnlyControl = new FormControl(false);
 
   paymentMethods: { value: PaymentMethod | ''; label: string }[] = [
     { value: '', label: 'All Methods' },
@@ -104,7 +105,7 @@ export class GivingList implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     public permissionService: PermissionService,
     private authService: AuthService,
-     private location: Location,
+    private location: Location,
   ) {}
 
   ngOnInit(): void {
@@ -252,6 +253,13 @@ export class GivingList implements OnInit, OnDestroy {
         this.currentPage = 1;
         this.loadTransactions();
       });
+
+    this.paystackOnlyControl.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.currentPage = 1;
+        this.loadTransactions();
+      });
   }
 
   // ── Category card click ──────────────────────────────────────
@@ -306,8 +314,12 @@ export class GivingList implements OnInit, OnDestroy {
       filters.startDate = this.startDateControl.value;
     if (this.endDateControl.value) filters.endDate = this.endDateControl.value;
     if (this.activeCategoryId) filters.categoryId = this.activeCategoryId;
-    if (this.paymentMethodControl.value)
+    // If paystackOnly is checked, it overrides the payment method dropdown
+    if (this.paystackOnlyControl.value) {
+      filters.paymentMethod = 'paystack';
+    } else if (this.paymentMethodControl.value) {
       filters.paymentMethod = this.paymentMethodControl.value;
+    }
 
     this.financeService
       .getGivingTransactions(this.currentPage, this.pageSize, filters)
@@ -332,8 +344,10 @@ export class GivingList implements OnInit, OnDestroy {
     this.endDateControl.setValue('', { emitEvent: false });
     this.categoryControl.setValue('', { emitEvent: false });
     this.paymentMethodControl.setValue('', { emitEvent: false });
+    this.paystackOnlyControl.setValue(false, { emitEvent: false });
     this.activeCategoryId = null;
     this.activeCategoryName = null;
+
     this.currentPage = 1;
     this.loadTransactions(); // single call
   }
@@ -522,16 +536,25 @@ export class GivingList implements OnInit, OnDestroy {
       currency,
     }).format(amount || 0);
   }
+
   getMemberName(t: any): string {
-    return t.member
-      ? `${t.member.first_name} ${t.member.last_name}`
-      : 'Anonymous';
+    if (t.member) return `${t.member.first_name} ${t.member.last_name}`;
+    if (t.payer_name?.trim()) return t.payer_name.trim();
+    return 'Anonymous';
   }
+
   getMemberInitials(t: any): string {
-    return t.member
-      ? `${t.member.first_name[0]}${t.member.last_name[0]}`.toUpperCase()
-      : 'A';
+    if (t.member)
+      return `${t.member.first_name[0]}${t.member.last_name[0]}`.toUpperCase();
+    if (t.payer_name?.trim()) {
+      const parts = t.payer_name.trim().split(' ');
+      return parts.length >= 2
+        ? `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
+        : parts[0][0].toUpperCase();
+    }
+    return 'A';
   }
+
   getMemberFullName(m: Member): string {
     return `${m.first_name} ${m.last_name}`;
   }
@@ -547,9 +570,7 @@ export class GivingList implements OnInit, OnDestroy {
     return 'Invalid input';
   }
 
-    goBack(): void {
+  goBack(): void {
     this.location.back();
   }
 }
-
-

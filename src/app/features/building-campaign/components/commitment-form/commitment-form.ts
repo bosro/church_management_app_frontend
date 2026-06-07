@@ -199,56 +199,48 @@ export class CommitmentForm implements OnInit, OnDestroy {
   }
 
   async initiatePayment(): Promise<void> {
-    if (!this.initialPaymentAmount || this.initialPaymentAmount <= 0) return;
-    this.paymentLoading = true;
-    this.paymentError = '';
+  if (!this.initialPaymentAmount || this.initialPaymentAmount <= 0) return;
+  this.paymentLoading = true;
+  this.paymentError = '';
 
-    const supabaseClient = this.supabase.client as any;
-    const supabaseUrl =
-      supabaseClient.supabaseUrl ??
-      supabaseClient.rest?.url?.replace('/rest/v1', '') ??
-      '';
+  const supabaseClient = this.supabase.client as any;
+  const supabaseUrl = supabaseClient.supabaseUrl ?? supabaseClient.rest?.url?.replace('/rest/v1', '') ?? '';
+  const anonKey = supabaseClient.supabaseKey ?? supabaseClient.headers?.apikey ?? '';
 
-    // Get the anon key — it's stored on the client instance
-    const anonKey =
-      supabaseClient.supabaseKey ?? supabaseClient.headers?.apikey ?? '';
-
-    try {
-      const res = await fetch(
-        `${supabaseUrl}/functions/v1/paystack-initialize-public`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            apikey: anonKey, // ← fixes the auth error
-            Authorization: `Bearer ${anonKey}`, // ← Supabase expects both
-          },
-          body: JSON.stringify({
-            church_id: this.churchIdFromRoute || this.authService.getChurchId(),
-            commitment_id: this.submittedCommitmentId,
-            amount: this.initialPaymentAmount,
-            payer_name:
-              this.form.value.visitor_name ||
-              (this.selectedMember
-                ? `${this.selectedMember.first_name} ${this.selectedMember.last_name}`
-                : 'Anonymous'),
-            payer_contact: this.form.value.visitor_contact || '',
-            payer_email: this.payerEmail || undefined,
-          }),
-        },
-      );
-      const data = await res.json();
-      if (!res.ok) {
-        this.paymentError = data.error || 'Could not initiate payment';
-        this.paymentLoading = false;
-        return;
-      }
-      window.location.href = data.authorization_url;
-    } catch (e: any) {
-      this.paymentError = e.message || 'Unexpected error';
+  try {
+    const res = await fetch(`${supabaseUrl}/functions/v1/paystack-initialize-public`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': anonKey,
+        'Authorization': `Bearer ${anonKey}`,
+      },
+      body: JSON.stringify({
+        church_id: this.churchIdFromRoute || this.authService.getChurchId(),
+        commitment_id: this.submittedCommitmentId,
+        amount: this.initialPaymentAmount,
+        payer_name: this.form.value.visitor_name ||
+          (this.selectedMember ? `${this.selectedMember.first_name} ${this.selectedMember.last_name}` : 'Anonymous'),
+        payer_contact: this.form.value.visitor_contact || '',
+        payer_email: this.payerEmail || undefined,
+        // Tell Paystack where to redirect after payment
+        callback_url: `${window.location.origin}/public/building-campaign/payment-callback`,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      this.paymentError = data.error || 'Could not initiate payment';
       this.paymentLoading = false;
+      return;
     }
+    // Store reference so callback page can verify
+    sessionStorage.setItem('pending_paystack_ref', data.reference);
+    window.location.href = data.authorization_url;
+  } catch (e: any) {
+    this.paymentError = e.message || 'Unexpected error';
+    this.paymentLoading = false;
   }
+}
 
   skipPayment(): void {
     this.showPaymentOption = false;

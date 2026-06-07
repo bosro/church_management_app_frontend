@@ -1,6 +1,6 @@
 // src/app/features/finance/services/finance.service.ts
 import { Injectable } from '@angular/core';
-import { Observable, from, throwError } from 'rxjs';
+import { Observable, from, of, throwError } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 import {
   GivingTransaction,
@@ -1179,10 +1179,66 @@ export class FinanceService {
     if (error) throw new Error(error.message);
     return (data || []) as CategoryGiver[];
   }
+
+  getPaystackBalance(): Observable<{
+    confirmed_balance: number;
+    pending_balance: number;
+    transaction_count: number;
+  }> {
+    let churchId: string;
+    try {
+      churchId = this.getChurchId();
+    } catch {
+      return of({
+        confirmed_balance: 0,
+        pending_balance: 0,
+        transaction_count: 0,
+      });
+    }
+
+    return from(
+      this.supabase.client.rpc('get_paystack_balance', {
+        church_uuid: churchId,
+      }),
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw new Error(error.message);
+        return data as {
+          confirmed_balance: number;
+          pending_balance: number;
+          transaction_count: number;
+        };
+      }),
+      catchError(() =>
+        of({ confirmed_balance: 0, pending_balance: 0, transaction_count: 0 }),
+      ),
+    );
+  }
+
+  getGivingTransactionsFiltered(
+    page: number,
+    pageSize: number,
+    filters?: {
+      startDate?: string;
+      endDate?: string;
+      categoryId?: string;
+      paymentMethod?: string;
+      paystackOnly?: boolean;
+    },
+  ): Observable<{ data: any[]; count: number }> {
+    // reuse existing getGivingTransactions but paystackOnly forces paymentMethod = 'paystack'
+    const resolvedFilters: {
+      startDate?: string;
+      endDate?: string;
+      categoryId?: string;
+      paymentMethod?: PaymentMethod | '';
+    } = {
+      ...filters,
+      paymentMethod: filters?.paystackOnly
+        ? ('paystack' as PaymentMethod)
+        : (filters?.paymentMethod as PaymentMethod | ''),
+    };
+
+    return this.getGivingTransactions(page, pageSize, resolvedFilters);
+  }
 }
-
-
-
-
-
-
