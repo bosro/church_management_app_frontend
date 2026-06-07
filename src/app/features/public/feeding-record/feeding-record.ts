@@ -51,7 +51,7 @@ export class FeedingRecord implements OnInit, OnDestroy {
   churchId = '';
   schoolName = '';
 
-  selectedDate = new Date().toISOString().split('T')[0];
+  selectedDate = FeedingRecord.lastSchoolDay(new Date());
   selectedTerm = '';
   selectedYear = '';
   terms = TERMS;
@@ -110,6 +110,31 @@ export class FeedingRecord implements OnInit, OnDestroy {
 
   // ── Attendance dropdown open state ────────────────────────────
   openAttendanceDropdownId: string | null = null;
+
+  // ── Weekend helpers ───────────────────────────────────────────
+
+  /** Returns true if the given date string falls on Saturday or Sunday. */
+  static isWeekend(dateStr: string): boolean {
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.getDay() === 0 || d.getDay() === 6;
+  }
+
+  /** Instance wrapper so the template can call isWeekend(selectedDate). */
+  isWeekend(dateStr: string): boolean {
+    return FeedingRecord.isWeekend(dateStr);
+  }
+
+  /**
+   * Returns the most recent school day (Mon–Fri) on or before `date`.
+   * If today is Saturday → Friday. If Sunday → Friday.
+   */
+  static lastSchoolDay(date: Date = new Date()): string {
+    const d = new Date(date);
+    const day = d.getDay();
+    if (day === 6) d.setDate(d.getDate() - 1); // Sat → Fri
+    if (day === 0) d.setDate(d.getDate() - 2); // Sun → Fri
+    return d.toISOString().split('T')[0];
+  }
 
   constructor(
     private feedingService: FeedingService,
@@ -784,6 +809,8 @@ export class FeedingRecord implements OnInit, OnDestroy {
   }
 
   isDateAllowed(dateStr: string): boolean {
+    // Weekends are never valid recording days
+    if (FeedingRecord.isWeekend(dateStr)) return false;
     if (dateStr === this.today) return true;
     if (!this.activeRecordingWindow) return false;
     return (
@@ -819,7 +846,9 @@ export class FeedingRecord implements OnInit, OnDestroy {
   }
 
   get today(): string {
-    return new Date().toISOString().split('T')[0];
+    // The max-date cap on the date input should be the last school day,
+    // not a raw calendar today (which might be a weekend).
+    return FeedingRecord.lastSchoolDay(new Date());
   }
 
   get displayCount(): string {
