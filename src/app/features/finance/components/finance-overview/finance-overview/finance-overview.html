@@ -120,6 +120,41 @@
             </div>
           </div>
 
+          <!-- ── Paystack Balance Card ──────────────────────────── -->
+          <div class="paystack-balance-card" *ngIf="paystackBalance">
+            <div class="psb-left">
+              <div class="psb-icon">
+                <i class="ri-secure-payment-line"></i>
+              </div>
+              <div class="psb-info">
+                <p class="psb-label">
+                  <i class="ri-shield-check-line"></i>
+                  Paystack Collected
+                </p>
+                <h3 class="psb-amount">{{ formatCurrency(paystackBalance.confirmed_balance) }}</h3>
+                <p class="psb-meta">
+                  <span class="psb-count">
+                    <i class="ri-exchange-line"></i>
+                    {{ paystackBalance.transaction_count }} confirmed payment{{ paystackBalance.transaction_count !== 1
+                    ? 's' : '' }}
+                  </span>
+                  <span class="psb-pending" *ngIf="paystackBalance.pending_balance > 0">
+                    <i class="ri-time-line"></i>
+                    {{ formatCurrency(paystackBalance.pending_balance) }} pending
+                  </span>
+                </p>
+              </div>
+            </div>
+            <div class="psb-right">
+              <p class="psb-hint">Funds collected via Paystack (MoMo / Card) sitting in your Paystack account</p>
+              <button class="psb-withdraw-btn" (click)="viewWithdrawals()"
+                *ngIf="permissionService.isAdmin || permissionService.finance.manage">
+                <i class="ri-bank-card-line"></i>
+                Request Withdrawal
+              </button>
+            </div>
+          </div>
+
           <!-- ── Category Breakdown ─────────────────────────── -->
           <div class="section-header">
             <h2>Category Breakdown</h2>

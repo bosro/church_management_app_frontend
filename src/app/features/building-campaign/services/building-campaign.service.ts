@@ -84,7 +84,9 @@ export class BuildingCampaignService {
     return from(
       this.supabase.client
         .from('building_commitments')
-        .select(`*, member:members(id, first_name, last_name, member_number, photo_url)`)
+        .select(
+          `*, member:members(id, first_name, last_name, member_number, photo_url)`,
+        )
         .eq('id', id)
         .eq('church_id', churchId)
         .single(),
@@ -98,45 +100,48 @@ export class BuildingCampaignService {
   }
 
   createCommitment(dto: CreateCommitmentDto): Observable<BuildingCommitment> {
-  let churchId: string;
-  try {
-    churchId = dto.church_id || this.getChurchId();
-  } catch {
-    if (dto.church_id) {
-      churchId = dto.church_id;
-    } else {
-      return throwError(() => new Error('Church not identified. Please use the shared link.'));
+    let churchId: string;
+    try {
+      churchId = dto.church_id || this.getChurchId();
+    } catch {
+      if (dto.church_id) {
+        churchId = dto.church_id;
+      } else {
+        return throwError(
+          () => new Error('Church not identified. Please use the shared link.'),
+        );
+      }
     }
-  }
 
-  return from(
-    this.supabase.client
-      .from('building_commitments')
-      .insert({
-        church_id: churchId,
-        member_id: dto.member_id || null,
-        visitor_name: dto.visitor_name || null,
-        visitor_contact: dto.visitor_contact || null,
-        total_pledge_amount: dto.total_pledge_amount,
-        initial_payment: dto.initial_payment,
-        instalment_frequency: dto.instalment_frequency,
-        instalment_count: dto.instalment_count,
-        currency: dto.currency || 'GHS',
-        payment_method: dto.payment_method || null,
-        campaign_name: dto.campaign_name || 'The Rich Church',
-        notes: dto.notes || null,
-        amount_paid: dto.initial_payment,
-      })
-      .select()
-      .single(),
-  ).pipe(
-    map(({ data, error }) => {
-      if (error) throw new Error(error.message);
-      return data as BuildingCommitment;
-    }),
-    catchError((err) => throwError(() => err)),
-  );
-}
+    return from(
+      this.supabase.client
+        .from('building_commitments')
+        .insert({
+          church_id: churchId,
+          member_id: dto.member_id || null,
+          visitor_name: dto.visitor_name || null,
+          visitor_contact: dto.visitor_contact || null,
+          total_pledge_amount: dto.total_pledge_amount,
+          initial_payment: dto.initial_payment,
+          instalment_frequency: dto.instalment_frequency,
+          instalment_count: dto.instalment_count,
+          currency: dto.currency || 'GHS',
+          payment_method: dto.payment_method || null,
+          campaign_name: dto.campaign_name || 'The Rich Church',
+          notes: dto.notes || null,
+          // amount_paid intentionally omitted — DB default 0
+          // Updated only by: webhook (Paystack) or admin payment recording
+        })
+        .select()
+        .single(),
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw new Error(error.message);
+        return data as BuildingCommitment;
+      }),
+      catchError((err) => throwError(() => err)),
+    );
+  }
 
   deleteCommitment(id: string): Observable<void> {
     const churchId = this.getChurchId();
@@ -147,7 +152,9 @@ export class BuildingCampaignService {
         .eq('id', id)
         .eq('church_id', churchId),
     ).pipe(
-      map(({ error }) => { if (error) throw new Error(error.message); }),
+      map(({ error }) => {
+        if (error) throw new Error(error.message);
+      }),
       catchError((err) => throwError(() => err)),
     );
   }
@@ -218,7 +225,9 @@ export class BuildingCampaignService {
         .eq('id', paymentId)
         .eq('church_id', churchId),
     ).pipe(
-      map(({ error }) => { if (error) throw new Error(error.message); }),
+      map(({ error }) => {
+        if (error) throw new Error(error.message);
+      }),
       catchError((err) => throwError(() => err)),
     );
   }
@@ -245,9 +254,19 @@ export class BuildingCampaignService {
 
   exportCommitmentsCSV(commitments: BuildingCommitment[]): Blob {
     const headers = [
-      'Name', 'Contact', 'Total Pledge', 'Initial Payment',
-      'Remaining', 'Instalment', 'Frequency', 'Periods',
-      'Amount Paid', 'Outstanding', 'Status', 'Payment Method', 'Date',
+      'Name',
+      'Contact',
+      'Total Pledge',
+      'Initial Payment',
+      'Remaining',
+      'Instalment',
+      'Frequency',
+      'Periods',
+      'Amount Paid',
+      'Outstanding',
+      'Status',
+      'Payment Method',
+      'Date',
     ];
     const rows = commitments.map((c) => {
       const name = c.member
@@ -255,11 +274,16 @@ export class BuildingCampaignService {
         : c.visitor_name || 'N/A';
       const contact = c.member?.member_number || c.visitor_contact || 'N/A';
       return [
-        name, contact,
-        c.total_pledge_amount, c.initial_payment,
-        c.remaining_amount, c.instalment_amount,
-        c.instalment_frequency, c.instalment_count,
-        c.amount_paid, c.total_pledge_amount - c.amount_paid,
+        name,
+        contact,
+        c.total_pledge_amount,
+        c.initial_payment,
+        c.remaining_amount,
+        c.instalment_amount,
+        c.instalment_frequency,
+        c.instalment_count,
+        c.amount_paid,
+        c.total_pledge_amount - c.amount_paid,
         c.is_fulfilled ? 'Fulfilled' : 'Pending',
         c.payment_method || 'N/A',
         new Date(c.submitted_at).toLocaleDateString('en-GH'),
@@ -272,5 +296,3 @@ export class BuildingCampaignService {
     return new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   }
 }
-
-

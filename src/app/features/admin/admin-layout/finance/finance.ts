@@ -405,3 +405,5 @@ export class Finance implements OnInit, OnDestroy {
     return map[method] || 'ri-wallet-line';
   }
 }
+
+

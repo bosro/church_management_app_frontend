@@ -500,3 +500,5 @@ createCommunication(communicationData: {
     return Math.ceil(length / 153);
   }
 }
+
+

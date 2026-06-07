@@ -108,6 +108,15 @@
                 <option *ngFor="let method of paymentMethods" [value]="method.value">{{ method.label }}</option>
               </select>
             </div>
+            <!-- Paystack filter pill -->
+            <div class="filter-group" style="flex: 0 0 auto; min-width: auto; align-self: flex-end;">
+              <label class="paystack-filter-toggle" [class.active]="paystackOnlyControl.value"
+                title="Show only Paystack payments">
+                <input type="checkbox" [formControl]="paystackOnlyControl" style="display:none" />
+                <i class="ri-secure-payment-line"></i>
+                <span>Paystack only</span>
+              </label>
+            </div>
             <div class="filter-actions">
               <button class="btn-clear-filters" (click)="clearFilters()">
                 <i class="ri-close-circle-line"></i> Clear
@@ -157,7 +166,13 @@
               </thead>
               <tbody>
                 <tr *ngFor="let transaction of transactions">
-                  <td class="date-cell">{{ transaction.transaction_date | date:'MMM d, y' }}</td>
+                  <!-- Replace the existing date-cell td -->
+                  <td class="date-cell">
+                    {{ transaction.transaction_date | date:'MMM d, y' }}
+                    <span class="txn-time" *ngIf="transaction.created_at">
+                      {{ transaction.created_at | date:'h:mm a' }}
+                    </span>
+                  </td>
                   <td>
                     <div class="member-cell">
                       <div class="member-avatar-small">
@@ -179,7 +194,24 @@
                   <td><span class="amount">{{ formatCurrency(transaction.amount, transaction.currency) }}</span></td>
                   <td>
                     <span class="payment-method-badge" [attr.data-method]="transaction.payment_method">
-                      {{ transaction.payment_method | titlecase }}
+                      <!-- Paystack with channel -->
+                      <ng-container *ngIf="transaction.payment_method === 'paystack'">
+                        <i class="ri-secure-payment-line"
+                          style="font-size:0.8rem;vertical-align:middle;margin-right:3px;"></i>
+                        Paystack
+                        <ng-container *ngIf="transaction.payment_channel">
+                          <span class="ps-channel">
+                            · {{ transaction.payment_channel === 'mobile_money' ? 'MoMo' :
+                            transaction.payment_channel === 'card' ? 'Card' :
+                            transaction.payment_channel === 'bank' ? 'Bank' :
+                            (transaction.payment_channel | titlecase) }}
+                          </span>
+                        </ng-container>
+                      </ng-container>
+                      <!-- All other methods -->
+                      <ng-container *ngIf="transaction.payment_method !== 'paystack'">
+                        {{ transaction.payment_method | titlecase }}
+                      </ng-container>
                     </span>
                   </td>
                   <td><span class="reference">{{ transaction.transaction_reference || '—' }}</span></td>
@@ -348,5 +380,3 @@
     </form>
   </div>
 </div>
-
-
