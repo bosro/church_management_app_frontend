@@ -1,187 +1,71 @@
-// Cloudflare Worker — serves OG previews to social media bots
-// for /public/register/:token and /public/student-register/:token.
-// Everyone else hits your normal Angular app.
+i want you to carefully analyze my existing feeding fee and attendance system before making any changes. The current feeding fee recording functionality is working correctly, and I do not want any existing logic or structure to break.
 
-const SUPABASE_URL = 'https://huiglhqqqtcowsvurqxu.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh1aWdsaHFxcXRjb3dzdnVycXh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5NjI2ODMsImV4cCI6MjA4NTUzODY4M30.yBmoQu06kGS-oAx3H0JisI6vkjEeEJchHfQMA9ZahOY';
-const APP_ORIGIN = 'https://web.churchmann.org';
+Previously, attendance was directly tied to feeding fee payments. This caused problems because if a teacher recorded a student’s feeding fee payment but forgot to mark attendance for that day, it affected the app’s flow and data consistency. Because of this issue, attendance was removed or made optional.
 
-// Bot user agents we want to serve OG meta to
-const BOT_PATTERNS = [
-  /facebookexternalhit/i,
-  /facebot/i,
-  /twitterbot/i,
-  /linkedinbot/i,
-  /slackbot/i,
-  /discordbot/i,
-  /telegrambot/i,
-  /whatsapp/i,
-  /skypeuripreview/i,
-  /pinterest/i,
-  /redditbot/i,
-  /applebot/i,
-  /vkshare/i,
-  /googlebot/i, // optional — helps with Google search previews too
-];
+Now, I need attendance functionality to be reintroduced, but with a different logic and structure.
 
-function isBot(userAgent) {
-  if (!userAgent) return false;
-  return BOT_PATTERNS.some((re) => re.test(userAgent));
-}
+Here is the exact behavior I want:
+	1.	Attendance should no longer be tightly dependent on feeding fee payments.
+	•	A teacher should still be able to manually mark a student as Present or Absent for a particular day.
+	•	Recording payment and recording attendance should be treated as separate actions internally.
+	2.	Automatic attendance behavior:
+	•	If a student is already recognized by the system as “paid” for a particular day (including advance payments carried forward), the system should automatically consider the student Present by default.
+	•	This automatic attendance should happen even if the teacher forgets to manually mark attendance.
+	•	The only exception is when the teacher explicitly changes the attendance status to Absent manually.
+	3.	Advance payment and adjustment logic:
+	•	The system already supports advance payments, where a student can pay for multiple days ahead.
+	•	Example:
+	•	A student pays for today and tomorrow.
+	•	If the student comes to school tomorrow, the feeding balance/payment allocation for tomorrow should be adjusted/consumed normally.
+	•	However, if the student does NOT come to school tomorrow, the payment for that day should NOT be consumed or deducted.
+	•	The payment should remain available until the student actually attends school.
+	•	In short:
+	•	Feeding fee deductions/consumption should depend on attendance.
+	•	A day’s payment should only be consumed when the student is considered Present.
+	•	If the student is marked Absent, the payment for that day should remain untouched/carried forward.
+	4.	Attendance override behavior:
+	•	By default, students with valid feeding coverage should automatically be treated as Present.
+	•	However, teachers/admins must still be able to manually override attendance and mark a student as Absent if necessary.
+	•	That override should immediately affect payment adjustment calculations correctly.
+  also in the case of when students are owing the calcuation should be done correctly and show the amount they are owing as the total of the money they are supposed to have paid if they were to attend school and pay the feding sonsistently is already calculated and known
+	5.	Flexible historical editing:
+	•	The system already allows teachers/admins to go back to previous dates and modify payment records.
+	•	Attendance should also support this same flexibility.
+	•	Teachers/admins should be able to:
+	•	Open previous dates,
+	•	Edit attendance records,
+	•	Correct mistakes,
+	•	Change Present ↔ Absent statuses.
+	•	Any historical attendance modification should automatically recalculate and correctly reflect:
+	•	feeding balances,
+	•	carried-over payments,
+	•	payment consumption,
+	•	attendance reports,
+	•	and all related calculations across the system.
+	6.	Update the UI/UX of the table:
+	•	Do not display “Present” or “Absent” directly by default in the main table.
+	•	Instead, display something more neutral like “Attendance”.
+	•	When the teacher clicks/selects the attendance field, they should then see options such as:
+	•	Present
+	•	Absent
+	•	The UI should remain clean and avoid confusion.
+	7.	Before making any code changes:
+	•	Thoroughly analyze the existing backend flow, database structure, attendance logic, feeding fee logic, and carried-payment logic.
+	•	Understand how payments are currently recorded and how the daily feeding table is generated.
+	•	Ensure all existing working features remain stable.
+	8.	I also want you to provide SQL queries for me to run on my database so I can share the results with you.
+	•	The queries should help expose the current structure of:
+	•	feeding fee tables,
+	•	attendance tables,
+	•	payment records,
+	•	carried-over payment logic,
+	•	historical adjustment logic,
+	•	relationships between students and daily records.
+	•	The goal is for you to fully understand the current architecture before implementing any modifications.
 
-function escapeHtml(s) {
-  if (!s) return '';
-  return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
-async function lookupContext(linkType, token) {
-  // linkType is 'member' or 'student'
-  const table =
-    linkType === 'student' ? 'student_registration_links' : 'registration_links';
-
-  // Fetch link → church_id (one round trip via REST + select)
-  const linkResp = await fetch(
-    `${SUPABASE_URL}/rest/v1/${table}?link_token=eq.${encodeURIComponent(token)}&select=church_id,is_active,expires_at,max_uses,current_uses&limit=1`,
-    {
-      headers: {
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-      },
-    }
-  );
-
-  if (!linkResp.ok) return null;
-  const linkRows = await linkResp.json();
-  if (!linkRows || linkRows.length === 0) return null;
-  const link = linkRows[0];
-
-  // Fetch church name + logo
-  const churchResp = await fetch(
-    `${SUPABASE_URL}/rest/v1/churches?id=eq.${link.church_id}&select=name,logo_url&limit=1`,
-    {
-      headers: {
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-      },
-    }
-  );
-
-  if (!churchResp.ok) return null;
-  const churchRows = await churchResp.json();
-  if (!churchRows || churchRows.length === 0) return null;
-
-  return {
-    churchName: churchRows[0].name || 'Registration',
-    churchLogo: churchRows[0].logo_url || `${APP_ORIGIN}/assets/images/og-invite.png`,
-    linkType,
-  };
-}
-
-function buildOgHtml({ churchName, churchLogo, linkType, fullUrl }) {
-  const isStudent = linkType === 'student';
-  const safeName = escapeHtml(churchName);
-  const safeLogo = escapeHtml(churchLogo);
-  const safeUrl = escapeHtml(fullUrl);
-
-  const title = isStudent
-    ? `Enrol your child — ${safeName}`
-    : `Register — ${safeName}`;
-
-  const description = isStudent
-    ? `${safeName} invites you to enrol your child. Tap to fill the registration form.`
-    : `You've been invited to register with ${safeName}. Tap to complete the form.`;
-
-  // Tiny HTML page with OG tags. Humans (in case any slip through) get redirected.
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<title>${title}</title>
-<meta name="description" content="${description}">
-
-<!-- Open Graph -->
-<meta property="og:type" content="website">
-<meta property="og:url" content="${safeUrl}">
-<meta property="og:title" content="${title}">
-<meta property="og:description" content="${description}">
-<meta property="og:image" content="${safeLogo}">
-<meta property="og:site_name" content="${safeName}">
-
-<!-- Twitter -->
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="${title}">
-<meta name="twitter:description" content="${description}">
-<meta name="twitter:image" content="${safeLogo}">
-
-<!-- Redirect humans (bots ignore this) -->
-<meta http-equiv="refresh" content="0; url=${safeUrl}">
-</head>
-<body>
-<p>Redirecting to <a href="${safeUrl}">${safeName} registration</a>…</p>
-</body>
-</html>`;
-}
-
-export default {
-  async fetch(request) {
-    const url = new URL(request.url);
-    const userAgent = request.headers.get('user-agent') || '';
-
-    // Match the two public registration routes
-    const memberMatch = url.pathname.match(/^\/public\/register\/([^/]+)\/?$/);
-    const studentMatch = url.pathname.match(/^\/public\/student-register\/([^/]+)\/?$/);
-
-    const match = memberMatch || studentMatch;
-    const isPublicRegRoute = !!match;
-    const isABot = isBot(userAgent);
-
-    // Only intercept for bots on these routes. Everyone else passes through.
-    if (!isPublicRegRoute || !isABot) {
-      return fetch(request); // Pass through to your origin (Hostinger)
-    }
-
-    const linkType = studentMatch ? 'student' : 'member';
-    const token = match[1];
-
-    try {
-      const context = await lookupContext(linkType, token);
-
-      if (!context) {
-        // Token not found — fall back to a generic invite preview
-        return new Response(
-          buildOgHtml({
-            churchName: 'Registration',
-            churchLogo: `${APP_ORIGIN}/assets/images/og-invite.png`,
-            linkType,
-            fullUrl: request.url,
-          }),
-          {
-            headers: {
-              'content-type': 'text/html;charset=UTF-8',
-              'cache-control': 'public, max-age=300',
-            },
-          }
-        );
-      }
-
-      return new Response(
-        buildOgHtml({ ...context, fullUrl: request.url }),
-        {
-          headers: {
-            'content-type': 'text/html;charset=UTF-8',
-            'cache-control': 'public, max-age=600', // bots can cache 10min
-          },
-        }
-      );
-    } catch (err) {
-      // On any error, just let the request pass through to Angular
-      return fetch(request);
-    }
-  },
-};
-
+Important:
+	•	Do not refactor or rewrite unrelated working parts of the application unnecessarily.
+	•	Preserve the existing feeding fee recording functionality.
+	•	Focus on safely integrating attendance back into the system with the new intelligent default-present behavior.
+	•	Make changes incrementally and carefully to avoid breaking production functionality.
+	•	Ensure all calculations remain accurate after historical attendance/payment edits.

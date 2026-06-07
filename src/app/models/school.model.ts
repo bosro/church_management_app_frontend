@@ -237,3 +237,5 @@ export interface SchoolExpensesSummary {
   net_balance: number;
   expense_count: number;
 }
+
+
