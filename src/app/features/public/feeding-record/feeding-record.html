@@ -293,15 +293,13 @@
               <td class="text-center">
                 <div class="action-btns">
                   <button class="btn-pay" [disabled]="studentStates[student.id]?.studentFeedingFees?.length === 0
-                      || !isDateAllowed(selectedDate)
-                      || studentStates[student.id]?.overallStatus === 'paid'
-                      || studentStates[student.id]?.loadingSummary" (click)="openPaymentModal(student)" [title]="studentStates[student.id]?.studentFeedingFees?.length === 0
-                      ? 'No fee assigned'
-                      : studentStates[student.id]?.overallStatus === 'paid'
-                        ? 'Fully paid this term'
-                        : !isDateAllowed(selectedDate)
-                          ? 'Past date — contact admin'
-                          : 'Record payment'">
+      || !isDateAllowed(selectedDate)
+      || studentStates[student.id]?.loadingSummary" (click)="openPaymentModal(student)" [title]="studentStates[student.id]?.studentFeedingFees?.length === 0
+      ? 'No fee assigned — admin must assign first'
+      : !isDateAllowed(selectedDate)
+        ? 'Weekend or past date — contact admin'
+        : 'Record payment'">
+
                     <i class="ri-money-dollar-circle-line"></i>
                     Pay
                   </button>
@@ -390,14 +388,24 @@
             × {{ paymentSff.total_days }} school days
           </span>
         </div>
+        <!-- Notice shown when term fee is already fully paid -->
+        <div class="term-paid-notice" *ngIf="paymentSff.status === 'paid'">
+          <i class="ri-shield-check-line"></i>
+          <span>
+            Term fee fully covered. Any additional payment adds
+            <strong>extra credit days</strong> carried forward for the
+            remaining school days this term.
+          </span>
+        </div>
+
       </div>
       <div class="form-group" *ngIf="(studentStates[paymentStudent?.id]?.studentFeedingFees?.length || 0) > 1">
         <label>Fee to pay against</label>
         <select [(ngModel)]="paymentSff">
-          <option *ngFor="let f of studentStates[paymentStudent?.id]?.studentFeedingFees" [ngValue]="f"
-            [disabled]="f.status === 'paid'">
+          <option *ngFor="let f of studentStates[paymentStudent?.id]?.studentFeedingFees" [ngValue]="f">
             {{ f.feeding_fee_structure?.fee_name || 'Feeding Fee' }}
-            — Balance: {{ formatCurrency(f.amount_due - f.amount_paid) }}
+            — {{ f.status === 'paid' ? 'Fully paid (top-up)' : 'Balance: ' + formatCurrency(f.amount_due -
+            f.amount_paid) }}
           </option>
         </select>
       </div>
