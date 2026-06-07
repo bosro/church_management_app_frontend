@@ -1,4 +1,4 @@
-// feeding-record.scss — attendance-free version
+// feeding-record.scss — attendance-aware version
 
 .feeding-page {
   min-height: 100vh;
@@ -55,7 +55,7 @@
 
 // ─── Body ─────────────────────────────────────────────────────
 .feeding-body {
-  max-width: 1300px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 24px;
   @media (max-width: 768px) {
@@ -96,7 +96,6 @@
   }
 }
 
-// Backdating banner
 .recording-window-banner {
   display: flex;
   align-items: flex-start;
@@ -177,11 +176,14 @@
 // ─── Summary Bar ──────────────────────────────────────────────
 .summary-bar {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 12px;
   margin-bottom: 16px;
 
-  @media (max-width: 500px) {
+  @media (max-width: 700px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  @media (max-width: 400px) {
     grid-template-columns: 1fr;
   }
 
@@ -218,6 +220,9 @@
     }
     &.showing i {
       color: #059669;
+    }
+    &.absent-stat i {
+      color: #dc2626;
     }
   }
 }
@@ -259,7 +264,7 @@
     }
     input {
       width: 100%;
-      padding: 10px 36px 10px 36px;
+      padding: 10px 36px;
       border: 1px solid #e5e7eb;
       border-radius: 8px;
       font-size: 14px;
@@ -302,29 +307,33 @@
 .students-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 700px;
+  min-width: 900px; // wider to fit the new Attendance column
   table-layout: fixed;
 
+  // Column widths — 8 columns now
   th:nth-child(1) {
-    width: 28%;
+    width: 22%;
   } // Student
   th:nth-child(2) {
-    width: 10%;
+    width: 8%;
   } // Class
   th:nth-child(3) {
-    width: 14%;
+    width: 12%;
   } // Term Total
   th:nth-child(4) {
-    width: 12%;
+    width: 10%;
   } // Paid
   th:nth-child(5) {
-    width: 12%;
+    width: 10%;
   } // Balance
   th:nth-child(6) {
-    width: 12%;
-  } // Status
+    width: 10%;
+  } // Fee Status
   th:nth-child(7) {
-    width: 12%;
+    width: 15%;
+  } // Attendance  ← NEW
+  th:nth-child(8) {
+    width: 13%;
   } // Actions
 
   thead {
@@ -419,7 +428,6 @@
   font-weight: 700;
   color: #111827;
 }
-
 .not-assigned-chip {
   display: inline-flex;
   padding: 3px 8px;
@@ -455,7 +463,7 @@
   border-radius: 4px;
 }
 
-// Status chips
+// Fee status chips
 .status-chip {
   display: inline-flex;
   align-items: center;
@@ -606,7 +614,6 @@
   color: #374151;
   cursor: pointer;
   font-family: "Nunito Sans", sans-serif;
-  transition: all 0.15s;
   &:hover {
     background: #f3f4f6;
   }
@@ -943,7 +950,6 @@
       align-items: center;
       gap: 12px;
       flex-wrap: wrap;
-
       .sff-amount-row {
         display: flex;
         flex-direction: column;
@@ -1007,7 +1013,6 @@
       display: flex;
       align-items: flex-start;
       gap: 12px;
-
       .history-icon {
         width: 36px;
         height: 36px;
@@ -1049,7 +1054,6 @@
       align-items: flex-end;
       gap: 4px;
       flex-shrink: 0;
-
       .history-notes {
         font-size: 12px;
         color: #6b7280;
@@ -1057,27 +1061,6 @@
         text-align: right;
         max-width: 120px;
       }
-
-      .btn-delete-payment {
-        width: 28px;
-        height: 28px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: none;
-        border: 1px solid transparent;
-        border-radius: 6px;
-        color: #9ca3af;
-        cursor: pointer;
-        font-size: 14px;
-        transition: all 0.15s;
-        &:hover {
-          background: #fef2f2;
-          border-color: #fecaca;
-          color: #dc2626;
-        }
-      }
-
       .history-lock {
         color: #d1d5db;
         font-size: 14px;
@@ -1086,6 +1069,38 @@
       }
     }
   }
+}
+
+.history-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-edit-payment,
+.btn-delete-payment {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: #9ca3af;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.15s;
+}
+.btn-edit-payment:hover {
+  background: #eef2ff;
+  border-color: #a5b4fc;
+  color: #4f46e5;
+}
+.btn-delete-payment:hover {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #dc2626;
 }
 
 .history-empty {
@@ -1105,7 +1120,7 @@
   }
 }
 
-// ─── Delete Confirm ───────────────────────────────────────────
+// ─── Delete Confirm Modal ─────────────────────────────────────
 .delete-confirm-modal {
   background: white;
   border-radius: 16px;
@@ -1149,7 +1164,6 @@
   .dcm-actions {
     display: flex;
     gap: 10px;
-
     .btn-cancel {
       flex: 1;
       padding: 10px;
@@ -1198,6 +1212,185 @@
   }
 }
 
+// ─── Attendance Column Styles (NEW) ───────────────────────────
+
+.att-cell {
+  position: relative; // anchor for the dropdown
+}
+
+.att-na {
+  color: #d1d5db;
+  font-size: 14px;
+}
+
+.att-saving {
+  display: inline-flex;
+  align-items: center;
+  color: #9ca3af;
+  font-size: 16px;
+}
+
+// The wrapper holds the chip + dropdown together
+.att-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+// Base chip style (all variants share this)
+.att-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px 4px 8px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-family: "Nunito Sans", sans-serif;
+  transition: all 0.15s;
+  white-space: nowrap;
+  line-height: 1.4;
+
+  i {
+    font-size: 13px;
+  }
+  .att-caret {
+    font-size: 12px;
+    margin-left: 1px;
+    opacity: 0.6;
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+}
+
+// Auto-present: payment-covered, not explicitly marked — indigo outline
+.att-auto {
+  background: #eef2ff;
+  color: #4f46e5;
+  border-color: #c7d2fe;
+  &:hover:not(:disabled) {
+    background: #e0e7ff;
+    border-color: #a5b4fc;
+  }
+}
+
+// Explicit present — solid green
+.att-present {
+  background: #d1fae5;
+  color: #065f46;
+  border-color: #6ee7b7;
+  &:hover:not(:disabled) {
+    background: #a7f3d0;
+    border-color: #34d399;
+  }
+}
+
+// Absent — solid red
+.att-absent {
+  background: #fee2e2;
+  color: #991b1b;
+  border-color: #fca5a5;
+  &:hover:not(:disabled) {
+    background: #fecaca;
+    border-color: #f87171;
+  }
+}
+
+// Unmarked — neutral grey dashed
+.att-unmarked {
+  background: white;
+  color: #6b7280;
+  border: 1px dashed #d1d5db;
+  &:hover:not(:disabled) {
+    background: #f9fafb;
+    border-color: #9ca3af;
+    color: #374151;
+  }
+}
+
+// Credit-days badge (e.g. "3d") shown next to the chip
+.credit-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 18px;
+  padding: 0 5px;
+  background: #e0e7ff;
+  color: #4338ca;
+  border-radius: 100px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: default;
+  flex-shrink: 0;
+}
+
+// Dropdown that appears when chip is clicked
+.att-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 130px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  z-index: 200;
+  overflow: hidden;
+  animation: fadeIn 0.12s ease;
+}
+
+.att-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  background: none;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: "Nunito Sans", sans-serif;
+  text-align: left;
+  transition: background 0.12s;
+  i {
+    font-size: 15px;
+  }
+
+  &:not(:last-child) {
+    border-bottom: 1px solid #f3f4f6;
+  }
+}
+
+.att-option-present {
+  color: #065f46;
+  i {
+    color: #059669;
+  }
+  &:hover {
+    background: #d1fae5;
+  }
+}
+
+.att-option-absent {
+  color: #991b1b;
+  i {
+    color: #dc2626;
+  }
+  &:hover {
+    background: #fee2e2;
+  }
+}
+
 // ─── Animations ───────────────────────────────────────────────
 @keyframes spin {
   to {
@@ -1232,32 +1425,4 @@
 }
 .spin {
   animation: spin 0.8s linear infinite;
-}
-
-
-// Edit button + grouped actions in history
-.history-item-actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.btn-edit-payment {
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: none;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  color: #9ca3af;
-  cursor: pointer;
-  font-size: 14px;
-  transition: all 0.15s;
-  &:hover {
-    background: #eef2ff;
-    border-color: #a5b4fc;
-    color: #4f46e5;
-  }
 }

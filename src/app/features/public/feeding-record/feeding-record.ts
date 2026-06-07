@@ -9,6 +9,25 @@ import {
 } from '../../reports/services/feeding.service';
 import { FeedingFilterService } from '../../reports/services/feeding-filter.service';
 
+// ── Attendance status as the UI understands it ────────────────
+// 'auto-present' : student has credit days remaining, no explicit record today
+// 'present'      : teacher explicitly marked present
+// 'absent'       : teacher explicitly marked absent
+// 'unmarked'     : no payment credit and no explicit record
+export type AttendanceDisplay = 'auto-present' | 'present' | 'absent' | 'unmarked';
+
+export interface StudentDailyStatus {
+  // From the DB RPC
+  is_present: boolean | null;   // null = no record exists
+  has_record: boolean;
+  days_paid: number;
+  days_attended: number;
+  credit_days: number;
+  // Derived on the frontend
+  displayStatus: AttendanceDisplay;
+  savingAttendance: boolean;
+}
+
 interface StudentState {
   studentFeedingFees: StudentFeedingFee[];
   totalDue: number;
@@ -16,6 +35,7 @@ interface StudentState {
   totalBalance: number;
   overallStatus: 'unpaid' | 'partial' | 'paid';
   loadingSummary: boolean;
+  dailyStatus: StudentDailyStatus | null;
 }
 
 @Component({
@@ -49,7 +69,6 @@ export class FeedingRecord implements OnInit, OnDestroy {
 
   studentStates: { [studentId: string]: StudentState } = {};
 
-  // Daily payments collected today
   dailyCollected = 0;
 
   errorMessage = '';
@@ -88,6 +107,9 @@ export class FeedingRecord implements OnInit, OnDestroy {
   editPaymentMethod = 'Cash';
   editPaymentNotes = '';
   processingEdit = false;
+
+  // ── Attendance dropdown open state ────────────────────────────
+  openAttendanceDropdownId: string | null = null;
 
   constructor(
     private feedingService: FeedingService,
@@ -187,7 +209,10 @@ export class FeedingRecord implements OnInit, OnDestroy {
       }
     });
 
-    if (this.students.length) this.loadFeeStates(this.students);
+    if (this.students.length) {
+      this.loadFeeStates(this.students);
+      this.loadDailyStatuses(this.students);
+    }
     this.cdr.markForCheck();
   }
 
@@ -204,10 +229,11 @@ export class FeedingRecord implements OnInit, OnDestroy {
       totalBalance: 0,
       overallStatus: 'unpaid',
       loadingSummary: true,
+      dailyStatus: null,
     };
   }
 
-  // ── Load fee states (no attendance) ──────────────────────────
+  // ── Load fee states ───────────────────────────────────────────
 
   private async loadFeeStates(students: any[]): Promise<void> {
     if (!students.length) return;
@@ -220,7 +246,6 @@ export class FeedingRecord implements OnInit, OnDestroy {
     this.cdr.markForCheck();
 
     try {
-      // Load in chunks of 50 to avoid URL length limits
       const allSffs: any[] = [];
       for (let i = 0; i < studentIds.length; i += 50) {
         const chunk = studentIds.slice(i, i + 50);
@@ -236,7 +261,6 @@ export class FeedingRecord implements OnInit, OnDestroy {
         if (data) allSffs.push(...data);
       }
 
-      // Group by student
       const byStudent: { [sid: string]: any[] } = {};
       allSffs.forEach((f) => {
         if (!byStudent[f.student_id]) byStudent[f.student_id] = [];
@@ -262,6 +286,7 @@ export class FeedingRecord implements OnInit, OnDestroy {
         }
 
         this.studentStates[sid] = {
+          ...this.studentStates[sid],
           studentFeedingFees: fees,
           totalDue,
           totalPaid,
@@ -281,6 +306,153 @@ export class FeedingRecord implements OnInit, OnDestroy {
     }
   }
 
+  // ── Load daily attendance statuses (new) ──────────────────────
+
+  async loadDailyStatuses(students: any[]): Promise<void> {
+    if (!students.length) return;
+    try {
+      const { data, error } = await (this.feedingService as any).supabase.client
+        .rpc('get_student_daily_status', {
+          p_church_id:     this.churchId,
+          p_date:          this.selectedDate,
+          p_academic_year: this.selectedYear,
+          p_term:          this.selectedTerm,
+        });
+
+      if (error) throw new Error(error.message);
+
+      const byStudent: { [sid: string]: any } = {};
+      (data || []).forEach((row: any) => {
+        byStudent[row.student_id] = row;
+      });
+
+      students.forEach((s) => {
+        if (!this.studentStates[s.id]) return;
+        const row = byStudent[s.id];
+        if (row) {
+          this.studentStates[s.id].dailyStatus = {
+            is_present:      row.is_present,
+            has_record:      row.has_record,
+            days_paid:       Number(row.days_paid),
+            days_attended:   Number(row.days_attended),
+            credit_days:     Number(row.credit_days),
+            displayStatus:   this.computeDisplayStatus(row),
+            savingAttendance: false,
+          };
+        } else {
+          // Student has no payments this term — no credit, no record
+          this.studentStates[s.id].dailyStatus = null;
+        }
+      });
+
+      this.cdr.markForCheck();
+    } catch (err: any) {
+      // Non-fatal — attendance display degrades gracefully
+      console.warn('Failed to load daily statuses:', err.message);
+    }
+  }
+
+  // ── Compute display status from DB row ────────────────────────
+  // Logic:
+  //   explicit absent record           → 'absent'
+  //   explicit present record          → 'present'
+  //   no record + has credit days      → 'auto-present' (paid coverage)
+  //   no record + no credit            → 'unmarked'
+  private computeDisplayStatus(row: {
+    is_present: boolean | null;
+    has_record: boolean;
+    credit_days: number;
+  }): AttendanceDisplay {
+    if (row.has_record) {
+      return row.is_present ? 'present' : 'absent';
+    }
+    return row.credit_days > 0 ? 'auto-present' : 'unmarked';
+  }
+
+  // ── Mark attendance ───────────────────────────────────────────
+
+  async markAttendance(studentId: string, isPresent: boolean): Promise<void> {
+    const state = this.studentStates[studentId];
+    if (!state?.dailyStatus) return;
+    if (!this.isDateAllowed(this.selectedDate)) return;
+
+    this.openAttendanceDropdownId = null;
+    state.dailyStatus.savingAttendance = true;
+    this.cdr.markForCheck();
+
+    try {
+      await (this.feedingService as any).supabase.client.rpc(
+        'upsert_feeding_attendance',
+        {
+          p_church_id:       this.churchId,
+          p_student_id:      studentId,
+          p_attendance_date: this.selectedDate,
+          p_academic_year:   this.selectedYear,
+          p_term:            this.selectedTerm,
+          p_is_present:      isPresent,
+        },
+      );
+
+      // Optimistically update the local state
+      state.dailyStatus.is_present = isPresent;
+      state.dailyStatus.has_record = true;
+
+      // Recompute attended days count locally for credit_days display
+      if (isPresent && !state.dailyStatus.has_record) {
+        state.dailyStatus.days_attended += 1;
+        state.dailyStatus.credit_days = Math.max(
+          0,
+          state.dailyStatus.days_paid - state.dailyStatus.days_attended,
+        );
+      }
+
+      state.dailyStatus.displayStatus = this.computeDisplayStatus(state.dailyStatus);
+      state.dailyStatus.savingAttendance = false;
+      this.cdr.markForCheck();
+    } catch (err: any) {
+      state.dailyStatus.savingAttendance = false;
+      this.errorMessage = err.message || 'Failed to save attendance';
+      this.cdr.markForCheck();
+    }
+  }
+
+  toggleAttendanceDropdown(studentId: string): void {
+    this.openAttendanceDropdownId =
+      this.openAttendanceDropdownId === studentId ? null : studentId;
+    this.cdr.markForCheck();
+  }
+
+  closeAllDropdowns(): void {
+    this.openAttendanceDropdownId = null;
+    this.cdr.markForCheck();
+  }
+
+  // ── Term/Year/Date change ─────────────────────────────────────
+
+  onTermYearChange(): void {
+    this.feedingFilter.setBoth(this.selectedTerm, this.selectedYear);
+    Object.keys(this.studentStates).forEach((sid) => {
+      this.studentStates[sid] = this.defaultState();
+    });
+    if (this.students.length) {
+      this.loadFeeStates(this.students);
+      this.loadDailyStatuses(this.students);
+    }
+    this.loadDailyCollected();
+  }
+
+  onDateChange(): void {
+    this.loadDailyCollected();
+    // Reload attendance for the newly selected date
+    if (this.students.length) {
+      this.loadDailyStatuses(this.students);
+    }
+  }
+
+  confirmTermYear(): void {
+    this.feedingFilter.setBoth(this.selectedTerm, this.selectedYear);
+  }
+
   private async refreshStudent(studentId: string): Promise<void> {
     const student = this.allStudents.find((s) => s.id === studentId);
     if (!student) return;
@@ -288,27 +460,8 @@ export class FeedingRecord implements OnInit, OnDestroy {
       this.studentStates[studentId].loadingSummary = true;
     this.cdr.markForCheck();
     await this.loadFeeStates([student]);
-    await this.refreshDailyCollected();
-  }
-
-  // ── Term/Year change ──────────────────────────────────────────
-
-  onTermYearChange(): void {
-    this.feedingFilter.setBoth(this.selectedTerm, this.selectedYear);
-    // Reset all states
-    Object.keys(this.studentStates).forEach((sid) => {
-      this.studentStates[sid] = this.defaultState();
-    });
-    if (this.students.length) this.loadFeeStates(this.students);
-    this.loadDailyCollected();
-  }
-
-  onDateChange(): void {
-    this.loadDailyCollected();
-  }
-
-  confirmTermYear(): void {
-    this.feedingFilter.setBoth(this.selectedTerm, this.selectedYear);
+    await this.loadDailyStatuses([student]);
+    await this.loadDailyCollected();
   }
 
   // ── Daily collected amount ────────────────────────────────────
@@ -330,11 +483,7 @@ export class FeedingRecord implements OnInit, OnDestroy {
     } catch {}
   }
 
-  private async refreshDailyCollected(): Promise<void> {
-    await this.loadDailyCollected();
-  }
-
-  // ── Search (client-side) ──────────────────────────────────────
+  // ── Search ────────────────────────────────────────────────────
 
   onSearchInput(): void {
     this.searchSubject.next(this.searchQuery);
@@ -358,7 +507,10 @@ export class FeedingRecord implements OnInit, OnDestroy {
       if (!this.studentStates[s.id])
         this.studentStates[s.id] = this.defaultState();
     });
-    if (this.students.length) this.loadFeeStates(this.students);
+    if (this.students.length) {
+      this.loadFeeStates(this.students);
+      this.loadDailyStatuses(this.students);
+    }
     this.cdr.markForCheck();
   }
 
@@ -367,14 +519,13 @@ export class FeedingRecord implements OnInit, OnDestroy {
     this.applyClassFilter();
   }
 
-  // ── Edit Payment (Teacher) ────────────────────────────────────
+  // ── Edit Payment ──────────────────────────────────────────────
 
   openEditPayment(payment: any): void {
     this.editTargetPayment = payment;
     this.editPaymentAmount = Number(payment.amount_paid);
     this.editPaymentMethod = payment.payment_method || 'Cash';
     this.editPaymentNotes = payment.notes || '';
-    // Find the matching SFF so we can show the days-coverage breakdown
     const state = this.studentStates[this.historyStudent?.id];
     this.editTargetSff =
       state?.studentFeedingFees?.find(
@@ -430,7 +581,6 @@ export class FeedingRecord implements OnInit, OnDestroy {
       .subscribe({
         next: () => {
           this.processingEdit = false;
-          // Update the payment in the local history list so it reflects immediately
           this.historyPayments = this.historyPayments.map((p) =>
             p.id === this.editTargetPayment.id
               ? {
@@ -455,6 +605,7 @@ export class FeedingRecord implements OnInit, OnDestroy {
         },
       });
   }
+
   // ── Payment Modal ─────────────────────────────────────────────
 
   openPaymentModal(student: any, sff?: StudentFeedingFee): void {
@@ -468,7 +619,6 @@ export class FeedingRecord implements OnInit, OnDestroy {
     const balance = this.paymentSff
       ? Number(this.paymentSff.amount_due) - Number(this.paymentSff.amount_paid)
       : 0;
-    // Default to the outstanding balance; if fully paid default to daily rate
     this.paymentAmount =
       balance > 0 ? balance : this.paymentSff?.daily_amount || 0;
     this.paymentNotes = '';
@@ -682,5 +832,19 @@ export class FeedingRecord implements OnInit, OnDestroy {
 
   trackById(_: number, s: any): string {
     return s.id;
+  }
+
+  // ── Attendance summary for the summary bar ────────────────────
+
+  get attendanceSummary(): { present: number; absent: number; unmarked: number } {
+    let present = 0, absent = 0, unmarked = 0;
+    this.students.forEach((s) => {
+      const ds = this.studentStates[s.id]?.dailyStatus;
+      if (!ds) { unmarked++; return; }
+      if (ds.displayStatus === 'absent') { absent++; }
+      else if (ds.displayStatus === 'present' || ds.displayStatus === 'auto-present') { present++; }
+      else { unmarked++; }
+    });
+    return { present, absent, unmarked };
   }
 }
