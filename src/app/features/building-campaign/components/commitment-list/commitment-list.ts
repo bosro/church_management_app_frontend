@@ -306,6 +306,13 @@ export class CommitmentsList implements OnInit, OnDestroy {
     );
   }
 
+  // Amount this specific pledger still owes — always derived live from
+  // total_pledge_amount - amount_paid so it stays correct no matter how
+  // many partial/irregular payments have been recorded.
+  getOutstanding(c: BuildingCommitment): number {
+    return Math.max(0, (c.total_pledge_amount || 0) - (c.amount_paid || 0));
+  }
+
   formatCurrency(n: number): string {
     return new Intl.NumberFormat('en-GH', {
       style: 'currency',

@@ -92,7 +92,20 @@
             <div class="stat-info">
               <p class="stat-label">Collected</p>
               <h3 class="stat-value">{{ formatCurrency(stats.total_collected) }}</h3>
-              <p class="stat-meta">{{ formatCurrency(stats.total_outstanding) }} outstanding</p>
+              <p class="stat-meta">{{ stats.total_pledged > 0 ? ((stats.total_collected / stats.total_pledged) * 100 | number:'1.0-0') : 0 }}% of total pledged</p>
+            </div>
+          </div>
+          <!-- Dedicated Outstanding card — previously this was a small, easy-to-miss
+               line under the Collected card. It's now its own prominent stat so
+               admins can see at a glance how much is still owed across all pledgers. -->
+          <div class="stat-card stat-card-outstanding">
+            <div class="stat-icon" style="background:#ede9fe;color:#6d28d9">
+              <i class="ri-hourglass-line"></i>
+            </div>
+            <div class="stat-info">
+              <p class="stat-label">Total Outstanding</p>
+              <h3 class="stat-value">{{ formatCurrency(stats.total_outstanding) }}</h3>
+              <p class="stat-meta">Still owed by all pledgers</p>
             </div>
           </div>
           <div class="stat-card">
@@ -171,6 +184,7 @@
                 <th>Initial</th>
                 <th>Instalment</th>
                 <th>Progress</th>
+                <th>Outstanding</th>
                 <th>Status</th>
                 <th>Date</th>
                 <th></th>
@@ -209,6 +223,9 @@
                     </div>
                     <span class="progress-mini-pct">{{ getProgressPct(c) }}%</span>
                   </div>
+                </td>
+                <td class="amount-cell">
+                  <strong [class.text-fulfilled]="c.is_fulfilled">{{ formatCurrency(getOutstanding(c)) }}</strong>
                 </td>
                 <td>
                   <span class="status-badge" [class.fulfilled]="c.is_fulfilled">
@@ -283,6 +300,10 @@
                 <div class="cc-amount-item">
                   <span class="cc-amount-label">Collected</span>
                   <strong class="cc-amount-val green">{{ formatCurrency(c.amount_paid) }}</strong>
+                </div>
+                <div class="cc-amount-item">
+                  <span class="cc-amount-label">Outstanding</span>
+                  <strong class="cc-amount-val purple">{{ formatCurrency(getOutstanding(c)) }}</strong>
                 </div>
               </div>
 

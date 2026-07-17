@@ -225,12 +225,41 @@ export class Finance implements OnInit, OnDestroy {
     this.loadingWithdrawals = true;
     this.supabase.client
       .from('withdrawal_requests')
-      .select('*, church:churches!church_id(name)')
+      .select('*')
       .order('created_at', { ascending: false })
       .limit(50)
-      .then(({ data, error }) => {
+      .then(async ({ data, error }) => {
+        if (error) {
+          this.loadingWithdrawals = false;
+          this.withdrawalError = `Failed to load withdrawal requests: ${error.message}`;
+          console.error('loadWithdrawalRequests error:', error);
+          return;
+        }
+
+        const rows = data || [];
+        const churchIds = [...new Set(rows.map((r: any) => r.church_id).filter(Boolean))];
+
+        // Fetch church names separately — do NOT rely on an embedded
+        // `churches!church_id(name)` select here. PostgREST needs an
+        // actual FK constraint between withdrawal_requests.church_id
+        // and churches.id to resolve that embed; if it's missing, the
+        // whole query fails with PGRST200 and silently returns nothing.
+        let churchMap: Record<string, string> = {};
+        if (churchIds.length > 0) {
+          const { data: churches, error: churchErr } = await this.supabase.client
+            .from('churches')
+            .select('id, name')
+            .in('id', churchIds);
+          if (!churchErr) {
+            churchMap = Object.fromEntries((churches || []).map((c: any) => [c.id, c.name]));
+          }
+        }
+
+        this.withdrawalRequests = rows.map((r: any) => ({
+          ...r,
+          church: { name: churchMap[r.church_id] || 'Unknown church' },
+        }));
         this.loadingWithdrawals = false;
-        if (!error) this.withdrawalRequests = data || [];
       });
   }
 
