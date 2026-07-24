@@ -33,6 +33,11 @@ export class FinanceOverview implements OnInit, OnDestroy {
   topGivers: TopGiver[] = [];
 
 paystackBalance: { confirmed_balance: number; pending_balance: number; transaction_count: number } | null = null;
+  withdrawnTotal = 0;
+  get availableToWithdraw(): number {
+    if (!this.paystackBalance) return 0;
+    return Math.max(0, this.paystackBalance.confirmed_balance - this.withdrawnTotal);
+  }
 
   // Category summary cards
   categorySummaries: CategorySummary[] = [];
@@ -159,6 +164,13 @@ paystackBalance: { confirmed_balance: number; pending_balance: number; transacti
       this.paystackBalance = balance.confirmed_balance > 0 ? balance : null;
     },
     error: () => {}
+  });
+
+  this.financeService.getWithdrawnTotal()
+  .pipe(takeUntil(this.destroy$))
+  .subscribe({
+    next: (total) => { this.withdrawnTotal = total; },
+    error: () => { this.withdrawnTotal = 0; },
   });
 
     // Category summaries

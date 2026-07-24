@@ -77,10 +77,10 @@ export class Finance implements OnInit, OnDestroy {
   loadingWithdrawals = false;
 
   // Totals across all churches
-  get platformTotal(): number { return this.churchStats.reduce((s, c) => s + c.total_giving, 0); }
+  get platformTotal(): number { return this.churchStats.reduce((s, c) => s + Number(c.total_giving), 0); }
   get platformTransactions(): number { return this.churchStats.reduce((s, c) => s + Number(c.total_transactions), 0); }
-  get platformExpenses(): number { return this.churchStats.reduce((s, c) => s + c.total_expenses, 0); }
-  get platformNetBalance(): number { return this.churchStats.reduce((s, c) => s + c.net_balance, 0); }
+  get platformExpenses(): number { return this.churchStats.reduce((s, c) => s + Number(c.total_expenses), 0); }
+  get platformNetBalance(): number { return this.churchStats.reduce((s, c) => s + Number(c.net_balance), 0); }
   get activeChurches(): number { return this.churchStats.length; }
   get pendingWithdrawals(): WithdrawalRequest[] { return this.withdrawalRequests.filter((r) => r.status === 'pending'); }
 

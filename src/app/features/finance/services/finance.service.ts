@@ -1215,6 +1215,34 @@ export class FinanceService {
     );
   }
 
+  // Sums completed withdrawals for this church — used to show admins how
+  // much of their confirmed Paystack balance has already been paid out
+  // vs. how much is still actually available to withdraw. Without this,
+  // the "Paystack Collected" figure alone can look like unclaimed money
+  // is still sitting there even after a successful withdrawal.
+  getWithdrawnTotal(): Observable<number> {
+    let churchId: string;
+    try {
+      churchId = this.getChurchId();
+    } catch {
+      return of(0);
+    }
+
+    return from(
+      this.supabase.client
+        .from('withdrawal_requests')
+        .select('amount')
+        .eq('church_id', churchId)
+        .eq('status', 'completed'),
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw new Error(error.message);
+        return (data || []).reduce((sum: number, r: any) => sum + Number(r.amount), 0);
+      }),
+      catchError(() => of(0)),
+    );
+  }
+
   getGivingTransactionsFiltered(
     page: number,
     pageSize: number,

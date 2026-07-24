@@ -143,6 +143,19 @@
                     {{ formatCurrency(paystackBalance.pending_balance) }} pending
                   </span>
                 </p>
+                <!-- Withdrawn vs still-available breakdown — without this,
+                     the total above can look like unclaimed money is still
+                     sitting there even after a successful withdrawal. -->
+                <p class="psb-meta psb-breakdown" *ngIf="withdrawnTotal > 0">
+                  <span class="psb-withdrawn">
+                    <i class="ri-check-double-line"></i>
+                    {{ formatCurrency(withdrawnTotal) }} already withdrawn
+                  </span>
+                  <span class="psb-available">
+                    <i class="ri-wallet-3-line"></i>
+                    {{ formatCurrency(availableToWithdraw) }} still available
+                  </span>
+                </p>
               </div>
             </div>
             <div class="psb-right">

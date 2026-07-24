@@ -939,6 +939,28 @@ button:disabled {
       font-weight: 600;
       i { font-size: 0.875rem; }
     }
+    .psb-breakdown {
+      margin-top: 0.5rem;
+      padding-top: 0.5rem;
+      border-top: 1px solid rgba(255,255,255,0.12);
+    }
+    .psb-withdrawn {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      font-size: 0.8125rem;
+      color: rgba(255,255,255,0.6);
+      i { font-size: 0.875rem; }
+    }
+    .psb-available {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      font-size: 0.8125rem;
+      color: #4ade80;
+      font-weight: 600;
+      i { font-size: 0.875rem; }
+    }
   }
 
   .psb-right {
