@@ -268,6 +268,15 @@
               Job Hub
             </span>
           </label>
+
+          <label class="checkbox-label">
+            <input type="checkbox" [checked]="churchForm.enabled_features.includes('branch_autonomy')"
+              (change)="toggleFeature('branch_autonomy', $event)" />
+            <span>
+              <i class="ri-building-line"></i>
+              Branch Autonomy (branch staff only see their own branch)
+            </span>
+          </label>
         </div>
         <small class="help-text">Enable or disable feature modules for this church</small>
       </div>

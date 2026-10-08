@@ -52,20 +52,24 @@ export class FeedingFilterService {
     const saved = localStorage.getItem(this.YEAR_KEY);
     const validYears = generateAcademicYears();
     if (saved && validYears.includes(saved)) return saved;
-    const defaultYear = currentAcademicYear();
+    const guess = this._guessAcademicYear();
+    const defaultYear = validYears.includes(guess) ? guess : currentAcademicYear();
     localStorage.setItem(this.YEAR_KEY, defaultYear); // persist default
     return defaultYear;
   }
 
+  // School year starts in September: Sep–Dec = Term 1, Jan–Apr = Term 2, May–Aug = Term 3.
+  // (Matches how the school actually records: e.g. October 2026 = 2026/2027 Term 1.)
   private _guessCurrentTerm(): string {
     const month = new Date().getMonth() + 1;
-    if (month >= 1 && month <= 4) return 'Term 1';
-    if (month >= 5 && month <= 8) return 'Term 2';
+    if (month >= 9) return 'Term 1';
+    if (month <= 4) return 'Term 2';
     return 'Term 3';
   }
+
+  private _guessAcademicYear(): string {
+    const now = new Date();
+    const y = now.getFullYear();
+    return now.getMonth() + 1 >= 9 ? `${y}/${y + 1}` : `${y - 1}/${y}`;
+  }
 }
-
-
-
-
-

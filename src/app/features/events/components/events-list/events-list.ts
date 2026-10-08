@@ -17,6 +17,8 @@ export interface CalendarCell {
   events: ChurchEvent[];
 }
 
+import { copyToClipboard, eventRegistrationUrl } from '../../../../core/utils/copy-to-clipboard';
+
 @Component({
   selector: 'app-events-list',
   standalone: false,
@@ -30,6 +32,7 @@ export class EventsList implements OnInit, OnDestroy {
   upcomingEvents: ChurchEvent[] = [];
   loading = false;
   errorMessage = '';
+  copiedEventId: string | null = null;
   successMessage = '';
 
   currentPage = 1;
@@ -204,6 +207,20 @@ export class EventsList implements OnInit, OnDestroy {
 
   viewEvent(eventId: string): void {
     this.router.navigate(['main/events', eventId]);
+  }
+
+  /** Copy the public registration link for an event (card button) */
+  async copyRegistrationLink(eventId: string, event: MouseEvent): Promise<void> {
+    event.stopPropagation();
+    const ok = await copyToClipboard(eventRegistrationUrl(eventId));
+    if (ok) {
+      this.copiedEventId = eventId;
+      setTimeout(() => {
+        if (this.copiedEventId === eventId) this.copiedEventId = null;
+      }, 2500);
+    } else {
+      this.errorMessage = 'Could not copy automatically. Link: ' + eventRegistrationUrl(eventId);
+    }
   }
 
   editEvent(eventId: string, event: MouseEvent): void {

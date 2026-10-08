@@ -10,6 +10,12 @@ import { FormBuilder, FormGroup } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { takeUntil, debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { MemberService } from '../../services/member.service';
+import {
+  BulkMembershipService,
+  BulkTarget,
+  BulkTargetType,
+  BulkResult,
+} from '../../services/bulk-membership.service';
 import { AuthService } from '../../../../core/services/auth';
 import {
   Member,
@@ -52,6 +58,7 @@ export class MemberList implements OnInit, OnDestroy {
   canAddMember = false;
   canEditMember = false;
   canDeleteMember = false;
+  canBulkAssign = false; // add many members to a cell / branch / ministry
   canImportExport = false;
 
   // Birthday notice
@@ -75,6 +82,16 @@ export class MemberList implements OnInit, OnDestroy {
   selectedIds = new Set<string>();
   selectAll = false;
 
+  // ── Bulk add to cell / branch / ministry ─────────────────────────────────
+  showBulkAddModal = false;
+  bulkTargetType: BulkTargetType = 'cell';
+  bulkTargets: BulkTarget[] = [];
+  bulkTargetId = '';
+  loadingBulkTargets = false;
+  bulkAdding = false;
+  bulkError = '';
+  bulkResult: BulkResult | null = null;
+
   // ── Confirm modal state ───────────────────────────────────────────────────
   showConfirmModal = false;
   confirmModalConfig = {
@@ -96,6 +113,7 @@ export class MemberList implements OnInit, OnDestroy {
 
   constructor(
     private memberService: MemberService,
+    private bulkMembership: BulkMembershipService,
     private authService: AuthService,
     private router: Router,
     private route: ActivatedRoute,
@@ -221,6 +239,82 @@ export class MemberList implements OnInit, OnDestroy {
 
   get selectedCount(): number {
     return this.selectedIds.size;
+  }
+
+  /** Checkboxes / selection bar are shown to anyone who can delete OR bulk-assign */
+  get canSelectMembers(): boolean {
+    return this.canDeleteMember || this.canBulkAssign;
+  }
+
+  // ── Bulk add to cell / branch / ministry ────────────────────────────────────
+
+  get bulkTypeLabel(): string {
+    return this.bulkTargetType === 'cell'
+      ? 'cell group'
+      : this.bulkTargetType === 'branch'
+        ? 'branch'
+        : 'ministry / department';
+  }
+
+  openBulkAdd(): void {
+    if (!this.canBulkAssign || this.selectedIds.size === 0) return;
+    this.bulkResult = null;
+    this.bulkError = '';
+    this.bulkTargetId = '';
+    this.showBulkAddModal = true;
+    this.loadBulkTargets();
+  }
+
+  closeBulkAdd(): void {
+    if (this.bulkAdding) return;
+    this.showBulkAddModal = false;
+    this.bulkResult = null;
+    this.bulkError = '';
+  }
+
+  onBulkTypeChange(type: BulkTargetType): void {
+    if (this.bulkAdding) return;
+    this.bulkTargetType = type;
+    this.bulkTargetId = '';
+    this.bulkResult = null;
+    this.bulkError = '';
+    this.loadBulkTargets();
+  }
+
+  private async loadBulkTargets(): Promise<void> {
+    this.loadingBulkTargets = true;
+    this.bulkTargets = [];
+    try {
+      this.bulkTargets = await this.bulkMembership.getTargets(this.bulkTargetType);
+    } catch (e: any) {
+      this.bulkError = e?.message || 'Could not load the list.';
+    } finally {
+      this.loadingBulkTargets = false;
+    }
+  }
+
+  async confirmBulkAdd(): Promise<void> {
+    if (this.bulkAdding || !this.bulkTargetId || this.selectedIds.size === 0) return;
+    this.bulkAdding = true;
+    this.bulkError = '';
+    this.bulkResult = null;
+    try {
+      this.bulkResult = await this.bulkMembership.addMembers(
+        this.bulkTargetType,
+        this.bulkTargetId,
+        Array.from(this.selectedIds),
+      );
+      if (this.bulkResult.added > 0) {
+        this.loadMembers(); // refresh list (cell column etc.)
+      }
+      if (this.bulkResult.failed === 0) {
+        this.clearSelection();
+      }
+    } catch (e: any) {
+      this.bulkError = e?.message || 'Something went wrong. Nothing was changed.';
+    } finally {
+      this.bulkAdding = false;
+    }
   }
 
   // ── Confirm modal helpers ───────────────────────────────────────────────────
@@ -461,6 +555,9 @@ export class MemberList implements OnInit, OnDestroy {
 
     this.canDeleteMember =
       this.permissionService.isAdmin || this.permissionService.members.delete;
+
+    this.canBulkAssign =
+      this.permissionService.isAdmin || this.permissionService.members.edit;
 
     this.canImportExport =
       this.permissionService.isAdmin ||

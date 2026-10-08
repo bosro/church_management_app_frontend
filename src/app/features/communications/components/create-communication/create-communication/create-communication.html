@@ -155,6 +155,45 @@
                       </span>
                     </label>
 
+                    <!-- Saved groups + import toolbar -->
+                    <div class="group-tools">
+                      <div class="group-tools-row">
+                        <i class="ri-bookmark-line group-tools-icon"></i>
+                        <select class="group-select" aria-label="Load a saved group"
+                          (change)="onLoadGroup($any($event.target).value); $any($event.target).value = ''">
+                          <option value="">
+                            {{ loadingGroups ? 'Loading groups…' : (savedGroups.length ? 'Load a saved group…' : 'No saved groups yet') }}
+                          </option>
+                          <option *ngFor="let g of savedGroups" [value]="g.id">{{ g.name }} ({{ g.member_count }})</option>
+                        </select>
+                      </div>
+
+                      <div class="group-tools-row group-import-row">
+                        <i class="ri-download-2-line group-tools-icon"></i>
+                        <select class="group-select group-select-sm" aria-label="Import from"
+                          (change)="onImportTypeChange($any($event.target).value)">
+                          <option value="cell" [selected]="importType === 'cell'">Cell group</option>
+                          <option value="ministry" [selected]="importType === 'ministry'">Ministry</option>
+                          <option value="branch" [selected]="importType === 'branch'">Branch</option>
+                        </select>
+                        <select class="group-select" [disabled]="loadingImportTargets"
+                          aria-label="Choose {{ importTypeLabel }}"
+                          (change)="importTargetId = $any($event.target).value">
+                          <option value="" [selected]="!importTargetId">
+                            {{ loadingImportTargets ? 'Loading…' : 'Add everyone from a ' + importTypeLabel + '…' }}
+                          </option>
+                          <option *ngFor="let t of importTargets" [value]="t.id" [selected]="t.id === importTargetId">{{ t.name }}</option>
+                        </select>
+                        <button type="button" class="btn-group-add" (click)="addFromTarget()"
+                          [disabled]="!importTargetId || importing">
+                          {{ importing ? 'Adding…' : 'Add' }}
+                        </button>
+                      </div>
+
+                      <p class="group-feedback group-ok" *ngIf="groupMessage"><i class="ri-checkbox-circle-line"></i> {{ groupMessage }}</p>
+                      <p class="group-feedback group-bad" *ngIf="groupError"><i class="ri-error-warning-line"></i> {{ groupError }}</p>
+                    </div>
+
                     <!-- Search input -->
                     <div class="member-search-wrapper">
                       <div class="member-search-input-row">
@@ -193,10 +232,43 @@
                           <i class="ri-group-line"></i>
                           Recipients ({{ customListCount }})
                         </span>
-                        <button type="button" class="btn-clear-list" (click)="clearCustomList()">
-                          <i class="ri-delete-bin-line"></i>
-                          Clear all
-                        </button>
+                        <span class="custom-list-actions">
+                          <button type="button" class="btn-save-group" (click)="openSaveGroup()">
+                            <i class="ri-save-line"></i>
+                            {{ activeGroup ? 'Save / update group' : 'Save as group' }}
+                          </button>
+                          <button type="button" class="btn-clear-list" (click)="clearCustomList()">
+                            <i class="ri-delete-bin-line"></i>
+                            Clear all
+                          </button>
+                        </span>
+                      </div>
+
+                      <!-- Save group panel -->
+                      <div class="save-group-panel" *ngIf="showSaveGroup">
+                        <label for="group-name">Group name</label>
+                        <input id="group-name" type="text" maxlength="80" placeholder="e.g. Choir, Youth Leaders, Ushers"
+                          [value]="saveGroupName" (input)="saveGroupName = $any($event.target).value" />
+                        <div class="save-group-actions">
+                          <button type="button" class="btn-group-primary" (click)="confirmSaveGroup(false)" [disabled]="savingGroup">
+                            {{ savingGroup ? 'Saving…' : 'Save as new group' }}
+                          </button>
+                          <button type="button" class="btn-group-primary alt" *ngIf="activeGroup"
+                            (click)="confirmSaveGroup(true)" [disabled]="savingGroup">
+                            Update “{{ activeGroup.name }}”
+                          </button>
+                          <button type="button" class="btn-group-ghost" (click)="showSaveGroup = false" [disabled]="savingGroup">Cancel</button>
+                        </div>
+                        <div class="delete-group-row" *ngIf="activeGroup">
+                          <button type="button" class="btn-group-danger" *ngIf="!confirmDeleteGroup" (click)="confirmDeleteGroup = true">
+                            <i class="ri-delete-bin-line"></i> Delete saved group “{{ activeGroup.name }}”
+                          </button>
+                          <span *ngIf="confirmDeleteGroup" class="delete-confirm">
+                            Delete this saved group? (Members are not deleted.)
+                            <button type="button" class="btn-group-danger solid" (click)="deleteActiveGroup()" [disabled]="savingGroup">Yes, delete</button>
+                            <button type="button" class="btn-group-ghost" (click)="confirmDeleteGroup = false">Keep</button>
+                          </span>
+                        </div>
                       </div>
                       <div class="custom-member-chips">
                         <div *ngFor="let member of customSelectedMembers" class="member-chip">

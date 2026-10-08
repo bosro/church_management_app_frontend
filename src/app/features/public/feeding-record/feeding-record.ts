@@ -8,6 +8,7 @@ import {
   StudentFeedingFee,
 } from '../../reports/services/feeding.service';
 import { FeedingFilterService } from '../../reports/services/feeding-filter.service';
+import { FeedingPublicService, FeedingHoliday } from './feeding-public.service';
 
 // ── Attendance status as the UI understands it ────────────────
 // 'auto-present' : student has credit days remaining, no explicit record today
@@ -23,6 +24,11 @@ export interface StudentDailyStatus {
   days_paid: number;
   days_attended: number;
   credit_days: number;
+  // From get_feeding_daily_overview (attendance-aware money)
+  covered_today: boolean;      // paid up through the viewed date
+  leftover_amount: number;     // GHS paid but not yet "eaten" (e.g. absent days)
+  owing_amount: number;        // GHS owed for days attended but not paid
+  daily_rate: number;
   // Derived on the frontend
   displayStatus: AttendanceDisplay;
   savingAttendance: boolean;
@@ -50,6 +56,21 @@ export class FeedingRecord implements OnInit, OnDestroy {
 
   churchId = '';
   schoolName = '';
+
+  // ── Access (PIN) + term confirmation ──────────────────────────
+  authState: 'checking' | 'locked' | 'term-confirm' | 'ready' = 'checking';
+  pin = '';
+  pinError = '';
+  pinAttemptsLeft: number | null = null;
+  verifyingPin = false;
+
+  holidays: FeedingHoliday[] = [];
+  adminTerm = '';
+  adminYear = '';
+  termSetByAdmin = false;
+  confirmTerm = '';
+  confirmYear = '';
+  changingTerm = false;
 
   selectedDate = FeedingRecord.lastSchoolDay(new Date());
   selectedTerm = '';
@@ -111,6 +132,21 @@ export class FeedingRecord implements OnInit, OnDestroy {
   // ── Attendance dropdown open state ────────────────────────────
   openAttendanceDropdownId: string | null = null;
 
+  // ── Money summary (week) + expenses ───────────────────────────
+  weekCollected = 0;
+  weekExpensesTotal = 0;
+  weekExpenses: any[] = [];
+  termLeftoverTotal = 0;     // carry-forward credit across ALL students
+  termOwingTotal = 0;
+  showExpenseModal = false;
+  savingExpense = false;
+  expenseTitle = '';
+  expenseAmount: number | null = null;
+  expenseNote = '';
+  expenseDate = '';
+  expenseBy = '';
+  private readonly TEACHER_NAME_KEY = 'churchman_feeding_teacher_name';
+
   // ── Weekend helpers ───────────────────────────────────────────
 
   /** Returns true if the given date string falls on Saturday or Sunday. */
@@ -141,6 +177,7 @@ export class FeedingRecord implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private cdr: ChangeDetectorRef,
     public feedingFilter: FeedingFilterService,
+    private pub: FeedingPublicService,
   ) {}
 
   ngOnInit(): void {
@@ -149,19 +186,123 @@ export class FeedingRecord implements OnInit, OnDestroy {
       this.errorMessage = 'Invalid page link — school ID is missing.';
       return;
     }
+    this.pub.init(this.churchId);
 
     this.selectedTerm = this.feedingFilter.term;
     this.selectedYear = this.feedingFilter.year;
 
-    this.loadSchoolInfo();
-    this.loadClasses();
-    this.loadAllStudents();
-    this.loadDailyCollected();
-    this.loadRecordingWindow();
+    try {
+      this.expenseBy = localStorage.getItem(this.TEACHER_NAME_KEY) || '';
+    } catch {}
+
+    this.pub.sessionExpired$.pipe(takeUntil(this.destroy$)).subscribe(() => {
+      this.authState = 'locked';
+      this.pin = '';
+      this.pinError = 'Your session has ended. Please enter the PIN again.';
+      this.cdr.markForCheck();
+    });
 
     this.searchSubject
       .pipe(debounceTime(250), distinctUntilChanged(), takeUntil(this.destroy$))
       .subscribe((q) => this.applySearch(q));
+
+    this.restoreSession();
+  }
+
+  // ── PIN + session ─────────────────────────────────────────────
+
+  private async restoreSession(): Promise<void> {
+    if (!this.pub.getToken()) {
+      this.authState = 'locked';
+      this.cdr.markForCheck();
+      return;
+    }
+    try {
+      await this.loadBootstrapAndContinue();
+    } catch {
+      this.authState = 'locked';
+      this.cdr.markForCheck();
+    }
+  }
+
+  async submitPin(): Promise<void> {
+    if (!this.pin.trim() || this.verifyingPin) return;
+    this.verifyingPin = true;
+    this.pinError = '';
+    this.cdr.markForCheck();
+    try {
+      const res = await this.pub.verifyPin(this.pin.trim());
+      if (!res.ok) {
+        this.pinError = res.error || 'Wrong PIN.';
+        this.pinAttemptsLeft = res.attempts_left ?? null;
+        this.pin = '';
+        return;
+      }
+      this.pin = '';
+      this.pinAttemptsLeft = null;
+      await this.loadBootstrapAndContinue();
+    } catch (err: any) {
+      this.pinError = err.message || 'Could not check the PIN. Try again.';
+    } finally {
+      this.verifyingPin = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  private async loadBootstrapAndContinue(): Promise<void> {
+    const b = await this.pub.bootstrap();
+    this.schoolName = b.school_name || 'School';
+    this.classes = b.classes || [];
+    this.activeRecordingWindow = b.window || null;
+    this.windowLoaded = true;
+    this.holidays = b.holidays || [];
+    this.adminYear = b.active_year || '';
+    this.adminTerm = b.active_term || '';
+    this.termSetByAdmin = !!(b.active_year && b.active_term);
+
+    const year = this.adminYear || this.feedingFilter.year;
+    const term = this.adminTerm || this.feedingFilter.term;
+
+    // Already confirmed in this browser tab? Go straight in.
+    if (this.termSetByAdmin && this.pub.isTermConfirmed(year, term)) {
+      this.enterPage(term, year);
+      return;
+    }
+    this.confirmTerm = term;
+    this.confirmYear = year;
+    this.changingTerm = !this.termSetByAdmin; // admin hasn't set one → teacher chooses
+    this.authState = 'term-confirm';
+    this.cdr.markForCheck();
+  }
+
+  /** Teacher taps "Yes, this is correct" (or picks another term and confirms). */
+  confirmTermAndStart(): void {
+    this.pub.markTermConfirmed(this.confirmYear, this.confirmTerm);
+    this.enterPage(this.confirmTerm, this.confirmYear);
+  }
+
+  private enterPage(term: string, year: string): void {
+    this.selectedTerm = term;
+    this.selectedYear = year;
+    this.feedingFilter.setBoth(term, year);
+    this.authState = 'ready';
+    this.loadAllStudents();
+    this.loadDailyCollected();
+    this.loadWeekMoney();
+    this.cdr.markForCheck();
+  }
+
+  lockPage(): void {
+    this.pub.clearSession();
+    this.authState = 'locked';
+    this.pinError = '';
+    this.cdr.markForCheck();
+  }
+
+  // ── Holidays ──────────────────────────────────────────────────
+  holidayName(dateStr: string): string | null {
+    const h = this.holidays.find((x) => dateStr >= x.from_date && dateStr <= x.to_date);
+    return h ? h.name : null;
   }
 
   ngOnDestroy(): void {
@@ -169,54 +310,19 @@ export class FeedingRecord implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  // ── School info ───────────────────────────────────────────────
-
-  private async loadSchoolInfo(): Promise<void> {
-    const { data } = await (this.feedingService as any).supabase.client
-      .from('churches')
-      .select('name')
-      .eq('id', this.churchId)
-      .single();
-    this.schoolName = data?.name || 'School';
-    this.cdr.markForCheck();
-  }
-
-  // ── Classes ───────────────────────────────────────────────────
-
-  loadClasses(): void {
-    this.feedingService
-      .getClasses(this.churchId)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (c) => {
-          this.classes = c;
-          this.cdr.markForCheck();
-        },
-      });
-  }
-
   // ── Load all students ─────────────────────────────────────────
 
   async loadAllStudents(): Promise<void> {
     this.loadingStudents = true;
     this.cdr.markForCheck();
-
     try {
-      const { data, count } = await (this.feedingService as any).supabase.client
-        .from('students')
-        .select(
-          'id, first_name, last_name, middle_name, student_number, class_id, class:school_classes(id, name, tier)',
-          { count: 'exact' },
-        )
-        .eq('church_id', this.churchId)
-        .eq('is_active', true)
-        .order('first_name');
-
-      this.allStudents = data || [];
-      this.totalStudents = count || 0;
+      const data = await this.pub.students();
+      this.allStudents = data;
+      this.totalStudents = data.length;
       this.applyClassFilter();
     } catch (err: any) {
-      this.errorMessage = err.message || 'Failed to load students';
+      if (err.message !== 'SESSION_EXPIRED')
+        this.errorMessage = err.message || 'Failed to load students';
     } finally {
       this.loadingStudents = false;
       this.cdr.markForCheck();
@@ -271,20 +377,7 @@ export class FeedingRecord implements OnInit, OnDestroy {
     this.cdr.markForCheck();
 
     try {
-      const allSffs: any[] = [];
-      for (let i = 0; i < studentIds.length; i += 50) {
-        const chunk = studentIds.slice(i, i + 50);
-        const { data } = await (this.feedingService as any).supabase.client
-          .from('student_feeding_fees')
-          .select(
-            '*, feeding_fee_structure:feeding_fee_structures(fee_name, daily_amount, total_days)',
-          )
-          .eq('church_id', this.churchId)
-          .eq('academic_year', this.selectedYear)
-          .eq('term', this.selectedTerm)
-          .in('student_id', chunk);
-        if (data) allSffs.push(...data);
-      }
+      const allSffs: any[] = await this.pub.fees(this.selectedYear, this.selectedTerm);
 
       const byStudent: { [sid: string]: any[] } = {};
       allSffs.forEach((f) => {
@@ -331,25 +424,35 @@ export class FeedingRecord implements OnInit, OnDestroy {
     }
   }
 
-  // ── Load daily attendance statuses (new) ──────────────────────
+  // ── Load daily attendance statuses ────────────────────────────
+  // Uses get_feeding_daily_overview, which returns a row for EVERY student
+  // with a fee assigned — including students who have not paid yet, so they
+  // can be marked absent on a Monday.
+  private overviewByStudent: { [sid: string]: any } = {};
 
   async loadDailyStatuses(students: any[]): Promise<void> {
     if (!students.length) return;
     try {
-      const { data, error } = await (this.feedingService as any).supabase.client
-        .rpc('get_student_daily_status', {
-          p_church_id:     this.churchId,
-          p_date:          this.selectedDate,
-          p_academic_year: this.selectedYear,
-          p_term:          this.selectedTerm,
-        });
-
-      if (error) throw new Error(error.message);
+      const data = await this.pub.overview(
+        this.selectedDate,
+        this.selectedYear,
+        this.selectedTerm,
+      );
 
       const byStudent: { [sid: string]: any } = {};
       (data || []).forEach((row: any) => {
         byStudent[row.student_id] = row;
       });
+      this.overviewByStudent = byStudent;
+
+      // Totals across every student (not just the filtered list)
+      let left = 0, owe = 0;
+      Object.values(byStudent).forEach((r: any) => {
+        left += Number(r.leftover_amount || 0);
+        owe += Number(r.owing_amount || 0);
+      });
+      this.termLeftoverTotal = left;
+      this.termOwingTotal = owe;
 
       students.forEach((s) => {
         if (!this.studentStates[s.id]) return;
@@ -358,22 +461,29 @@ export class FeedingRecord implements OnInit, OnDestroy {
           this.studentStates[s.id].dailyStatus = {
             is_present:      row.is_present,
             has_record:      row.has_record,
-            days_paid:       Number(row.days_paid),
-            days_attended:   Number(row.days_attended),
-            credit_days:     Number(row.credit_days),
+            days_paid:       0,
+            days_attended:   Number(row.expected_days || 0),
+            credit_days:     Number(row.credit_days || 0),
+            covered_today:   !!row.covered_today,
+            leftover_amount: Number(row.leftover_amount || 0),
+            owing_amount:    Number(row.owing_amount || 0),
+            daily_rate:      Number(row.daily_rate || 0),
             displayStatus:   this.computeDisplayStatus(row),
             savingAttendance: false,
           };
         } else {
-          // Student has no payments this term — no credit, no record
+          // No fee assigned this term — attendance does not apply
           this.studentStates[s.id].dailyStatus = null;
         }
       });
 
       this.cdr.markForCheck();
     } catch (err: any) {
-      // Non-fatal — attendance display degrades gracefully
       console.warn('Failed to load daily statuses:', err.message);
+      if (err.message === 'SESSION_EXPIRED') return;
+      this.errorMessage =
+        'Could not load attendance. Please refresh the page. (' + err.message + ')';
+      this.cdr.markForCheck();
     }
   }
 
@@ -386,12 +496,12 @@ export class FeedingRecord implements OnInit, OnDestroy {
   private computeDisplayStatus(row: {
     is_present: boolean | null;
     has_record: boolean;
-    credit_days: number;
+    covered_today: boolean;
   }): AttendanceDisplay {
     if (row.has_record) {
       return row.is_present ? 'present' : 'absent';
     }
-    return row.credit_days > 0 ? 'auto-present' : 'unmarked';
+    return row.covered_today ? 'auto-present' : 'unmarked';
   }
 
   // ── Mark attendance ───────────────────────────────────────────
@@ -406,36 +516,22 @@ export class FeedingRecord implements OnInit, OnDestroy {
     this.cdr.markForCheck();
 
     try {
-      await (this.feedingService as any).supabase.client.rpc(
-        'upsert_feeding_attendance',
-        {
-          p_church_id:       this.churchId,
-          p_student_id:      studentId,
-          p_attendance_date: this.selectedDate,
-          p_academic_year:   this.selectedYear,
-          p_term:            this.selectedTerm,
-          p_is_present:      isPresent,
-        },
+      await this.pub.setAttendance(
+        studentId,
+        this.selectedDate,
+        this.selectedYear,
+        this.selectedTerm,
+        isPresent,
       );
 
-      // Optimistically update the local state
-      state.dailyStatus.is_present = isPresent;
-      state.dailyStatus.has_record = true;
-
-      // Recompute attended days count locally for credit_days display
-      if (isPresent && !state.dailyStatus.has_record) {
-        state.dailyStatus.days_attended += 1;
-        state.dailyStatus.credit_days = Math.max(
-          0,
-          state.dailyStatus.days_paid - state.dailyStatus.days_attended,
-        );
-      }
-
-      state.dailyStatus.displayStatus = this.computeDisplayStatus(state.dailyStatus);
-      state.dailyStatus.savingAttendance = false;
+      // Re-read from the database so leftover / owing amounts are exact
+      const student = this.allStudents.find((s) => s.id === studentId);
+      if (student) await this.loadDailyStatuses([student]);
+      // Leftover totals can change for everyone's view; keep the rest in sync
+      if (state.dailyStatus) state.dailyStatus.savingAttendance = false;
       this.cdr.markForCheck();
     } catch (err: any) {
-      state.dailyStatus.savingAttendance = false;
+      if (state.dailyStatus) state.dailyStatus.savingAttendance = false;
       this.errorMessage = err.message || 'Failed to save attendance';
       this.cdr.markForCheck();
     }
@@ -464,10 +560,12 @@ export class FeedingRecord implements OnInit, OnDestroy {
       this.loadDailyStatuses(this.students);
     }
     this.loadDailyCollected();
+    this.loadWeekMoney();
   }
 
   onDateChange(): void {
     this.loadDailyCollected();
+    this.loadWeekMoney();
     // Reload attendance for the newly selected date
     if (this.students.length) {
       this.loadDailyStatuses(this.students);
@@ -487,25 +585,111 @@ export class FeedingRecord implements OnInit, OnDestroy {
     await this.loadFeeStates([student]);
     await this.loadDailyStatuses([student]);
     await this.loadDailyCollected();
+    await this.loadWeekMoney();
   }
 
   // ── Daily collected amount ────────────────────────────────────
 
   async loadDailyCollected(): Promise<void> {
     try {
-      const { data } = await (this.feedingService as any).supabase.client
-        .from('feeding_payments')
-        .select('amount_paid')
-        .eq('church_id', this.churchId)
-        .eq('payment_date', this.selectedDate)
-        .eq('academic_year', this.selectedYear)
-        .eq('term', this.selectedTerm);
-      this.dailyCollected = (data || []).reduce(
-        (s: number, p: any) => s + Number(p.amount_paid),
-        0,
+      this.dailyCollected = await this.pub.collected(
+        this.selectedYear,
+        this.selectedTerm,
+        this.selectedDate,
+        this.selectedDate,
       );
       this.cdr.markForCheck();
     } catch {}
+  }
+
+  // ── Week money + expenses ─────────────────────────────────────
+
+  /** Monday–Friday of the week containing `dateStr`, as YYYY-MM-DD (local). */
+  private weekRange(dateStr: string): { from: string; to: string } {
+    const d = new Date(dateStr + 'T00:00:00');
+    const dow = d.getDay();                       // 0 Sun … 6 Sat
+    const mondayOffset = dow === 0 ? -6 : 1 - dow;
+    const mon = new Date(d); mon.setDate(d.getDate() + mondayOffset);
+    const fri = new Date(mon); fri.setDate(mon.getDate() + 4);
+    const f = (x: Date) =>
+      `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`;
+    return { from: f(mon), to: f(fri) };
+  }
+
+  get weekLabel(): string {
+    const r = this.weekRange(this.selectedDate);
+    return `${this.formatDateLabel(r.from)} – ${this.formatDateLabel(r.to)}`;
+  }
+
+  /** Cash the teacher should hand over = collected − expenses (this week). */
+  get weekCashToHandOver(): number {
+    return this.weekCollected - this.weekExpensesTotal;
+  }
+
+  async loadWeekMoney(): Promise<void> {
+    const r = this.weekRange(this.selectedDate);
+    try {
+      const [collected, expenses] = await Promise.all([
+        this.pub.collected(this.selectedYear, this.selectedTerm, r.from, r.to),
+        this.pub.expenses(this.selectedYear, this.selectedTerm, r.from, r.to),
+      ]);
+      this.weekCollected = collected;
+      this.weekExpenses = expenses;
+      this.weekExpensesTotal = expenses.reduce((sum: number, e: any) => sum + Number(e.amount), 0);
+      this.cdr.markForCheck();
+    } catch (e: any) {
+      console.warn('Failed to load week money', e?.message);
+    }
+  }
+
+  openExpenseModal(): void {
+    this.expenseTitle = '';
+    this.expenseAmount = null;
+    this.expenseNote = '';
+    this.expenseDate = this.selectedDate;
+    this.showExpenseModal = true;
+  }
+
+  closeExpenseModal(): void {
+    this.showExpenseModal = false;
+    this.savingExpense = false;
+  }
+
+  get canSaveExpense(): boolean {
+    return (
+      !this.savingExpense &&
+      !!this.expenseTitle.trim() &&
+      !!this.expenseBy.trim() &&
+      !!this.expenseAmount && this.expenseAmount > 0 &&
+      !!this.expenseDate
+    );
+  }
+
+  async submitExpense(): Promise<void> {
+    if (!this.canSaveExpense) return;
+    this.savingExpense = true;
+    try {
+      await this.pub.recordExpense({
+        year: this.selectedYear,
+        term: this.selectedTerm,
+        amount: this.expenseAmount as number,
+        date: this.expenseDate,
+        title: this.expenseTitle,
+        description: this.expenseNote,
+        enteredBy: this.expenseBy,
+      });
+
+      try { localStorage.setItem(this.TEACHER_NAME_KEY, this.expenseBy.trim()); } catch {}
+      const amt = this.expenseAmount;
+      this.closeExpenseModal();
+      this.successMessage = `Expense of ${this.formatCurrency(amt || 0)} recorded. The admin can see it.`;
+      setTimeout(() => (this.successMessage = ''), 5000);
+      await this.loadWeekMoney();
+    } catch (err: any) {
+      this.savingExpense = false;
+      this.errorMessage = err.message || 'Failed to record expense';
+    }
+    this.cdr.markForCheck();
   }
 
   // ── Search ────────────────────────────────────────────────────
@@ -595,8 +779,8 @@ export class FeedingRecord implements OnInit, OnDestroy {
     const daysApplied =
       rate > 0 ? Math.max(0, Math.floor(this.editPaymentAmount / rate)) : 1;
 
-    this.feedingService
-      .updateFeedingPayment(this.editTargetPayment.id, {
+    this.pub
+      .updatePayment(this.editTargetPayment.id, {
         amount_paid: this.editPaymentAmount,
         days_covered: daysApplied,
         payment_method: this.editPaymentMethod,
@@ -686,8 +870,8 @@ export class FeedingRecord implements OnInit, OnDestroy {
     const rate = this.paymentSff.daily_amount || 0;
     const daysApplied = rate > 0 ? Math.max(0, Math.floor(amount / rate)) : 1;
 
-    this.feedingService
-      .recordFeedingPayment({
+    this.pub
+      .recordPayment({
         studentId,
         studentFeedingFeeId: this.paymentSff.id,
         amount,
@@ -697,7 +881,6 @@ export class FeedingRecord implements OnInit, OnDestroy {
         daysApplied,
         paymentMethod: this.paymentMethod,
         notes: this.paymentNotes || undefined,
-        churchId: this.churchId,
       })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
@@ -727,15 +910,11 @@ export class FeedingRecord implements OnInit, OnDestroy {
     this.cdr.markForCheck();
 
     try {
-      const { data } = await (this.feedingService as any).supabase.client
-        .from('feeding_payments')
-        .select('*')
-        .eq('church_id', this.churchId)
-        .eq('student_id', student.id)
-        .eq('academic_year', this.selectedYear)
-        .eq('term', this.selectedTerm)
-        .order('payment_date', { ascending: false });
-      this.historyPayments = data || [];
+      this.historyPayments = await this.pub.studentPayments(
+        student.id,
+        this.selectedYear,
+        this.selectedTerm,
+      );
     } catch (err: any) {
       this.errorMessage = err.message || 'Failed to load history';
     } finally {
@@ -768,8 +947,8 @@ export class FeedingRecord implements OnInit, OnDestroy {
     this.processingDelete = true;
     const payment = this.deleteTargetPayment;
 
-    this.feedingService
-      .deleteFeedingPayment(payment.id)
+    this.pub
+      .deletePayment(payment.id)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
@@ -794,23 +973,10 @@ export class FeedingRecord implements OnInit, OnDestroy {
 
   // ── Recording Window ──────────────────────────────────────────
 
-  async loadRecordingWindow(): Promise<void> {
-    try {
-      this.activeRecordingWindow =
-        await this.feedingService.getActiveRecordingWindowPromise(
-          this.churchId,
-        );
-    } catch {
-      this.activeRecordingWindow = null;
-    } finally {
-      this.windowLoaded = true;
-      this.cdr.markForCheck();
-    }
-  }
-
   isDateAllowed(dateStr: string): boolean {
     // Weekends are never valid recording days
     if (FeedingRecord.isWeekend(dateStr)) return false;
+    if (this.holidayName(dateStr)) return false;
     if (dateStr === this.today) return true;
     if (!this.activeRecordingWindow) return false;
     return (

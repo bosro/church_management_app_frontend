@@ -20,6 +20,12 @@
               <i class="ri-arrow-left-line"></i>
             </button>
             <div class="header-actions">
+              <!-- Copy public registration link (only for public events) -->
+              <button class="btn-secondary" (click)="copyRegistrationLink()" *ngIf="event.is_public">
+                <i [class]="linkCopied ? 'ri-check-line' : 'ri-link'"></i>
+                {{ linkCopied ? 'Link copied!' : 'Copy Registration Link' }}
+              </button>
+
               <button class="btn-secondary" (click)="exportRegistrations()"
                 *ngIf="permissionService.isAdmin || permissionService.events.view">
                 <i class="ri-download-line"></i>

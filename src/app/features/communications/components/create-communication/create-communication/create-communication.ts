@@ -20,6 +20,15 @@ import { PermissionService } from '../../../../../core/services/permission.servi
 import { AuthService } from '../../../../../core/services/auth';
 import { MemberService } from '../../../../members/services/member.service';
 import { Member } from '../../../../../models/member.model';
+import {
+  RecipientGroupsService,
+  RecipientGroup,
+  ImportSourceType,
+} from '../../../services/recipient-groups.service';
+import {
+  BulkMembershipService,
+  BulkTarget,
+} from '../../../../members/services/bulk-membership.service';
 
 interface MessageTemplate {
   name: string;
@@ -59,6 +68,24 @@ export class CreateCommunication implements OnInit, OnDestroy {
   showCustomDropdown = false;
   private customSearch$ = new Subject<string>();
 
+  // ── Saved recipient groups ────────────────────────────────────────────────
+  savedGroups: RecipientGroup[] = [];
+  loadingGroups = false;
+  activeGroup: RecipientGroup | null = null; // group currently loaded into the list
+  showSaveGroup = false;
+  saveGroupName = '';
+  savingGroup = false;
+  confirmDeleteGroup = false;
+  groupMessage = '';
+  groupError = '';
+
+  // Import from an existing cell / ministry / branch
+  importType: ImportSourceType = 'cell';
+  importTargets: BulkTarget[] = [];
+  importTargetId = '';
+  loadingImportTargets = false;
+  importing = false;
+
   // ── Send progress ──────────────────────────────────────────────────────────
   sendProgress: SendProgress | null = null;
   sending = false;
@@ -91,6 +118,8 @@ export class CreateCommunication implements OnInit, OnDestroy {
     private fb: FormBuilder,
     private communicationsService: CommunicationsService,
     private memberService: MemberService,
+    private recipientGroups: RecipientGroupsService,
+    private bulkMembership: BulkMembershipService,
     private router: Router,
     public permissionService: PermissionService,
     private authService: AuthService,
@@ -101,6 +130,8 @@ export class CreateCommunication implements OnInit, OnDestroy {
     this.initForm();
     this.setupMemberSearch();
     this.setupCustomSearch();
+    this.loadSavedGroups();
+    this.loadImportTargets();
   }
 
   ngOnDestroy(): void {
@@ -209,6 +240,9 @@ export class CreateCommunication implements OnInit, OnDestroy {
   }
 
   clearCustomList(): void {
+    this.activeGroup = null;
+    this.showSaveGroup = false;
+    this.confirmDeleteGroup = false;
     this.customSelectedMembers = [];
     this.customSearchQuery = '';
     this.customSearchResults = [];
@@ -220,6 +254,153 @@ export class CreateCommunication implements OnInit, OnDestroy {
 
   get customListCount(): number {
     return this.customSelectedMembers.length;
+  }
+
+  // ── Saved recipient groups ─────────────────────────────────────────────────
+
+  /** Adds members to the custom list, skipping anyone already in it. */
+  private mergeIntoCustomList(members: Member[]): number {
+    const have = new Set(this.customSelectedMembers.map((m) => m.id));
+    const fresh = members.filter((m) => !have.has(m.id));
+    this.customSelectedMembers = [...this.customSelectedMembers, ...fresh];
+    return fresh.length;
+  }
+
+  private setGroupFeedback(message: string, error = ''): void {
+    this.groupMessage = message;
+    this.groupError = error;
+    if (message) setTimeout(() => (this.groupMessage = ''), 5000);
+  }
+
+  async loadSavedGroups(): Promise<void> {
+    this.loadingGroups = true;
+    try {
+      this.savedGroups = await this.recipientGroups.listGroups();
+    } catch {
+      // Table may not exist yet (migration not run) - fail quietly, list stays empty
+      this.savedGroups = [];
+    } finally {
+      this.loadingGroups = false;
+    }
+  }
+
+  async onLoadGroup(groupId: string): Promise<void> {
+    if (!groupId) return;
+    const group = this.savedGroups.find((g) => g.id === groupId);
+    if (!group) return;
+    this.groupError = '';
+    try {
+      const { members, skipped } = await this.recipientGroups.getGroupMembers(groupId);
+      const hadMembers = this.customSelectedMembers.length > 0;
+      const added = this.mergeIntoCustomList(members);
+      this.activeGroup = hadMembers ? this.activeGroup : group;
+      let msg = `Added ${added} member${added === 1 ? '' : 's'} from "${group.name}".`;
+      if (skipped > 0) msg += ` ${skipped} skipped (deceased/transferred).`;
+      this.setGroupFeedback(msg);
+    } catch (e: any) {
+      this.setGroupFeedback('', e?.message || 'Could not load that group.');
+    }
+  }
+
+  openSaveGroup(): void {
+    this.saveGroupName = this.activeGroup?.name || '';
+    this.groupError = '';
+    this.confirmDeleteGroup = false;
+    this.showSaveGroup = true;
+  }
+
+  async confirmSaveGroup(updateExisting: boolean): Promise<void> {
+    if (this.savingGroup) return;
+    const name = this.saveGroupName.trim();
+    if (name.length < 2) {
+      this.groupError = 'Please enter a group name (at least 2 characters).';
+      return;
+    }
+    if (this.customSelectedMembers.length === 0) {
+      this.groupError = 'Add at least one member before saving a group.';
+      return;
+    }
+    this.savingGroup = true;
+    this.groupError = '';
+    try {
+      const id = await this.recipientGroups.saveGroup(
+        updateExisting && this.activeGroup ? this.activeGroup.id : null,
+        name,
+        this.customSelectedMembers.map((m) => m.id),
+      );
+      await this.loadSavedGroups();
+      this.activeGroup = this.savedGroups.find((g) => g.id === id) || null;
+      this.showSaveGroup = false;
+      this.setGroupFeedback(`Group "${name}" saved with ${this.customSelectedMembers.length} members.`);
+    } catch (e: any) {
+      this.groupError = e?.message || 'Could not save the group.';
+    } finally {
+      this.savingGroup = false;
+    }
+  }
+
+  async deleteActiveGroup(): Promise<void> {
+    if (!this.activeGroup || this.savingGroup) return;
+    this.savingGroup = true;
+    try {
+      const name = this.activeGroup.name;
+      await this.recipientGroups.deleteGroup(this.activeGroup.id);
+      this.activeGroup = null;
+      this.confirmDeleteGroup = false;
+      this.showSaveGroup = false;
+      await this.loadSavedGroups();
+      this.setGroupFeedback(`Group "${name}" deleted. Members themselves were not affected.`);
+    } catch (e: any) {
+      this.groupError = e?.message || 'Could not delete the group.';
+    } finally {
+      this.savingGroup = false;
+    }
+  }
+
+  // ── Import from cell / ministry / branch ───────────────────────────────────
+
+  get importTypeLabel(): string {
+    return this.importType === 'cell' ? 'cell group' : this.importType === 'branch' ? 'branch' : 'ministry';
+  }
+
+  onImportTypeChange(type: string): void {
+    this.importType = type as ImportSourceType;
+    this.importTargetId = '';
+    this.loadImportTargets();
+  }
+
+  private async loadImportTargets(): Promise<void> {
+    this.loadingImportTargets = true;
+    this.importTargets = [];
+    try {
+      this.importTargets = await this.bulkMembership.getTargets(this.importType);
+    } catch {
+      this.importTargets = [];
+    } finally {
+      this.loadingImportTargets = false;
+    }
+  }
+
+  async addFromTarget(): Promise<void> {
+    if (!this.importTargetId || this.importing) return;
+    this.importing = true;
+    this.groupError = '';
+    try {
+      const target = this.importTargets.find((t) => t.id === this.importTargetId);
+      const { members, skipped } = await this.recipientGroups.getMembersOfTarget(
+        this.importType,
+        this.importTargetId,
+      );
+      const added = this.mergeIntoCustomList(members);
+      let msg = `Added ${added} member${added === 1 ? '' : 's'} from ${target?.name || 'the ' + this.importTypeLabel}.`;
+      if (members.length === 0) msg = `No members found in ${target?.name || 'that ' + this.importTypeLabel}.`;
+      if (skipped > 0) msg += ` ${skipped} skipped (deceased/transferred).`;
+      this.setGroupFeedback(msg);
+    } catch (e: any) {
+      this.setGroupFeedback('', e?.message || 'Could not load members.');
+    } finally {
+      this.importing = false;
+    }
   }
 
   // ── Computed helpers ───────────────────────────────────────────────────────

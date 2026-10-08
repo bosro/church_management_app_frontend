@@ -1482,3 +1482,97 @@
   }
   strong { color: #047857; }
 }
+
+
+// ── Cash & expenses panel ─────────────────────────────────────
+.cash-panel {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 16px;
+
+  .cash-panel-head {
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 12px; margin-bottom: 12px; flex-wrap: wrap;
+    h3 { margin: 0; font-size: 15px; display: flex; align-items: center; gap: 6px; }
+    p { margin: 2px 0 0; font-size: 12px; color: #6b7280; }
+  }
+  .btn-add-expense {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px; border: none; border-radius: 10px; cursor: pointer;
+    background: #f59e0b; color: #fff; font-weight: 600; font-size: 13px;
+    &:hover { background: #d97706; }
+  }
+  .cash-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+    @media (max-width: 560px) { grid-template-columns: 1fr; }
+  }
+  .cash-item {
+    background: #f9fafb; border-radius: 10px; padding: 10px 12px;
+    span { display: block; font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: .03em; }
+    strong { font-size: 18px; }
+    &.minus strong { color: #b45309; }
+    &.total { background: #ecfdf5; strong { color: #047857; } }
+    &.total.negative { background: #fef2f2; strong { color: #b91c1c; } }
+  }
+  .cash-extra {
+    display: flex; flex-wrap: wrap; gap: 14px; margin-top: 10px;
+    font-size: 12px; color: #4b5563;
+    .owing-total { color: #b91c1c; }
+  }
+  .expense-list {
+    margin-top: 12px; border-top: 1px dashed #e5e7eb; padding-top: 8px;
+    .expense-row {
+      display: flex; justify-content: space-between; gap: 10px;
+      padding: 6px 0; font-size: 13px;
+      .expense-row-title { margin: 0; font-weight: 600; }
+      .expense-row-meta { margin: 2px 0 0; font-size: 11px; color: #6b7280; }
+      strong { color: #b45309; white-space: nowrap; }
+    }
+  }
+}
+
+.owing-badge {
+  display: inline-block; margin-left: 6px; padding: 2px 8px;
+  font-size: 11px; font-weight: 600; color: #b91c1c;
+  background: #fef2f2; border: 1px solid #fecaca; border-radius: 999px;
+  white-space: nowrap;
+}
+
+
+// ── PIN screen ────────────────────────────────────────────────
+.pin-screen {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  background: #f3f4f6; padding: 20px;
+}
+.pin-card {
+  width: 100%; max-width: 360px; background: #fff; border-radius: 18px;
+  padding: 28px 24px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,.08);
+  h1 { font-size: 20px; margin: 8px 0 4px; }
+  .pin-icon { font-size: 38px; color: #4f46e5; }
+  .pin-sub { margin: 0 0 16px; color: #6b7280; font-size: 14px; }
+  .pin-input {
+    width: 100%; text-align: center; font-size: 26px; letter-spacing: 8px;
+    padding: 12px; border: 2px solid #e5e7eb; border-radius: 12px; outline: none;
+    &:focus { border-color: #4f46e5; }
+  }
+  .pin-error { color: #b91c1c; font-size: 13px; margin: 10px 0 0; }
+  .pin-hint { color: #92400e; font-size: 12px; margin: 4px 0 0; }
+  .pin-btn {
+    width: 100%; margin-top: 14px; padding: 12px; border: none; border-radius: 12px;
+    background: #4f46e5; color: #fff; font-weight: 700; font-size: 15px; cursor: pointer;
+    &:disabled { opacity: .5; cursor: not-allowed; }
+  }
+  .pin-foot { margin: 14px 0 0; font-size: 12px; color: #9ca3af; }
+}
+.term-confirm-box {
+  background: #eef2ff; border-radius: 12px; padding: 14px; text-align: center;
+  span { display: block; font-size: 12px; color: #6b7280; }
+  strong { font-size: 20px; color: #3730a3; }
+}
+.term-confirm-ask { font-size: 13px; color: #4b5563; margin: 12px 0; }
+.header-lock-btn {
+  margin-left: 10px; background: rgba(255,255,255,.2); border: none; color: inherit;
+  border-radius: 8px; padding: 4px 8px; cursor: pointer;
+}

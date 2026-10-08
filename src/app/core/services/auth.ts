@@ -248,9 +248,26 @@ export class AuthService {
     return this.currentProfile?.branch_id ?? undefined;
   }
 
+  /**
+   * True when this user's data should be limited to their own branch.
+   *  • A pastor with a branch is ALWAYS branch-scoped (existing behaviour, unchanged).
+   *  • When the church has the 'branch_autonomy' feature switched on, other staff
+   *    roles that have a branch (e.g. a branch church_admin / finance_officer) are
+   *    scoped too. super_admin and people with no branch are never scoped.
+   */
   isBranchPastor(): boolean {
     const role = this.getCurrentUserRole();
-    return role === 'pastor' && !!this.currentProfile?.branch_id;
+    if (!this.currentProfile?.branch_id) return false;
+    if (role === 'pastor') return true;
+    return (
+      this.hasChurchFeature('branch_autonomy') &&
+      ['church_admin', 'finance_officer', 'senior_pastor', 'associate_pastor'].includes(role as string)
+    );
+  }
+
+  /** Readable alias used by new code */
+  isBranchScoped(): boolean {
+    return this.isBranchPastor();
   }
 
   isChurchAdmin(): boolean {

@@ -32,6 +32,7 @@ import {
   TotalPresentDaysPipe,
 } from '../../core/pipes/feeding-summary.pipe';
 import { FeedingExpenses } from './components/feeding/feeding-expenses/feeding-expenses';
+import { FeedingSettings } from './components/feeding/feeding-settings/feeding-settings';
 import { SchoolExpenses } from './components/fees/school-expenses/school-expenses';
 
 @NgModule({
@@ -62,6 +63,7 @@ import { SchoolExpenses } from './components/fees/school-expenses/school-expense
     TotalFieldPipe,
     TotalPresentDaysPipe,
     FeedingExpenses,
+    FeedingSettings,
     SchoolExpenses
   ],
   imports: [CommonModule, ReportsRoutingModule, QrCodeComponent],

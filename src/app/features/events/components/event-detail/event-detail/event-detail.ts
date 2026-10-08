@@ -15,6 +15,8 @@ import { ChurchEvent, EventCategory } from '../../../../../models/event.model';
 import { PermissionService } from '../../../../../core/services/permission.service';
 import { AuthService } from '../../../../../core/services/auth';
 
+import { copyToClipboard, eventRegistrationUrl } from '../../../../../core/utils/copy-to-clipboard';
+
 @Component({
   selector: 'app-event-detail',
   standalone: false,
@@ -44,6 +46,8 @@ export class EventDetail implements OnInit, OnDestroy {
   registering = false;
 
   canManageEvents = false;
+
+  linkCopied = false;
 
   constructor(
     private route: ActivatedRoute,
@@ -333,6 +337,18 @@ export class EventDetail implements OnInit, OnDestroy {
           this.errorMessage = error.message || 'Failed to export registrations';
         },
       });
+  }
+
+  /** Copies the public registration link so it can be shared (WhatsApp, SMS, etc.) */
+  async copyRegistrationLink(): Promise<void> {
+    if (!this.event) return;
+    const ok = await copyToClipboard(eventRegistrationUrl(this.event.id));
+    if (ok) {
+      this.linkCopied = true;
+      setTimeout(() => (this.linkCopied = false), 2500);
+    } else {
+      this.errorMessage = 'Could not copy automatically. Link: ' + eventRegistrationUrl(this.event.id);
+    }
   }
 
   goBack(): void {

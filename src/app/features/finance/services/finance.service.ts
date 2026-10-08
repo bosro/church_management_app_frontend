@@ -79,6 +79,15 @@ export class FinanceService {
     return this.authService.isBranchPastor();
   }
 
+  /**
+   * Branch autonomy is OFF by default. Pledge scoping/stamping applies only to
+   * branch-scoped staff of churches that have the 'branch_autonomy' switch ON,
+   * so nothing changes for any other church (or before the DB migration is run).
+   */
+  private isAutonomyScoped(): boolean {
+    return this.authService.isBranchPastor() && this.authService.hasChurchFeature('branch_autonomy');
+  }
+
   // ==================== GIVING CATEGORIES ====================
 
   getGivingCategories(): Observable<GivingCategory[]> {
@@ -664,6 +673,12 @@ export class FinanceService {
       )
       .eq('church_id', churchId);
 
+    // Branch-scoped staff only see their own branch's pledges (branch autonomy ON)
+    const scopedBranchId = this.getBranchId();
+    if (this.isAutonomyScoped() && scopedBranchId) {
+      query = query.eq('branch_id', scopedBranchId);
+    }
+
     if (filters?.memberId) query = query.eq('member_id', filters.memberId);
     if (filters?.categoryId)
       query = query.eq('category_id', filters.categoryId);
@@ -679,16 +694,21 @@ export class FinanceService {
 
   getPledgeById(pledgeId: string): Observable<any> {
     const churchId = this.getChurchId();
-    return from(
-      this.supabase.client
-        .from('pledges')
-        .select(
-          `*, category:giving_categories(id, name), member:members(id, first_name, last_name, member_number, photo_url)`,
-        )
-        .eq('id', pledgeId)
-        .eq('church_id', churchId)
-        .single(),
-    ).pipe(
+    let pledgeQuery = this.supabase.client
+      .from('pledges')
+      .select(
+        `*, category:giving_categories(id, name), member:members(id, first_name, last_name, member_number, photo_url, phone_primary)`,
+      )
+      .eq('id', pledgeId)
+      .eq('church_id', churchId);
+
+    // Branch-scoped staff cannot open another branch's pledge (branch autonomy ON)
+    const scopedBranchId = this.getBranchId();
+    if (this.isAutonomyScoped() && scopedBranchId) {
+      pledgeQuery = pledgeQuery.eq('branch_id', scopedBranchId);
+    }
+
+    return from(pledgeQuery.single()).pipe(
       map(({ data, error }) => {
         if (error) throw new Error(error.message);
         return data;
@@ -710,6 +730,11 @@ export class FinanceService {
       is_fulfilled: false,
       notes: pledgeData.notes || null,
     };
+    // Stamp the branch on pledges recorded by branch-scoped staff (branch autonomy ON)
+    const stampBranchId = this.getBranchId();
+    if (this.isAutonomyScoped() && stampBranchId) {
+      insertData.branch_id = stampBranchId;
+    }
     if (pledgeData.member_id) {
       insertData.member_id = pledgeData.member_id;
     } else {
@@ -831,6 +856,8 @@ export class FinanceService {
         transaction_reference: paymentData.transaction_reference || null,
         notes: paymentData.notes || null,
         recorded_by: currentUserId,
+        // A payment belongs to the same branch as its pledge (only sent when set)
+        ...(pledge.branch_id ? { branch_id: pledge.branch_id } : {}),
       })
       .select()
       .single();

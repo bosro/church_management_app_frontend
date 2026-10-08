@@ -3,7 +3,7 @@
 // All other logic is unchanged from your original.
 import { Injectable } from '@angular/core';
 import { Observable, from, throwError } from 'rxjs';
-import { map, catchError } from 'rxjs/operators';
+import { map, catchError, tap } from 'rxjs/operators';
 import { SupabaseService } from '../../../core/services/supabase';
 import { AuthService } from '../../../core/services/auth';
 import {
@@ -366,6 +366,23 @@ export class BranchesService {
     ).pipe(catchError((err) => throwError(() => err)));
   }
 
+  /**
+   * Branch autonomy: members.branch_id is the "primary branch" used for scoping.
+   * Keep it in step with branch assignment - only for churches with the switch ON.
+   */
+  private async syncMemberPrimaryBranch(memberId: string, branchId: string): Promise<void> {
+    try {
+      if (!this.authService.hasChurchFeature('branch_autonomy')) return;
+      await this.supabase.client
+        .from('members')
+        .update({ branch_id: branchId, updated_at: new Date().toISOString() })
+        .eq('id', memberId)
+        .eq('church_id', this.getChurchId());
+    } catch {
+      /* never block the assignment */
+    }
+  }
+
   assignMemberToBranch(
     branchId: string,
     memberId: string,
@@ -428,6 +445,9 @@ export class BranchesService {
         if (error) throw new Error(error.message);
         if (!data) throw new Error('Failed to assign member');
         return data;
+      }),
+      tap(() => {
+        this.syncMemberPrimaryBranch(memberId, branchId);
       }),
       catchError((err) => throwError(() => err)),
     );

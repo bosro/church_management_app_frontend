@@ -1,0 +1,108 @@
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+  <div class="dashboard-content">
+    <app-header></app-header>
+    <div class="dashboard-body">
+      <div class="settings-container">
+
+        <button class="btn-back" (click)="goBack()"><i class="ri-arrow-left-line"></i><span>Back</span></button>
+
+        <div class="page-header">
+          <h1>Teacher Access &amp; School Calendar</h1>
+          <p class="subtitle">Control who can open the teacher feeding page, which term it uses, and which days are holidays</p>
+        </div>
+
+        <div *ngIf="successMessage" class="ok-alert"><i class="ri-checkbox-circle-line"></i> {{ successMessage }}</div>
+        <div *ngIf="errorMessage" class="err-alert"><i class="ri-error-warning-line"></i> {{ errorMessage }}</div>
+
+        <div *ngIf="loading" class="loading">Loading…</div>
+
+        <ng-container *ngIf="!loading">
+
+          <!-- Teacher link -->
+          <section class="card">
+            <h2><i class="ri-link"></i> Teacher link</h2>
+            <p class="hint">Teachers open this link and enter the PIN below. The link alone no longer gives access.</p>
+            <div class="link-row">
+              <input type="text" readonly [value]="publicLink" />
+              <button class="btn" (click)="copyLink()"><i class="ri-file-copy-line"></i> Copy</button>
+            </div>
+          </section>
+
+          <!-- PIN -->
+          <section class="card">
+            <h2><i class="ri-lock-password-line"></i> Teacher PIN</h2>
+            <p class="status" [class.on]="hasPin">
+              <i [class]="hasPin ? 'ri-shield-check-line' : 'ri-shield-line'"></i>
+              {{ hasPin ? 'Teacher access is ON' : 'Teacher access is OFF — no PIN set' }}
+              <span *ngIf="hasPin && pinUpdatedAt"> · PIN changed {{ pinUpdatedAt | date:'medium' }}</span>
+              <span *ngIf="hasPin"> · {{ activeSessions }} teacher(s) signed in now</span>
+            </p>
+
+            <div class="new-pin-box" *ngIf="justSetPin">
+              <span>New PIN (write it down — it cannot be shown again)</span>
+              <strong>{{ justSetPin }}</strong>
+            </div>
+
+            <div class="pin-row">
+              <input type="text" inputmode="numeric" maxlength="8" placeholder="4 to 8 digits"
+                [(ngModel)]="newPin" />
+              <button class="btn" (click)="generatePin()"><i class="ri-magic-line"></i> Generate</button>
+              <button class="btn primary" (click)="savePin()" [disabled]="!pinValid || savingPin">
+                {{ hasPin ? 'Change PIN' : 'Set PIN' }}
+              </button>
+            </div>
+            <p class="hint">Changing the PIN signs everyone out and clears any lock-out after wrong tries. After 5 wrong tries the page locks for 15 minutes.</p>
+            <button class="btn danger" *ngIf="hasPin" (click)="disableAccess()">Turn off teacher access</button>
+          </section>
+
+          <!-- Active term -->
+          <section class="card">
+            <h2><i class="ri-calendar-check-line"></i> Active term</h2>
+            <p class="status" [class.on]="!!activeTerm">
+              {{ activeTerm ? ('Teachers will be asked to confirm: ' + activeTerm + ' · ' + activeYear) : 'Not set yet — teachers will have to choose the term themselves' }}
+              <span *ngIf="termUpdatedAt"> · set {{ termUpdatedAt | date:'medium' }}</span>
+            </p>
+            <div class="pin-row">
+              <select [(ngModel)]="termYear">
+                <option *ngFor="let y of academicYears" [value]="y">{{ y }}</option>
+              </select>
+              <select [(ngModel)]="termTerm">
+                <option *ngFor="let t of terms" [value]="t">{{ t }}</option>
+              </select>
+              <button class="btn primary" (click)="saveTerm()" [disabled]="savingTerm">Save active term</button>
+            </div>
+            <p class="hint">After teachers enter the PIN they see this term and confirm it, so everything they record is saved under the right term.</p>
+          </section>
+
+          <!-- Holidays -->
+          <section class="card">
+            <h2><i class="ri-calendar-event-line"></i> Holidays &amp; breaks</h2>
+            <p class="hint">On these dates nothing can be recorded, and they are not counted as school days (so nobody is charged, and no leftover is created). Total feeding days in the fee structure are not changed automatically.</p>
+            <div class="holiday-form">
+              <input type="text" placeholder="e.g. Independence Day, Mid-term break" [(ngModel)]="holidayName" maxlength="100" />
+              <label>From <input type="date" [(ngModel)]="holidayFrom" /></label>
+              <label>To <small>(optional)</small> <input type="date" [(ngModel)]="holidayTo" [min]="holidayFrom" /></label>
+              <button class="btn primary" (click)="addHoliday()" [disabled]="!holidayValid || savingHoliday">
+                <i class="ri-add-line"></i> Add
+              </button>
+            </div>
+
+            <div class="empty" *ngIf="holidays.length === 0">No holidays added yet.</div>
+            <div class="holiday-row" *ngFor="let h of holidays">
+              <div>
+                <strong>{{ h.name }}</strong>
+                <span>
+                  {{ h.from_date | date:'EEE, MMM d, y' }}
+                  <ng-container *ngIf="h.to_date !== h.from_date"> → {{ h.to_date | date:'EEE, MMM d, y' }}</ng-container>
+                </span>
+              </div>
+              <button class="btn-icon" (click)="removeHoliday(h)" title="Remove"><i class="ri-delete-bin-line"></i></button>
+            </div>
+          </section>
+
+        </ng-container>
+      </div>
+    </div>
+  </div>
+</div>

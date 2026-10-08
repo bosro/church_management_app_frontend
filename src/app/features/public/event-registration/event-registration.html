@@ -1,0 +1,115 @@
+<!-- src/app/features/public/event-registration/event-registration.html -->
+<div class="public-wrapper">
+  <div class="public-container">
+
+    <!-- Loading -->
+    <div *ngIf="pageState === 'loading'" class="status-state">
+      <div class="spinner"></div>
+      <h2>Loading event...</h2>
+    </div>
+
+    <!-- Not found -->
+    <div *ngIf="pageState === 'notfound'" class="status-state">
+      <div class="status-icon error"><i class="ri-calendar-close-line"></i></div>
+      <h2>Event not found</h2>
+      <p>This link may be incorrect, or the event is no longer available.</p>
+      <p class="hint">Please contact your church for the correct link.</p>
+    </div>
+
+    <!-- Event card (form / closed / success) -->
+    <div *ngIf="event && (pageState === 'form' || pageState === 'closed' || pageState === 'success')"
+      class="event-card">
+
+      <img *ngIf="heroImage" [src]="heroImage" [alt]="event.title" class="hero" />
+
+      <div class="event-head">
+        <div class="church-line">
+          <img *ngIf="event.church_logo" [src]="event.church_logo" [alt]="event.church_name" class="logo" />
+          <span>{{ event.church_name }}</span>
+        </div>
+        <h1>{{ event.title }}</h1>
+
+        <ul class="meta">
+          <li>
+            <i class="ri-calendar-event-line"></i>
+            <span>
+              {{ event.start_date | date:'EEEE, MMM d, y' }} · {{ event.start_date | date:'h:mm a' }}
+              <ng-container *ngIf="event.end_date"> – {{ event.end_date | date:'h:mm a' }}</ng-container>
+            </span>
+          </li>
+          <li *ngIf="event.location">
+            <i class="ri-map-pin-line"></i><span>{{ event.location }}</span>
+          </li>
+          <li *ngIf="event.registration_deadline && pageState === 'form'">
+            <i class="ri-time-line"></i>
+            <span>Register by {{ event.registration_deadline | date:'MMM d, y' }}</span>
+          </li>
+          <li *ngIf="event.spots_left !== null && event.spots_left !== undefined && pageState === 'form'">
+            <i class="ri-group-line"></i>
+            <span>{{ event.spots_left }} spot{{ event.spots_left === 1 ? '' : 's' }} left</span>
+          </li>
+        </ul>
+
+        <p *ngIf="event.description" class="description">{{ event.description }}</p>
+      </div>
+
+      <!-- Closed -->
+      <div *ngIf="pageState === 'closed'" class="closed-box">
+        <i class="ri-lock-line"></i>
+        <div>
+          <strong>Registration is closed</strong>
+          <p>{{ event.closed_reason }}</p>
+        </div>
+      </div>
+
+      <!-- Success -->
+      <div *ngIf="pageState === 'success'" class="success-box">
+        <div class="status-icon success"><i class="ri-checkbox-circle-line"></i></div>
+        <h2>You're registered!</h2>
+        <p>Thank you, {{ name }}. We look forward to seeing you at {{ event.title }}.</p>
+        <button type="button" class="btn-secondary" (click)="registerAnother()">
+          <i class="ri-user-add-line"></i> Register another person
+        </button>
+      </div>
+
+      <!-- Form -->
+      <form *ngIf="pageState === 'form'" class="reg-form" (ngSubmit)="submit()" #regForm="ngForm" novalidate>
+        <h3>Register to attend</h3>
+
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i><span>{{ errorMessage }}</span>
+        </div>
+
+        <div class="field">
+          <label for="reg-name">Full name <span class="req">*</span></label>
+          <input id="reg-name" name="name" type="text" [(ngModel)]="name" required maxlength="100"
+            autocomplete="name" placeholder="Your full name" />
+        </div>
+
+        <div class="field">
+          <label for="reg-email">Email <span class="req">*</span></label>
+          <input id="reg-email" name="email" type="email" [(ngModel)]="email" required maxlength="150"
+            autocomplete="email" placeholder="you@example.com" />
+        </div>
+
+        <div class="field">
+          <label for="reg-phone">Phone <span class="opt">(optional)</span></label>
+          <input id="reg-phone" name="phone" type="tel" [(ngModel)]="phone" maxlength="30"
+            autocomplete="tel" placeholder="e.g. 024 000 0000" />
+        </div>
+
+        <div class="field">
+          <label for="reg-notes">Notes <span class="opt">(optional)</span></label>
+          <textarea id="reg-notes" name="notes" rows="3" [(ngModel)]="notes" maxlength="500"
+            placeholder="Anything we should know?"></textarea>
+        </div>
+
+        <button type="submit" class="btn-primary" [disabled]="submitting">
+          <span *ngIf="!submitting">Register</span>
+          <span *ngIf="submitting">Registering...</span>
+        </button>
+      </form>
+    </div>
+
+  </div>
+</div>

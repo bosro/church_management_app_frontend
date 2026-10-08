@@ -143,6 +143,18 @@
               </div>
             </div>
 
+            <!-- SMS confirmation to the member -->
+            <label class="sms-option" *ngIf="canOfferSms" [class.disabled]="!selectedMemberHasPhone">
+              <input type="checkbox" [checked]="sendSms && selectedMemberHasPhone"
+                [disabled]="!selectedMemberHasPhone || loading"
+                (change)="sendSms = $any($event.target).checked" />
+              <span>
+                <strong><i class="ri-message-2-line"></i> Send SMS confirmation</strong>
+                <small *ngIf="selectedMemberHasPhone">to {{ selectedMember?.phone_primary }}</small>
+                <small *ngIf="!selectedMemberHasPhone">No phone number on file for this member</small>
+              </span>
+            </label>
+
             <div class="form-actions">
               <button type="button" class="btn-secondary" (click)="cancel()" [disabled]="loading">Cancel</button>
               <button type="submit" class="btn-primary" [disabled]="loading">

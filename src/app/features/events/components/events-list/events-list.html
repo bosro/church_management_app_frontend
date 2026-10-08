@@ -111,6 +111,10 @@
                 <span class="date-year">{{ event.start_date | date:'yyyy' }}</span>
               </div>
               <div class="event-actions">
+                <button class="btn-icon-small" (click)="copyRegistrationLink(event.id, $event)"
+                  *ngIf="event.is_public" [title]="copiedEventId === event.id ? 'Link copied!' : 'Copy registration link'">
+                  <i [class]="copiedEventId === event.id ? 'ri-check-line' : 'ri-link'"></i>
+                </button>
                 <button class="btn-icon-small" (click)="editEvent(event.id, $event)"
                   *ngIf="permissionService.isAdmin || permissionService.events.edit">
                   <i class="ri-edit-line"></i>
@@ -294,6 +298,10 @@
               </div>
 
               <div class="detail-event-actions">
+                <button class="btn-icon-small" (click)="copyRegistrationLink(event.id, $event)"
+                  *ngIf="event.is_public" [title]="copiedEventId === event.id ? 'Link copied!' : 'Copy registration link'">
+                  <i [class]="copiedEventId === event.id ? 'ri-check-line' : 'ri-link'"></i>
+                </button>
                 <button class="btn-icon-small" (click)="editEvent(event.id, $event)"
                   *ngIf="permissionService.isAdmin || permissionService.events.edit">
                   <i class="ri-edit-line"></i>

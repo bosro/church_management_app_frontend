@@ -9,6 +9,7 @@ import { LinkCheckin } from './link-checkin/link-checkin';
 import { MemberRegistration } from './member-registration/member-registration';
 import { FeedingRecord } from './feeding-record/feeding-record';
 import { PublicStudentRegistration } from './public-student-registration/public-student-registration';
+import { PublicEventRegistration } from './event-registration/event-registration';
 import { GivingThankYouPage } from './giving-thank-you/giving-thank-you';
 import { CommitmentForm } from '../building-campaign/components/commitment-form/commitment-form';
 import { BuildingCampaignPaymentCallback } from './building-campaign-payment-callback/building-campaign-payment-callback';
@@ -39,6 +40,10 @@ const routes: Routes = [
     path: 'student-register/:token',
     component: PublicStudentRegistration,
   },
+  {
+    path: 'event-register/:eventId',
+    component: PublicEventRegistration,
+  },
    {
     path: 'building-campaign/:churchId',
     component: CommitmentForm,
@@ -51,6 +56,7 @@ const routes: Routes = [
     MemberRegistration,
     FeedingRecord,
     PublicStudentRegistration,
+    PublicEventRegistration,
     GivingThankYouPage,
     BuildingCampaignPaymentCallback
   ],

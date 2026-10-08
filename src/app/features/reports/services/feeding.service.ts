@@ -790,8 +790,31 @@ export class FeedingService {
         .eq('term', term),
     ]);
 
-    const present = (attRes.data || []).filter((a: any) => a.is_present).length;
-    const absent = (attRes.data || []).filter((a: any) => !a.is_present).length;
+    let present = (attRes.data || []).filter((a: any) => a.is_present).length;
+    let absent = (attRes.data || []).filter((a: any) => !a.is_present).length;
+
+    // Prefer the attendance-aware overview so "present" matches the teacher
+    // page (paid students count as present unless marked absent).
+    try {
+      const { data: ov, error: ovErr } = await this.supabase.client.rpc(
+        'feeding_admin_overview',
+        {
+          p_church_id: churchId,
+          p_date: date,
+          p_year: academicYear,
+          p_term: term,
+        },
+      );
+      if (!ovErr && Array.isArray(ov)) {
+        present = ov.filter(
+          (r: any) =>
+            (r.has_record && r.is_present) || (!r.has_record && r.covered_today),
+        ).length;
+        absent = ov.filter((r: any) => r.has_record && !r.is_present).length;
+      }
+    } catch {
+      /* fall back to explicit-record counts above */
+    }
     const totalCollected = (payRes.data || []).reduce(
       (s: number, p: any) => s + Number(p.amount_paid),
       0,

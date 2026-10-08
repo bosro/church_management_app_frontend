@@ -117,6 +117,9 @@
                   <td>
                     <div class="title-cell">
                       <span class="expense-title">{{ expense.title }}</span>
+                      <span class="teacher-entry-badge" *ngIf="expense.source === 'teacher'">
+                        <i class="ri-user-star-line"></i> Entered by teacher: {{ expense.entered_by_name || 'Unknown' }}
+                      </span>
                       <span class="expense-desc" *ngIf="expense.description">{{ expense.description }}</span>
                     </div>
                   </td>

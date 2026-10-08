@@ -1,4 +1,76 @@
-<div class="feeding-page" (click)="closeAllDropdowns()">
+<!-- ══ SCREEN: Checking / PIN ═══════════════════════════════════ -->
+<div class="pin-screen" *ngIf="authState === 'checking' || authState === 'locked'">
+  <div class="pin-card">
+    <div class="pin-icon"><i class="ri-lock-password-line"></i></div>
+    <h1>Daily Feeding Fee</h1>
+    <p class="pin-sub" *ngIf="authState === 'checking'">Checking access…</p>
+    <ng-container *ngIf="authState === 'locked'">
+      <p class="pin-sub">Enter the PIN the admin gave you</p>
+      <input class="pin-input" type="password" inputmode="numeric" autocomplete="off"
+        maxlength="8" placeholder="• • • •" [(ngModel)]="pin"
+        (keyup.enter)="submitPin()" [disabled]="verifyingPin" />
+      <p class="pin-error" *ngIf="pinError">{{ pinError }}</p>
+      <p class="pin-hint" *ngIf="pinAttemptsLeft !== null && pinAttemptsLeft > 0">
+        {{ pinAttemptsLeft }} attempt(s) left before a 15-minute wait.
+      </p>
+      <button class="pin-btn" (click)="submitPin()" [disabled]="!pin.trim() || verifyingPin">
+        <i class="ri-loader-4-line spin" *ngIf="verifyingPin"></i>
+        {{ verifyingPin ? 'Checking…' : 'Continue' }}
+      </button>
+      <p class="pin-foot">Forgot the PIN? Ask the school admin.</p>
+    </ng-container>
+  </div>
+</div>
+
+<!-- ══ MODAL: Confirm the term (after PIN) ═══════════════════════ -->
+<div class="modal-overlay" *ngIf="authState === 'term-confirm'">
+  <div class="payment-modal term-confirm-modal">
+    <div class="payment-modal-header">
+      <div>
+        <h3>Confirm the term</h3>
+        <p>{{ schoolName }}</p>
+      </div>
+    </div>
+    <div class="payment-modal-body">
+      <ng-container *ngIf="!changingTerm">
+        <div class="term-confirm-box">
+          <span>The admin has set the current term to</span>
+          <strong>{{ confirmTerm }} · {{ confirmYear }}</strong>
+        </div>
+        <p class="term-confirm-ask">Is this correct? Everything you record will be saved under this term.</p>
+      </ng-container>
+      <ng-container *ngIf="changingTerm">
+        <p class="term-confirm-ask" *ngIf="!termSetByAdmin">
+          The admin has not set the current term yet. Please choose it carefully.
+        </p>
+        <p class="term-confirm-ask" *ngIf="termSetByAdmin">
+          Choose the term you want to work in. If the admin's term is wrong, please tell them.
+        </p>
+        <div class="form-group">
+          <label>Academic year</label>
+          <select [(ngModel)]="confirmYear">
+            <option *ngFor="let y of academicYears" [value]="y">{{ y }}</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Term</label>
+          <select [(ngModel)]="confirmTerm">
+            <option *ngFor="let t of terms" [value]="t">{{ t }}</option>
+          </select>
+        </div>
+      </ng-container>
+    </div>
+    <div class="payment-modal-footer">
+      <button class="btn-cancel" *ngIf="!changingTerm" (click)="changingTerm = true">No, change it</button>
+      <button class="btn-cancel" (click)="lockPage()">Sign out</button>
+      <button class="btn-submit-payment" (click)="confirmTermAndStart()">
+        <i class="ri-check-line"></i> {{ changingTerm ? 'Confirm' : 'Yes, correct' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="feeding-page" *ngIf="authState === 'ready'" (click)="closeAllDropdowns()">
 
   <!-- Header -->
   <div class="feeding-header">
@@ -12,6 +84,9 @@
     <div class="feeding-header-date">
       <i class="ri-calendar-line"></i>
       {{ selectedDate | date:'EEEE, MMMM d, y' }}
+      <button class="header-lock-btn" (click)="lockPage(); $event.stopPropagation()" title="Sign out">
+        <i class="ri-logout-box-r-line"></i>
+      </button>
     </div>
   </div>
 
@@ -45,6 +120,9 @@
       <div class="filter-item">
         <label>Payment Date</label>
         <input type="date" [(ngModel)]="selectedDate" (change)="onDateChange()" [max]="today" />
+        <span class="weekend-filter-warn" *ngIf="holidayName(selectedDate)">
+          <i class="ri-error-warning-line"></i> Holiday — {{ holidayName(selectedDate) }} (no school)
+        </span>
         <span class="weekend-filter-warn" *ngIf="isWeekend(selectedDate)">
           <i class="ri-error-warning-line"></i> Weekend — no school
         </span>
@@ -97,6 +175,56 @@
         <div>
           <p class="sum-value">{{ totalStudents }}</p>
           <p class="sum-label">Total Students</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cash & expenses (this week) -->
+    <div class="cash-panel">
+      <div class="cash-panel-head">
+        <div>
+          <h3><i class="ri-wallet-3-line"></i> Cash this week</h3>
+          <p>{{ weekLabel }}</p>
+        </div>
+        <button class="btn-add-expense" (click)="openExpenseModal()">
+          <i class="ri-add-line"></i> Record expense
+        </button>
+      </div>
+      <div class="cash-grid">
+        <div class="cash-item">
+          <span>Collected</span>
+          <strong>{{ formatCurrency(weekCollected) }}</strong>
+        </div>
+        <div class="cash-item minus">
+          <span>Expenses</span>
+          <strong>− {{ formatCurrency(weekExpensesTotal) }}</strong>
+        </div>
+        <div class="cash-item total" [class.negative]="weekCashToHandOver < 0">
+          <span>Cash to hand over</span>
+          <strong>{{ formatCurrency(weekCashToHandOver) }}</strong>
+        </div>
+      </div>
+      <div class="cash-extra">
+        <span title="Money paid for days a student has not yet eaten (for example, absent days). It is still in the cash above and belongs to that student's future days.">
+          <i class="ri-refresh-line"></i>
+          Leftover carried forward: <strong>{{ formatCurrency(termLeftoverTotal) }}</strong>
+        </span>
+        <span *ngIf="termOwingTotal > 0" class="owing-total">
+          <i class="ri-error-warning-line"></i>
+          Owed by students: <strong>{{ formatCurrency(termOwingTotal) }}</strong>
+        </span>
+      </div>
+      <div class="expense-list" *ngIf="weekExpenses.length > 0">
+        <div class="expense-row" *ngFor="let e of weekExpenses">
+          <div>
+            <p class="expense-row-title">{{ e.title }}</p>
+            <p class="expense-row-meta">
+              {{ e.expense_date | date:'EEE, MMM d' }}
+              <span *ngIf="e.entered_by_name"> · {{ e.entered_by_name }}</span>
+              <span *ngIf="e.description"> · {{ e.description }}</span>
+            </p>
+          </div>
+          <strong>− {{ formatCurrency(e.amount) }}</strong>
         </div>
       </div>
     </div>
@@ -268,10 +396,16 @@
                       <i class="ri-arrow-down-s-line att-caret"></i>
                     </button>
 
-                    <!-- Credit days indicator -->
-                    <span *ngIf="(studentStates[student.id]?.dailyStatus?.credit_days ?? 0) > 0" class="credit-badge"
-                      [title]="studentStates[student.id]?.dailyStatus?.credit_days + ' day(s) of payment credit remaining'">
-                      {{ studentStates[student.id]?.dailyStatus?.credit_days }}d
+                    <!-- Leftover credit (paid but not yet eaten) -->
+                    <span *ngIf="(studentStates[student.id]?.dailyStatus?.leftover_amount ?? 0) > 0" class="credit-badge"
+                      [title]="'Leftover credit: ' + formatCurrency(studentStates[student.id]?.dailyStatus?.leftover_amount ?? 0) + ' (' + studentStates[student.id]?.dailyStatus?.credit_days + ' day(s)) carried forward'">
+                      {{ formatCurrency(studentStates[student.id]?.dailyStatus?.leftover_amount ?? 0) }} left
+                    </span>
+
+                    <!-- Owing indicator (attended but not fully paid) -->
+                    <span *ngIf="(studentStates[student.id]?.dailyStatus?.owing_amount ?? 0) > 0" class="owing-badge"
+                      title="Amount owed for days attended">
+                      Owes {{ formatCurrency(studentStates[student.id]?.dailyStatus?.owing_amount ?? 0) }}
                     </span>
 
                     <!-- Dropdown menu -->
@@ -297,7 +431,7 @@
       || studentStates[student.id]?.loadingSummary" (click)="openPaymentModal(student)" [title]="studentStates[student.id]?.studentFeedingFees?.length === 0
       ? 'No fee assigned — admin must assign first'
       : !isDateAllowed(selectedDate)
-        ? 'Weekend or past date — contact admin'
+        ? 'Weekend, holiday or past date — contact admin'
         : 'Record payment'">
 
                     <i class="ri-money-dollar-circle-line"></i>
@@ -318,10 +452,11 @@
         <i class="ri-information-line"></i>
         <span>
           Tap <strong>Pay</strong> to record a payment.
-          The <strong>Attendance</strong> column auto-shows <em>Present</em> when a student has payment credit for the
-          day.
-          Click it to override — mark a student Absent if they did not come in.
-          Absent students' credit days are preserved and carry forward.
+          Use the <strong>Attendance</strong> column to mark a student <em>Absent</em> — this works even if they have not
+          paid yet. A student who paid is treated as present unless marked absent.
+          The money for an absent day is not used up: it shows as <strong>left</strong> and carries forward.
+          A student who attended but has not paid shows what they <strong>owe</strong>.
+          Past dates can be corrected and everything recalculates.
         </span>
       </div>
 
@@ -440,6 +575,10 @@
       <div class="form-group">
         <label>Payment Date</label>
         <input type="date" [(ngModel)]="selectedDate" [max]="today" />
+        <div class="weekend-warning" *ngIf="holidayName(selectedDate)">
+          <i class="ri-calendar-event-line"></i>
+          {{ holidayName(selectedDate) }} is a holiday — no school, so nothing can be recorded for this date.
+        </div>
         <div class="weekend-warning" *ngIf="isWeekend(selectedDate)">
           <i class="ri-error-warning-line"></i>
           This is a weekend — no school day. Please select a weekday.
@@ -618,6 +757,54 @@
         <i class="ri-loader-4-line spin" *ngIf="processingEdit"></i>
         <i class="ri-save-line" *ngIf="!processingEdit"></i>
         {{ processingEdit ? 'Saving...' : 'Save ' + formatCurrency(editPaymentAmount) }}
+      </button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══ MODAL: Record Expense ═══════════════════════════════════ -->
+<div class="modal-overlay" *ngIf="showExpenseModal" (click)="closeExpenseModal()">
+  <div class="payment-modal" (click)="$event.stopPropagation()">
+    <div class="payment-modal-header">
+      <div>
+        <h3>Record Expense</h3>
+        <p>Money taken out of the feeding collection</p>
+      </div>
+      <button class="close-btn" (click)="closeExpenseModal()"><i class="ri-close-line"></i></button>
+    </div>
+    <div class="payment-modal-body">
+      <div class="term-paid-notice">
+        <i class="ri-information-line"></i>
+        <span>This will be <strong>deducted from the cash to hand over</strong> and shown to the admin with your name and reason. Expenses cannot be edited afterwards — ask the admin if you made a mistake.</span>
+      </div>
+      <div class="form-group">
+        <label>Your name *</label>
+        <input type="text" [(ngModel)]="expenseBy" maxlength="80" placeholder="e.g. Mrs. Mensah" />
+      </div>
+      <div class="form-group">
+        <label>What was it used for? *</label>
+        <input type="text" [(ngModel)]="expenseTitle" maxlength="200" placeholder="e.g. Gas for cooking, bought rice, transport" />
+      </div>
+      <div class="form-group">
+        <label>Amount (GHS) *</label>
+        <input type="number" [(ngModel)]="expenseAmount" min="0.01" step="0.01" />
+      </div>
+      <div class="form-group">
+        <label>Date *</label>
+        <input type="date" [(ngModel)]="expenseDate" [max]="today" />
+      </div>
+      <div class="form-group">
+        <label>Extra details (Optional)</label>
+        <input type="text" [(ngModel)]="expenseNote" maxlength="500" placeholder="Any extra explanation" />
+      </div>
+    </div>
+    <div class="payment-modal-footer">
+      <button class="btn-cancel" (click)="closeExpenseModal()" [disabled]="savingExpense">Cancel</button>
+      <button class="btn-submit-payment" (click)="submitExpense()" [disabled]="!canSaveExpense">
+        <i class="ri-loader-4-line spin" *ngIf="savingExpense"></i>
+        <i class="ri-save-line" *ngIf="!savingExpense"></i>
+        {{ savingExpense ? 'Saving...' : 'Save expense' }}
       </button>
     </div>
   </div>

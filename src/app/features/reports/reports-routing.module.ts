@@ -27,6 +27,7 @@ import { ReceiptsList } from './components/fees/receipts-list/receipts-list';
 import { StudentRegistrationLinks } from './components/students/student-registration-links/student-registration-links';
 import { SchoolExpenses } from './components/fees/school-expenses/school-expenses';
 import { FeedingExpenses } from './components/feeding/feeding-expenses/feeding-expenses';
+import { FeedingSettings } from './components/feeding/feeding-settings/feeding-settings';
 
 const routes: Routes = [
   {
@@ -176,6 +177,16 @@ const routes: Routes = [
   {
     path: 'fees/feeding-admin',
     component: FeedingAdmin,
+    canActivate: [PermissionGuard],
+    data: {
+      roles: ['super_admin', 'church_admin'],
+      permission: 'school.manage',
+      requiresFeature: 'reports',
+    },
+  },
+  {
+    path: 'fees/feeding-settings',
+    component: FeedingSettings,
     canActivate: [PermissionGuard],
     data: {
       roles: ['super_admin', 'church_admin'],

@@ -325,10 +325,22 @@ export class AdminService {
       pro: ['reports', 'voting', 'job_hub'],
     };
 
-    const featuresToEnable = planFeatures[planId] ?? [];
+    const planFeatureList = planFeatures[planId] ?? [];
 
     return from(
-      this.supabase.client
+      (async () => {
+        // 'branch_autonomy' is switched on manually (not part of any plan) - never wipe it
+        const { data: current } = await this.supabase.client
+          .from('churches')
+          .select('enabled_features')
+          .eq('id', churchId)
+          .maybeSingle();
+        const keepManual = (current?.enabled_features || []).filter(
+          (f: string) => f === 'branch_autonomy',
+        );
+        const featuresToEnable = Array.from(new Set([...planFeatureList, ...keepManual]));
+
+        return this.supabase.client
         .from('churches')
         .update({
           subscription_plan: planId,
@@ -342,7 +354,8 @@ export class AdminService {
           enabled_features: featuresToEnable, // ← auto-set features
           updated_at: new Date().toISOString(),
         })
-        .eq('id', churchId),
+        .eq('id', churchId);
+      })(),
     ).pipe(
       map(({ error }) => {
         if (error) throw new Error(error.message);

@@ -8,6 +8,7 @@ import { FinanceService } from '../services/finance.service';
 import { PaymentMethod } from '../../../models/giving.model';
 import { PermissionService } from '../../../core/services/permission.service';
 import { AuthService } from '../../../core/services/auth';
+import { PaymentSmsService } from '../services/payment-sms.service';
 
 @Component({
   selector: 'app-pledge-details',
@@ -29,6 +30,7 @@ export class PledgeDetails implements OnInit, OnDestroy {
   showPaymentModal = false;
   paymentForm!: FormGroup;
   recordingPayment = false;
+  sendSms = false; // tick-box: SMS confirmation to the pledger
 
   // Payment methods
   paymentMethods: PaymentMethod[] = [
@@ -50,6 +52,7 @@ export class PledgeDetails implements OnInit, OnDestroy {
     private financeService: FinanceService,
     public permissionService: PermissionService,
     private authService: AuthService,
+    private paymentSms: PaymentSmsService,
   ) {}
 
   ngOnInit(): void {
@@ -173,7 +176,16 @@ private checkPermissions(): void {
       ]);
     this.paymentForm.get('amount')?.updateValueAndValidity();
 
+    this.sendSms = this.canOfferSms && this.pledgerHasPhone;
     this.showPaymentModal = true;
+  }
+
+  /** SMS is offered for MEMBER pledges only, to people who may send SMS */
+  get canOfferSms(): boolean {
+    return !!this.pledge?.member && this.paymentSms.canSendAlerts;
+  }
+  get pledgerHasPhone(): boolean {
+    return !!this.pledge?.member?.phone_primary?.trim();
   }
 
   closePaymentModal(): void {
@@ -201,20 +213,42 @@ private checkPermissions(): void {
 
     const paymentData = this.paymentForm.value;
 
+    // Capture what the SMS needs BEFORE the modal resets / pledge reloads
+    const member = this.pledge?.member;
+    const wantSms = this.sendSms && !!member && this.pledgerHasPhone && this.paymentSms.canSendAlerts;
+    const paidAmount = parseFloat(paymentData.amount);
+    const balanceAfter = Math.max(0, this.getBalance() - paidAmount);
+
     this.financeService
       .recordPledgePayment(this.pledgeId, paymentData)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: () => {
+        next: async () => {
           this.successMessage = 'Payment recorded successfully!';
           this.loadPledgeDetails();
           this.loadPaymentHistory();
           this.closePaymentModal();
+
+          // The payment is already saved. The SMS can never undo it.
+          if (wantSms && member) {
+            this.successMessage += ' Sending SMS…';
+            const result = await this.paymentSms.sendPledgePaymentReceipt({
+              memberId: member.id,
+              firstName: member.first_name,
+              amount: paidAmount,
+              currency: paymentData.currency,
+              balanceAfter,
+              date: paymentData.payment_date,
+            });
+            this.successMessage = result.sent
+              ? 'Payment recorded successfully! SMS confirmation sent.'
+              : `Payment recorded successfully! (SMS not sent: ${result.error})`;
+          }
           this.recordingPayment = false;
 
           setTimeout(() => {
             this.successMessage = '';
-          }, 3000);
+          }, wantSms ? 6000 : 3000);
         },
         error: (error) => {
           this.errorMessage = error.message || 'Failed to record payment';

@@ -36,7 +36,9 @@ export interface FeedingExpense {
   description?: string;
   receipt_reference?: string;
   receipt_media_urls?: string[];
-  recorded_by: string;
+  recorded_by: string | null;
+  source?: 'admin' | 'teacher';
+  entered_by_name?: string | null;
   created_at: string;
   updated_at?: string;
 }
@@ -403,9 +405,11 @@ export class FeedingExpenses implements OnInit, OnDestroy {
 
     try {
       if (this.editingExpense) {
+        // Keep original recorder/source (important for teacher-entered rows)
+        const { recorded_by: _keep, ...editPayload } = payload;
         const { error } = await this.supabase.client
           .from('feeding_expenses')
-          .update({ ...payload, updated_at: new Date().toISOString() })
+          .update({ ...editPayload, updated_at: new Date().toISOString() })
           .eq('id', this.editingExpense.id)
           .eq('church_id', churchId);
         if (error) throw new Error(error.message);

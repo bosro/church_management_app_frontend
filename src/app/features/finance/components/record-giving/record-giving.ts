@@ -20,6 +20,7 @@ import { GivingCategory, PaymentMethod } from '../../../../models/giving.model';
 import { Member } from '../../../../models/member.model';
 import { PermissionService } from '../../../../core/services/permission.service';
 import { AuthService } from '../../../../core/services/auth';
+import { PaymentSmsService } from '../../services/payment-sms.service';
 
 @Component({
   selector: 'app-record-giving',
@@ -46,6 +47,7 @@ export class RecordGiving implements OnInit, OnDestroy {
   searchResults: Member[] = [];
   searching = false;
   selectedMember: Member | null = null;
+  sendSms = false; // tick-box: SMS confirmation to the member
 
   paymentMethods: { value: PaymentMethod; label: string }[] = [
     { value: 'cash', label: 'Cash' },
@@ -74,6 +76,7 @@ export class RecordGiving implements OnInit, OnDestroy {
     private router: Router,
     public permissionService: PermissionService,
     private authService: AuthService,
+    private paymentSms: PaymentSmsService,
   ) {}
 
   ngOnInit(): void {
@@ -173,13 +176,23 @@ export class RecordGiving implements OnInit, OnDestroy {
       });
   }
 
+  /** Tick-box is offered only to people who may send SMS, for a member that has a phone number */
+  get canOfferSms(): boolean {
+    return !!this.selectedMember && this.paymentSms.canSendAlerts;
+  }
+  get selectedMemberHasPhone(): boolean {
+    return !!this.selectedMember?.phone_primary?.trim();
+  }
+
   selectMember(member: Member): void {
     this.selectedMember = member;
+    this.sendSms = !!member.phone_primary?.trim(); // on by default when we can reach them
     this.searchControl.setValue('');
     this.searchResults = [];
   }
   removeMember(): void {
     this.selectedMember = null;
+    this.sendSms = false;
   }
 
   // ── Individual giving submit ─────────────────────────────────
@@ -199,14 +212,36 @@ export class RecordGiving implements OnInit, OnDestroy {
       amount: parseFloat(this.givingForm.value.amount),
     };
 
+    // Capture what the SMS needs BEFORE the form is touched again
+    const member = this.selectedMember;
+    const wantSms = this.sendSms && !!member && this.selectedMemberHasPhone && this.paymentSms.canSendAlerts;
+    const categoryName = this.categories?.find((c: any) => c.id === transactionData.category_id)?.name;
+
     this.financeService
       .createGivingTransaction(transactionData)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: () => {
+        next: async () => {
           this.successMessage = 'Giving recorded successfully!';
+
+          // The payment is already saved. The SMS can never undo it.
+          if (wantSms && member) {
+            this.successMessage += ' Sending SMS…';
+            const result = await this.paymentSms.sendGivingReceipt({
+              memberId: member.id,
+              firstName: member.first_name,
+              amount: transactionData.amount,
+              currency: transactionData.currency,
+              categoryName,
+              date: transactionData.transaction_date,
+            });
+            this.successMessage = result.sent
+              ? 'Giving recorded successfully! SMS confirmation sent.'
+              : `Giving recorded successfully! (SMS not sent: ${result.error})`;
+          }
+
           this.loading = false;
-          setTimeout(() => this.router.navigate(['main/finance']), 1500);
+          setTimeout(() => this.router.navigate(['main/finance']), wantSms ? 2500 : 1500);
         },
         error: (error) => {
           this.loading = false;

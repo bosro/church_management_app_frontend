@@ -708,3 +708,43 @@ button:disabled {
 }
 
 
+
+// ── SMS confirmation tick-box ────────────────────────────────────────────────
+.sms-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  margin: 0.25rem 0 1rem;
+  padding: 0.75rem 0.875rem;
+  background: #f5f3ff;
+  border: 1px solid #ddd6fe;
+  border-radius: 10px;
+  cursor: pointer;
+
+  input[type='checkbox'] {
+    margin-top: 0.2rem;
+    width: 1.125rem;
+    height: 1.125rem;
+    accent-color: #7c3aed;
+  }
+
+  span {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    font-size: 0.9rem;
+    color: #374151;
+  }
+
+  small {
+    color: #6b7280;
+    font-size: 0.8125rem;
+  }
+
+  &.disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+    background: #f9fafb;
+    border-color: #e5e7eb;
+  }
+}

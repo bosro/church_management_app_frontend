@@ -276,6 +276,18 @@
         </div>
       </div>
 
+      <!-- SMS confirmation to the pledger (members only) -->
+      <label class="sms-option" *ngIf="canOfferSms" [class.disabled]="!pledgerHasPhone">
+        <input type="checkbox" [checked]="sendSms && pledgerHasPhone"
+          [disabled]="!pledgerHasPhone || recordingPayment"
+          (change)="sendSms = $any($event.target).checked" />
+        <span>
+          <strong><i class="ri-message-2-line"></i> Send SMS confirmation</strong>
+          <small *ngIf="pledgerHasPhone">to {{ pledge.member.phone_primary }}</small>
+          <small *ngIf="!pledgerHasPhone">No phone number on file for this member</small>
+        </span>
+      </label>
+
       <div class="modal-footer">
         <button
           type="button"

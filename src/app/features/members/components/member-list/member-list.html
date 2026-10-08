@@ -167,7 +167,7 @@
         </div>
 
         <!-- Bulk Action Bar -->
-        <div *ngIf="selectedCount > 0 && canDeleteMember" class="bulk-action-bar">
+        <div *ngIf="selectedCount > 0 && canSelectMembers" class="bulk-action-bar">
           <div class="bulk-info">
             <i class="ri-checkbox-multiple-line"></i>
             <span>{{ selectedCount }} member{{ selectedCount > 1 ? 's' : '' }} selected</span>
@@ -177,7 +177,11 @@
               <i class="ri-close-line"></i>
               <span>Deselect All</span>
             </button>
-            <button class="btn-bulk-delete" (click)="bulkDelete()">
+            <button class="btn-bulk-add" (click)="openBulkAdd()" *ngIf="canBulkAssign">
+              <i class="ri-user-add-line"></i>
+              <span>Add to…</span>
+            </button>
+            <button class="btn-bulk-delete" (click)="bulkDelete()" *ngIf="canDeleteMember">
               <i class="ri-delete-bin-line"></i>
               <span>Delete Selected</span>
             </button>
@@ -197,7 +201,7 @@
               <thead>
                 <tr>
                   <!-- Select-all checkbox — only for admins who can delete -->
-                  <th *ngIf="canDeleteMember" class="col-check">
+                  <th *ngIf="canSelectMembers" class="col-check">
                     <label class="custom-checkbox">
                       <input type="checkbox" [checked]="selectAll" (change)="toggleSelectAll()" />
                       <span class="checkmark"></span>
@@ -218,7 +222,7 @@
                   (click)="viewMember(member.id)">
 
                   <!-- Row checkbox -->
-                  <td *ngIf="canDeleteMember" class="col-check" (click)="$event.stopPropagation()">
+                  <td *ngIf="canSelectMembers" class="col-check" (click)="$event.stopPropagation()">
                     <label class="custom-checkbox">
                       <input type="checkbox" [checked]="isSelected(member.id)" (change)="toggleSelect(member.id)" />
                       <span class="checkmark"></span>
@@ -276,7 +280,7 @@
                 </tr>
 
                 <tr *ngIf="members.length === 0">
-                  <td [attr.colspan]="canDeleteMember ? 9 : 8" class="empty-state">
+                  <td [attr.colspan]="canSelectMembers ? 9 : 8" class="empty-state">
                     <i class="ri-user-line"></i>
                     <p>No members found</p>
                     <button class="btn-primary-small" (click)="addMember()" *ngIf="canAddMember">
@@ -307,7 +311,7 @@
             (click)="viewMember(member.id)">
             <div class="card-header">
               <!-- Grid checkbox -->
-              <div *ngIf="canDeleteMember" class="card-check" (click)="$event.stopPropagation()">
+              <div *ngIf="canSelectMembers" class="card-check" (click)="$event.stopPropagation()">
                 <label class="custom-checkbox">
                   <input type="checkbox" [checked]="isSelected(member.id)" (change)="toggleSelect(member.id)" />
                   <span class="checkmark"></span>
@@ -388,6 +392,73 @@
           </div>
           <i class="ri-arrow-right-s-line export-arrow"></i>
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bulk Add Modal: add selected members to a cell / branch / ministry -->
+  <div class="modal-overlay" *ngIf="showBulkAddModal" (click)="closeBulkAdd()">
+    <div class="bulk-add-modal" (click)="$event.stopPropagation()">
+      <div class="bulk-add-header">
+        <h3>Add {{ selectedCount }} member{{ selectedCount === 1 ? '' : 's' }} to…</h3>
+        <button class="bulk-add-close" (click)="closeBulkAdd()" [disabled]="bulkAdding" aria-label="Close">
+          <i class="ri-close-line"></i>
+        </button>
+      </div>
+
+      <!-- Step 1: choose + confirm -->
+      <div *ngIf="!bulkResult">
+        <div class="bulk-type-tabs">
+          <button type="button" [class.active]="bulkTargetType === 'cell'" (click)="onBulkTypeChange('cell')">
+            <i class="ri-group-line"></i> Cell Group
+          </button>
+          <button type="button" [class.active]="bulkTargetType === 'branch'" (click)="onBulkTypeChange('branch')">
+            <i class="ri-building-line"></i> Branch
+          </button>
+          <button type="button" [class.active]="bulkTargetType === 'ministry'" (click)="onBulkTypeChange('ministry')">
+            <i class="ri-team-line"></i> Ministry
+          </button>
+        </div>
+
+        <label class="bulk-label" for="bulk-target">Choose {{ bulkTypeLabel }}</label>
+        <select id="bulk-target" class="bulk-select" (change)="bulkTargetId = $any($event.target).value"
+          [disabled]="loadingBulkTargets || bulkAdding">
+          <option value="" [selected]="!bulkTargetId">{{ loadingBulkTargets ? 'Loading…' : '— Select —' }}</option>
+          <option *ngFor="let t of bulkTargets" [value]="t.id" [selected]="t.id === bulkTargetId">{{ t.name }}</option>
+        </select>
+        <p class="bulk-empty" *ngIf="!loadingBulkTargets && bulkTargets.length === 0 && !bulkError">
+          No active {{ bulkTypeLabel }}s found. Create one first.
+        </p>
+        <p class="bulk-note" *ngIf="bulkTargetType === 'cell'">
+          A member can be in one cell only. Anyone already in a different cell will be moved to this one.
+        </p>
+
+        <div class="bulk-error" *ngIf="bulkError"><i class="ri-error-warning-line"></i> {{ bulkError }}</div>
+
+        <div class="bulk-add-footer">
+          <button class="btn-bulk-secondary" (click)="closeBulkAdd()" [disabled]="bulkAdding">Cancel</button>
+          <button class="btn-bulk-primary" (click)="confirmBulkAdd()" [disabled]="!bulkTargetId || bulkAdding">
+            {{ bulkAdding ? 'Adding…' : 'Add ' + selectedCount + ' member' + (selectedCount === 1 ? '' : 's') }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 2: result summary -->
+      <div *ngIf="bulkResult" class="bulk-result">
+        <div class="bulk-result-icon" [class.warn]="bulkResult.failed > 0">
+          <i [class]="bulkResult.failed > 0 ? 'ri-alert-line' : 'ri-checkbox-circle-line'"></i>
+        </div>
+        <h4>{{ bulkResult.added }} of {{ bulkResult.requested }} added</h4>
+        <ul>
+          <li *ngIf="bulkResult.moved > 0">{{ bulkResult.moved }} moved from another cell</li>
+          <li *ngIf="bulkResult.alreadyIn > 0">{{ bulkResult.alreadyIn }} already there (skipped)</li>
+          <li *ngIf="bulkResult.notFound > 0">{{ bulkResult.notFound }} not found</li>
+          <li *ngIf="bulkResult.failed > 0" class="fail">{{ bulkResult.failed }} failed</li>
+        </ul>
+        <div class="bulk-error" *ngFor="let err of bulkResult.errors"><i class="ri-error-warning-line"></i> {{ err }}</div>
+        <div class="bulk-add-footer">
+          <button class="btn-bulk-primary" (click)="closeBulkAdd()">Done</button>
+        </div>
       </div>
     </div>
   </div>

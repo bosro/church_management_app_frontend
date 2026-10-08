@@ -1018,3 +1018,48 @@ button:disabled {
     .psb-amount { font-size: 1.625rem; }
   }
 }
+
+// ── Quick Actions strip (moved to top of the page) ──────────────────────────
+// Horizontal, scrollable row so the actions are always visible without
+// scrolling down the page. Overrides the old 2/3-column grid layout.
+.quick-actions-bar {
+  grid-column: 1 / -1; // span full width if parent is a grid
+  width: 100%;
+  min-width: 0;
+  margin-bottom: 0.25rem;
+}
+
+.quick-actions-grid.quick-actions-row {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.75rem;
+  overflow-x: auto;
+  padding: 0.25rem 0.125rem 0.5rem;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+
+  .action-btn {
+    flex: 0 0 auto;
+    flex-direction: row; // icon beside label → much shorter than before
+    gap: 0.625rem;
+    min-width: 9.5rem;
+    padding: 0.75rem 1.125rem;
+    white-space: nowrap;
+    scroll-snap-align: start;
+
+    i {
+      font-size: 1.5rem;
+    }
+    span {
+      font-size: 0.875rem;
+    }
+  }
+}
+
+@media (max-width: 640px) {
+  .quick-actions-grid.quick-actions-row .action-btn {
+    min-width: 8.5rem;
+    padding: 0.625rem 0.875rem;
+  }
+}
