@@ -133,6 +133,9 @@ export class FeedingRecord implements OnInit, OnDestroy {
   openAttendanceDropdownId: string | null = null;
 
   // ── Money summary (week) + expenses ───────────────────────────
+  // 'day' = hand over cash every school day, 'week' = once a week
+  cashView: 'day' | 'week' = 'week';
+  private readonly CASH_VIEW_KEY = 'churchman_feeding_cash_view';
   weekCollected = 0;
   weekExpensesTotal = 0;
   weekExpenses: any[] = [];
@@ -193,6 +196,8 @@ export class FeedingRecord implements OnInit, OnDestroy {
 
     try {
       this.expenseBy = localStorage.getItem(this.TEACHER_NAME_KEY) || '';
+      const v = localStorage.getItem(this.CASH_VIEW_KEY);
+      if (v === 'day' || v === 'week') this.cashView = v;
     } catch {}
 
     this.pub.sessionExpired$.pipe(takeUntil(this.destroy$)).subscribe(() => {
@@ -616,9 +621,28 @@ export class FeedingRecord implements OnInit, OnDestroy {
     return { from: f(mon), to: f(fri) };
   }
 
+  /** The period the cash panel covers: the selected day, or its Mon–Fri week. */
+  private cashRange(): { from: string; to: string } {
+    return this.cashView === 'day'
+      ? { from: this.selectedDate, to: this.selectedDate }
+      : this.weekRange(this.selectedDate);
+  }
+
   get weekLabel(): string {
+    if (this.cashView === 'day') return this.formatDateLabel(this.selectedDate);
     const r = this.weekRange(this.selectedDate);
     return `${this.formatDateLabel(r.from)} – ${this.formatDateLabel(r.to)}`;
+  }
+
+  get cashTitle(): string {
+    return this.cashView === 'day' ? 'Cash for this day' : 'Cash this week';
+  }
+
+  setCashView(v: 'day' | 'week'): void {
+    if (this.cashView === v) return;
+    this.cashView = v;
+    try { localStorage.setItem(this.CASH_VIEW_KEY, v); } catch {}
+    this.loadWeekMoney();
   }
 
   /** Cash the teacher should hand over = collected − expenses (this week). */
@@ -627,7 +651,7 @@ export class FeedingRecord implements OnInit, OnDestroy {
   }
 
   async loadWeekMoney(): Promise<void> {
-    const r = this.weekRange(this.selectedDate);
+    const r = this.cashRange();
     try {
       const [collected, expenses] = await Promise.all([
         this.pub.collected(this.selectedYear, this.selectedTerm, r.from, r.to),

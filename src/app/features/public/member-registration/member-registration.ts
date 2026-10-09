@@ -164,15 +164,15 @@ export class MemberRegistration implements OnInit, OnDestroy {
 
   private async fetchChurchBranding(churchId: string): Promise<void> {
     try {
-      const { data } = await this.supabase.client
-        .from('churches')
-        .select('name, logo_url')
-        .eq('id', churchId)
-        .maybeSingle();
+      const { data } = await this.supabase.client.rpc(
+        'get_public_church_branding',
+        { p_church_id: churchId },
+      );
+      const row = Array.isArray(data) ? data[0] : data;
 
-      if (data) {
-        this.churchName = data.name || '';
-        this.churchLogo = data.logo_url || null;
+      if (row) {
+        this.churchName = row.name || '';
+        this.churchLogo = row.logo_url || null;
       }
     } catch {
       /* non-critical */

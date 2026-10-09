@@ -112,6 +112,10 @@
           <i class="ri-close-circle-line"></i>
           Deactivate
         </button>
+        <button class="btn btn-secondary" (click)="reactivateChurch(church)" *ngIf="!church.is_active">
+          <i class="ri-checkbox-circle-line"></i>
+          Reactivate
+        </button>
       </div>
     </div>
   </div>
@@ -266,15 +270,6 @@
             <span>
               <i class="ri-briefcase-line"></i>
               Job Hub
-            </span>
-          </label>
-
-          <label class="checkbox-label">
-            <input type="checkbox" [checked]="churchForm.enabled_features.includes('branch_autonomy')"
-              (change)="toggleFeature('branch_autonomy', $event)" />
-            <span>
-              <i class="ri-building-line"></i>
-              Branch Autonomy (branch staff only see their own branch)
             </span>
           </label>
         </div>

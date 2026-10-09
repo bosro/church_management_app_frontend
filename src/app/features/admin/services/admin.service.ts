@@ -262,7 +262,25 @@ export class AdminService {
    * Delete church (soft delete by setting is_active = false)
    */
   deleteChurch(churchId: string): Observable<any> {
-    return this.updateChurch(churchId, { is_active: false });
+    return this.setChurchActive(churchId, false);
+  }
+
+  /**
+   * Deactivate or reactivate a church (super admin only).
+   * Deactivating hides it from signup, blocks its users and signs them out.
+   */
+  setChurchActive(churchId: string, active: boolean): Observable<any> {
+    return from(
+      this.supabase.client.rpc('admin_set_church_active', {
+        p_church_id: churchId,
+        p_active: active,
+      }),
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw new Error(error.message);
+        return data;
+      }),
+    );
   }
 
   clearUserPermissions(userId: string): Observable<void> {

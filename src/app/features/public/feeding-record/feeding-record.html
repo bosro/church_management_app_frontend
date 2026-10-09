@@ -183,8 +183,12 @@
     <div class="cash-panel">
       <div class="cash-panel-head">
         <div>
-          <h3><i class="ri-wallet-3-line"></i> Cash this week</h3>
+          <h3><i class="ri-wallet-3-line"></i> {{ cashTitle }}</h3>
           <p>{{ weekLabel }}</p>
+          <div class="cash-toggle" role="tablist" aria-label="Cash period">
+            <button [class.active]="cashView === 'day'" (click)="setCashView('day')">Day</button>
+            <button [class.active]="cashView === 'week'" (click)="setCashView('week')">Week</button>
+          </div>
         </div>
         <button class="btn-add-expense" (click)="openExpenseModal()">
           <i class="ri-add-line"></i> Record expense
@@ -204,6 +208,11 @@
           <strong>{{ formatCurrency(weekCashToHandOver) }}</strong>
         </div>
       </div>
+      <p class="cash-negative-note" *ngIf="weekCashToHandOver < 0">
+        <i class="ri-information-line"></i>
+        Expenses are more than the money collected for this period — the school owes you
+        {{ formatCurrency(-weekCashToHandOver) }}. Tell the admin.
+      </p>
       <div class="cash-extra">
         <span title="Money paid for days a student has not yet eaten (for example, absent days). It is still in the cash above and belongs to that student's future days.">
           <i class="ri-refresh-line"></i>

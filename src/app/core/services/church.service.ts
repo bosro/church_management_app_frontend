@@ -15,17 +15,23 @@ export class ChurchService {
    * Get all churches for signup dropdown
    */
   getAllChurches(): Observable<Church[]> {
-    return from(
-      this.supabase.query<Church>('churches', {
-        select: 'id, name, location',
-        order: { column: 'name', ascending: true },
-      }),
-    ).pipe(
-      map(({ data, error }) => {
-        if (error) throw error;
-        return data || [];
-      }),
-    );
+    return from(this.loadActiveChurches());
+  }
+
+  /** Only ACTIVE churches are offered at signup. */
+  private async loadActiveChurches(): Promise<Church[]> {
+    const { data, error } = await this.supabase.client.rpc('get_signup_churches');
+    if (!error) return (data || []) as Church[];
+
+    // Fallback if the database function is not installed yet:
+    // still never list a deactivated church.
+    const res = await this.supabase.client
+      .from('churches')
+      .select('id, name, location')
+      .eq('is_active', true)
+      .order('name', { ascending: true });
+    if (res.error) throw res.error;
+    return (res.data || []) as Church[];
   }
 
   /**

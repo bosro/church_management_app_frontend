@@ -81,6 +81,34 @@
               </div>
             </div>
 
+            <!-- Branch staff (branch autonomy) -->
+            <div class="branch-staff" *ngIf="showBranchStaff">
+              <div class="branch-staff-head">
+                <h4><i class="ri-shield-user-line"></i> Branch staff</h4>
+                <small>Staff assigned here only see this branch's data.</small>
+              </div>
+
+              <ul class="branch-staff-list" *ngIf="branchStaff.length > 0">
+                <li *ngFor="let s of branchStaff">
+                  <span class="bs-name">{{ s.full_name }} <em>{{ s.role.replace('_', ' ') }}</em></span>
+                  <button type="button" class="bs-remove" (click)="removeStaff(s)" [disabled]="staffBusy"
+                    title="Remove from branch"><i class="ri-close-line"></i></button>
+                </li>
+              </ul>
+              <p class="branch-staff-empty" *ngIf="branchStaff.length === 0">No staff assigned to this branch yet.</p>
+
+              <div class="branch-staff-add">
+                <select (change)="staffToAddId = $any($event.target).value" [disabled]="staffBusy">
+                  <option value="" [selected]="!staffToAddId">Add a staff member…</option>
+                  <option *ngFor="let a of assignableStaff" [value]="a.id" [selected]="a.id === staffToAddId">
+                    {{ a.full_name }} ({{ a.role.replace('_', ' ') }})
+                  </option>
+                </select>
+                <button type="button" (click)="addStaff()" [disabled]="!staffToAddId || staffBusy">Add</button>
+              </div>
+              <p class="branch-staff-error" *ngIf="staffError"><i class="ri-error-warning-line"></i> {{ staffError }}</p>
+            </div>
+
             <div class="info-grid">
               <div class="info-item" *ngIf="branch.address">
                 <span class="info-label">Address</span>

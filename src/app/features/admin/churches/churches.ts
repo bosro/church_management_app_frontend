@@ -283,8 +283,32 @@ export class Churches implements OnInit {
     });
   }
 
+  reactivateChurch(church: Church): void {
+    if (!confirm(`Reactivate ${church.name}? Its users will be able to sign in again and everything will be as it was.`)) return;
+    this.adminService.setChurchActive(church.id, true).subscribe({
+      next: () => {
+        this.successMessage = `${church.name} reactivated.`;
+        this.loadChurches();
+        setTimeout(() => (this.successMessage = ''), 3000);
+      },
+      error: (error) => {
+        this.errorMessage = error.message || 'Failed to reactivate church';
+        setTimeout(() => (this.errorMessage = ''), 3000);
+      },
+    });
+  }
+
   deactivateChurch(church: Church): void {
-    if (!confirm(`Are you sure you want to deactivate ${church.name}?`)) return;
+    if (
+      !confirm(
+        `Deactivate ${church.name}?\n\n` +
+          `• It will disappear from the signup list\n` +
+          `• All its users will be signed out and cannot sign in\n` +
+          `• Its public links and teacher PIN page stop working\n` +
+          `• No data is deleted — you can reactivate it any time.`,
+      )
+    )
+      return;
     this.adminService.deleteChurch(church.id).subscribe({
       next: () => {
         this.successMessage = 'Church deactivated successfully!';

@@ -66,6 +66,15 @@ export class AuthService {
       )
       .subscribe(async (user) => {
         if (user) {
+          // Already signed in, but the church was deactivated meanwhile
+          if (!(await this.isMyChurchActive())) {
+            await this.supabase.client.auth.signOut();
+            this.currentProfileSubject.next(null);
+            this.getUserRolesService().clearCurrentUserPermissions();
+            this.authReadySubject.next(true);
+            this.router.navigate(['/auth/signin']);
+            return;
+          }
           await this.loadUserProfile(user.id);
           await this.loadChurchFeatures();
 
@@ -83,6 +92,21 @@ export class AuthService {
         // Only set authReady AFTER permissions are in memory
         this.authReadySubject.next(true);
       });
+  }
+
+  /**
+   * False ONLY when the logged-in person belongs to a deactivated church.
+   * If the check itself cannot run (e.g. database function not installed
+   * yet) we do NOT lock anyone out.
+   */
+  private async isMyChurchActive(): Promise<boolean> {
+    try {
+      const { data, error } = await this.supabase.client.rpc('my_church_is_active');
+      if (error) return true;
+      return data !== false;
+    } catch {
+      return true;
+    }
   }
 
   private async loadUserProfile(userId: string) {
@@ -125,6 +149,14 @@ export class AuthService {
     ).pipe(
       switchMap(async ({ data, error }) => {
         if (error) throw error;
+
+        // A deactivated church cannot sign in (checked before anything else)
+        if (!(await this.isMyChurchActive())) {
+          await this.supabase.client.auth.signOut();
+          throw new Error(
+            'This church account has been deactivated. Please contact support.',
+          );
+        }
 
         const { data: profile } = await this.supabase.query<User>('profiles', {
           filters: { id: data.user!.id },

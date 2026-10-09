@@ -12,7 +12,7 @@ import {
 } from '../../../../models/branch.model';
 import { Member } from '../../../../models/member.model';
 import { PermissionService } from '../../../../core/services/permission.service';
-import { BranchesService } from '../../services/branches';
+import { BranchesService, BranchStaffMember } from '../../services/branches';
 import { AuthService } from '../../../../core/services/auth';
 
 @Component({
@@ -55,6 +55,13 @@ export class BranchDetail implements OnInit, OnDestroy {
 
   // Permissions
   canManageBranches = false;
+
+  // ── Branch staff (branch autonomy) ──
+  branchStaff: BranchStaffMember[] = [];
+  assignableStaff: BranchStaffMember[] = [];
+  staffToAddId = '';
+  staffBusy = false;
+  staffError = '';
   canAssignMembers = false;
   canViewInsights = false;
 
@@ -74,6 +81,7 @@ export class BranchDetail implements OnInit, OnDestroy {
     this.branchId = this.route.snapshot.paramMap.get('id') || '';
     if (this.branchId) {
       this.loadBranch();
+      this.loadBranchStaff();
       this.loadBranchMembers();
       this.loadAllMembers();
 
@@ -167,6 +175,55 @@ export class BranchDetail implements OnInit, OnDestroy {
 
   switchTab(tab: 'members' | 'insights'): void {
     this.activeTab = tab;
+  }
+
+  // ── Branch staff (only for main-church admins, only when autonomy is ON) ──
+
+  get showBranchStaff(): boolean {
+    return (
+      this.canManageBranches &&
+      this.authService.hasChurchFeature('branch_autonomy') &&
+      !this.authService.isBranchPastor() // a branch user cannot manage other staff
+    );
+  }
+
+  async loadBranchStaff(): Promise<void> {
+    if (!this.branchId || !this.authService.hasChurchFeature('branch_autonomy')) return;
+    try {
+      this.branchStaff = await this.branchesService.listBranchStaff(this.branchId);
+      this.assignableStaff = await this.branchesService.listAssignableStaff();
+    } catch (e: any) {
+      this.staffError = e?.message || 'Could not load branch staff.';
+    }
+  }
+
+  async addStaff(): Promise<void> {
+    if (!this.staffToAddId || this.staffBusy) return;
+    this.staffBusy = true;
+    this.staffError = '';
+    try {
+      await this.branchesService.assignStaffToBranch(this.staffToAddId, this.branchId);
+      this.staffToAddId = '';
+      await this.loadBranchStaff();
+    } catch (e: any) {
+      this.staffError = e?.message || 'Could not assign this person.';
+    } finally {
+      this.staffBusy = false;
+    }
+  }
+
+  async removeStaff(member: BranchStaffMember): Promise<void> {
+    if (this.staffBusy) return;
+    this.staffBusy = true;
+    this.staffError = '';
+    try {
+      await this.branchesService.removeStaffFromBranch(member.id, this.branchId);
+      await this.loadBranchStaff();
+    } catch (e: any) {
+      this.staffError = e?.message || 'Could not remove this person.';
+    } finally {
+      this.staffBusy = false;
+    }
   }
 
   openAssignPastorModal(): void {

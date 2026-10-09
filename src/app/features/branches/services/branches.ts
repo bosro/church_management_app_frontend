@@ -16,6 +16,13 @@ import {
   BranchPastor,
 } from '../../../models/branch.model';
 
+export interface BranchStaffMember {
+  id: string;
+  full_name: string;
+  email: string;
+  role: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -634,6 +641,120 @@ export class BranchesService {
         if (profileError) throw new Error(profileError.message);
       })(),
     ).pipe(catchError((err) => throwError(() => err)));
+  }
+
+  // ==================== BRANCH STAFF (branch autonomy) ====================
+  // Any staff member (incl. a church_admin) can be assigned to ONE branch. A branch-scoped
+  // user then only sees that branch's data (see AuthService.isBranchPastor()).
+
+  private static readonly NON_STAFF_ROLES = ['member', 'super_admin'];
+
+  async listBranchStaff(branchId: string): Promise<BranchStaffMember[]> {
+    const churchId = this.getChurchId();
+    const { data, error } = await this.supabase.client
+      .from('profiles')
+      .select('id, full_name, email, role')
+      .eq('church_id', churchId)
+      .eq('branch_id', branchId)
+      .eq('is_active', true)
+      .order('full_name', { ascending: true });
+    if (error) throw new Error(error.message);
+    return (data || []) as BranchStaffMember[];
+  }
+
+  /** Active staff of this church who are not assigned to any branch yet */
+  async listAssignableStaff(): Promise<BranchStaffMember[]> {
+    const churchId = this.getChurchId();
+    const { data, error } = await this.supabase.client
+      .from('profiles')
+      .select('id, full_name, email, role')
+      .eq('church_id', churchId)
+      .eq('is_active', true)
+      .is('branch_id', null)
+      .not('role', 'in', '("member","super_admin")')
+      .order('full_name', { ascending: true });
+    if (error) throw new Error(error.message);
+    return (data || []) as BranchStaffMember[];
+  }
+
+  async assignStaffToBranch(userId: string, branchId: string): Promise<void> {
+    const churchId = this.getChurchId();
+
+    if (userId === this.authService.getUserId()) {
+      throw new Error(
+        'You cannot assign yourself to a branch (you would lose main-church access). Ask another administrator.',
+      );
+    }
+
+    const { data: branch } = await this.supabase.client
+      .from('branches')
+      .select('id, is_active')
+      .eq('id', branchId)
+      .eq('church_id', churchId)
+      .single();
+    if (!branch) throw new Error('Branch not found or access denied');
+    if (!branch.is_active) throw new Error('Cannot assign staff to an inactive branch');
+
+    const { data: user } = await this.supabase.client
+      .from('profiles')
+      .select('id, role, branch_id')
+      .eq('id', userId)
+      .eq('church_id', churchId)
+      .eq('is_active', true)
+      .single();
+    if (!user) throw new Error('User not found');
+    if (BranchesService.NON_STAFF_ROLES.includes(user.role)) {
+      throw new Error('Members and super admins cannot be assigned as branch staff');
+    }
+    if (user.branch_id && user.branch_id !== branchId) {
+      throw new Error('This person is already assigned to another branch. Remove them there first.');
+    }
+
+    const now = new Date().toISOString();
+    const { error } = await this.supabase.client
+      .from('profiles')
+      .update({ branch_id: branchId, updated_at: now })
+      .eq('id', userId)
+      .eq('church_id', churchId);
+    if (error) throw new Error(error.message);
+
+    // keep the parallel users table in step (best effort - never blocks)
+    await this.supabase.client
+      .from('users')
+      .update({ branch_id: branchId, updated_at: now })
+      .eq('id', userId)
+      .eq('church_id', churchId);
+  }
+
+  async removeStaffFromBranch(userId: string, branchId: string): Promise<void> {
+    const churchId = this.getChurchId();
+
+    const { data: branch } = await this.supabase.client
+      .from('branches')
+      .select('id, pastor_id')
+      .eq('id', branchId)
+      .eq('church_id', churchId)
+      .single();
+    if (!branch) throw new Error('Branch not found or access denied');
+    if (branch.pastor_id === userId) {
+      throw new Error('This person is the branch pastor. Use "Remove pastor" instead.');
+    }
+
+    const now = new Date().toISOString();
+    const { error } = await this.supabase.client
+      .from('profiles')
+      .update({ branch_id: null, updated_at: now })
+      .eq('id', userId)
+      .eq('church_id', churchId)
+      .eq('branch_id', branchId);
+    if (error) throw new Error(error.message);
+
+    await this.supabase.client
+      .from('users')
+      .update({ branch_id: null, updated_at: now })
+      .eq('id', userId)
+      .eq('church_id', churchId)
+      .eq('branch_id', branchId);
   }
 
   getMyBranch(): Observable<Branch> {
