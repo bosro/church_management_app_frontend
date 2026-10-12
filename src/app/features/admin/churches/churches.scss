@@ -914,3 +914,31 @@
 
   i { font-size: 0.75rem; }
 }
+
+
+// ── Church detail modal ───────────────────────────────────
+.badge-starter { background: #d1fae5; color: #065f46; }
+.detail-modal .modal-body { max-height: 70vh; overflow-y: auto; }
+.detail-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.detail-stat {
+  background: #f5f3ff; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 4px;
+  &__num { font-size: 22px; font-weight: 800; color: #5b21b6; }
+  &__label { font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: .04em; }
+}
+.detail-tabs {
+  display: flex; gap: 8px; border-bottom: 1px solid #e5e7eb; margin-bottom: 16px;
+  button { background: none; border: none; padding: 10px 14px; font-weight: 600; color: #6b7280; cursor: pointer; border-bottom: 2px solid transparent;
+    &.active { color: #5b21b6; border-bottom-color: #5b21b6; } }
+}
+.detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; margin-bottom: 8px;
+  > div { display: flex; flex-direction: column; gap: 3px; word-break: break-word; }
+  .label { font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: .04em; } }
+.detail-h { margin: 20px 0 8px; font-size: 14px; }
+.detail-table-wrap { overflow-x: auto; border: 1px solid #e5e7eb; border-radius: 10px; }
+.detail-table { width: 100%; border-collapse: collapse; font-size: 13px;
+  th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #f3f4f6; white-space: nowrap; }
+  th { background: #f9fafb; font-weight: 700; color: #374151; }
+  .muted { color: #9ca3af; text-align: center; } }
+.members-toolbar { display: flex; gap: 8px; input { flex: 1; } }
+.members-pager { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 12px; }
+.muted { color: #6b7280; font-size: 13px; }

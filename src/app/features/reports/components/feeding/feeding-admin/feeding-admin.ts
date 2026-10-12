@@ -7,6 +7,8 @@ import {
   FeedingFeeStructure,
   StudentFeedingFee,
   FeedingPayment,
+  FeeStructureImpact,
+  FeeChangeMode,
 } from '../../../services/feeding.service';
 import { AuthService } from '../../../../../core/services/auth';
 import {
@@ -52,6 +54,13 @@ export class FeedingAdmin implements OnInit, OnDestroy {
   showDeleteStructureModal = false;
   structureToDelete: FeedingFeeStructure | null = null;
   deletingStructure = false;
+  deleteImpact: FeeStructureImpact | null = null;
+  loadingDeleteImpact = false;
+  deleteConfirmText = '';
+
+  // Edit: payment-aware change handling
+  editImpact: FeeStructureImpact | null = null;
+  changeMode: FeeChangeMode | '' = '';
 
   // ── Assign to class/student ───────────────────────────────────
   showAssignClassModal = false;
@@ -258,6 +267,12 @@ export class FeedingAdmin implements OnInit, OnDestroy {
       if (!groups[key]) groups[key] = [];
       groups[key].push(s);
     });
+    Object.keys(groups).forEach((k) =>
+      groups[k].sort(
+        (a, b) =>
+          Number(!!a.superseded_by) - Number(!!b.superseded_by),
+      ),
+    );
     return Object.keys(groups).map((key) => ({
       class:
         key === '__general__'
@@ -293,8 +308,38 @@ export class FeedingAdmin implements OnInit, OnDestroy {
       academic_year: s.academic_year,
       term: s.term,
     };
+    this.editImpact = null;
+    this.changeMode = '';
     this.showStructureModal = true;
     this.errorMessage = '';
+    this.feedingService
+      .getFeedingFeeStructureImpact(s.id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (impact) => {
+          this.editImpact = impact;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.editImpact = null;
+          this.cdr.markForCheck();
+        },
+      });
+  }
+
+  /** Edit modal: payments exist AND the rate or days actually changed. */
+  get needsChangeMode(): boolean {
+    const s = this.editingStructure;
+    if (!s || !this.editImpact || this.editImpact.payment_count === 0)
+      return false;
+    return (
+      Number(this.structureForm.daily_amount) !== Number(s.daily_amount) ||
+      Number(this.structureForm.total_days) !== Number(s.total_days)
+    );
+  }
+
+  get editHasPayments(): boolean {
+    return !!this.editImpact && this.editImpact.payment_count > 0;
   }
 
   get previewTotal(): number {
@@ -358,22 +403,67 @@ export class FeedingAdmin implements OnInit, OnDestroy {
 
     try {
       if (this.editingStructure) {
-        const classId = this.structureForm.selectedClassIds[0] || null;
-        await this.feedingService
-          .updateFeedingFeeStructure(this.editingStructure.id, {
-            class_id: classId,
-            fee_name: this.structureForm.fee_name,
-            daily_amount: this.structureForm.daily_amount,
-            total_days: this.structureForm.total_days,
-            academic_year: this.structureForm.academic_year,
-            term: this.structureForm.term,
+        const st = this.editingStructure;
+        const feeChanged =
+          Number(this.structureForm.daily_amount) !== Number(st.daily_amount) ||
+          Number(this.structureForm.total_days) !== Number(st.total_days);
+
+        if (this.needsChangeMode && !this.changeMode) {
+          this.errorMessage =
+            'Payments already exist. Please choose how the new fee should be applied.';
+          this.savingStructure = false;
+          return;
+        }
+
+        // 1) Push name / rate / days to the structure and its students.
+        //    Errors are surfaced (they used to be silently swallowed).
+        const result = await this.feedingService
+          .applyFeedingFeeChange(st.id, {
+            feeName: this.structureForm.fee_name,
+            dailyAmount: Number(this.structureForm.daily_amount),
+            totalDays: Number(this.structureForm.total_days),
+            mode: (this.changeMode || 'continue') as FeeChangeMode,
           })
           .toPromise();
 
-        await this.syncStudentFeesAfterEdit(this.editingStructure.id);
-        this.showSuccess(
-          'Fee structure updated! Unpaid student fees have been synced automatically.',
-        );
+        // 2) Class / year / term only change when nothing has been paid
+        if (!this.editHasPayments) {
+          const classId = this.structureForm.selectedClassIds[0] || null;
+          if (
+            classId !== (st.class_id || null) ||
+            this.structureForm.academic_year !== st.academic_year ||
+            this.structureForm.term !== st.term
+          ) {
+            await this.feedingService
+              .updateFeedingFeeStructure(st.id, {
+                class_id: classId,
+                academic_year: this.structureForm.academic_year,
+                term: this.structureForm.term,
+              })
+              .toPromise();
+          }
+        }
+
+        if (result?.mode === 'fresh') {
+          this.showSuccess(
+            `New fee started. ${result.students_frozen} student(s) keep their old payments at the old rate and now continue on the new fee` +
+              (result.students_moved
+                ? `; ${result.students_moved} with no payments moved to the new fee.`
+                : '.'),
+          );
+        } else if (result?.mode === 'continue') {
+          this.showSuccess(
+            `Fee updated for all ${result.students_updated} assigned student(s). Payments were kept; the new rate applies from today and earlier days stay at the old rate.`,
+          );
+        } else {
+          this.showSuccess(
+            feeChanged
+              ? `Fee updated for ${result?.students_updated ?? 0} assigned student(s).`
+              : 'Fee structure updated.',
+          );
+        }
+        this.loadStudentFeedingFees();
+        this.loadStats();
       } else {
         const classIds =
           this.structureForm.selectedClassIds.length > 0
@@ -441,14 +531,548 @@ export class FeedingAdmin implements OnInit, OnDestroy {
     }
   }
 
-  private async syncStudentFeesAfterEdit(structureId: string): Promise<void> {
+  confirmDeleteStructure(s: FeedingFeeStructure): void {
+    this.structureToDelete = s;
+    this.deleteImpact = null;
+    this.deleteConfirmText = '';
+    this.loadingDeleteImpact = true;
+    this.errorMessage = '';
+    this.showDeleteStructureModal = true;
+    this.feedingService
+      .getFeedingFeeStructureImpact(s.id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (impact) => {
+          this.deleteImpact = impact;
+          this.loadingDeleteImpact = false;
+          this.cdr.markForCheck();
+        },
+        error: (err) => {
+          this.loadingDeleteImpact = false;
+          this.errorMessage = err.message || 'Could not check this fee structure';
+          this.cdr.markForCheck();
+        },
+      });
+  }
+
+  get deleteHasPayments(): boolean {
+    return !!this.deleteImpact && this.deleteImpact.payment_count > 0;
+  }
+
+  get canConfirmDelete(): boolean {
+    if (this.loadingDeleteImpact || this.deletingStructure || !this.deleteImpact)
+      return false;
+    return (
+      !this.deleteHasPayments ||
+      this.deleteConfirmText.trim().toUpperCase() === 'DELETE'
+    );
+  }
+
+  closeDeleteModal(): void {
+    this.showDeleteStructureModal = false;
+    this.deleteImpact = null;
+    this.deleteConfirmText = '';
+  }
+
+  executeDeleteStructure(): void {
+    if (!this.structureToDelete || !this.canConfirmDelete) return;
+    this.deletingStructure = true;
+    this.feedingService
+      .deleteFeedingFeeStructure(
+        this.structureToDelete.id,
+        this.deleteHasPayments,
+      )
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          const n = this.deleteImpact?.payment_count || 0;
+          this.deletingStructure = false;
+          this.closeDeleteModal();
+          this.structureToDelete = null;
+          this.showSuccess(
+            n > 0
+              ? `Fee structure deleted along with ${n} payment record(s).`
+              : 'Fee structure deleted',
+          );
+          this.loadFeeStructures();
+          this.loadStudentFeedingFees();
+          this.loadStats();
+          this.cdr.markForCheck();
+        },
+        error: (err) => {
+          this.deletingStructure = false;
+          this.errorMessage = err.message || 'Failed to delete';
+          this.cdr.markForCheck();
+        },
+      });
+  }
+
+  // ── Assign to class/student ───────────────────────────────────
+  showAssignClassModal = false;
+  assignClassStructure: FeedingFeeStructure | null = null;
+  assignClassId = '';
+  assigningClass = false;
+
+  showAssignStudentModal = false;
+  assignStudentStructure: FeedingFeeStructure | null = null;
+  studentSearchQuery = '';
+  studentSearchResults: any[] = [];
+  searchingStudents = false;
+  selectedStudentId = '';
+  selectedStudentName = '';
+  assignCustomAmount: number | null = null;
+  useCustomAmount = false;
+  assigningStudent = false;
+
+  // ── Assigned students modal ───────────────────────────────────
+  showAssignedStudentsModal = false;
+  assignedStudentsStructure: FeedingFeeStructure | null = null;
+  assignedStudentsList: any[] = [];
+  loadingAssignedStudents = false;
+  unassigningId: string | null = null;
+  unassignError = '';
+
+  // ── Student Feeding Fees list ─────────────────────────────────
+  studentFeedingFees: StudentFeedingFee[] = [];
+  loadingStudentFees = false;
+  selectedClassFilter = '';
+  showOutstandingOnly = false;
+
+  // ── Payments ──────────────────────────────────────────────────
+  payments: FeedingPayment[] = [];
+  loadingPayments = false;
+  selectedDate = new Date().toISOString().split('T')[0];
+  dailySummary: any = null;
+
+  showEditPaymentModal = false;
+  editingPayment: any = null;
+  editPaymentAmount = 0;
+  editPaymentDate = '';
+  editPaymentNotes = '';
+  editPaymentMethod = 'Cash';
+  savingPayment = false;
+
+  // ── Student detail modal ──────────────────────────────────────
+  showStudentDetailModal = false;
+  studentDetail: any = null;
+  studentDetailLoading = false;
+
+  // ── Recording window ──────────────────────────────────────────
+  activeWindow: any = null;
+  showWindowModal = false;
+  windowFrom = '';
+  windowTo = '';
+  windowReason = '';
+  savingWindow = false;
+  windowHistory: any[] = [];
+  showWindowHistory = false;
+
+  // ── Statistics ────────────────────────────────────────────────
+  stats: any = null;
+
+  // ── Public link ───────────────────────────────────────────────
+  publicLink = '';
+  linkCopied = false;
+
+  // ── Active tab ────────────────────────────────────────────────
+  activeTab: 'structures' | 'student-fees' | 'payments' = 'structures';
+
+  errorMessage = '';
+  successMessage = '';
+
+  paymentMethods = ['Cash', 'Mobile Money', 'Bank Transfer', 'Cheque'];
+
+  expensesSummary: {
+    total_collected: number;
+    total_expenses: number;
+    net_balance: number;
+    expense_count: number;
+  } | null = null;
+
+  loadingExpensesSummary = false;
+
+  constructor(
+    private feedingService: FeedingService,
+    private authService: AuthService,
+    private cdr: ChangeDetectorRef,
+    public router: Router,
+    private feedingFilter: FeedingFilterService,
+    private supabase: SupabaseService, // ← ADD THIS
+  ) {}
+
+  ngOnInit(): void {
+    this.churchId = this.authService.getChurchId() || '';
+    this.publicLink = `${window.location.origin}/public/feeding-fees/${this.churchId}`;
+    this.selectedTerm = this.feedingFilter.term;
+    this.selectedYear = this.feedingFilter.year;
+
+    this.loadClasses();
+    this.loadFeeStructures();
+    this.loadStudentFeedingFees();
+    this.loadPayments();
+    this.loadDailySummary();
+    this.loadStats();
+    this.loadActiveWindow();
+    this.loadExpensesSummary();
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  onFilterChange(): void {
+    this.feedingFilter.setBoth(this.selectedTerm, this.selectedYear);
+    this.loadFeeStructures();
+    this.loadStudentFeedingFees();
+    this.loadPayments();
+    this.loadDailySummary();
+    this.loadStats();
+  }
+
+  onDateChange(): void {
+    this.loadPayments();
+    this.loadDailySummary();
+  }
+
+  loadClasses(): void {
+    this.feedingService
+      .getClasses(this.churchId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (c) => {
+          this.classes = c;
+          this.cdr.markForCheck();
+        },
+      });
+  }
+
+  loadExpensesSummary(): void {
+    this.loadingExpensesSummary = true;
+    const churchId = this.authService.getChurchId() || '';
+
+    this.supabase.client
+      .rpc('get_feeding_expenses_summary', {
+        p_church_id: churchId,
+        p_academic_year: this.selectedYear,
+        p_term: this.selectedTerm,
+      })
+      .then(({ data, error }) => {
+        this.loadingExpensesSummary = false;
+        if (error) {
+          this.cdr.markForCheck();
+          return;
+        }
+        if (Array.isArray(data) && data.length > 0) {
+          this.expensesSummary = data[0];
+        } else {
+          this.expensesSummary = data;
+        }
+        this.cdr.markForCheck();
+      });
+  }
+
+  getExpensesSpentPercent(): number {
+    if (!this.expensesSummary || this.expensesSummary.total_collected === 0)
+      return 0;
+    const pct = Math.round(
+      (this.expensesSummary.total_expenses /
+        this.expensesSummary.total_collected) *
+        100,
+    );
+    return Math.min(pct, 100); // cap at 100 for the bar width; label still shows real %
+  }
+
+  loadFeeStructures(): void {
+    this.loadingStructures = true;
+    this.feedingService
+      .getFeedingFeeStructures(this.selectedYear, this.selectedTerm)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (structures) => {
+          this.feeStructures = structures;
+          this.loadingStructures = false;
+          this.cdr.markForCheck();
+        },
+        error: (err) => {
+          this.errorMessage = err.message || 'Failed to load fee structures';
+          this.loadingStructures = false;
+          this.cdr.markForCheck();
+        },
+      });
+  }
+
+  get groupedFeeStructures(): {
+    class: any;
+    structures: FeedingFeeStructure[];
+  }[] {
+    const groups: { [key: string]: FeedingFeeStructure[] } = {};
+    this.feeStructures.forEach((s) => {
+      const key = s.class_id || '__general__';
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(s);
+    });
+    Object.keys(groups).forEach((k) =>
+      groups[k].sort(
+        (a, b) =>
+          Number(!!a.superseded_by) - Number(!!b.superseded_by),
+      ),
+    );
+    return Object.keys(groups).map((key) => ({
+      class:
+        key === '__general__'
+          ? { id: '__general__', name: 'General (All Classes)' }
+          : groups[key][0].class || { id: key, name: 'Unknown Class' },
+      structures: groups[key],
+    }));
+  }
+
+  // ── Create / Edit ─────────────────────────────────────────────
+
+  openCreateStructure(): void {
+    this.editingStructure = null;
+    this.structureForm = {
+      selectedClassIds: [],
+      fee_name: 'Feeding Fee',
+      daily_amount: 0,
+      total_days: 0,
+      academic_year: this.selectedYear,
+      term: this.selectedTerm,
+    };
+    this.showStructureModal = true;
+    this.errorMessage = '';
+  }
+
+  openEditStructure(s: FeedingFeeStructure): void {
+    this.editingStructure = s;
+    this.structureForm = {
+      selectedClassIds: s.class_id ? [s.class_id] : [],
+      fee_name: s.fee_name,
+      daily_amount: s.daily_amount,
+      total_days: s.total_days,
+      academic_year: s.academic_year,
+      term: s.term,
+    };
+    this.editImpact = null;
+    this.changeMode = '';
+    this.showStructureModal = true;
+    this.errorMessage = '';
+    this.feedingService
+      .getFeedingFeeStructureImpact(s.id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (impact) => {
+          this.editImpact = impact;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.editImpact = null;
+          this.cdr.markForCheck();
+        },
+      });
+  }
+
+  /** Edit modal: payments exist AND the rate or days actually changed. */
+  get needsChangeMode(): boolean {
+    const s = this.editingStructure;
+    if (!s || !this.editImpact || this.editImpact.payment_count === 0)
+      return false;
+    return (
+      Number(this.structureForm.daily_amount) !== Number(s.daily_amount) ||
+      Number(this.structureForm.total_days) !== Number(s.total_days)
+    );
+  }
+
+  get editHasPayments(): boolean {
+    return !!this.editImpact && this.editImpact.payment_count > 0;
+  }
+
+  get previewTotal(): number {
+    return (
+      (this.structureForm.daily_amount || 0) *
+      (this.structureForm.total_days || 0)
+    );
+  }
+
+  toggleClassSelection(classId: string): void {
+    const idx = this.structureForm.selectedClassIds.indexOf(classId);
+    if (idx === -1) {
+      this.structureForm.selectedClassIds = [
+        ...this.structureForm.selectedClassIds,
+        classId,
+      ];
+    } else {
+      this.structureForm.selectedClassIds =
+        this.structureForm.selectedClassIds.filter((id) => id !== classId);
+    }
+  }
+
+  isClassSelected(classId: string): boolean {
+    return this.structureForm.selectedClassIds.includes(classId);
+  }
+
+  toggleAllClasses(): void {
+    if (this.structureForm.selectedClassIds.length === this.classes.length) {
+      this.structureForm.selectedClassIds = [];
+    } else {
+      this.structureForm.selectedClassIds = this.classes.map((c) => c.id);
+    }
+  }
+
+  get allClassesSelected(): boolean {
+    return (
+      this.classes.length > 0 &&
+      this.structureForm.selectedClassIds.length === this.classes.length
+    );
+  }
+
+  get someClassesSelected(): boolean {
+    return (
+      this.structureForm.selectedClassIds.length > 0 &&
+      this.structureForm.selectedClassIds.length < this.classes.length
+    );
+  }
+
+  async saveStructure(): Promise<void> {
+    if (
+      !this.structureForm.fee_name ||
+      !this.structureForm.daily_amount ||
+      !this.structureForm.total_days
+    ) {
+      this.errorMessage =
+        'Fee name, daily amount, and number of days are required';
+      return;
+    }
+    this.savingStructure = true;
+    this.errorMessage = '';
+
     try {
-      await (this.feedingService as any).supabase.client.rpc(
-        'sync_student_fees_after_structure_update',
-        { p_feeding_fee_structure_id: structureId },
-      );
-    } catch (e) {
-      console.warn('sync failed', e);
+      if (this.editingStructure) {
+        const st = this.editingStructure;
+        const feeChanged =
+          Number(this.structureForm.daily_amount) !== Number(st.daily_amount) ||
+          Number(this.structureForm.total_days) !== Number(st.total_days);
+
+        if (this.needsChangeMode && !this.changeMode) {
+          this.errorMessage =
+            'Payments already exist. Please choose how the new fee should be applied.';
+          this.savingStructure = false;
+          return;
+        }
+
+        // 1) Push name / rate / days to the structure and its students.
+        //    Errors are surfaced (they used to be silently swallowed).
+        const result = await this.feedingService
+          .applyFeedingFeeChange(st.id, {
+            feeName: this.structureForm.fee_name,
+            dailyAmount: Number(this.structureForm.daily_amount),
+            totalDays: Number(this.structureForm.total_days),
+            mode: (this.changeMode || 'continue') as FeeChangeMode,
+          })
+          .toPromise();
+
+        // 2) Class / year / term only change when nothing has been paid
+        if (!this.editHasPayments) {
+          const classId = this.structureForm.selectedClassIds[0] || null;
+          if (
+            classId !== (st.class_id || null) ||
+            this.structureForm.academic_year !== st.academic_year ||
+            this.structureForm.term !== st.term
+          ) {
+            await this.feedingService
+              .updateFeedingFeeStructure(st.id, {
+                class_id: classId,
+                academic_year: this.structureForm.academic_year,
+                term: this.structureForm.term,
+              })
+              .toPromise();
+          }
+        }
+
+        if (result?.mode === 'fresh') {
+          this.showSuccess(
+            `New fee started. ${result.students_frozen} student(s) keep their old payments at the old rate and now continue on the new fee` +
+              (result.students_moved
+                ? `; ${result.students_moved} with no payments moved to the new fee.`
+                : '.'),
+          );
+        } else if (result?.mode === 'continue') {
+          this.showSuccess(
+            `Fee updated for all ${result.students_updated} assigned student(s). Existing payments were kept and balances recalculated.`,
+          );
+        } else {
+          this.showSuccess(
+            feeChanged
+              ? `Fee updated for ${result?.students_updated ?? 0} assigned student(s).`
+              : 'Fee structure updated.',
+          );
+        }
+        this.loadStudentFeedingFees();
+        this.loadStats();
+      } else {
+        const classIds =
+          this.structureForm.selectedClassIds.length > 0
+            ? this.structureForm.selectedClassIds
+            : [null];
+
+        let totalAssigned = 0;
+
+        for (const classId of classIds) {
+          // Step 1: create the structure
+          const created = await this.feedingService
+            .createFeedingFeeStructure({
+              class_id: classId,
+              fee_name: this.structureForm.fee_name,
+              daily_amount: this.structureForm.daily_amount,
+              total_days: this.structureForm.total_days,
+              academic_year: this.structureForm.academic_year,
+              term: this.structureForm.term,
+            })
+            .toPromise();
+
+          // Step 2: auto-assign to all students in the class
+          if (classId && created?.id) {
+            try {
+              const count = await this.feedingService
+                .assignFeedingFeeToClass(
+                  created.id,
+                  classId,
+                  this.structureForm.academic_year,
+                  this.structureForm.term,
+                )
+                .toPromise();
+              totalAssigned += (count as number) || 0;
+            } catch (assignErr) {
+              console.warn('Auto-assign failed for class', classId, assignErr);
+            }
+          }
+        }
+
+        const classCount = this.structureForm.selectedClassIds.length;
+        if (classCount > 0 && totalAssigned > 0) {
+          this.showSuccess(
+            `Fee structure created and automatically assigned to ${totalAssigned} student(s) across ${classCount} class(es)!`,
+          );
+        } else if (classCount > 0 && totalAssigned === 0) {
+          this.showSuccess(
+            `Fee structure created for ${classCount} class(es). No students were found — make sure students are enrolled in those classes.`,
+          );
+        } else {
+          this.showSuccess('Fee structure created!');
+        }
+
+        this.loadStudentFeedingFees();
+        this.loadStats();
+      }
+
+      this.savingStructure = false;
+      this.showStructureModal = false;
+      this.loadFeeStructures();
+      this.cdr.markForCheck();
+    } catch (err: any) {
+      this.savingStructure = false;
+      this.errorMessage = err.message || 'Failed to save';
+      this.cdr.markForCheck();
     }
   }
 

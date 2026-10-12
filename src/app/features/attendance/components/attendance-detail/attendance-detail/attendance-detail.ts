@@ -11,6 +11,7 @@ import {
 import { PermissionService } from '../../../../../core/services/permission.service';
 import { AuthService } from '../../../../../core/services/auth';
 
+import { RequiresPlan } from '../../../../../core/plan-gate';
 @Component({
   selector: 'app-attendance-detail',
   standalone: false,
@@ -184,6 +185,8 @@ export class AttendanceDetail implements OnInit, OnDestroy {
     }
     this.router.navigate(['main/attendance', this.eventId, 'mark']);
   }
+
+  @RequiresPlan('export')
 
   exportReport(): void {
     this.attendanceService

@@ -179,7 +179,17 @@
                 </thead>
                 <tbody>
                   <tr *ngFor="let s of group.structures">
-                    <td>{{ s.fee_name }}</td>
+                    <td>
+                      {{ s.fee_name }}
+                      <span *ngIf="s.superseded_by"
+                        style="margin-left:6px;font-size:11px;background:#f3f4f6;color:#6b7280;border-radius:10px;padding:2px 8px;">
+                        Old rate · replaced {{ s.superseded_at | date:'d MMM yyyy' }}
+                      </span>
+                      <span *ngIf="s.effective_from && !s.superseded_by"
+                        style="margin-left:6px;font-size:11px;background:#ecfdf5;color:#047857;border-radius:10px;padding:2px 8px;">
+                        New rate · from {{ s.effective_from | date:'d MMM yyyy' }}
+                      </span>
+                    </td>
                     <td class="text-right">
                       <span class="rate-chip">{{ formatCurrency(s.daily_amount) }}/day</span>
                     </td>
@@ -191,7 +201,7 @@
                     </td>
                     <td class="text-center">
                       <div class="action-buttons">
-                        <button class="btn-icon-small" (click)="openEditStructure(s)" title="Edit">
+                        <button class="btn-icon-small" *ngIf="!s.superseded_by" (click)="openEditStructure(s)" title="Edit">
                           <i class="ri-edit-line"></i>
                         </button>
                         <button class="btn-icon-small btn-view-students" (click)="openAssignedStudents(s)"
@@ -637,12 +647,52 @@
         </ng-container>
       </div>
 
+      <!-- Payments exist + fee changed: choose how to apply -->
+      <div *ngIf="editingStructure && needsChangeMode"
+        style="background:#fffbeb;border:1px solid #fcd34d;border-left:4px solid #f59e0b;border-radius:8px;padding:12px 14px;margin-top:12px;">
+        <div style="font-weight:700;color:#92400e;margin-bottom:4px;">
+          <i class="ri-alert-line"></i> Payments already recorded
+        </div>
+        <div style="font-size:13px;color:#78350f;margin-bottom:10px;">
+          {{ editImpact?.students_with_payments }} student(s) have paid
+          {{ formatCurrency(editImpact?.total_paid || 0) }} at the old rate
+          ({{ formatCurrency(editingStructure.daily_amount) }}/day). How should the new fee
+          ({{ formatCurrency(structureForm.daily_amount) }}/day) be applied?
+        </div>
+
+        <label style="display:flex;gap:8px;align-items:flex-start;cursor:pointer;margin-bottom:8px;">
+          <input type="radio" name="changeMode" value="fresh" [(ngModel)]="changeMode" style="margin-top:3px;" />
+          <span style="font-size:13px;color:#1f2937;">
+            <strong>Start fresh with the new fee</strong><br />
+            Existing payments stay recorded against the old fee and are marked settled at the old rate.
+            Each of these students then starts a new balance at the new rate
+            ({{ structureForm.total_days }} days). The old fee is kept in history.
+            <em>Tip: set School Days to the days still remaining if you only want to charge the rest of the term.</em>
+          </span>
+        </label>
+
+        <label style="display:flex;gap:8px;align-items:flex-start;cursor:pointer;">
+          <input type="radio" name="changeMode" value="continue" [(ngModel)]="changeMode" style="margin-top:3px;" />
+          <span style="font-size:13px;color:#1f2937;">
+            <strong>Continue with the new fee</strong><br />
+            No restart and nothing is split. The same records stay, payments are kept, the new rate
+            ({{ formatCurrency(structureForm.daily_amount) }}/day) applies from today onward, and days
+            before today stay at the old rate ({{ formatCurrency(editingStructure.daily_amount) }}/day).
+            The term total is set to {{ formatCurrency(previewTotal) }} (new rate × days).
+          </span>
+        </label>
+      </div>
+
+      <p *ngIf="editingStructure && editHasPayments" style="font-size:12px;color:#6b7280;margin-top:8px;">
+        Class, year and term can't be changed while payments exist.
+      </p>
+
       <div *ngIf="errorMessage" class="error-alert" style="margin-top:8px;">{{ errorMessage }}</div>
     </div>
 
     <div class="modal-footer">
       <button class="btn-secondary" (click)="showStructureModal = false" [disabled]="savingStructure">Cancel</button>
-      <button class="btn-primary" (click)="saveStructure()" [disabled]="savingStructure">
+      <button class="btn-primary" (click)="saveStructure()" [disabled]="savingStructure || (needsChangeMode && !changeMode)">
         <i class="ri-loader-4-line spin" *ngIf="savingStructure"></i>
         <i class="ri-save-line" *ngIf="!savingStructure"></i>
         {{ savingStructure ? 'Saving...' : (editingStructure ? 'Update' : 'Create') }}
@@ -652,20 +702,48 @@
 </div>
 
 <!-- ══ MODAL: Delete Structure Confirm ═════════════════════════ -->
-<div class="modal-overlay" *ngIf="showDeleteStructureModal" (click)="showDeleteStructureModal = false">
+<div class="modal-overlay" *ngIf="showDeleteStructureModal" (click)="closeDeleteModal()">
   <div class="delete-modal" (click)="$event.stopPropagation()">
     <div class="delete-modal-icon"><i class="ri-delete-bin-line"></i></div>
     <h3>Delete Fee Structure</h3>
-    <p>Delete <strong>"{{ structureToDelete?.fee_name }}"</strong>?
-      This will also remove it from any students it was assigned to (if no payments exist).
+    <p>Delete <strong>"{{ structureToDelete?.fee_name }}"</strong>
+      ({{ formatCurrency(structureToDelete?.daily_amount || 0) }}/day)?</p>
+
+    <p *ngIf="loadingDeleteImpact" style="font-size:13px;color:#6b7280;">Checking what this will affect...</p>
+
+    <!-- Safe delete -->
+    <p *ngIf="deleteImpact && !deleteHasPayments" style="font-size:13px;color:#6b7280;">
+      It will be removed from {{ deleteImpact.students_assigned }} assigned student(s). No payments are recorded against it.
     </p>
+
+    <!-- Destructive warning -->
+    <div *ngIf="deleteImpact && deleteHasPayments"
+      style="background:#fef2f2;border:1px solid #fca5a5;border-left:4px solid #dc2626;border-radius:8px;padding:12px 14px;text-align:left;margin:10px 0;">
+      <div style="font-weight:700;color:#b91c1c;margin-bottom:6px;">
+        <i class="ri-error-warning-line"></i> This is a destructive action
+      </div>
+      <div style="font-size:13px;color:#7f1d1d;line-height:1.5;">
+        <strong>{{ deleteImpact.payment_count }}</strong> payment record(s) totalling
+        <strong>{{ formatCurrency(deleteImpact.total_paid) }}</strong> from
+        <strong>{{ deleteImpact.students_with_payments }}</strong> student(s) will be
+        <strong>permanently deleted</strong> together with this fee structure and its
+        {{ deleteImpact.students_assigned }} student fee record(s). This cannot be undone.
+      </div>
+      <label style="display:block;font-size:12px;color:#7f1d1d;margin-top:10px;">
+        Type <strong>DELETE</strong> to confirm
+      </label>
+      <input type="text" [(ngModel)]="deleteConfirmText" placeholder="DELETE" autocomplete="off"
+        style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid #fca5a5;border-radius:6px;" />
+    </div>
+
+    <div *ngIf="errorMessage" class="error-alert" style="margin:8px 0;">{{ errorMessage }}</div>
+
     <div class="delete-modal-actions">
-      <button class="btn-cancel" (click)="showDeleteStructureModal = false"
-        [disabled]="deletingStructure">Cancel</button>
-      <button class="btn-confirm-delete" (click)="executeDeleteStructure()" [disabled]="deletingStructure">
+      <button class="btn-cancel" (click)="closeDeleteModal()" [disabled]="deletingStructure">Cancel</button>
+      <button class="btn-confirm-delete" (click)="executeDeleteStructure()" [disabled]="!canConfirmDelete">
         <i class="ri-loader-4-line spin" *ngIf="deletingStructure"></i>
         <i class="ri-delete-bin-line" *ngIf="!deletingStructure"></i>
-        {{ deletingStructure ? 'Deleting...' : 'Yes, Delete' }}
+        {{ deletingStructure ? 'Deleting...' : (deleteHasPayments ? 'Delete everything' : 'Yes, Delete') }}
       </button>
     </div>
   </div>

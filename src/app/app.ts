@@ -10,6 +10,7 @@ import { SwUpdate, VersionReadyEvent } from '@angular/service-worker';
 import { filter, take } from 'rxjs/operators';
 import { SettingsService } from './features/settings/services';
 import { PwaInstallService } from './core/services/pwa-install.service';
+import { PlanGate } from './core/plan-gate';
 
 @Component({
   selector: 'app-root',
@@ -36,6 +37,7 @@ import { PwaInstallService } from './core/services/pwa-install.service';
 })
 export class App implements OnInit {
   title = 'Churchman.';
+  gatePrompt: { feature: string; message: string } | null = null;
   showLayout = true;
   authInitialized = false;
   updateAvailable = false;
@@ -90,6 +92,9 @@ export class App implements OnInit {
   }
 
   ngOnInit(): void {
+    // "Upgrade required" pop-up for paid features (see core/plan-gate.ts)
+    PlanGate.prompt$.subscribe((p) => (this.gatePrompt = p));
+
     this.supabase.authInitialized$.subscribe((initialized) => {
       this.authInitialized = initialized;
     });
@@ -138,6 +143,16 @@ export class App implements OnInit {
   }
 
   // ── Existing methods ────────────────────────────────────
+  closeGatePrompt(): void {
+    this.gatePrompt = null;
+  }
+
+  goUpgrade(): void {
+    const feature = this.gatePrompt?.feature;
+    this.gatePrompt = null;
+    this.router.navigate(['/main/settings'], { queryParams: { tab: 'subscription', locked: feature } });
+  }
+
   private clearStuckLocks(): void {
     try {
       const hasCleared = sessionStorage.getItem('locks-cleared');

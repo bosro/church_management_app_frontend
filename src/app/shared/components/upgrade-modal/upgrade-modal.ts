@@ -106,6 +106,33 @@ export class UpgradeModal implements OnInit {
     return this.subscriptionService.currentTier;
   }
 
+  /** Real yearly saving for a plan, e.g. 60/mo -> 600/yr = 17% */
+  getSavingPercent(plan: SubscriptionPlan): number {
+    const full = plan.price_monthly * 12;
+    return full > 0 ? Math.round(((full - plan.price_yearly) / full) * 100) : 0;
+  }
+
+  get maxSavingPercent(): number {
+    return this.plans.reduce((m, p) => Math.max(m, this.getSavingPercent(p)), 0);
+  }
+
+  /** Same paid plan as the church already has -> this is a renewal (time is added on top) */
+  isRenewal(plan: SubscriptionPlan): boolean {
+    return plan.id === this.currentTier && this.currentTier !== 'free';
+  }
+
+  /** Paying for a DIFFERENT plan while a paid one is still running replaces it (no proration) */
+  replacesRunningPlan(plan: SubscriptionPlan): boolean {
+    const st = this.subscriptionService.currentStatus;
+    return !!st && st.tier !== 'free' && st.tier !== plan.id && !st.is_complimentary && !!st.expires_at;
+  }
+
+  formatSms(plan: SubscriptionPlan): string {
+    if (!plan.can_send_communications) return 'No SMS';
+    if (plan.sms_monthly_limit === null || plan.sms_monthly_limit === undefined) return 'Unlimited SMS';
+    return `${plan.sms_monthly_limit.toLocaleString()} SMS / month`;
+  }
+
   // ── Navigation ─────────────────────────────────────────────────────────────
 
   selectPlanForCheckout(plan: SubscriptionPlan): void {

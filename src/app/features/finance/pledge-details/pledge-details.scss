@@ -902,3 +902,90 @@
     border-color: #e5e7eb;
   }
 }
+
+// ── Collect online (Paystack pay link) ───────────────────────────────────────
+.pay-mode-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0.75rem 0 1rem;
+
+  button {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    padding: 0.6rem 0.5rem;
+    border: 1px solid #d1d5db;
+    background: #f9fafb;
+    border-radius: 8px;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: #4b5563;
+    font-family: inherit;
+    cursor: pointer;
+
+    &.active {
+      background: #ede9fe;
+      border-color: #7c3aed;
+      color: #5b21b6;
+    }
+  }
+}
+
+.create-link-btn {
+  width: 100%;
+  margin-top: 0.25rem;
+}
+
+.online-error {
+  margin: 0.75rem 0 0;
+  color: #b91c1c;
+  font-size: 0.8125rem;
+  display: flex;
+  gap: 0.375rem;
+}
+
+.online-result {
+  margin-top: 1rem;
+  padding: 0.875rem;
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  border-radius: 10px;
+
+  .online-info {
+    margin: 0 0 0.625rem;
+    font-size: 0.8125rem;
+    color: #166534;
+  }
+
+  .online-link-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.55rem 0.65rem;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 0.8125rem;
+    background: #fff;
+  }
+
+  .online-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 0.625rem;
+
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      text-decoration: none;
+    }
+  }
+
+  .online-note {
+    margin: 0.625rem 0 0;
+    font-size: 0.75rem;
+    color: #4b5563;
+  }
+}

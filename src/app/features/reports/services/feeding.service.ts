@@ -20,8 +20,20 @@ export interface FeedingFeeStructure {
   created_at: string;
   updated_at: string;
   amount_due?: any;
+  superseded_by?: string | null;
+  superseded_at?: string | null;
+  effective_from?: string | null;
   class?: { id: string; name: string; tier: string | null } | null;
 }
+
+export interface FeeStructureImpact {
+  students_assigned: number;
+  students_with_payments: number;
+  payment_count: number;
+  total_paid: number;
+}
+
+export type FeeChangeMode = 'continue' | 'fresh';
 
 export interface StudentFeedingFee {
   id: string;
@@ -191,15 +203,68 @@ export class FeedingService {
     );
   }
 
-  deleteFeedingFeeStructure(id: string): Observable<void> {
+  deleteFeedingFeeStructure(id: string, force = false): Observable<void> {
     return from(
       this.supabase.client.rpc('delete_feeding_fee_structure_safe', {
         p_fee_structure_id: id,
         p_church_id: this.churchId,
+        p_force: force,
       }),
     ).pipe(
       map(({ error }) => {
         if (error) throw new Error(error.message);
+      }),
+    );
+  }
+
+  /** How many students / payments a structure touches (for warning banners). */
+  getFeedingFeeStructureImpact(id: string): Observable<FeeStructureImpact> {
+    return from(
+      this.supabase.client.rpc('get_feeding_fee_structure_impact', {
+        p_fee_structure_id: id,
+        p_church_id: this.churchId,
+      }),
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw new Error(error.message);
+        return {
+          students_assigned: Number(data?.students_assigned || 0),
+          students_with_payments: Number(data?.students_with_payments || 0),
+          payment_count: Number(data?.payment_count || 0),
+          total_paid: Number(data?.total_paid || 0),
+        } as FeeStructureImpact;
+      }),
+    );
+  }
+
+  /**
+   * Change fee name / daily amount / days and push it to the assigned students.
+   * mode 'continue' = new rate applies to everyone, payments kept.
+   * mode 'fresh'    = students with payments keep the old rate for what they
+   *                   paid; a new structure starts for the new rate.
+   */
+  applyFeedingFeeChange(
+    id: string,
+    change: {
+      feeName: string;
+      dailyAmount: number;
+      totalDays: number;
+      mode: FeeChangeMode;
+    },
+  ): Observable<any> {
+    return from(
+      this.supabase.client.rpc('apply_feeding_fee_change', {
+        p_fee_structure_id: id,
+        p_church_id: this.churchId,
+        p_fee_name: change.feeName,
+        p_daily_amount: change.dailyAmount,
+        p_total_days: change.totalDays,
+        p_mode: change.mode,
+      }),
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw new Error(error.message);
+        return data;
       }),
     );
   }

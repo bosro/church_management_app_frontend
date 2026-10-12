@@ -7,7 +7,8 @@ import {
   GivingSummary,
   GivingTransaction,
 } from '../../../../models/giving.model';
-import { GivingService } from '../../services/giving';
+import { GivingService, MyPledge } from '../../services/giving';
+import { PaystackService } from '../../services/paystack';
 
 @Component({
   selector: 'app-giving-dashboard',
@@ -34,9 +35,18 @@ export class GivingDashboard implements OnInit, OnDestroy {
   recentTransactions: GivingTransaction[] = [];
   fiscalYear = new Date().getFullYear();
 
+  // ── My pledges (pay online) ──
+  pledges: MyPledge[] = [];
+  pledgesLoading = false;
+  payingPledge: MyPledge | null = null;
+  payAmount = '';
+  payError = '';
+  payBusy = false;
+
   constructor(
     private givingService: GivingService,
     private router: Router,
+    private paystackService: PaystackService,
   ) {}
 
   ngOnInit(): void {
@@ -52,6 +62,7 @@ export class GivingDashboard implements OnInit, OnDestroy {
     this.loading = true;
     this.loadGivingSummary();
     this.loadRecentTransactions();
+    this.loadPledges();
   }
 
   private loadGivingSummary(): void {
@@ -71,6 +82,81 @@ export class GivingDashboard implements OnInit, OnDestroy {
           this.loading = false;
         },
       });
+  }
+
+  // ── My pledges ──────────────────────────────────────────────────────────────
+
+  private loadPledges(): void {
+    this.pledgesLoading = true;
+    this.givingService
+      .getMyPledges()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (pledges) => {
+          this.pledges = pledges;
+          this.pledgesLoading = false;
+        },
+        error: () => {
+          this.pledges = []; // no pledges card if it cannot be loaded
+          this.pledgesLoading = false;
+        },
+      });
+  }
+
+  /** Pledges that still have a balance */
+  get openPledges(): MyPledge[] {
+    return this.pledges.filter((p) => !p.is_fulfilled && this.balanceOf(p) > 0);
+  }
+
+  balanceOf(p: MyPledge): number {
+    return Math.max(0, Math.round((Number(p.pledge_amount) - Number(p.amount_paid || 0)) * 100) / 100);
+  }
+
+  progressOf(p: MyPledge): number {
+    const total = Number(p.pledge_amount) || 0;
+    return total > 0 ? Math.min(100, Math.round((Number(p.amount_paid || 0) / total) * 100)) : 0;
+  }
+
+  openPay(p: MyPledge): void {
+    this.payingPledge = p;
+    this.payAmount = this.balanceOf(p).toFixed(2);
+    this.payError = '';
+  }
+
+  closePay(): void {
+    if (this.payBusy) return;
+    this.payingPledge = null;
+    this.payError = '';
+  }
+
+  async startPledgePayment(): Promise<void> {
+    if (!this.payingPledge || this.payBusy) return;
+    const amount = Math.round(parseFloat(this.payAmount) * 100) / 100;
+    const balance = this.balanceOf(this.payingPledge);
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      this.payError = 'Enter a valid amount.';
+      return;
+    }
+    if (amount > balance + 0.005) {
+      this.payError = `Amount cannot be more than your balance (${this.payingPledge.currency} ${balance.toFixed(2)}).`;
+      return;
+    }
+
+    this.payBusy = true;
+    this.payError = '';
+    try {
+      const result = await this.paystackService.initializePledgePayment({
+        pledge_id: this.payingPledge.id,
+        amount,
+        mode: 'self',
+      });
+      sessionStorage.setItem('paystack_pending_ref', result.reference);
+      window.location.href = result.authorization_url; // off to Paystack
+    } catch (e: any) {
+      this.payError = e?.message || 'Could not start the payment. Please try again.';
+      this.payBusy = false;
+    }
   }
 
   navigateToHistory(): void {

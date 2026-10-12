@@ -9,6 +9,8 @@ import { PaymentMethod } from '../../../models/giving.model';
 import { PermissionService } from '../../../core/services/permission.service';
 import { AuthService } from '../../../core/services/auth';
 import { PaymentSmsService } from '../services/payment-sms.service';
+import { PaystackService } from '../../my-giving/services/paystack';
+import { copyToClipboard } from '../../../core/utils/copy-to-clipboard';
 
 @Component({
   selector: 'app-pledge-details',
@@ -32,6 +34,16 @@ export class PledgeDetails implements OnInit, OnDestroy {
   recordingPayment = false;
   sendSms = false; // tick-box: SMS confirmation to the pledger
 
+  // ── Collect online (Paystack pay link) ──
+  payMode: 'record' | 'online' = 'record';
+  onlineEmail = '';
+  onlineBusy = false;
+  onlineError = '';
+  onlineLink = '';
+  onlineInfo = '';
+  linkCopied = false;
+  linkSmsMessage = '';
+
   // Payment methods
   paymentMethods: PaymentMethod[] = [
     'cash',
@@ -53,6 +65,7 @@ export class PledgeDetails implements OnInit, OnDestroy {
     public permissionService: PermissionService,
     private authService: AuthService,
     private paymentSms: PaymentSmsService,
+    private paystackService: PaystackService,
   ) {}
 
   ngOnInit(): void {
@@ -177,6 +190,13 @@ private checkPermissions(): void {
     this.paymentForm.get('amount')?.updateValueAndValidity();
 
     this.sendSms = this.canOfferSms && this.pledgerHasPhone;
+    this.payMode = 'record';
+    this.onlineEmail = '';
+    this.onlineError = '';
+    this.onlineLink = '';
+    this.onlineInfo = '';
+    this.linkCopied = false;
+    this.linkSmsMessage = '';
     this.showPaymentModal = true;
   }
 
@@ -186,6 +206,85 @@ private checkPermissions(): void {
   }
   get pledgerHasPhone(): boolean {
     return !!this.pledge?.member?.phone_primary?.trim();
+  }
+
+  // ── Collect online (Paystack pay link) ──────────────────────────────────────
+
+  setPayMode(mode: 'record' | 'online'): void {
+    if (this.recordingPayment || this.onlineBusy) return;
+    this.payMode = mode;
+    this.onlineError = '';
+  }
+
+  get canSmsLink(): boolean {
+    return this.canOfferSms && this.pledgerHasPhone && !!this.onlineLink;
+  }
+
+  async createOnlineLink(): Promise<void> {
+    if (this.onlineBusy) return;
+    const amount = Math.round(parseFloat(this.paymentForm.get('amount')?.value) * 100) / 100;
+    const balance = this.getBalance();
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      this.onlineError = 'Enter an amount greater than 0.';
+      return;
+    }
+    if (amount > balance + 0.005) {
+      this.onlineError = 'Amount cannot be more than the remaining balance.';
+      return;
+    }
+
+    this.onlineBusy = true;
+    this.onlineError = '';
+    this.onlineLink = '';
+    this.linkSmsMessage = '';
+    try {
+      const result = await this.paystackService.initializePledgePayment({
+        pledge_id: this.pledgeId,
+        amount,
+        mode: 'link',
+        payer_email: this.onlineEmail.trim() || undefined,
+      });
+      this.onlineLink = result.authorization_url;
+      this.onlineInfo =
+        result.charge_amount > result.pledge_amount
+          ? `Payer will be charged ${this.formatCurrency(result.charge_amount, this.pledge.currency)} ` +
+            `(includes ${this.formatCurrency(result.charge_amount - result.pledge_amount, this.pledge.currency)} fees); ` +
+            `the pledge is credited ${this.formatCurrency(result.pledge_amount, this.pledge.currency)}.`
+          : `The pledge will be credited ${this.formatCurrency(result.pledge_amount, this.pledge.currency)}.`;
+    } catch (e: any) {
+      this.onlineError = e?.message || 'Could not create the payment link.';
+    } finally {
+      this.onlineBusy = false;
+    }
+  }
+
+  async copyOnlineLink(): Promise<void> {
+    if (!this.onlineLink) return;
+    const ok = await copyToClipboard(this.onlineLink);
+    if (ok) {
+      this.linkCopied = true;
+      setTimeout(() => (this.linkCopied = false), 2500);
+    } else {
+      this.onlineError = 'Could not copy automatically. Select the link and copy it.';
+    }
+  }
+
+  async sendOnlineLinkBySms(): Promise<void> {
+    const member = this.pledge?.member;
+    if (!member || !this.onlineLink || this.onlineBusy) return;
+    this.onlineBusy = true;
+    this.linkSmsMessage = 'Sending SMS…';
+    const amount = Math.round(parseFloat(this.paymentForm.get('amount')?.value) * 100) / 100;
+    const result = await this.paymentSms.sendPledgePayLink({
+      memberId: member.id,
+      firstName: member.first_name,
+      amount,
+      currency: this.pledge.currency,
+      link: this.onlineLink,
+    });
+    this.linkSmsMessage = result.sent ? 'SMS sent to the member.' : `SMS not sent: ${result.error}`;
+    this.onlineBusy = false;
   }
 
   closePaymentModal(): void {
@@ -201,6 +300,7 @@ private checkPermissions(): void {
   }
 
   recordPayment(): void {
+    if (this.payMode !== 'record') return; // pressing Enter in online mode must not record a payment
     if (this.paymentForm.invalid) {
       Object.keys(this.paymentForm.controls).forEach((key) => {
         this.paymentForm.get(key)?.markAsTouched();

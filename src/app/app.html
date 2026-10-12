@@ -56,6 +56,19 @@
     </div>
   </div>
 
+  <!-- ── Plan gate: feature not included in the church's plan ───────── -->
+  <div class="plan-gate-overlay" *ngIf="gatePrompt" (click)="closeGatePrompt()">
+    <div class="plan-gate-card" (click)="$event.stopPropagation()">
+      <div class="plan-gate-icon"><i class="ri-vip-crown-line"></i></div>
+      <h3>Upgrade required</h3>
+      <p>{{ gatePrompt.message }}</p>
+      <div class="plan-gate-actions">
+        <button class="plan-gate-btn plan-gate-btn--ghost" (click)="closeGatePrompt()">Not now</button>
+        <button class="plan-gate-btn" (click)="goUpgrade()">See plans</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ── Offline Banner ────────────────────────────────────────────────── -->
   <div class="offline-banner" *ngIf="isOffline" @slideUp>
     <div class="offline-content">

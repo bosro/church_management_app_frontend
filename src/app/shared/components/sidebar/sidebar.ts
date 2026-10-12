@@ -450,6 +450,14 @@ export class Sidebar implements OnInit {
       : 'Free';
   }
 
+  /** Expiry / grace alert for church admins (renewal reminder). null = nothing to show. */
+  get subscriptionAlert(): { level: 'warn' | 'danger'; text: string } | null {
+    if (!this.subscriptionLoaded) return null;
+    const role = this.currentUser?.role;
+    if (!role || !['church_admin', 'pastor', 'senior_pastor'].includes(role)) return null;
+    return this.subscriptionService.alertMessage;
+  }
+
   get showUpgradeBanner(): boolean {
     if (!this.subscriptionLoaded) return false; // ← don't flash before data loads
     if (this.bannerDismissed) return false;

@@ -17,6 +17,7 @@ import { AuthService } from '../../../../../core/services/auth';
 
 import { copyToClipboard, eventRegistrationUrl } from '../../../../../core/utils/copy-to-clipboard';
 
+import { RequiresPlan } from '../../../../../core/plan-gate';
 @Component({
   selector: 'app-event-detail',
   standalone: false,
@@ -311,6 +312,8 @@ export class EventDetail implements OnInit, OnDestroy {
     this.searchControl.setValue('', { emitEvent: false });
     this.searchResults = [];
   }
+
+  @RequiresPlan('export')
 
   exportRegistrations(): void {
     if (!this.canManageEvents) {

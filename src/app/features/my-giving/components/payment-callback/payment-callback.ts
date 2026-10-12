@@ -13,6 +13,7 @@ type State = 'verifying' | 'success' | 'failed';
 export class PaymentCallback implements OnInit, OnDestroy {
   state: State = 'verifying';
   message = '';
+  isPledge = false;
   private timer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
@@ -37,6 +38,7 @@ export class PaymentCallback implements OnInit, OnDestroy {
       return;
     }
 
+    this.isPledge = reference.startsWith('PLG-');
     this.poll(reference, 0);
   }
 
@@ -61,7 +63,9 @@ export class PaymentCallback implements OnInit, OnDestroy {
 
         if (status === 'completed') {
           this.state = 'success';
-          this.message = 'Payment confirmed! Your giving has been recorded.';
+          this.message = this.isPledge
+          ? 'Payment confirmed! Your pledge has been updated.'
+          : 'Payment confirmed! Your giving has been recorded.';
           setTimeout(() => this.router.navigate(['/main/my-giving']), 3000);
         } else if (status === 'failed' || status === 'abandoned') {
           this.state = 'failed';

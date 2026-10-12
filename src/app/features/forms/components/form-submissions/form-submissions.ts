@@ -8,6 +8,7 @@ import { FormsService } from '../../services/forms';
 import { PermissionService } from '../../../../core/services/permission.service';
 import { AuthService } from '../../../../core/services/auth';
 
+import { RequiresPlan } from '../../../../core/plan-gate';
 @Component({
   selector: 'app-form-submissions',
   standalone: false,
@@ -191,6 +192,7 @@ export class FormSubmissions implements OnInit, OnDestroy {
   }
 
   // Export
+  @RequiresPlan('export')
   exportToCSV(): void {
     if (!this.canManageForms) {
       this.errorMessage = 'You do not have permission to export submissions';

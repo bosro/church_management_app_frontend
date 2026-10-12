@@ -23,6 +23,7 @@ import {
   MemberStatistics,
 } from '../../../../models/member.model';
 import { PermissionService } from '../../../../core/services/permission.service';
+import { SubscriptionService } from '../../../../core/services/subscription.service';
 
 @Component({
   selector: 'app-member-list',
@@ -111,6 +112,10 @@ export class MemberList implements OnInit, OnDestroy {
   loadingDuplicateStats = false;
   deletingDuplicates = false;
 
+  // plan gate (export)
+  showUpgradeModal = false;
+  upgradeModalTrigger = '';
+
   constructor(
     private memberService: MemberService,
     private bulkMembership: BulkMembershipService,
@@ -119,6 +124,7 @@ export class MemberList implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private fb: FormBuilder,
     public permissionService: PermissionService,
+    private subscriptionService: SubscriptionService,
   ) {}
 
   ngOnInit(): void {
@@ -731,7 +737,15 @@ export class MemberList implements OnInit, OnDestroy {
 
   exportMembers(): void {
     if (!this.canImportExport) return;
-    this.showExportModal = true;
+    // Plan gate (no-op until enforce_plan_limits is switched on)
+    this.subscriptionService.checkFeatureAccess('export').then((allowed) => {
+      if (!allowed) {
+        this.upgradeModalTrigger = 'Exporting members is available on Starter and above. Upgrade to unlock it.';
+        this.showUpgradeModal = true;
+        return;
+      }
+      this.showExportModal = true;
+    });
   }
 
   exportAs(format: 'csv' | 'excel' | 'pdf'): void {

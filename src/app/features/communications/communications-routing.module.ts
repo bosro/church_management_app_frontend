@@ -13,6 +13,7 @@ import { PermissionGuard } from '../../core/guards/permission.guard';
 
 // NOTE: Adjust these import paths if your file structure has different nesting.
 // The original had one extra folder level on each. Verify against your actual paths.
+import { PlanFeatureGuard } from '../../core/guards/plan-feature.guard';
 import { CommunicationsList } from './components/communications-list/communications-list/communications-list';
 import { CreateCommunication } from './components/create-communication/create-communication/create-communication';
 import { SmsLogs } from './components/sms-logs/sms-logs/sms-logs';
@@ -45,8 +46,9 @@ const routes: Routes = [
   {
     path: 'create',
     component: CreateCommunication,
-    canActivate: [PermissionGuard],
+    canActivate: [PermissionGuard, PlanFeatureGuard],
     data: {
+      planFeature: 'communications',
       title: 'New Message',
       breadcrumb: 'New Message',
       permission: 'communications.send',

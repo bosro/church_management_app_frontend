@@ -11,6 +11,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { AuthService } from '../../../../../core/services/auth';
 
+import { RequiresPlan } from '../../../../../core/plan-gate';
 @Component({
   selector: 'app-branches-list',
   standalone: false,
@@ -206,6 +207,8 @@ export class BranchesList implements OnInit, OnDestroy {
     this.deleteModalBranch = null;
     this.deleteModalStep = 1;
   }
+
+  @RequiresPlan('export')
 
   exportBranches(): void {
     if (this.branches.length === 0) {

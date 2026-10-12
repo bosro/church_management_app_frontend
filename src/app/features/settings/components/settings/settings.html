@@ -959,6 +959,11 @@
                 <p>Loading subscription info...</p>
               </div>
 
+              <div *ngIf="lockedFeature" class="sub-note" style="background:#fef3c7;border:1px solid #f59e0b;border-radius:10px;padding:12px 14px;margin-bottom:12px;color:#92400e;">
+                <i class="ri-lock-line"></i>
+                {{ lockedFeatureLabel }} is not included in your current plan. Choose a plan below to unlock it.
+              </div>
+
               <div *ngIf="!loadingSubscription && subscriptionStatus">
 
                 <!-- Current Plan Banner -->
@@ -973,15 +978,23 @@
                         <i class="ri-error-warning-line"></i>
                         Expired — downgraded to Free
                       </div>
-                      <div *ngIf="subscriptionStatus.expires_at && !subscriptionStatus.is_expired" class="expiry-info"
-                        [class.expiring-soon]="(getDaysUntilExpiry() || 999) <= 30">
+                      <div *ngIf="subscriptionStatus.in_grace" class="expired-badge">
+                        <i class="ri-time-line"></i>
+                        Expired — {{ graceDaysLeft }} day{{ graceDaysLeft === 1 ? '' : 's' }} grace left
+                      </div>
+                      <div *ngIf="subscriptionStatus.is_complimentary" class="expiry-info">
+                        <i class="ri-gift-line"></i>
+                        Complimentary plan
+                      </div>
+                      <div *ngIf="subscriptionStatus.expires_at && !subscriptionStatus.is_expired && !subscriptionStatus.in_grace && !subscriptionStatus.is_complimentary"
+                        class="expiry-info" [class.expiring-soon]="subscriptionStatus.state === 'expiring'">
                         <i class="ri-calendar-line"></i>
-                        {{ (getDaysUntilExpiry() || 0) <= 30 ? 'Expires in ' + getDaysUntilExpiry() + ' days' : 'Active'
-                          }} </div>
-                          <div *ngIf="!subscriptionStatus.expires_at" class="expiry-info">
-                            <i class="ri-checkbox-circle-line"></i>
-                            No expiry set
-                          </div>
+                        {{ subscriptionStatus.state === 'expiring' ? 'Expires in ' + countdownLabel : 'Active' }}
+                      </div>
+                      <div *ngIf="!subscriptionStatus.expires_at && !subscriptionStatus.is_complimentary && subscriptionStatus.tier === 'free'" class="expiry-info">
+                        <i class="ri-checkbox-circle-line"></i>
+                        Free plan — no expiry
+                      </div>
                       </div>
                       <button *ngIf="subscriptionStatus.tier === 'free'" class="btn-upgrade-plan"
                         (click)="openUpgradeModal()">
@@ -993,6 +1006,61 @@
                         <i class="ri-refresh-line"></i>
                         Renew / Change Plan
                       </button>
+                    </div>
+                  </div>
+
+                  <!-- Subscription countdown (start / end / time left / SMS) -->
+                  <div class="sub-countdown" *ngIf="subscriptionStatus.expires_at || subscriptionStatus.is_complimentary || subscriptionStatus.sms_limit !== null"
+                    [class.sub-countdown--warn]="subscriptionStatus.state === 'expiring'"
+                    [class.sub-countdown--danger]="subscriptionStatus.state === 'grace' || subscriptionStatus.state === 'expired'">
+                    <div class="sub-countdown__head">
+                      <h3><i class="ri-timer-line"></i> Subscription period</h3>
+                      <span class="sub-chip" *ngIf="subscriptionStatus.billing_cycle">
+                        {{ subscriptionStatus.billing_cycle === 'yearly' ? 'Yearly billing' : 'Monthly billing' }}
+                      </span>
+                    </div>
+
+                    <ng-container *ngIf="subscriptionStatus.expires_at && !subscriptionStatus.is_complimentary">
+                      <div class="sub-countdown__dates">
+                        <div>
+                          <span class="sub-label">Started</span>
+                          <strong>{{ subscriptionStatus.started_at ? (subscriptionStatus.started_at | date:'d MMM y, h:mm a') : '—' }}</strong>
+                        </div>
+                        <div>
+                          <span class="sub-label">Ends</span>
+                          <strong>{{ subscriptionStatus.expires_at | date:'d MMM y, h:mm a' }}</strong>
+                        </div>
+                        <div>
+                          <span class="sub-label">{{ subscriptionStatus.in_grace ? 'Grace left' : 'Time left' }}</span>
+                          <strong class="sub-big">
+                            {{ subscriptionStatus.in_grace ? graceDaysLeft + ' day' + (graceDaysLeft === 1 ? '' : 's') : countdownLabel }}
+                          </strong>
+                        </div>
+                      </div>
+                      <div class="sub-bar"><div class="sub-bar__fill" [style.width.%]="periodElapsedPercent"></div></div>
+                      <p class="sub-note" *ngIf="subscriptionStatus.state === 'expiring'">
+                        Your plan ends soon. Renew now to keep your limits and features &mdash; renewing adds time on top of your end date.
+                      </p>
+                      <p class="sub-note" *ngIf="subscriptionStatus.in_grace">
+                        Your plan has expired but you keep full access for {{ graceDaysLeft }} more day{{ graceDaysLeft === 1 ? '' : 's' }}.
+                        After that the account moves to the Free plan (your data is never deleted).
+                      </p>
+                      <p class="sub-note" *ngIf="subscriptionStatus.is_expired">
+                        Your account is on the Free plan. Upgrade any time to restore your previous limits.
+                      </p>
+                    </ng-container>
+
+                    <p class="sub-note" *ngIf="subscriptionStatus.is_complimentary">
+                      This plan was granted by the platform and has no billing period.
+                    </p>
+
+                    <div class="sub-sms" *ngIf="subscriptionStatus.sms_limit !== null">
+                      <div class="sub-sms__row">
+                        <span class="sub-label"><i class="ri-message-3-line"></i> SMS this month</span>
+                        <strong>{{ subscriptionStatus.sms_used }} / {{ subscriptionStatus.sms_limit }}</strong>
+                      </div>
+                      <div class="sub-bar"><div class="sub-bar__fill" [style.width.%]="smsPercent"
+                        [style.background]="smsPercent >= 90 ? '#DC2626' : ''"></div></div>
                     </div>
                   </div>
 
@@ -1163,7 +1231,7 @@
                         <i [class]="subscriptionStatus.plan.can_use_reports ?
              'ri-checkbox-circle-fill' : 'ri-close-circle-line'"></i>
                         <span>Advanced Reports</span>
-                        <span *ngIf="!subscriptionStatus.plan.can_use_reports" class="feature-locked">Pro only</span>
+                        <span *ngIf="!subscriptionStatus.plan.can_use_reports" class="feature-locked">Premium only</span>
                       </div>
 
                       <div class="feature-item" [class.enabled]="subscriptionStatus.plan.can_custom_branding">

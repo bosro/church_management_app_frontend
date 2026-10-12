@@ -49,7 +49,7 @@
         <div class="church-icon">
           <i class="ri-building-line"></i>
         </div>
-        <div class="church-info">
+        <div class="church-info" style="cursor:pointer" (click)="openDetails(church)" title="View details">
           <h3>{{ church.name }}</h3>
           <p class="location">
             <i class="ri-map-pin-line"></i>
@@ -100,6 +100,10 @@
       </div>
 
       <div class="church-actions">
+        <button class="btn btn-primary" (click)="openDetails(church)" title="View church details and members">
+          <i class="ri-eye-line"></i>
+          Details
+        </button>
         <button class="btn btn-subscription" (click)="openSubscriptionModal(church)" title="Manage subscription">
           <i class="ri-vip-crown-line"></i>
           Subscription
@@ -427,6 +431,17 @@
         <small class="help-text">Record the payment reference for tracking</small>
       </div>
 
+      <!-- Complimentary -->
+      <div class="form-group" *ngIf="subscriptionForm.plan_id !== 'free'">
+        <label style="display:flex;gap:8px;align-items:center;cursor:pointer;">
+          <input type="checkbox" [(ngModel)]="subscriptionForm.complimentary" />
+          Complimentary (free grant) — never auto-downgraded, no reminder emails
+        </label>
+        <small class="help-text">
+          Leave unticked to bill normally: the church is reminded before the end date and moves to Free after the grace period.
+        </small>
+      </div>
+
       <!-- Billing Email -->
       <div class="form-group">
         <label>Billing Email</label>
@@ -447,6 +462,209 @@
       <button class="btn btn-primary" (click)="saveSubscription()" [disabled]="processing">
         <i class="ri-save-line"></i>
         {{ processing ? 'Saving...' : 'Save Subscription' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- Church details: overview + members (super admin)               -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" *ngIf="showDetailModal" (click)="closeDetails()">
+  <div class="modal-content modal-lg detail-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div>
+        <h2><i class="ri-building-line"></i> {{ detailChurchRow?.name }}</h2>
+        <p class="modal-subtitle">
+          {{ detailChurchRow?.location || 'Location not set' }}
+        </p>
+      </div>
+      <button class="close-btn" (click)="closeDetails()"><i class="ri-close-line"></i></button>
+    </div>
+
+    <div class="modal-body">
+      <div *ngIf="detailLoading" class="usage-loading"><div class="spinner-sm"></div> Loading...</div>
+      <div *ngIf="detailError" class="alert alert-error"><i class="ri-error-warning-line"></i><span>{{ detailError }}</span></div>
+
+      <ng-container *ngIf="detail">
+        <!-- headline numbers -->
+        <div class="detail-stats">
+          <div class="detail-stat">
+            <span class="detail-stat__num">{{ detail.members_total }}</span>
+            <span class="detail-stat__label">Total members</span>
+          </div>
+          <div class="detail-stat">
+            <span class="detail-stat__num">{{ detail.members_active }}</span>
+            <span class="detail-stat__label">Active members</span>
+          </div>
+          <div class="detail-stat" *ngIf="detail.branches?.length">
+            <span class="detail-stat__num">{{ detail.branches.length }}</span>
+            <span class="detail-stat__label">Branches</span>
+          </div>
+          <div class="detail-stat">
+            <span class="detail-stat__num">{{ detail.staff?.length || 0 }}</span>
+            <span class="detail-stat__label">Staff / admins</span>
+          </div>
+          <div class="detail-stat">
+            <span class="detail-stat__num">{{ getPlanName(detail.effective_plan) }}</span>
+            <span class="detail-stat__label">Effective plan</span>
+          </div>
+        </div>
+
+        <div class="detail-tabs">
+          <button [class.active]="detailTab === 'overview'" (click)="switchDetailTab('overview')">Overview</button>
+          <button [class.active]="detailTab === 'members'" (click)="switchDetailTab('members')">
+            Members ({{ membersTotal }})
+          </button>
+        </div>
+
+        <!-- OVERVIEW -->
+        <div *ngIf="detailTab === 'overview'">
+          <div class="detail-grid">
+            <div><span class="label">Contact email</span><strong>{{ detail.church.contact_email || '—' }}</strong></div>
+            <div><span class="label">Contact phone</span><strong>{{ detail.church.contact_phone || '—' }}</strong></div>
+            <div><span class="label">Billing email</span><strong>{{ detail.church.billing_email || '—' }}</strong></div>
+            <div><span class="label">Created</span><strong>{{ formatDate(detail.church.created_at) }}</strong></div>
+            <div><span class="label">Plan</span>
+              <strong>{{ getPlanName(detail.church.subscription_plan) }}
+                <span *ngIf="detail.church.is_complimentary">(complimentary)</span>
+                <span *ngIf="detail.church.billing_cycle">· {{ detail.church.billing_cycle }}</span></strong></div>
+            <div><span class="label">Started</span>
+              <strong>{{ detail.church.subscription_started_at ? (detail.church.subscription_started_at | date:'d MMM y, h:mm a') : '—' }}</strong></div>
+            <div><span class="label">Ends</span>
+              <strong>{{ detail.church.subscription_expires_at ? (detail.church.subscription_expires_at | date:'d MMM y, h:mm a') : '—' }}</strong></div>
+            <div><span class="label">Status</span><strong>{{ detail.church.is_active ? 'Active' : 'Inactive' }}</strong></div>
+          </div>
+
+          <h4 class="detail-h">Usage</h4>
+          <div class="usage-pills">
+            <span class="usage-pill"><i class="ri-group-line"></i> {{ detail.usage?.members }} members</span>
+            <span class="usage-pill"><i class="ri-building-2-line"></i> {{ detail.usage?.branches }} branches</span>
+            <span class="usage-pill"><i class="ri-user-settings-line"></i> {{ detail.usage?.users }} staff users</span>
+            <span class="usage-pill"><i class="ri-calendar-event-line"></i> {{ detail.usage?.events }} events</span>
+            <span class="usage-pill"><i class="ri-team-line"></i> {{ detail.usage?.ministries }} departments</span>
+            <span class="usage-pill"><i class="ri-file-list-3-line"></i> {{ detail.usage?.forms }} forms</span>
+          </div>
+
+          <ng-container *ngIf="detail.branches?.length">
+            <h4 class="detail-h">Branches under this church ({{ detail.branches.length }})</h4>
+            <div class="detail-table-wrap">
+              <table class="detail-table">
+                <thead>
+                  <tr><th>Branch</th><th>Location</th><th>Pastor</th><th>Contact</th><th>Members</th><th>Status</th></tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let b of detail.branches">
+                    <td><strong>{{ b.name }}</strong></td>
+                    <td>{{ b.city || b.address || '—' }}</td>
+                    <td>
+                      {{ b.pastor_name || '—' }}
+                      <div class="muted" *ngIf="b.pastor_email || b.pastor_phone">{{ b.pastor_email }} {{ b.pastor_phone }}</div>
+                    </td>
+                    <td>{{ b.phone || b.email || '—' }}</td>
+                    <td>
+                      <a href="javascript:void(0)" (click)="viewBranchMembers(b.id)" title="View this branch's members">
+                        {{ b.members_active }} active / {{ b.members_total }}
+                      </a>
+                    </td>
+                    <td>{{ b.is_active ? 'Active' : 'Inactive' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="muted" style="margin-top:6px;">
+              Main church (not assigned to a branch): <strong>{{ detail.members_no_branch }}</strong> members
+            </p>
+          </ng-container>
+
+          <h4 class="detail-h">Church staff &amp; admins</h4>
+          <div class="detail-table-wrap">
+            <table class="detail-table">
+              <thead><tr><th>Name</th><th>Role</th><th>Email</th><th>Phone</th></tr></thead>
+              <tbody>
+                <tr *ngFor="let u of detail.staff">
+                  <td>{{ u.full_name }}</td>
+                  <td>{{ (u.role || '').replace('_', ' ') }}</td>
+                  <td>{{ u.email }}</td>
+                  <td>{{ u.phone || '—' }}</td>
+                </tr>
+                <tr *ngIf="!detail.staff?.length"><td colspan="4" class="muted">No staff accounts</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h4 class="detail-h">Recent subscription payments</h4>
+          <div class="detail-table-wrap">
+            <table class="detail-table">
+              <thead><tr><th>Date</th><th>Plan</th><th>Billing</th><th>Amount</th><th>Status</th></tr></thead>
+              <tbody>
+                <tr *ngFor="let p of detail.payments">
+                  <td>{{ p.created_at | date:'d MMM y' }}</td>
+                  <td>{{ getPlanName(p.plan_id) }}</td>
+                  <td>{{ p.billing_cycle || (p.duration_months + ' mo') }}</td>
+                  <td>GHS {{ (p.amount_paid || p.amount) | number:'1.2-2' }}</td>
+                  <td>{{ p.status }}</td>
+                </tr>
+                <tr *ngIf="!detail.payments?.length"><td colspan="5" class="muted">No payments yet</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- MEMBERS -->
+        <div *ngIf="detailTab === 'members'">
+          <div class="members-toolbar">
+            <input type="text" class="form-control" placeholder="Search name, email, phone or member no."
+              [(ngModel)]="memberSearch" (ngModelChange)="onMemberSearch()" />
+            <select class="form-control" style="max-width:220px" *ngIf="detail.branches?.length"
+              [(ngModel)]="memberBranchFilter" (ngModelChange)="onBranchFilterChange()">
+              <option value="">All branches</option>
+              <option *ngFor="let b of detail.branches" [value]="b.id">{{ b.name }}</option>
+            </select>
+            <button class="btn btn-secondary" (click)="exportMembersCsv()" [disabled]="!membersTotal">
+              <i class="ri-download-line"></i> CSV
+            </button>
+          </div>
+          <p class="muted" style="margin:8px 0;">
+            Showing {{ members.length }} of {{ membersFiltered }}
+            <span *ngIf="memberSearch">(filtered from {{ membersTotal }} total)</span>
+            <span *ngIf="!memberSearch"> members in total</span>
+          </p>
+
+          <div *ngIf="membersLoading" class="usage-loading"><div class="spinner-sm"></div> Loading members...</div>
+
+          <div class="detail-table-wrap" *ngIf="!membersLoading">
+            <table class="detail-table">
+              <thead><tr><th>No.</th><th>Name</th><th>Email</th><th>Phone</th><th>Branch</th><th>Status</th><th>Joined</th></tr></thead>
+              <tbody>
+                <tr *ngFor="let m of members">
+                  <td>{{ m.member_number || '—' }}</td>
+                  <td>{{ m.first_name }} {{ m.last_name }}</td>
+                  <td>{{ m.email || '—' }}</td>
+                  <td>{{ m.phone_primary || '—' }}</td>
+                  <td>{{ m.branch_name || 'Main church' }}</td>
+                  <td>{{ m.membership_status }}</td>
+                  <td>{{ m.join_date ? (m.join_date | date:'d MMM y') : '—' }}</td>
+                </tr>
+                <tr *ngIf="!members.length"><td colspan="7" class="muted">No members found</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="members-pager" *ngIf="membersFiltered > memberPageSize">
+            <button class="btn btn-secondary" (click)="changeMemberPage(-1)" [disabled]="memberPage === 0">Previous</button>
+            <span>Page {{ memberPage + 1 }} of {{ memberPageCount }}</span>
+            <button class="btn btn-secondary" (click)="changeMemberPage(1)" [disabled]="memberPage + 1 >= memberPageCount">Next</button>
+          </div>
+        </div>
+      </ng-container>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-secondary" (click)="closeDetails()">Close</button>
+      <button class="btn btn-subscription" (click)="closeDetails(); openSubscriptionModal(detailChurchRow)" *ngIf="detailChurchRow">
+        <i class="ri-vip-crown-line"></i> Manage subscription
       </button>
     </div>
   </div>

@@ -108,6 +108,7 @@ export class Settings implements OnInit, OnDestroy {
   loadingSubscription = false;
   showUpgradeModal = false;
   upgradeModalTrigger = '';
+  lockedFeature = '';   // set when a route guard sent the user here (feature not in their plan)
 
   // ── Options ───────────────────────────────────────────────
   educationLevels = [
@@ -154,6 +155,7 @@ export class Settings implements OnInit, OnDestroy {
         if (params['tab'] && !this.isMember) {
           this.activeTab = params['tab'];
         }
+        this.lockedFeature = params['locked'] || '';
       });
 
     this.loadProfileData();
@@ -887,15 +889,65 @@ export class Settings implements OnInit, OnDestroy {
         return '#5B21B6';
       case 'growth':
         return '#0369A1';
+      case 'starter':
+        return '#059669';
       default:
         return '#6B7280';
     }
   }
 
+  get lockedFeatureLabel(): string {
+    const map: Record<string, string> = {
+      communications: 'Sending SMS & email messages',
+      export: 'Exporting data',
+      reports: 'Advanced reports',
+      custom_branding: 'Custom branding',
+    };
+    return map[this.lockedFeature] || 'That feature';
+  }
+
   openUpgradeModal(): void {
-    this.upgradeModalTrigger =
+    this.upgradeModalTrigger = this.lockedFeature
+      ? `${this.lockedFeatureLabel} is not included in your current plan. Upgrade to unlock it.`
+      :
       'Upgrade your plan to unlock more features and higher limits.';
     this.showUpgradeModal = true;
+  }
+
+  // ── Subscription countdown ───────────────────────────────
+
+  /** e.g. "12 days 4 hrs", "5 hrs 20 min", "Ended" */
+  get countdownLabel(): string {
+    const st = this.subscriptionStatus;
+    if (!st?.expires_at) return '';
+    const ms = new Date(st.expires_at).getTime() - Date.now();
+    if (ms <= 0) return 'Ended';
+    const days = Math.floor(ms / 86400000);
+    const hrs = Math.floor((ms % 86400000) / 3600000);
+    const mins = Math.floor((ms % 3600000) / 60000);
+    if (days > 0) return `${days} day${days === 1 ? '' : 's'} ${hrs} hr${hrs === 1 ? '' : 's'}`;
+    return `${hrs} hr${hrs === 1 ? '' : 's'} ${mins} min`;
+  }
+
+  /** % of the current paid period already used (for the progress bar) */
+  get periodElapsedPercent(): number {
+    const st = this.subscriptionStatus;
+    if (!st?.expires_at || !st.started_at) return 0;
+    const start = new Date(st.started_at).getTime();
+    const end = new Date(st.expires_at).getTime();
+    if (end <= start) return 100;
+    return Math.min(100, Math.max(0, Math.round(((Date.now() - start) / (end - start)) * 100)));
+  }
+
+  get graceDaysLeft(): number {
+    return this.subscriptionService.graceDaysLeft ?? 0;
+  }
+
+  get smsPercent(): number {
+    const st = this.subscriptionStatus;
+    if (!st || st.sms_limit === null || st.sms_limit === undefined) return 0;
+    if (st.sms_limit === 0) return 100;
+    return Math.min(100, Math.round((st.sms_used / st.sms_limit) * 100));
   }
 
   getDaysUntilExpiry(): number | null {

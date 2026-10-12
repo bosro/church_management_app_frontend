@@ -14,6 +14,16 @@ import {
 import { SupabaseService } from '../../../core/services/supabase';
 import { AuthService } from '../../../core/services/auth';
 
+export interface MyPledge {
+  id: string;
+  pledge_amount: number;
+  amount_paid: number;
+  currency: string;
+  due_date?: string | null;
+  is_fulfilled: boolean;
+  category?: { name: string } | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class GivingService {
   private userId?: string;
@@ -51,6 +61,26 @@ export class GivingService {
             ),
         ),
       ),
+    );
+  }
+
+  /** The logged-in member's own pledges (row-security already limits this to them) */
+  getMyPledges(): Observable<MyPledge[]> {
+    return this.getMemberId().pipe(
+      switchMap((memberId) =>
+        from(
+          this.supabase.client
+            .from('pledges')
+            .select('id, pledge_amount, amount_paid, currency, due_date, is_fulfilled, category:giving_categories(name)')
+            .eq('member_id', memberId)
+            .order('is_fulfilled', { ascending: true })
+            .order('pledge_date', { ascending: false }),
+        ),
+      ),
+      map((response: any) => {
+        if (response.error) throw response.error;
+        return (response.data || []) as MyPledge[];
+      }),
     );
   }
 

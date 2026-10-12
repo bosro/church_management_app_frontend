@@ -310,8 +310,8 @@ export class AdminService {
       subscription_expires_at, subscription_started_at,
       billing_email, payment_reference,
       contact_email, contact_phone, size_category,
-      enabled_features
-    `, // ← ADD enabled_features here
+      enabled_features, is_complimentary, billing_cycle
+    `,
         )
         .order('created_at', { ascending: false }),
     ).pipe(
@@ -323,7 +323,9 @@ export class AdminService {
   }
 
   /**
-   * Update church subscription (super admin only)
+   * Update church subscription (super admin only) — manual grants / bank or MoMo payments.
+   * Plan features now come from subscription_plans.plan_features (no more hard-coded list).
+   * `complimentary` = never auto-downgraded and no reminder emails (use for free grants / partners).
    */
   updateChurchSubscription(
     churchId: string,
@@ -331,52 +333,85 @@ export class AdminService {
     durationMonths: number,
     paymentReference: string,
     billingEmail?: string,
+    complimentary: boolean = false,
   ): Observable<void> {
+    const months = Number(durationMonths) || 1;
     const expiresAt = new Date();
-    expiresAt.setMonth(expiresAt.getMonth() + durationMonths);
-
-    // Define which features each plan unlocks
-    const planFeatures: Record<string, string[]> = {
-      free: [],
-      starter: [],
-      growth: ['reports'],
-      pro: ['reports', 'voting', 'job_hub'],
-    };
-
-    const planFeatureList = planFeatures[planId] ?? [];
+    expiresAt.setMonth(expiresAt.getMonth() + months);
 
     return from(
       (async () => {
-        // 'branch_autonomy' is switched on manually (not part of any plan) - never wipe it
-        const { data: current } = await this.supabase.client
-          .from('churches')
-          .select('enabled_features')
-          .eq('id', churchId)
-          .maybeSingle();
-        const keepManual = (current?.enabled_features || []).filter(
-          (f: string) => f === 'branch_autonomy',
-        );
+        const [{ data: plans }, { data: current }] = await Promise.all([
+          this.supabase.client.from('subscription_plans').select('id, plan_features'),
+          this.supabase.client
+            .from('churches')
+            .select('enabled_features, subscription_plan')
+            .eq('id', churchId)
+            .maybeSingle(),
+        ]);
+
+        const managed = new Set<string>();
+        (plans || []).forEach((p: any) => (p.plan_features || []).forEach((f: string) => managed.add(f)));
+        const planFeatureList: string[] =
+          (plans || []).find((p: any) => p.id === planId)?.plan_features || [];
+        // manual flags (e.g. branch_autonomy) are never wiped
+        const keepManual = (current?.enabled_features || []).filter((f: string) => !managed.has(f));
         const featuresToEnable = Array.from(new Set([...planFeatureList, ...keepManual]));
 
+        const isFree = planId === 'free';
         return this.supabase.client
-        .from('churches')
-        .update({
-          subscription_plan: planId,
-          subscription_tier: planId === 'pro' ? 'premium' : planId,
-          subscription_expires_at:
-            planId === 'free' ? null : expiresAt.toISOString(),
-          subscription_started_at: new Date().toISOString(),
-          subscription_renewed_at: new Date().toISOString(),
-          payment_reference: paymentReference || null,
-          billing_email: billingEmail || null,
-          enabled_features: featuresToEnable, // ← auto-set features
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', churchId);
+          .from('churches')
+          .update({
+            subscription_plan: planId,
+            subscription_tier: planId === 'pro' ? 'premium' : planId,
+            subscription_expires_at: isFree ? null : expiresAt.toISOString(),
+            subscription_started_at: new Date().toISOString(),
+            subscription_renewed_at: new Date().toISOString(),
+            subscription_cancelled_at: null,
+            billing_cycle: isFree ? null : months >= 12 ? 'yearly' : 'monthly',
+            is_complimentary: !isFree && complimentary,
+            previous_plan:
+              current?.subscription_plan && current.subscription_plan !== planId
+                ? current.subscription_plan
+                : undefined,
+            payment_reference: paymentReference || null,
+            billing_email: billingEmail || null,
+            enabled_features: featuresToEnable,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', churchId);
       })(),
     ).pipe(
       map(({ error }) => {
         if (error) throw new Error(error.message);
+      }),
+    );
+  }
+
+  /** One call for the church detail screen: church, plan state, usage, staff, last payments, member totals */
+  getChurchSummary(churchId: string): Observable<any> {
+    return from(this.supabase.client.rpc('admin_get_church_summary', { p_church_id: churchId })).pipe(
+      map(({ data, error }) => {
+        if (error) throw new Error(error.message);
+        return data;
+      }),
+    );
+  }
+
+  /** Members of a church (name, email, phone, status…) + total count. Super admin only (RPC checks). */
+  getChurchMembers(churchId: string, search = '', limit = 25, offset = 0, branchId: string | null = null): Observable<any> {
+    return from(
+      this.supabase.client.rpc('admin_get_church_members', {
+        p_church_id: churchId,
+        p_search: search || null,
+        p_limit: limit,
+        p_offset: offset,
+        p_branch_id: branchId || null,
+      }),
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw new Error(error.message);
+        return data;
       }),
     );
   }

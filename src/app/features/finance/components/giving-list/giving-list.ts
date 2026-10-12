@@ -26,6 +26,7 @@ import { MemberService } from '../../../members/services/member.service';
 import { Member } from '../../../../models/member.model';
 import { Location } from '@angular/common';
 
+import { RequiresPlan } from '../../../../core/plan-gate';
 @Component({
   selector: 'app-giving-list',
   standalone: false,
@@ -446,6 +447,7 @@ export class GivingList implements OnInit, OnDestroy {
   }
 
   // ── Export ───────────────────────────────────────────────────
+  @RequiresPlan('export')
   exportReport(): void {
     if (!this.canViewFinance) {
       this.errorMessage = 'You do not have permission to export reports';

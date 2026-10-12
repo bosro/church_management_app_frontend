@@ -1380,6 +1380,12 @@ export class MemberService {
     return (data || []) as Member[];
   }
 
+  /**
+   * Public (anonymous) member search for QR / link check-in.
+   * Uses the public_search_members() database function, which only returns
+   * id, names, member number and photo of ACTIVE members of ONE church.
+   * Falls back to the old direct query if the function is not installed yet.
+   */
   searchMembersPublic(
     churchId: string,
     query: string,
@@ -1387,43 +1393,50 @@ export class MemberService {
   ): Observable<Member[]> {
     if (!query || query.length < 2) return of([]);
     return from(
-      this.supabase.client
-        .from('members')
-        .select(
-          'id, first_name, middle_name, last_name, member_number, photo_url, church_id',
-        )
-        .eq('church_id', churchId)
-        .eq('membership_status', 'active')
-        .or(
-          `first_name.ilike.%${query}%,last_name.ilike.%${query}%,member_number.ilike.%${query}%`,
-        )
-        .order('first_name', { ascending: true })
-        .limit(limit),
-    ).pipe(
-      map(({ data, error }) => {
-        if (error) throw new Error(error.message);
-        return (data || []) as Member[];
-      }),
-      catchError(() => of([])),
-    );
+      (async () => {
+        const { data, error } = await this.supabase.client.rpc('public_search_members', {
+          p_church_id: churchId,
+          p_query: query,
+          p_limit: limit,
+        });
+        if (!error) return (data || []) as Member[];
+
+        // 06_public_checkin_functions.sql not applied yet -> old behaviour
+        const missing = error.code === 'PGRST202' || error.code === '42883';
+        if (!missing) throw new Error(error.message);
+        const legacy = await this.supabase.client
+          .from('members')
+          .select('id, first_name, middle_name, last_name, member_number, photo_url, church_id')
+          .eq('church_id', churchId)
+          .eq('membership_status', 'active')
+          .or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%,member_number.ilike.%${query}%`)
+          .order('first_name', { ascending: true })
+          .limit(limit);
+        if (legacy.error) throw new Error(legacy.error.message);
+        return (legacy.data || []) as Member[];
+      })(),
+    ).pipe(catchError(() => of([])));
   }
 
+  /** Public (anonymous) lookup of ONE member by id, via public_get_member(). */
   getMemberByIdPublic(memberId: string): Observable<Member | null> {
     return from(
-      this.supabase.client
-        .from('members')
-        .select(
-          'id, first_name, middle_name, last_name, member_number, photo_url, church_id',
-        )
-        .eq('id', memberId)
-        .single(),
-    ).pipe(
-      map(({ data, error }) => {
-        if (error) return null;
-        return data as Member;
-      }),
-      catchError(() => of(null)),
-    );
+      (async () => {
+        const { data, error } = await this.supabase.client.rpc('public_get_member', {
+          p_member_id: memberId,
+        });
+        if (!error) return ((data || [])[0] as Member) ?? null;
+
+        const missing = error.code === 'PGRST202' || error.code === '42883';
+        if (!missing) return null;
+        const legacy = await this.supabase.client
+          .from('members')
+          .select('id, first_name, middle_name, last_name, member_number, photo_url, church_id')
+          .eq('id', memberId)
+          .single();
+        return legacy.error ? null : (legacy.data as Member);
+      })(),
+    ).pipe(catchError(() => of(null)));
   }
 
   getMembersByBirthdayRange(

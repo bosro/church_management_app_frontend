@@ -9,6 +9,7 @@ import { FinanceService } from '../../services/finance.service';
 import { PermissionService } from '../../../../core/services/permission.service';
 import { AuthService } from '../../../../core/services/auth';
 
+import { RequiresPlan } from '../../../../core/plan-gate';
 @Component({
   selector: 'app-pledges-list',
   standalone: false,
@@ -131,6 +132,8 @@ export class Pledges implements OnInit, OnDestroy {
         },
       });
   }
+
+  @RequiresPlan('export')
 
   exportPledges(): void {
     if (!this.canViewFinance) {

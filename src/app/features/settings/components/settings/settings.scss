@@ -976,3 +976,34 @@ textarea {
 
 
 
+
+
+// ── Subscription countdown card ───────────────────────────
+.sub-countdown {
+  margin: 20px 0;
+  padding: 20px;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  background: #fff;
+
+  &--warn { border-color: #f59e0b; background: #fffbeb; }
+  &--danger { border-color: #dc2626; background: #fef2f2; }
+
+  &__head {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;
+    h3 { margin: 0; font-size: 16px; display: flex; gap: 8px; align-items: center; }
+  }
+  &__dates {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-bottom: 14px;
+    > div { display: flex; flex-direction: column; gap: 4px; }
+  }
+}
+.sub-label { font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: .04em; }
+.sub-big { font-size: 20px; color: #5b21b6; }
+.sub-chip { font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: #ede9fe; color: #5b21b6; }
+.sub-bar {
+  height: 8px; border-radius: 999px; background: #e5e7eb; overflow: hidden;
+  &__fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #7c3aed, #5b21b6); transition: width .4s; }
+}
+.sub-note { margin: 12px 0 0; font-size: 13px; color: #4b5563; line-height: 1.5; }
+.sub-sms { margin-top: 18px; &__row { display: flex; justify-content: space-between; margin-bottom: 6px; } }

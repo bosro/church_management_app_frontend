@@ -194,7 +194,7 @@
 <div *ngIf="showPaymentModal" class="modal-overlay" (click)="closePaymentModal()">
   <div class="modal-content" (click)="$event.stopPropagation()">
     <div class="modal-header">
-      <h3>Record Payment</h3>
+      <h3>{{ payMode === 'record' ? 'Record Payment' : 'Collect Online (Paystack)' }}</h3>
       <button class="close-btn" (click)="closePaymentModal()">
         <i class="ri-close-line"></i>
       </button>
@@ -205,6 +205,15 @@
         <div class="balance-alert">
           <i class="ri-information-line"></i>
           <span>Remaining balance: {{ formatCurrency(getBalance(), pledge.currency) }}</span>
+        </div>
+
+        <div class="pay-mode-tabs">
+          <button type="button" [class.active]="payMode === 'record'" (click)="setPayMode('record')">
+            <i class="ri-hand-coin-line"></i> Record payment
+          </button>
+          <button type="button" [class.active]="payMode === 'online'" (click)="setPayMode('online')">
+            <i class="ri-bank-card-line"></i> Collect online
+          </button>
         </div>
 
         <div class="form-group">
@@ -223,6 +232,7 @@
           </span>
         </div>
 
+        <ng-container *ngIf="payMode === 'record'">
         <div class="form-row">
           <div class="form-group">
             <label>Currency *</label>
@@ -274,10 +284,44 @@
             placeholder="Add any additional notes (optional)"
           ></textarea>
         </div>
+        </ng-container>
+
+        <!-- Collect online: create a Paystack pay link -->
+        <ng-container *ngIf="payMode === 'online'">
+          <div class="form-group">
+            <label>Payer's email <span class="opt">(optional for members)</span></label>
+            <input type="email" [value]="onlineEmail" (input)="onlineEmail = $any($event.target).value"
+              placeholder="Leave blank to use the member's email on file" [disabled]="onlineBusy" />
+            <small class="hint">Paystack needs an email for the receipt. Required for visitor pledges without one on file.</small>
+          </div>
+
+          <button type="button" class="btn-primary create-link-btn" (click)="createOnlineLink()" [disabled]="onlineBusy">
+            <span *ngIf="!onlineBusy"><i class="ri-link"></i> {{ onlineLink ? 'Create a new link' : 'Create payment link' }}</span>
+            <span *ngIf="onlineBusy"><i class="ri-loader-4-line spin"></i> Please wait…</span>
+          </button>
+
+          <p class="online-error" *ngIf="onlineError"><i class="ri-error-warning-line"></i> {{ onlineError }}</p>
+
+          <div class="online-result" *ngIf="onlineLink">
+            <p class="online-info">{{ onlineInfo }}</p>
+            <input type="text" readonly class="online-link-input" [value]="onlineLink" (focus)="$any($event.target).select()" />
+            <div class="online-actions">
+              <button type="button" class="btn-secondary" (click)="copyOnlineLink()">
+                <i [class]="linkCopied ? 'ri-check-line' : 'ri-file-copy-line'"></i> {{ linkCopied ? 'Copied!' : 'Copy link' }}
+              </button>
+              <a class="btn-secondary" [href]="onlineLink" target="_blank" rel="noopener"><i class="ri-external-link-line"></i> Open</a>
+              <button type="button" class="btn-secondary" *ngIf="canSmsLink" (click)="sendOnlineLinkBySms()" [disabled]="onlineBusy">
+                <i class="ri-message-2-line"></i> Send by SMS
+              </button>
+            </div>
+            <p class="online-note" *ngIf="linkSmsMessage">{{ linkSmsMessage }}</p>
+            <p class="online-note">The pledge updates automatically after they pay. Nothing is recorded until Paystack confirms.</p>
+          </div>
+        </ng-container>
       </div>
 
       <!-- SMS confirmation to the pledger (members only) -->
-      <label class="sms-option" *ngIf="canOfferSms" [class.disabled]="!pledgerHasPhone">
+      <label class="sms-option" *ngIf="canOfferSms && payMode === 'record'" [class.disabled]="!pledgerHasPhone">
         <input type="checkbox" [checked]="sendSms && pledgerHasPhone"
           [disabled]="!pledgerHasPhone || recordingPayment"
           (change)="sendSms = $any($event.target).checked" />
@@ -295,9 +339,10 @@
           (click)="closePaymentModal()"
           [disabled]="recordingPayment"
         >
-          Cancel
+          {{ payMode === 'online' ? 'Close' : 'Cancel' }}
         </button>
         <button
+          *ngIf="payMode === 'record'"
           type="submit"
           class="btn-primary"
           [disabled]="recordingPayment || paymentForm.invalid"

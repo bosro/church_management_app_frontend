@@ -18,6 +18,7 @@ import {
 import { PermissionService } from '../../../../core/services/permission.service';
 import { AuthService } from '../../../../core/services/auth';
 
+import { RequiresPlan } from '../../../../core/plan-gate';
 @Component({
   selector: 'app-ministry-detail',
   standalone: false,
@@ -443,6 +444,7 @@ export class MinistryDetail implements OnInit, OnDestroy {
   }
 
   // Export
+  @RequiresPlan('export')
   exportMinistryReport(): void {
     this.ministryService
       .exportMinistryReport(this.ministryId)

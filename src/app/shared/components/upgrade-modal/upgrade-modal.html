@@ -23,7 +23,7 @@
           </button>
           <button [class.active]="billingCycle === 'yearly'" (click)="billingCycle = 'yearly'">
             Yearly
-            <span class="save-badge">Save up to 20%</span>
+            <span class="save-badge" *ngIf="maxSavingPercent > 0">Save up to {{ maxSavingPercent }}%</span>
           </button>
         </div>
       </div>
@@ -44,7 +44,8 @@
             <span class="period">/month</span>
           </div>
           <p *ngIf="billingCycle === 'yearly'" class="yearly-saving">
-            Save GHS {{ getYearlySaving(plan) | number:'1.0-0' }} per year
+            Billed GHS {{ plan.price_yearly | number:'1.0-0' }} yearly &middot;
+            you save GHS {{ getYearlySaving(plan) | number:'1.0-0' }}
           </p>
           <p *ngIf="billingCycle === 'monthly'" class="yearly-saving billed-text">
             Billed monthly
@@ -73,11 +74,19 @@
             </li>
             <li [class.disabled]="!plan.can_export">
               <i [class]="plan.can_export ? 'ri-download-line' : 'ri-close-line'"></i>
-              CSV Export
+              Export (Excel / PDF)
             </li>
             <li [class.disabled]="!plan.can_send_communications">
               <i [class]="plan.can_send_communications ? 'ri-message-3-line' : 'ri-close-line'"></i>
-              SMS & Email
+              {{ formatSms(plan) }} &amp; Email
+            </li>
+            <li *ngIf="plan.can_remove_ads">
+              <i class="ri-eye-off-line"></i>
+              Ad-free
+            </li>
+            <li *ngIf="plan.support_level">
+              <i class="ri-customer-service-2-line"></i>
+              {{ plan.support_level }} support
             </li>
             <li [class.disabled]="!plan.can_use_reports">
               <i [class]="plan.can_use_reports ? 'ri-bar-chart-line' : 'ri-close-line'"></i>
@@ -87,17 +96,17 @@
 
           <button
             class="btn-select"
-            [class.btn-select--current]="plan.id === currentTier"
-            [disabled]="plan.id === currentTier"
+            [class.btn-select--current]="plan.id === currentTier && !isRenewal(plan)"
+            [disabled]="plan.id === currentTier && !isRenewal(plan)"
             (click)="selectPlanForCheckout(plan)">
-            {{ plan.id === currentTier ? 'Current Plan' : 'Get ' + plan.name }}
+            {{ isRenewal(plan) ? 'Renew ' + plan.name : (plan.id === currentTier ? 'Current Plan' : 'Get ' + plan.name) }}
           </button>
         </div>
       </div>
 
       <p class="contact-note">
         <i class="ri-lock-line"></i>
-        Secure payment via Paystack. Cancel anytime.
+        Secure one-time payment via Paystack. No automatic charges &mdash; we remind you before your plan ends.
       </p>
     </ng-container>
 
@@ -117,7 +126,7 @@
         </button>
         <h2>Complete Upgrade</h2>
         <p class="checkout-subtitle">
-          Upgrading to <strong>{{ selectedPlan.name }}</strong> —
+          {{ isRenewal(selectedPlan) ? 'Renewing' : 'Upgrading to' }} <strong>{{ selectedPlan.name }}</strong> —
           {{ billingCycle === 'yearly' ? '12 months' : '1 month' }}
         </p>
       </div>
@@ -164,6 +173,17 @@
           </ng-container>
         </div>
 
+        <!-- Heads-up when this replaces a plan that is still running -->
+        <div class="fee-note" *ngIf="replacesRunningPlan(selectedPlan)" style="margin-bottom:12px;">
+          <i class="ri-information-line"></i>
+          Your current plan is still active. Switching starts <strong>{{ selectedPlan.name }}</strong>
+          today and the time left on your current plan is not carried over.
+        </div>
+        <div class="fee-note" *ngIf="isRenewal(selectedPlan)" style="margin-bottom:12px;">
+          <i class="ri-information-line"></i>
+          Renewing adds {{ billingCycle === 'yearly' ? '12 months' : '1 month' }} on top of your current end date.
+        </div>
+
         <!-- Billing email -->
         <div class="form-group">
           <label class="form-label">
@@ -193,11 +213,11 @@
             </div>
             <div class="perk-item" *ngIf="selectedPlan.can_export">
               <i class="ri-download-line"></i>
-              <span>CSV Export</span>
+              <span>Export (Excel / PDF)</span>
             </div>
             <div class="perk-item" *ngIf="selectedPlan.can_send_communications">
               <i class="ri-message-3-line"></i>
-              <span>SMS & Email</span>
+              <span>{{ formatSms(selectedPlan) }} &amp; Email</span>
             </div>
             <div class="perk-item" *ngIf="selectedPlan.can_use_reports">
               <i class="ri-bar-chart-line"></i>

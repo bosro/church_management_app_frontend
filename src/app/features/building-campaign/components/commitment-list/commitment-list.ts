@@ -18,6 +18,7 @@ import {
 } from '../../../../models/building-campaign.model';
 import { AuthService } from '../../../../core/services/auth';
 
+import { RequiresPlan } from '../../../../core/plan-gate';
 @Component({
   selector: 'app-commitment-list',
   standalone: false,
@@ -277,6 +278,8 @@ export class CommitmentsList implements OnInit, OnDestroy {
   }
 
   // ── Export ────────────────────────────────────────────────────
+
+  @RequiresPlan('export')
 
   exportCSV(): void {
     if (!this.commitments.length) return;

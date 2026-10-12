@@ -79,6 +79,13 @@
     </div>
   </div> -->
 
+  <!-- Subscription expiry / grace alert (church admins only) -->
+  <div class="sub-alert" *ngIf="subscriptionAlert as alert" [class.sub-alert--danger]="alert.level === 'danger'">
+    <i [class]="alert.level === 'danger' ? 'ri-error-warning-line' : 'ri-time-line'"></i>
+    <p>{{ alert.text }}</p>
+    <button type="button" (click)="navigateToUpgrade()">Renew now</button>
+  </div>
+
   <!-- User Profile -->
   <div class="sidebar-footer">
     <div class="user-profile" *ngIf="currentUser">

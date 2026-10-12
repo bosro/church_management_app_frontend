@@ -76,6 +76,23 @@ export class PaymentSmsService {
     });
   }
 
+  /** SMS containing a Paystack pay link for a pledge (staff -> member) */
+  sendPledgePayLink(opts: {
+    memberId: string;
+    firstName: string;
+    amount: number;
+    currency?: string;
+    link: string;
+  }): Promise<SmsResult> {
+    return this.send(opts.memberId, 'Pledge payment link', async () => {
+      const church = await this.getChurchName();
+      return (
+        `Dear ${opts.firstName}, you can pay ${this.money(opts.amount, opts.currency)} towards your pledge ` +
+        `securely here: ${opts.link}${church ? ' - ' + church : ''}`
+      );
+    });
+  }
+
   // ── Internals ──────────────────────────────────────────────────────────────
 
   private async send(

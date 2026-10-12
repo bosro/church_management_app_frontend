@@ -4,6 +4,7 @@ import { Component, OnInit } from '@angular/core';
 import { SubscriptionService, SubscriptionPlan } from '../../../core/services/subscription.service';
 import { SupabaseService } from '../../../core/services/supabase';
 import { from } from 'rxjs';
+import { PlanPdfService } from '../../../core/services/plan-pdf.service';
 
 @Component({
   selector: 'app-plans',
@@ -38,12 +39,43 @@ export class Plans implements OnInit {
     can_send_communications: false,
     can_use_reports: false,
     can_custom_branding: false,
+    // new fields (01_subscription_migration.sql)
+    sms_monthly_limit: null as number | null,
+    can_remove_ads: false,
+    support_level: '' as string | null,
+    tagline: '' as string | null,
+    sort_order: 0,
   };
 
   constructor(
     private subscriptionService: SubscriptionService,
     private supabase: SupabaseService,
+    private planPdf: PlanPdfService,
   ) {}
+
+  // ── PDF export ────────────────────────────────────────────
+  exportPlanPdf(plan: SubscriptionPlan): void {
+    this.planPdf.exportPlan(plan);
+  }
+
+  exportAllPlansPdf(): void {
+    this.planPdf.exportComparison(this.plans);
+  }
+
+  /** "GHS 50/mo billed GHS 600 yearly" helper for the plan cards */
+  yearlyPerMonth(plan: SubscriptionPlan): number {
+    return plan.price_yearly / 12;
+  }
+  yearlySavingPercent(plan: SubscriptionPlan): number {
+    const full = plan.price_monthly * 12;
+    return full > 0 ? Math.round(((full - plan.price_yearly) / full) * 100) : 0;
+  }
+  smsLabel(plan: SubscriptionPlan): string {
+    if (!plan.can_send_communications) return 'No SMS';
+    return plan.sms_monthly_limit === null || plan.sms_monthly_limit === undefined
+      ? 'Unlimited SMS'
+      : `${plan.sms_monthly_limit} SMS / month`;
+  }
 
   ngOnInit(): void {
     this.loadPlans();
@@ -64,6 +96,8 @@ export class Plans implements OnInit {
       max_forms: 5, max_events: 10, max_ministries: 3,
       can_export: false, can_send_communications: false,
       can_use_reports: false, can_custom_branding: false,
+      sms_monthly_limit: 0, can_remove_ads: false, support_level: 'Community',
+      tagline: '', sort_order: this.plans.length,
     };
     this.showCreateModal = true;
     this.errorMessage = '';

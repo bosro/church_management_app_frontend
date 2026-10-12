@@ -12,6 +12,8 @@ export interface SubscriptionPaymentInit {
   authorization_url: string;
   access_code: string;
   reference: string;
+  plan_price?: number;
+  charge_amount?: number;
 }
 
 export type SubscriptionPaymentStatus =
@@ -126,8 +128,11 @@ export class SubscriptionPaystackService {
           plan_id: params.planId,
           plan_name: params.planName,
           duration_months: params.durationMonths,
-          amount: chargeAmount,          // charge amount (with fee)
-          plan_price: params.planPrice,  // original plan price (church receives this)
+          billing_cycle: params.durationMonths >= 12 ? 'yearly' : 'monthly',
+          // NOTE: the server now looks the price up itself; these two are only
+          // kept for older deployments of the edge function and are ignored.
+          amount: chargeAmount,
+          plan_price: params.planPrice,
           billing_email: params.billingEmail,
           church_id: params.churchId,
         }),

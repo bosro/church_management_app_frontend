@@ -5,9 +5,14 @@
       <h1>Subscription Plans</h1>
       <p class="subtitle">Manage pricing tiers and feature access</p>
     </div>
-    <button class="btn-primary" (click)="openCreateModal()">
-      <i class="ri-add-line"></i> New Plan
-    </button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-secondary" (click)="exportAllPlansPdf()" [disabled]="!plans.length">
+        <i class="ri-file-pdf-line"></i> All plans (PDF)
+      </button>
+      <button class="btn-primary" (click)="openCreateModal()">
+        <i class="ri-add-line"></i> New Plan
+      </button>
+    </div>
   </div>
 
   <div *ngIf="successMessage" class="alert alert-success">
@@ -32,6 +37,10 @@
         <div class="plan-price">
           <span class="price-amount">{{ formatCurrency(plan.price_monthly) }}</span>
           <span class="price-period">/month</span>
+          <div class="price-yearly" *ngIf="plan.price_yearly > 0" style="font-size:12px;color:#6b7280;margin-top:2px;">
+            or {{ formatCurrency(yearlyPerMonth(plan)) }}/mo billed {{ formatCurrency(plan.price_yearly) }} yearly
+            <span *ngIf="yearlySavingPercent(plan) > 0">(save {{ yearlySavingPercent(plan) }}%)</span>
+          </div>
         </div>
       </div>
 
@@ -84,10 +93,20 @@
             <i [class]="plan.can_custom_branding ? 'ri-checkbox-circle-fill' : 'ri-close-circle-line'"></i>
             Custom Branding
           </div>
+          <div class="feature-item" [class.enabled]="plan.can_remove_ads">
+            <i [class]="plan.can_remove_ads ? 'ri-checkbox-circle-fill' : 'ri-close-circle-line'"></i>
+            Ad-free
+          </div>
+          <div class="feature-item enabled">
+            <i class="ri-message-3-line"></i> {{ smsLabel(plan) }}
+          </div>
         </div>
       </div>
 
       <div class="plan-actions">
+        <button class="btn btn-secondary" (click)="exportPlanPdf(plan)" title="Download this tier as a PDF to send to a church">
+          <i class="ri-file-pdf-line"></i> PDF
+        </button>
         <button class="btn btn-secondary" (click)="openEditModal(plan)">
           <i class="ri-edit-line"></i> Edit
         </button>
@@ -135,7 +154,7 @@
         </div>
       </div>
 
-      <h4 class="section-label">Limits (leave 0 for unlimited)</h4>
+      <h4 class="section-label">Limits (leave EMPTY for unlimited — 0 means none allowed)</h4>
       <div class="form-row three-col">
         <div class="form-group">
           <label>Max Members</label>
@@ -163,6 +182,26 @@
         </div>
       </div>
 
+      <h4 class="section-label">Messaging, support &amp; display</h4>
+      <div class="form-row three-col">
+        <div class="form-group">
+          <label>SMS per month</label>
+          <input type="number" class="form-control" [(ngModel)]="planForm.sms_monthly_limit" min="0" placeholder="empty = unlimited" />
+        </div>
+        <div class="form-group">
+          <label>Support level</label>
+          <input type="text" class="form-control" [(ngModel)]="planForm.support_level" placeholder="Community / Email / Priority" />
+        </div>
+        <div class="form-group">
+          <label>Display order</label>
+          <input type="number" class="form-control" [(ngModel)]="planForm.sort_order" min="0" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Tagline (shown on the PDF)</label>
+        <input type="text" class="form-control" [(ngModel)]="planForm.tagline" placeholder="For small churches getting organised" />
+      </div>
+
       <h4 class="section-label">Feature Access</h4>
       <div class="feature-toggles-modal">
         <label class="toggle-row">
@@ -183,6 +222,13 @@
           <span>Reports Module</span>
           <label class="toggle">
             <input type="checkbox" [(ngModel)]="planForm.can_use_reports" />
+            <span class="toggle-slider"></span>
+          </label>
+        </label>
+        <label class="toggle-row">
+          <span>Ad-free</span>
+          <label class="toggle">
+            <input type="checkbox" [(ngModel)]="planForm.can_remove_ads" />
             <span class="toggle-slider"></span>
           </label>
         </label>

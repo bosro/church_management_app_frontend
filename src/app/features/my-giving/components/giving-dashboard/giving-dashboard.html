@@ -76,6 +76,53 @@
             </div>
           </div>
 
+          <!-- My Pledges (pay online) -->
+          <div class="my-pledges" *ngIf="openPledges.length > 0">
+            <div class="section-header">
+              <div>
+                <h2>My Pledges</h2>
+                <p>Pay towards your pledge securely with card or mobile money</p>
+              </div>
+            </div>
+
+            <div class="pledge-row" *ngFor="let p of openPledges">
+              <div class="pledge-info">
+                <strong>{{ p.category?.name || 'Pledge' }}</strong>
+                <span class="pledge-nums">
+                  {{ p.currency }} {{ p.amount_paid | number:'1.2-2' }} of {{ p.currency }} {{ p.pledge_amount | number:'1.2-2' }}
+                  · Balance <b>{{ p.currency }} {{ balanceOf(p) | number:'1.2-2' }}</b>
+                </span>
+                <div class="pledge-bar"><div class="pledge-bar-fill" [style.width.%]="progressOf(p)"></div></div>
+              </div>
+              <button type="button" class="btn-pay-pledge" (click)="openPay(p)">
+                <i class="ri-bank-card-line"></i> Pay online
+              </button>
+            </div>
+          </div>
+
+          <!-- Pay pledge modal -->
+          <div class="pledge-modal-overlay" *ngIf="payingPledge" (click)="closePay()">
+            <div class="pledge-modal" (click)="$event.stopPropagation()">
+              <h3>Pay towards your pledge</h3>
+              <p class="pm-sub">{{ payingPledge.category?.name || 'Pledge' }} ·
+                Balance {{ payingPledge.currency }} {{ balanceOf(payingPledge) | number:'1.2-2' }}</p>
+
+              <label for="pledge-amt">Amount ({{ payingPledge.currency }})</label>
+              <input id="pledge-amt" type="number" inputmode="decimal" min="1" step="0.01"
+                [value]="payAmount" (input)="payAmount = $any($event.target).value" [disabled]="payBusy" />
+              <small>Card / mobile money fees may be added at checkout.</small>
+
+              <p class="pm-error" *ngIf="payError"><i class="ri-error-warning-line"></i> {{ payError }}</p>
+
+              <div class="pm-actions">
+                <button type="button" class="pm-cancel" (click)="closePay()" [disabled]="payBusy">Cancel</button>
+                <button type="button" class="pm-go" (click)="startPledgePayment()" [disabled]="payBusy">
+                  {{ payBusy ? 'Redirecting…' : 'Continue to payment' }}
+                </button>
+              </div>
+            </div>
+          </div>
+
           <!-- Recent Transactions -->
 
           <div class="recent-transactions">

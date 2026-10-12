@@ -27,6 +27,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { AuthService } from '../../../../core/services/auth';
 
+import { RequiresPlan } from '../../../../core/plan-gate';
 @Component({
   selector: 'app-finance-reports',
   standalone: false,
@@ -286,6 +287,8 @@ export class FinanceReports implements OnInit, OnDestroy {
 
   // ── Export: Giving Report ────────────────────────────────────
 
+  @RequiresPlan('export')
+
   exportGivingReport(): void {
     const startDate = this.startDateControl.value || '';
     const endDate = this.endDateControl.value || '';
@@ -525,6 +528,8 @@ export class FinanceReports implements OnInit, OnDestroy {
 
   // ── Export: Pledges Report ───────────────────────────────────
 
+  @RequiresPlan('export')
+
   exportPledgesReport(): void {
     this.showPledgesExportModal = true;
   }
@@ -684,6 +689,8 @@ export class FinanceReports implements OnInit, OnDestroy {
   }
 
   // ── Export: Expenses Report (NEW) ────────────────────────────
+
+  @RequiresPlan('export')
 
   exportExpensesReport(): void {
     this.showExpensesExportModal = true;

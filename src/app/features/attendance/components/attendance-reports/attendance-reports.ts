@@ -12,6 +12,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { AuthService } from '../../../../core/services/auth';
 
+import { RequiresPlan } from '../../../../core/plan-gate';
 interface ReportSummary {
   total_services: number;
   average_attendance: number;
@@ -199,6 +200,8 @@ export class AttendanceReports implements OnInit, OnDestroy {
     this.initForm();
     this.loadReports();
   }
+
+  @RequiresPlan('export')
 
   exportReport(): void {
     if (!this.reports.length) {

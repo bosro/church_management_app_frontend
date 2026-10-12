@@ -350,3 +350,107 @@
 
 
 
+
+// ── My Pledges (pay online) ──────────────────────────────────────────────────
+.my-pledges {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+
+  .section-header {
+    margin-bottom: 0.75rem;
+    h2 { margin: 0; font-size: 1.125rem; font-weight: 700; color: #111827; }
+    p { margin: 0.125rem 0 0; font-size: 0.8125rem; color: #6b7280; }
+  }
+
+  .pledge-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.875rem 0;
+    border-top: 1px solid #f3f4f6;
+    &:first-of-type { border-top: none; }
+  }
+
+  .pledge-info {
+    flex: 1;
+    min-width: 0;
+    strong { display: block; color: #111827; font-size: 0.95rem; }
+    .pledge-nums { display: block; font-size: 0.8125rem; color: #6b7280; margin: 0.125rem 0 0.5rem; }
+  }
+
+  .pledge-bar {
+    height: 6px;
+    background: #ede9fe;
+    border-radius: 999px;
+    overflow: hidden;
+    .pledge-bar-fill { height: 100%; background: #7c3aed; border-radius: 999px; }
+  }
+
+  .btn-pay-pledge {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.625rem 1rem;
+    border: none;
+    border-radius: 8px;
+    background: #7c3aed;
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.875rem;
+    font-family: inherit;
+    cursor: pointer;
+    &:hover { background: #6d28d9; }
+  }
+}
+
+.pledge-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 1000;
+
+  .pledge-modal {
+    background: #fff;
+    border-radius: 14px;
+    width: 100%;
+    max-width: 400px;
+    padding: 1.5rem;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+
+    h3 { margin: 0 0 0.25rem; font-size: 1.125rem; color: #111827; }
+    .pm-sub { margin: 0 0 1rem; font-size: 0.875rem; color: #6b7280; }
+    label { display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.375rem; }
+    input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 0.75rem;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 1.125rem;
+      font-family: inherit;
+    }
+    small { display: block; margin-top: 0.375rem; font-size: 0.75rem; color: #9ca3af; }
+    .pm-error { margin: 0.75rem 0 0; color: #b91c1c; font-size: 0.8125rem; display: flex; gap: 0.375rem; }
+    .pm-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.25rem; }
+    .pm-cancel, .pm-go {
+      padding: 0.7rem 1.1rem;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      font-family: inherit;
+      cursor: pointer;
+      border: none;
+    }
+    .pm-cancel { background: #f3f4f6; color: #374151; }
+    .pm-go { background: #7c3aed; color: #fff; &:disabled { opacity: 0.6; cursor: not-allowed; } }
+  }
+}
