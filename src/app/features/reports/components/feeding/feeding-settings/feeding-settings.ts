@@ -30,6 +30,8 @@ export class FeedingSettings implements OnInit {
 
   // Settings from the database
   hasPin = false;
+  pinRequired = true;
+  savingMode = false;
   pinUpdatedAt: string | null = null;
   activeSessions = 0;
   activeYear = '';
@@ -90,6 +92,7 @@ export class FeedingSettings implements OnInit {
       });
       if (error) throw new Error(error.message);
       this.hasPin = !!data?.has_pin;
+      this.pinRequired = data?.pin_required !== false;
       this.pinUpdatedAt = data?.pin_updated_at || null;
       this.activeSessions = Number(data?.active_sessions || 0);
       this.activeYear = data?.active_year || '';
@@ -144,6 +147,36 @@ export class FeedingSettings implements OnInit {
       this.flash('err', e.message || 'Failed to save PIN');
     } finally {
       this.savingPin = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  /** Switch between "teachers need the PIN" and "anyone with the link". */
+  async togglePinRequired(): Promise<void> {
+    if (this.savingMode) return;
+    const next = !this.pinRequired;
+    const msg = next
+      ? this.hasPin
+        ? 'Turn the PIN back ON? Anyone who got in without a PIN will be signed out and must enter the PIN.'
+        : 'Turn the PIN ON? No PIN is set yet, so nobody can get in until you set one below. Continue?'
+      : 'Turn the PIN OFF? Anyone who has the teacher link will be able to open the page and record payments, attendance and expenses without a PIN. Only do this if the link is shared with trusted people. Continue?';
+    if (!confirm(msg)) return;
+    this.savingMode = true;
+    try {
+      const { error } = await this.supabase.client.rpc('feeding_admin_set_pin_required', {
+        p_church_id: this.churchId,
+        p_required: next,
+      });
+      if (error) throw new Error(error.message);
+      this.flash(
+        'ok',
+        next ? 'PIN is now required for teachers.' : 'PIN is OFF — the teacher link is open to anyone who has it.',
+      );
+      await this.reload();
+    } catch (e: any) {
+      this.flash('err', e.message || 'Could not change the setting');
+    } finally {
+      this.savingMode = false;
       this.cdr.markForCheck();
     }
   }

@@ -98,6 +98,28 @@ export class FeedingPublicService {
     return res;
   }
 
+  /** Does this school currently require a PIN? (admin can switch it off) */
+  async pinRequired(): Promise<boolean> {
+    const { data, error } = await this.supabase.client.rpc('feeding_access_mode', {
+      p_church_id: this.churchId,
+    });
+    if (error) throw new Error(error.message);
+    return data?.pin_required !== false;
+  }
+
+  /** PIN switched off by the admin: get a session without a PIN. */
+  async openSessionIfPublic(): Promise<boolean> {
+    const { data, error } = await this.supabase.client.rpc('feeding_open_session', {
+      p_church_id: this.churchId,
+    });
+    if (error) throw new Error(error.message);
+    if (data?.ok && data.token) {
+      this.setToken(data.token);
+      return true;
+    }
+    return false;
+  }
+
   // ── Generic caller ──────────────────────────────────────────────
   private async call<T>(fn: string, args: Record<string, any> = {}): Promise<T> {
     const token = this.getToken();

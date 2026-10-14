@@ -58,6 +58,8 @@ export class FeedingRecord implements OnInit, OnDestroy {
   schoolName = '';
 
   // ── Access (PIN) + term confirmation ──────────────────────────
+  /** false when the admin has turned the PIN off (open link) */
+  pinRequired = true;
   authState: 'checking' | 'locked' | 'term-confirm' | 'ready' = 'checking';
   pin = '';
   pinError = '';
@@ -200,7 +202,17 @@ export class FeedingRecord implements OnInit, OnDestroy {
       if (v === 'day' || v === 'week') this.cashView = v;
     } catch {}
 
-    this.pub.sessionExpired$.pipe(takeUntil(this.destroy$)).subscribe(() => {
+    this.pub.sessionExpired$.pipe(takeUntil(this.destroy$)).subscribe(async () => {
+      // PIN switched off? quietly get a fresh session instead of locking.
+      if (!this.pinRequired) {
+        try {
+          if (await this.pub.openSessionIfPublic()) {
+            this.cdr.markForCheck();
+            return;
+          }
+        } catch {}
+        this.pinRequired = true; // admin switched the PIN back on
+      }
       this.authState = 'locked';
       this.pin = '';
       this.pinError = 'Your session has ended. Please enter the PIN again.';
@@ -217,17 +229,30 @@ export class FeedingRecord implements OnInit, OnDestroy {
   // ── PIN + session ─────────────────────────────────────────────
 
   private async restoreSession(): Promise<void> {
-    if (!this.pub.getToken()) {
-      this.authState = 'locked';
-      this.cdr.markForCheck();
-      return;
-    }
     try {
-      await this.loadBootstrapAndContinue();
+      this.pinRequired = await this.pub.pinRequired();
     } catch {
-      this.authState = 'locked';
-      this.cdr.markForCheck();
+      this.pinRequired = true; // can't tell → be safe and ask for the PIN
     }
+
+    if (this.pub.getToken()) {
+      try {
+        await this.loadBootstrapAndContinue();
+        return;
+      } catch {}
+    }
+
+    if (!this.pinRequired) {
+      try {
+        if (await this.pub.openSessionIfPublic()) {
+          await this.loadBootstrapAndContinue();
+          return;
+        }
+      } catch {}
+    }
+
+    this.authState = 'locked';
+    this.cdr.markForCheck();
   }
 
   async submitPin(): Promise<void> {

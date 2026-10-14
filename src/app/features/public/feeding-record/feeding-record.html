@@ -62,7 +62,7 @@
     </div>
     <div class="payment-modal-footer">
       <button class="btn-cancel" *ngIf="!changingTerm" (click)="changingTerm = true">No, change it</button>
-      <button class="btn-cancel" (click)="lockPage()">Sign out</button>
+      <button class="btn-cancel" *ngIf="pinRequired" (click)="lockPage()">Sign out</button>
       <button class="btn-submit-payment" (click)="confirmTermAndStart()">
         <i class="ri-check-line"></i> {{ changingTerm ? 'Confirm' : 'Yes, correct' }}
       </button>
@@ -84,7 +84,7 @@
     <div class="feeding-header-date">
       <i class="ri-calendar-line"></i>
       {{ selectedDate | date:'EEEE, MMMM d, y' }}
-      <button class="header-lock-btn" (click)="lockPage(); $event.stopPropagation()" title="Sign out">
+      <button class="header-lock-btn" *ngIf="pinRequired" (click)="lockPage(); $event.stopPropagation()" title="Sign out">
         <i class="ri-logout-box-r-line"></i>
       </button>
     </div>

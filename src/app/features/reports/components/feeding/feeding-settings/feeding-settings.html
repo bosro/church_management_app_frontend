@@ -22,11 +22,33 @@
           <!-- Teacher link -->
           <section class="card">
             <h2><i class="ri-link"></i> Teacher link</h2>
-            <p class="hint">Teachers open this link and enter the PIN below. The link alone no longer gives access.</p>
+            <p class="hint" *ngIf="pinRequired">Teachers open this link and enter the PIN below. The link alone does not give access.</p>
+            <p class="hint warn" *ngIf="!pinRequired">The PIN is OFF, so anyone with this link can open the teacher page.</p>
             <div class="link-row">
               <input type="text" readonly [value]="publicLink" />
               <button class="btn" (click)="copyLink()"><i class="ri-file-copy-line"></i> Copy</button>
             </div>
+          </section>
+
+          <!-- PIN on/off -->
+          <section class="card">
+            <h2><i class="ri-toggle-line"></i> Require PIN</h2>
+            <label class="switch-row">
+              <input type="checkbox" class="switch" [checked]="pinRequired"
+                [disabled]="savingMode" (click)="$event.preventDefault(); togglePinRequired()" />
+              <span>
+                <strong>{{ pinRequired ? 'PIN required' : 'PIN off (open link)' }}</strong><br />
+                <small>{{ pinRequired
+                  ? 'Teachers must enter the PIN to open the page.'
+                  : 'Anyone with the link can record fees, attendance and expenses.' }}</small>
+              </span>
+            </label>
+            <p class="hint warn" *ngIf="!pinRequired">
+              Open access is on. Switch the PIN back on at any time; everyone currently in will be signed out.
+            </p>
+            <p class="hint warn" *ngIf="pinRequired && !hasPin">
+              The PIN is required but none is set yet, so nobody can get in. Set one below.
+            </p>
           </section>
 
           <!-- PIN -->
