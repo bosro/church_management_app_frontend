@@ -14,6 +14,7 @@ export interface GivingCategory {
   church_id: string;
   name: string;
   description?: string;
+  public_giving_enabled?: boolean;
   is_active: boolean;
   created_at: string;
 }
