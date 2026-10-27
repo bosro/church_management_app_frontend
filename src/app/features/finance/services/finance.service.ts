@@ -158,6 +158,36 @@ export class FinanceService {
     );
   }
 
+  /** Switch the public QR / give page on or off for one category. */
+  setCategoryPublicGiving(
+    categoryId: string,
+    enabled: boolean,
+  ): Observable<void> {
+    const churchId = this.getChurchId();
+    return from(
+      this.supabase.client
+        .from('giving_categories')
+        .update({ public_giving_enabled: enabled })
+        .eq('id', categoryId)
+        .eq('church_id', churchId),
+    ).pipe(
+      map(({ error }) => {
+        if (error) throw new Error(error.message);
+      }),
+      catchError((err) => throwError(() => err)),
+    );
+  }
+
+  /**
+   * Public (no-login) giving page. Pass a categoryId for a category QR,
+   * leave it out for the general QR where the payer picks the category.
+   */
+  getPublicGivingUrl(categoryId?: string): string {
+    const churchId = this.getChurchId();
+    const base = `${window.location.origin}/public/give/${churchId}`;
+    return categoryId ? `${base}/${categoryId}` : base;
+  }
+
   deleteGivingCategory(categoryId: string): Observable<void> {
     const churchId = this.getChurchId();
     return from(

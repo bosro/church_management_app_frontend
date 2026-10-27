@@ -1,0 +1,52 @@
+<div class="cb-wrapper">
+  <div class="cb-card">
+
+    <ng-container *ngIf="state === 'checking'">
+      <div class="spinner"></div>
+      <h2>Confirming your payment…</h2>
+      <p>Please don’t close this page.</p>
+    </ng-container>
+
+    <ng-container *ngIf="state === 'success' && result">
+      <div class="icon success"><i class="ri-checkbox-circle-line"></i></div>
+      <h2>Thank you<ng-container *ngIf="result.payer_first_name">, {{ result.payer_first_name }}</ng-container>!</h2>
+      <p class="lead">Your gift to <strong>{{ result.category_name || 'the church' }}</strong> has been received.</p>
+
+      <div class="receipt">
+        <div class="row"><span>Church</span><strong>{{ result.church_name }}</strong></div>
+        <div class="row"><span>Category</span><strong>{{ result.category_name }}</strong></div>
+        <div class="row"><span>Gift amount</span><strong>{{ money(result.amount) }}</strong></div>
+        <div class="row" *ngIf="result.charge_amount > result.amount"><span>Total paid (incl. fee)</span><strong>{{ money(result.charge_amount) }}</strong></div>
+        <div class="row"><span>Reference</span><code>{{ result.reference }}</code></div>
+      </div>
+
+      <p class="blessing">God bless you for your generosity.</p>
+      <a class="btn" [routerLink]="giveAgainLink">Give again</a>
+    </ng-container>
+
+    <ng-container *ngIf="state === 'processing'">
+      <div class="icon warn"><i class="ri-time-line"></i></div>
+      <h2>Still processing</h2>
+      <p>We haven’t received confirmation yet. If you approved the payment on your phone, it can take a minute or two.</p>
+      <p class="ref">Reference: <code>{{ reference }}</code></p>
+      <button class="btn" (click)="retry()">Check again</button>
+      <p class="hint">Keep your reference. If money left your account but this never confirms, contact your church with it.</p>
+    </ng-container>
+
+    <ng-container *ngIf="state === 'failed'">
+      <div class="icon error"><i class="ri-close-circle-line"></i></div>
+      <h2>Payment not completed</h2>
+      <p>The payment didn’t go through and you have not been charged.</p>
+      <a class="btn" *ngIf="result" [routerLink]="giveAgainLink">Try again</a>
+    </ng-container>
+
+    <ng-container *ngIf="state === 'error'">
+      <div class="icon error"><i class="ri-error-warning-line"></i></div>
+      <h2>We couldn’t check this payment</h2>
+      <p>{{ errorMessage }}</p>
+      <p class="ref" *ngIf="reference">Reference: <code>{{ reference }}</code></p>
+      <button class="btn" *ngIf="reference" (click)="retry()">Try again</button>
+    </ng-container>
+
+  </div>
+</div>

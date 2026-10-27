@@ -19,10 +19,17 @@
             <h1>Giving Categories</h1>
             <p class="subtitle">Manage categories for organizing giving records</p>
           </div>
-          <button class="btn-primary" (click)="toggleForm()" *ngIf="canManageCategories">
-            <i [class]="showForm ? 'ri-close-line' : 'ri-add-line'"></i>
-            <span>{{ showForm ? 'Cancel' : 'Add Category' }}</span>
-          </button>
+          <div class="header-actions">
+            <button class="btn-qr" (click)="openQr(null)" *ngIf="categories.length > 0"
+              title="One QR for all giving types — the payer picks the category">
+              <i class="ri-qr-code-line"></i>
+              <span>General QR</span>
+            </button>
+            <button class="btn-primary" (click)="toggleForm()" *ngIf="canManageCategories">
+              <i [class]="showForm ? 'ri-close-line' : 'ri-add-line'"></i>
+              <span>{{ showForm ? 'Cancel' : 'Add Category' }}</span>
+            </button>
+          </div>
         </div>
 
         <!-- Success Message -->
@@ -92,16 +99,24 @@
                 <i class="ri-folder-line"></i>
               </div>
               <div class="category-info">
-                <h4>{{ category.name }}</h4>
+                <h4>
+                  {{ category.name }}
+                  <span class="public-off-badge" *ngIf="!isPublicEnabled(category)">Public giving off</span>
+                </h4>
                 <p *ngIf="category.description">{{ category.description }}</p>
               </div>
-              <div class="category-actions" *ngIf="canManageCategories">
-                <button class="btn-edit" (click)="editCategory(category)" title="Edit category">
-                  <i class="ri-edit-line"></i>
+              <div class="category-actions">
+                <button class="btn-qr-small" (click)="openQr(category)" title="QR code for {{ category.name }}">
+                  <i class="ri-qr-code-line"></i>
                 </button>
-                <button class="btn-delete" (click)="deleteCategory(category.id)" title="Delete category">
-                  <i class="ri-delete-bin-line"></i>
-                </button>
+                <ng-container *ngIf="canManageCategories">
+                  <button class="btn-edit" (click)="editCategory(category)" title="Edit category">
+                    <i class="ri-edit-line"></i>
+                  </button>
+                  <button class="btn-delete" (click)="deleteCategory(category.id)" title="Delete category">
+                    <i class="ri-delete-bin-line"></i>
+                  </button>
+                </ng-container>
               </div>
             </div>
 
@@ -113,6 +128,59 @@
           </div>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Public giving QR modal (category QR / general QR) ───── -->
+<div class="qr-overlay" *ngIf="showQrModal" (click)="closeQr()">
+  <div class="qr-modal" (click)="$event.stopPropagation()">
+    <div class="qr-modal-header">
+      <h3><i class="ri-qr-code-line"></i> {{ qrCategory ? 'Category QR Code' : 'General QR Code' }}</h3>
+      <button class="qr-close" (click)="closeQr()"><i class="ri-close-line"></i></button>
+    </div>
+
+    <div class="qr-modal-body">
+      <h2 class="qr-title">{{ qrTitle }}</h2>
+      <p class="qr-sub">{{ qrSubtitle }}</p>
+
+      <div class="qr-giving-code">
+        <qr-code [value]="qrUrl" [size]="260" [errorCorrectionLevel]="'M'"
+          [darkColor]="'#000000FF'" [lightColor]="'#FFFFFFFF'"></qr-code>
+      </div>
+
+      <p class="qr-explain" *ngIf="qrCategory">
+        Members and visitors who scan this enter their name, phone and amount, then pay.
+        Every payment is recorded under <strong>{{ qrCategory.name }}</strong>.
+      </p>
+      <p class="qr-explain" *ngIf="!qrCategory">
+        One code for everything. The payer chooses the giving category, enters their name,
+        phone and amount, then pays. Each payment is recorded under the category they chose.
+      </p>
+
+      <div class="qr-link-row">
+        <input type="text" [value]="qrUrl" readonly />
+        <button (click)="copyQrLink()" [class.copied]="qrCopied" title="Copy link">
+          <i [class]="qrCopied ? 'ri-check-line' : 'ri-file-copy-line'"></i>
+        </button>
+      </div>
+
+      <label class="qr-switch" *ngIf="qrCategory && canManageCategories">
+        <input type="checkbox" [checked]="isPublicEnabled(qrCategory)" [disabled]="qrToggling"
+          (change)="togglePublicGiving()" />
+        <span class="track"><span class="thumb"></span></span>
+        <span class="label">
+          Accept public payments for this category
+          <small>Turn off to stop this QR (and the General QR) from taking {{ qrCategory.name }} payments.</small>
+        </span>
+      </label>
+    </div>
+
+    <div class="qr-modal-footer">
+      <button class="btn-secondary" (click)="closeQr()">Close</button>
+      <button class="btn-primary" (click)="downloadQr()">
+        <i class="ri-download-2-line"></i> Download QR
+      </button>
     </div>
   </div>
 </div>

@@ -1,0 +1,125 @@
+<!-- src/app/features/public/public-give/public-give.html -->
+<div class="give-wrapper" [style.--brand]="brandColor">
+  <div class="give-container">
+
+    <!-- Loading -->
+    <div *ngIf="pageState === 'loading'" class="status-card">
+      <div class="spinner"></div>
+      <h2>Loading…</h2>
+    </div>
+
+    <!-- Not found -->
+    <div *ngIf="pageState === 'notfound'" class="status-card">
+      <div class="status-icon error"><i class="ri-error-warning-line"></i></div>
+      <h2>Page not found</h2>
+      <p>This giving link may be incorrect or the church is no longer available.</p>
+      <p class="hint">Please ask your church for the correct QR code.</p>
+    </div>
+
+    <!-- Category switched off / no categories -->
+    <div *ngIf="pageState === 'unavailable'" class="status-card">
+      <div class="church-line center" *ngIf="page?.church_name">
+        <img *ngIf="page?.church_logo" [src]="page?.church_logo!" [alt]="page?.church_name!" class="logo" />
+        <span>{{ page?.church_name }}</span>
+      </div>
+      <div class="status-icon warn"><i class="ri-pause-circle-line"></i></div>
+      <h2>Not available right now</h2>
+      <p>Online giving for this option is currently switched off.</p>
+      <p class="hint">Please contact your church office.</p>
+    </div>
+
+    <!-- Form -->
+    <div *ngIf="pageState === 'form' && page" class="give-card">
+
+      <div class="give-head">
+        <div class="church-line">
+          <img *ngIf="page.church_logo" [src]="page.church_logo" [alt]="page.church_name!" class="logo" />
+          <span>{{ page.church_name }}</span>
+        </div>
+
+        <!-- Category QR: the category is the headline -->
+        <ng-container *ngIf="isCategoryMode && page.category">
+          <p class="eyebrow">You are giving to</p>
+          <h1>{{ page.category.name }}</h1>
+          <p class="desc" *ngIf="page.category.description">{{ page.category.description }}</p>
+        </ng-container>
+
+        <!-- General QR -->
+        <ng-container *ngIf="!isCategoryMode">
+          <p class="eyebrow">Give online</p>
+          <h1>Make a Payment</h1>
+          <p class="desc">Choose what you are giving to, then enter your details.</p>
+        </ng-container>
+      </div>
+
+      <form class="give-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+
+        <div *ngIf="errorMessage" class="error-alert">
+          <i class="ri-error-warning-line"></i><span>{{ errorMessage }}</span>
+        </div>
+
+        <!-- General QR only: pick the category -->
+        <div class="field" *ngIf="!isCategoryMode">
+          <label for="category_id">Giving category *</label>
+          <select id="category_id" formControlName="category_id" [class.invalid]="fieldError('category_id')">
+            <option value="">Select a category…</option>
+            <option *ngFor="let c of page.categories" [value]="c.id">{{ c.name }}</option>
+          </select>
+          <span class="err" *ngIf="fieldError('category_id')">{{ fieldError('category_id') }}</span>
+          <span class="cat-desc" *ngIf="selectedCategory?.description">{{ selectedCategory?.description }}</span>
+        </div>
+
+        <div class="field">
+          <label for="payer_name">Your full name *</label>
+          <input id="payer_name" type="text" formControlName="payer_name" autocomplete="name"
+            placeholder="e.g. Kwame Mensah" [class.invalid]="fieldError('payer_name')" />
+          <span class="err" *ngIf="fieldError('payer_name')">{{ fieldError('payer_name') }}</span>
+        </div>
+
+        <div class="field">
+          <label for="payer_phone">Phone number *</label>
+          <input id="payer_phone" type="tel" inputmode="tel" formControlName="payer_phone" autocomplete="tel"
+            placeholder="e.g. 0244123456" [class.invalid]="fieldError('payer_phone')" />
+          <span class="err" *ngIf="fieldError('payer_phone')">{{ fieldError('payer_phone') }}</span>
+        </div>
+
+        <div class="field">
+          <label for="payer_email">Email <span class="opt">(optional — for a payment receipt from Paystack)</span></label>
+          <input id="payer_email" type="email" inputmode="email" formControlName="payer_email" autocomplete="email"
+            placeholder="you@example.com" [class.invalid]="fieldError('payer_email')" />
+          <span class="err" *ngIf="fieldError('payer_email')">{{ fieldError('payer_email') }}</span>
+        </div>
+
+        <div class="field">
+          <label for="amount">Amount (GHS) *</label>
+          <div class="amount-input">
+            <span class="cur">GHS</span>
+            <input id="amount" type="number" inputmode="decimal" step="0.01" min="1" formControlName="amount"
+              placeholder="0.00" [class.invalid]="fieldError('amount')" />
+          </div>
+          <div class="chips">
+            <button type="button" *ngFor="let a of quickAmounts" (click)="pickAmount(a)"
+              [class.active]="amountValue === a">{{ a }}</button>
+          </div>
+          <span class="err" *ngIf="fieldError('amount')">{{ fieldError('amount') }}</span>
+        </div>
+
+        <!-- Fee breakdown -->
+        <div class="summary" *ngIf="amountValue > 0">
+          <div class="row"><span>{{ selectedCategory?.name || 'Gift' }}</span><strong>{{ money(amountValue) }}</strong></div>
+          <div class="row muted" *ngIf="feeAmount > 0"><span>Payment processing fee</span><span>{{ money(feeAmount) }}</span></div>
+          <div class="row total"><span>You will pay</span><strong>{{ money(chargeAmount) }}</strong></div>
+        </div>
+
+        <button type="submit" class="pay-btn" [disabled]="submitting">
+          <ng-container *ngIf="!submitting"><i class="ri-secure-payment-line"></i> Pay {{ amountValue > 0 ? money(chargeAmount) : '' }}</ng-container>
+          <ng-container *ngIf="submitting"><i class="ri-loader-4-line spin"></i> Redirecting to payment…</ng-container>
+        </button>
+
+        <p class="secure"><i class="ri-lock-line"></i> Secure payment by Paystack — card or mobile money.</p>
+      </form>
+    </div>
+
+    <p class="powered">Powered by <strong>Churchman</strong></p>
+  </div>
+</div>

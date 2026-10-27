@@ -15,6 +15,7 @@ import { FinanceRevenueChart } from './components/finance-revenue-chart/finance-
 import { CategoryExpenses } from './components/category-expenses/category-expenses';
 import { PaymentLinks } from './components/payment-links/payment-links';
 import { WithdrawalRequests } from './components/withdrawal-requests/withdrawal-requests';
+import { QrCodeComponent } from 'ng-qrcode';
 
 
 
@@ -37,6 +38,7 @@ import { WithdrawalRequests } from './components/withdrawal-requests/withdrawal-
       CommonModule,
     ReactiveFormsModule,
     SharedModule,
+    QrCodeComponent,
     FinanceRoutingModule
   ],
   exports: [
