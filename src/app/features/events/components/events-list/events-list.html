@@ -115,6 +115,9 @@
                   *ngIf="event.is_public" [title]="copiedEventId === event.id ? 'Link copied!' : 'Copy registration link'">
                   <i [class]="copiedEventId === event.id ? 'ri-check-line' : 'ri-link'"></i>
                 </button>
+                <button class="btn-icon-small" (click)="openQr(event, $event)" *ngIf="event.is_public" title="Show QR code">
+                  <i class="ri-qr-code-line"></i>
+                </button>
                 <button class="btn-icon-small" (click)="editEvent(event.id, $event)"
                   *ngIf="permissionService.isAdmin || permissionService.events.edit">
                   <i class="ri-edit-line"></i>
@@ -302,6 +305,9 @@
                   *ngIf="event.is_public" [title]="copiedEventId === event.id ? 'Link copied!' : 'Copy registration link'">
                   <i [class]="copiedEventId === event.id ? 'ri-check-line' : 'ri-link'"></i>
                 </button>
+                <button class="btn-icon-small" (click)="openQr(event, $event)" *ngIf="event.is_public" title="Show QR code">
+                  <i class="ri-qr-code-line"></i>
+                </button>
                 <button class="btn-icon-small" (click)="editEvent(event.id, $event)"
                   *ngIf="permissionService.isAdmin || permissionService.events.edit">
                   <i class="ri-edit-line"></i>
@@ -339,3 +345,4 @@
   </div>
 </div>
 
+<app-event-qr-modal *ngIf="qrEvent" [eventId]="qrEvent.id" [title]="qrEvent.title" (closed)="qrEvent = null"></app-event-qr-modal>

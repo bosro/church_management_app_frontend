@@ -1,0 +1,24 @@
+<div class="qr-overlay" (click)="close()">
+  <div class="qr-dialog" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-label="Event QR code">
+    <button class="qr-close" (click)="close()" aria-label="Close"><i class="ri-close-line"></i></button>
+
+    <h3><i class="ri-qr-code-line"></i> Event QR Code</h3>
+    <p class="qr-title">{{ title }}</p>
+
+    <div class="qr-box" #qrBox>
+      <qr-code [value]="url" [size]="260" [errorCorrectionLevel]="'M'" [darkColor]="'#000000FF'" [lightColor]="'#FFFFFFFF'"></qr-code>
+    </div>
+    <p class="qr-hint">Scan to open the registration page</p>
+
+    <div class="qr-link">
+      <input type="text" [value]="url" readonly (focus)="$any($event.target).select()" />
+    </div>
+
+    <p class="qr-msg" *ngIf="message">{{ message }}</p>
+
+    <div class="qr-actions">
+      <button class="qr-btn ghost" (click)="copy()"><i [class]="copied ? 'ri-check-line' : 'ri-file-copy-line'"></i> {{ copied ? 'Copied!' : 'Copy link' }}</button>
+      <button class="qr-btn primary" (click)="download()"><i class="ri-download-2-line"></i> Download</button>
+    </div>
+  </div>
+</div>

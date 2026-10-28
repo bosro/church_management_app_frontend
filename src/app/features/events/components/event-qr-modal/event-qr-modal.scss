@@ -1,0 +1,12 @@
+.qr-overlay { position: fixed; inset: 0; background: rgba(17,24,39,.55); display: flex; align-items: center; justify-content: center; padding: 1rem; z-index: 2000; }
+.qr-dialog { position: relative; background: #fff; border-radius: 16px; padding: 1.5rem; width: 100%; max-width: 380px; text-align: center; font-family: 'Nunito Sans', sans-serif;
+  h3 { margin: 0 0 .25rem; font-size: 1.125rem; font-weight: 800; color: #111827; display: flex; gap: .5rem; align-items: center; justify-content: center; } }
+.qr-close { position: absolute; top: .75rem; right: .75rem; background: none; border: none; font-size: 1.375rem; color: #6B7280; cursor: pointer; }
+.qr-title { margin: 0 0 1rem; font-weight: 700; color: #5B21B6; word-break: break-word; }
+.qr-box { display: inline-flex; padding: .75rem; border: 1px solid #E5E7EB; border-radius: 12px; background: #fff; max-width: 100%; overflow: hidden; }
+.qr-hint { margin: .75rem 0; color: #6B7280; font-size: .875rem; }
+.qr-link input { width: 100%; box-sizing: border-box; padding: .5rem .625rem; border: 1.5px solid #D1D5DB; border-radius: 10px; font-size: .78rem; color: #374151; font-family: inherit; }
+.qr-msg { color: #B45309; font-size: .8125rem; margin: .5rem 0 0; }
+.qr-actions { display: flex; gap: .5rem; margin-top: 1rem; }
+.qr-btn { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: .375rem; padding: .625rem; border-radius: 10px; border: 1px solid transparent; font-weight: 700; cursor: pointer; font-family: inherit; font-size: .875rem;
+  &.primary { background: #5B21B6; color: #fff; } &.ghost { background: #fff; color: #374151; border-color: #D1D5DB; } }

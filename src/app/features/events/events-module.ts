@@ -6,16 +6,19 @@ import { EventDetail } from './components/event-detail/event-detail/event-detail
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { SharedModule } from '../../shared/shared-module';
 import { EventsRoutingModule } from './events-routing.module';
+import { QrCodeComponent } from 'ng-qrcode';
+import { EventQrModal } from './components/event-qr-modal/event-qr-modal';
 import { CreateEvent } from './components/create-event/create-event/create-event';
 
 @NgModule({
-  declarations: [EventsList, CreateEvent, EditEvent, EventDetail],
+  declarations: [EventsList, CreateEvent, EditEvent, EventDetail, EventQrModal],
   imports: [
     CommonModule,
     ReactiveFormsModule,
     FormsModule,
     SharedModule,
     EventsRoutingModule,
+    QrCodeComponent,
   ],
 })
 export class EventsModule {}

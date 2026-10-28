@@ -26,6 +26,10 @@
                 {{ linkCopied ? 'Link copied!' : 'Copy Registration Link' }}
               </button>
 
+              <button class="btn-secondary" (click)="showQr = true" *ngIf="event.is_public">
+                <i class="ri-qr-code-line"></i> QR Code
+              </button>
+
               <button class="btn-secondary" (click)="exportRegistrations()"
                 *ngIf="permissionService.isAdmin || permissionService.events.view">
                 <i class="ri-download-line"></i>
@@ -367,3 +371,5 @@
     </div>
   </div>
 </div>
+
+<app-event-qr-modal *ngIf="showQr && event" [eventId]="event.id" [title]="event.title" (closed)="showQr = false"></app-event-qr-modal>

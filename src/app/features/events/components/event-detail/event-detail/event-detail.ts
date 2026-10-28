@@ -49,6 +49,7 @@ export class EventDetail implements OnInit, OnDestroy {
   canManageEvents = false;
 
   linkCopied = false;
+  showQr = false;
 
   constructor(
     private route: ActivatedRoute,

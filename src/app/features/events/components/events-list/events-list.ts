@@ -210,6 +210,13 @@ export class EventsList implements OnInit, OnDestroy {
   }
 
   /** Copy the public registration link for an event (card button) */
+  qrEvent: { id: string; title: string } | null = null;
+
+  openQr(ev: { id: string; title: string }, event: MouseEvent): void {
+    event.stopPropagation();
+    this.qrEvent = { id: ev.id, title: ev.title };
+  }
+
   async copyRegistrationLink(eventId: string, event: MouseEvent): Promise<void> {
     event.stopPropagation();
     const ok = await copyToClipboard(eventRegistrationUrl(eventId));
