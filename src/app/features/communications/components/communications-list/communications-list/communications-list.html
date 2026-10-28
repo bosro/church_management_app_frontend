@@ -13,6 +13,9 @@
             <h1>Communications</h1>
             <p class="subtitle">Send messages to your members</p>
           </div>
+          <a routerLink="/main/communications/sender-id" class="sender-link" title="Choose the name your SMS are sent from">
+            <i class="ri-price-tag-3-line"></i> <span>SMS Sender ID</span>
+          </a>
           <button class="btn-primary" (click)="createCommunication()"
             *ngIf="permissionService.isAdmin || permissionService.communications.send">
             <i class="ri-add-line"></i>

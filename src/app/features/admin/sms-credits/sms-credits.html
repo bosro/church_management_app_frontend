@@ -1,0 +1,217 @@
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+  <div class="dashboard-content">
+    <app-header></app-header>
+    <div class="dashboard-body">
+      <div class="sc-container">
+
+        <div class="page-header">
+          <div>
+            <h1>SMS Credits</h1>
+            <p class="subtitle">Watch your SMS balance, see who is using it, and limit or block a church</p>
+          </div>
+          <div class="month-pick">
+            <label>Month</label>
+            <input type="month" [(ngModel)]="month" (change)="load()" />
+          </div>
+        </div>
+
+        <div *ngIf="successMessage" class="alert success"><i class="ri-checkbox-circle-line"></i><span>{{ successMessage }}</span></div>
+        <div *ngIf="errorMessage" class="alert error"><i class="ri-error-warning-line"></i><span>{{ errorMessage }}</span></div>
+        <div *ngIf="lowBalance" class="alert warn">
+          <i class="ri-alarm-warning-line"></i>
+          <span>Provider balance is low: {{ balance?.balance | number }} credits left (warning level {{ threshold | number }}). Top up soon so churches don’t fail to send.</span>
+        </div>
+
+        <!-- cards -->
+        <div class="cards">
+          <div class="card">
+            <div class="c-label">Provider balance <span class="live">live</span></div>
+            <div class="c-value" *ngIf="balanceLoading">…</div>
+            <ng-container *ngIf="!balanceLoading">
+              <div class="c-value" *ngIf="balance?.balance !== null && balance?.balance !== undefined">{{ balance?.balance | number }}</div>
+              <div class="c-value muted" *ngIf="balance?.balance === null || balance?.balance === undefined">—</div>
+            </ng-container>
+            <div class="c-sub" *ngIf="balance && !balance.success">{{ balance.error || 'Could not reach the provider.' }}</div>
+            <div class="c-sub" *ngIf="balance?.success && (balance?.balance === null || balance?.balance === undefined)">Reply not recognised — <a (click)="showRaw=!showRaw">see raw reply</a></div>
+            <pre class="raw" *ngIf="showRaw">{{ balance?.raw }}</pre>
+            <button class="link" (click)="refreshBalance()" [disabled]="balanceLoading"><i class="ri-refresh-line"></i> Refresh</button>
+          </div>
+          <div class="card">
+            <div class="c-label">Sent in {{ monthLabel }}</div>
+            <div class="c-value">{{ overview?.totals?.sent_this_month | number }}</div>
+            <div class="c-sub">{{ overview?.totals?.failed_this_month | number }} failed (not counted)</div>
+          </div>
+          <div class="card">
+            <div class="c-label">Ledger remaining</div>
+            <div class="c-value" *ngIf="ledgerRemaining !== null" [class.neg]="ledgerRemaining < 0">{{ ledgerRemaining | number }}</div>
+            <div class="c-value muted" *ngIf="ledgerRemaining === null">—</div>
+            <div class="c-sub">{{ overview?.totals?.topped_up_all_time | number }} topped up − {{ overview?.totals?.sent_all_time | number }} sent. Record top-ups in the Top-ups tab.</div>
+          </div>
+          <div class="card" [class.attn]="attentionCount">
+            <div class="c-label">Need attention</div>
+            <div class="c-value">{{ attentionCount }}</div>
+            <div class="c-sub">{{ overview?.totals?.blocked_churches }} blocked · churches blocked, at, or near their limit</div>
+          </div>
+        </div>
+
+        <div class="threshold">
+          Warn me when the provider balance drops below
+          <input type="number" min="1" [(ngModel)]="thresholdEdit" />
+          credits
+          <button class="btn ghost sm" (click)="saveThreshold()" [disabled]="thresholdEdit === threshold">Save</button>
+        </div>
+
+        <div class="tabs">
+          <button [class.active]="tab==='churches'" (click)="setTab('churches')">Churches</button>
+          <button [class.active]="tab==='topups'" (click)="setTab('topups')">Top-ups</button>
+        </div>
+
+        <!-- CHURCHES -->
+        <ng-container *ngIf="tab==='churches'">
+          <div class="filters">
+            <input class="search" type="text" placeholder="Search church…" [(ngModel)]="search" />
+            <select [(ngModel)]="statusFilter">
+              <option value="all">All churches</option>
+              <option value="attention">Needs attention</option>
+              <option value="blocked">Blocked only</option>
+            </select>
+          </div>
+
+          <div *ngIf="loading" class="loading"><div class="spinner"></div></div>
+          <div *ngIf="!loading && !rows.length" class="empty"><i class="ri-inbox-line"></i><p>No churches match.</p></div>
+
+          <div class="table-wrap" *ngIf="!loading && rows.length">
+            <table>
+              <thead>
+                <tr><th>Church</th><th>Plan</th><th class="usage-col">Used this month</th><th>Status</th><th class="r">All time</th><th></th></tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let r of rows" [class.blocked]="r.blocked">
+                  <td>
+                    <div class="name">{{ r.name }}</div>
+                    <div class="sub">
+                      <span *ngIf="r.sender_id">Sender: {{ r.sender_id }}</span>
+                      <span *ngIf="r.is_complimentary" class="chip">Complimentary</span>
+                    </div>
+                  </td>
+                  <td>
+                    {{ r.plan_name || r.plan }}
+                    <div class="sub" *ngIf="r.limit_source==='override'">custom limit</div>
+                  </td>
+                  <td class="usage-col">
+                    <div class="usage-text">
+                      <strong>{{ r.used | number }}</strong>
+                      <span *ngIf="r.limit !== null"> / {{ r.limit | number }}</span>
+                      <span *ngIf="r.limit === null" class="sub"> (no limit)</span>
+                      <span class="fail" *ngIf="r.failed"> · {{ r.failed }} failed</span>
+                    </div>
+                    <div class="bar" *ngIf="r.limit !== null"><div class="fill" [ngClass]="health(r)" [style.width.%]="pct(r)"></div></div>
+                  </td>
+                  <td>
+                    <span class="badge" [ngClass]="health(r)">{{ healthLabel(health(r)) }}</span>
+                    <div class="sub" *ngIf="r.blocked && r.block_reason">{{ r.block_reason }}</div>
+                  </td>
+                  <td class="r">{{ r.all_time | number }}</td>
+                  <td class="actions">
+                    <button class="btn ghost sm" (click)="openDetail(r)">Details</button>
+                    <button class="btn ghost sm" (click)="openControl(r)">Limit</button>
+                    <button class="btn sm" [ngClass]="r.blocked ? 'ok' : 'bad'" (click)="r.blocked ? openControl(r, false) : openControl(r, true)">{{ r.blocked ? 'Unblock' : 'Block' }}</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="hint">One SMS = one message to one phone number, as recorded in the SMS log. Failed messages are not counted. Messages longer than 160 characters may use more than one credit at your provider.</p>
+        </ng-container>
+
+        <!-- TOP-UPS -->
+        <ng-container *ngIf="tab==='topups'">
+          <div class="panel">
+            <h3>Record a top-up</h3>
+            <p class="hint tight">Log each time you buy credits from GiantSMS so the ledger can show what should be left.</p>
+            <div class="form-grid">
+              <label>Credits bought *<input type="number" min="1" [(ngModel)]="topupForm.credits" /></label>
+              <label>Amount paid (GHS)<input type="number" min="0" step="0.01" [(ngModel)]="topupForm.amount_paid" /></label>
+              <label>Date<input type="date" [(ngModel)]="topupForm.topped_up_on" /></label>
+              <label>Reference<input type="text" [(ngModel)]="topupForm.reference" placeholder="Receipt / momo ref" /></label>
+              <label class="wide">Note<input type="text" [(ngModel)]="topupForm.note" /></label>
+            </div>
+            <button class="btn primary" (click)="addTopup()" [disabled]="!topupValid || working">Add top-up</button>
+          </div>
+
+          <div class="empty" *ngIf="!topups.length"><i class="ri-wallet-3-line"></i><p>No top-ups recorded yet.</p></div>
+          <div class="table-wrap" *ngIf="topups.length">
+            <table>
+              <thead><tr><th>Date</th><th class="r">Credits</th><th class="r">Paid</th><th>Reference</th><th>Note</th><th></th></tr></thead>
+              <tbody>
+                <tr *ngFor="let t of topups">
+                  <td>{{ t.topped_up_on | date:'mediumDate' }}</td>
+                  <td class="r"><strong>{{ t.credits | number }}</strong></td>
+                  <td class="r"><span *ngIf="t.amount_paid !== null">{{ t.currency }} {{ t.amount_paid | number:'1.2-2' }}</span></td>
+                  <td>{{ t.reference }}</td>
+                  <td>{{ t.note }}</td>
+                  <td class="actions"><button class="btn ghost sm" (click)="deleteTopup(t)">Delete</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </ng-container>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- limit / block dialog -->
+<div class="overlay" *ngIf="ctl" (click)="closeControl()">
+  <div class="dialog" (click)="$event.stopPropagation()">
+    <h3>{{ ctl.name }}</h3>
+    <p class="d-text">Plan: <strong>{{ ctl.plan_name || ctl.plan }}</strong>
+      <span *ngIf="ctl.plan_limit !== null"> ({{ ctl.plan_limit | number }} SMS / month)</span>
+      <span *ngIf="ctl.plan_limit === null"> (unlimited SMS)</span>.
+      Used this month: <strong>{{ ctl.used | number }}</strong>.</p>
+
+    <div class="field-title">Monthly SMS limit</div>
+    <label class="radio"><input type="radio" name="mode" value="plan" [(ngModel)]="ctlLimitMode" /> Follow the plan</label>
+    <label class="radio"><input type="radio" name="mode" value="custom" [(ngModel)]="ctlLimitMode" /> Custom limit for this church</label>
+    <input *ngIf="ctlLimitMode==='custom'" class="num" type="number" min="0" [(ngModel)]="ctlCap" placeholder="e.g. 300" />
+    <p class="small" *ngIf="ctlLimitMode==='custom'">Replaces the plan’s allowance, even if it is higher. 0 means no SMS.</p>
+
+    <div class="field-title">Block SMS</div>
+    <label class="radio"><input type="checkbox" [(ngModel)]="ctlBlocked" /> Block all SMS for this church (email still works)</label>
+    <input *ngIf="ctlBlocked" class="txt" type="text" [(ngModel)]="ctlReason" placeholder="Reason shown to the church (optional)" />
+
+    <div class="field-title">Private note <span class="opt">(only you see this)</span></div>
+    <input class="txt" type="text" [(ngModel)]="ctlNotes" />
+
+    <div class="d-actions">
+      <button class="btn ghost" (click)="closeControl()" [disabled]="working">Cancel</button>
+      <button class="btn primary" (click)="saveControl()" [disabled]="!ctlValid || working">{{ working ? 'Saving…' : 'Save' }}</button>
+    </div>
+  </div>
+</div>
+
+<!-- detail dialog -->
+<div class="overlay" *ngIf="detailRow" (click)="detailRow = null">
+  <div class="dialog wide" (click)="$event.stopPropagation()">
+    <h3>{{ detailRow.name }} — {{ monthLabel }}</h3>
+    <div *ngIf="detailLoading" class="loading"><div class="spinner"></div></div>
+    <ng-container *ngIf="detail">
+      <div class="field-title">Who sent the SMS</div>
+      <p class="small" *ngIf="!detail.by_user.length">No SMS this month.</p>
+      <table class="mini" *ngIf="detail.by_user.length">
+        <tr *ngFor="let u of detail.by_user"><td>{{ u.user }}</td><td class="r"><strong>{{ u.sms | number }}</strong></td></tr>
+      </table>
+      <div class="field-title">Latest messages</div>
+      <p class="small" *ngIf="!detail.recent.length">Nothing sent this month.</p>
+      <table class="mini" *ngIf="detail.recent.length">
+        <tr *ngFor="let m of detail.recent">
+          <td>{{ m.title }}<div class="sub">{{ m.sent_at | date:'medium' }}</div></td>
+          <td class="r"><strong>{{ m.sms | number }}</strong><span class="fail" *ngIf="m.failed"> +{{ m.failed }} failed</span></td>
+        </tr>
+      </table>
+    </ng-container>
+    <div class="d-actions"><button class="btn ghost" (click)="detailRow = null">Close</button></div>
+  </div>
+</div>

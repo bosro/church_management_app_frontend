@@ -1,0 +1,95 @@
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+  <div class="dashboard-content">
+    <app-header></app-header>
+    <div class="dashboard-body">
+      <div class="sr-container">
+
+        <div class="page-header">
+          <h1>Sender ID Requests</h1>
+          <p class="subtitle">Churches asking to send SMS under their own name</p>
+        </div>
+
+        <div class="howto">
+          <strong>How it works:</strong> register the name with your SMS provider, click <em>In progress</em> while you wait,
+          then <em>Approve</em> once the provider confirms. Approving switches the church over immediately — only approve
+          after the provider has activated it, otherwise their messages may fail.
+        </div>
+
+        <div *ngIf="successMessage" class="alert success"><i class="ri-checkbox-circle-line"></i><span>{{ successMessage }}</span></div>
+        <div *ngIf="errorMessage" class="alert error"><i class="ri-error-warning-line"></i><span>{{ errorMessage }}</span></div>
+
+        <div class="tabs">
+          <button [class.active]="filter==='open'" (click)="setFilter('open')">Open <span class="count" *ngIf="openCount">{{ openCount }}</span></button>
+          <button [class.active]="filter==='approved'" (click)="setFilter('approved')">Approved</button>
+          <button [class.active]="filter==='rejected'" (click)="setFilter('rejected')">Rejected</button>
+          <button [class.active]="filter==='all'" (click)="setFilter('all')">All</button>
+        </div>
+
+        <div *ngIf="loading" class="loading"><div class="spinner"></div></div>
+
+        <div *ngIf="!loading && !requests.length" class="empty">
+          <i class="ri-inbox-line"></i>
+          <p>No requests here.</p>
+        </div>
+
+        <div class="list" *ngIf="!loading">
+          <div class="req" *ngFor="let r of requests">
+            <div class="req-top">
+              <div>
+                <div class="sid">{{ r.requested_sender_id }}</div>
+                <div class="church">{{ r.church?.name }}
+                  <span class="current" *ngIf="r.church?.sms_sender_id">· currently {{ r.church?.sms_sender_id }}</span>
+                </div>
+              </div>
+              <span class="badge" [ngClass]="r.status">{{ statusLabel(r.status) }}</span>
+            </div>
+
+            <div class="meta">
+              <span><i class="ri-user-line"></i> {{ r.requester?.full_name || r.requester?.email || 'Unknown' }}</span>
+              <span><i class="ri-calendar-line"></i> {{ r.created_at | date:'medium' }}</span>
+            </div>
+
+            <p class="note" *ngIf="r.notes"><i class="ri-chat-quote-line"></i> {{ r.notes }}</p>
+            <p class="note rej" *ngIf="r.rejection_reason"><i class="ri-close-circle-line"></i> {{ r.rejection_reason }}</p>
+            <p class="note adm" *ngIf="r.admin_notes"><i class="ri-sticky-note-line"></i> {{ r.admin_notes }}</p>
+
+            <div class="actions" *ngIf="isOpen(r)">
+              <button class="btn ghost" *ngIf="r.status==='pending'" (click)="open(r,'processing')">Mark in progress</button>
+              <button class="btn ok" (click)="open(r,'approve')"><i class="ri-check-line"></i> Approve</button>
+              <button class="btn bad" (click)="open(r,'reject')"><i class="ri-close-line"></i> Reject</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" *ngIf="dialog" (click)="closeDialog()">
+  <div class="dialog" (click)="$event.stopPropagation()">
+    <h3>{{ dialogTitle }}</h3>
+
+    <p class="d-text" *ngIf="dialog.action==='approve'">
+      {{ dialog.req.church?.name }} will start sending SMS as <strong>{{ dialog.req.requested_sender_id }}</strong> straight away,
+      and they’ll be emailed. Make sure your SMS provider has already activated this name.
+    </p>
+    <p class="d-text" *ngIf="dialog.action==='processing'">The church will see that registration is in progress.</p>
+
+    <label *ngIf="dialog.action==='reject'">Reason (shown to the church) *
+      <textarea rows="3" [(ngModel)]="reason" maxlength="300" placeholder="e.g. Name is too similar to a bank. Please suggest another."></textarea>
+    </label>
+
+    <label>Internal notes <span class="opt">(optional, only you see this)</span>
+      <textarea rows="2" [(ngModel)]="adminNotes" maxlength="300"></textarea>
+    </label>
+
+    <div class="d-actions">
+      <button class="btn ghost" (click)="closeDialog()" [disabled]="working">Cancel</button>
+      <button class="btn" [ngClass]="dialog.action==='reject' ? 'bad' : 'ok'" (click)="confirm()" [disabled]="!canConfirm">
+        {{ working ? 'Working…' : (dialog.action==='approve' ? 'Approve' : dialog.action==='reject' ? 'Reject' : 'Save') }}
+      </button>
+    </div>
+  </div>
+</div>

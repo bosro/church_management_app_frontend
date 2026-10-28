@@ -9,6 +9,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import { SenderIdService } from '../../../../../core/services/sender-id.service';
 import { Subject, Subscription } from 'rxjs';
 import { takeUntil, debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
 import { CommunicationsService, SendProgress } from '../../../services/communications';
@@ -113,6 +114,7 @@ export class CreateCommunication implements OnInit, OnDestroy {
   ];
 
   canManageCommunications = false;
+  sendingAs = '';
 
   constructor(
     private fb: FormBuilder,
@@ -123,9 +125,11 @@ export class CreateCommunication implements OnInit, OnDestroy {
     private router: Router,
     public permissionService: PermissionService,
     private authService: AuthService,
+    private senderIdService: SenderIdService,
   ) {}
 
   ngOnInit(): void {
+    this.senderIdService.getMyInfo().then((i) => (this.sendingAs = i?.effective_sender_id || '')).catch(() => {});
     this.checkPermissions();
     this.initForm();
     this.setupMemberSearch();

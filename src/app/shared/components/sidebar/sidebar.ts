@@ -93,6 +93,20 @@ export class Sidebar implements OnInit {
           active: false,
           roles: ['super_admin'],
         },
+        {
+          icon: 'ri-price-tag-3-line',
+          label: 'Sender ID Requests',
+          route: '/main/admin/sender-id-requests',
+          active: false,
+          roles: ['super_admin'],
+        },
+        {
+          icon: 'ri-bar-chart-box-line',
+          label: 'SMS Credits',
+          route: '/main/admin/sms-credits',
+          active: false,
+          roles: ['super_admin'],
+        },
       ],
     },
     {

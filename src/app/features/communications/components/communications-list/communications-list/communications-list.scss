@@ -524,3 +524,6 @@
 
 
 
+
+.sender-link { display: inline-flex; align-items: center; gap: .5rem; padding: .625rem 1rem; margin-right: .75rem; background: #fff; color: #5B21B6;
+  border: 1px solid #DDD6FE; border-radius: 8px; font-weight: 700; font-size: .9375rem; text-decoration: none; &:hover { background: #F5F3FF; } }

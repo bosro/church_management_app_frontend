@@ -14,8 +14,9 @@ export interface GivingCategory {
   church_id: string;
   name: string;
   description?: string;
-  public_giving_enabled?: boolean;
   is_active: boolean;
+  /** false = the public QR / give page no longer accepts payments for this category */
+  public_giving_enabled?: boolean;
   created_at: string;
 }
 
@@ -32,6 +33,10 @@ export interface GivingTransaction {
   paystack_reference?: string;
   payment_status?: 'pending' | 'completed' | 'failed' | 'abandoned';
   payment_channel?: string;
+  /** 'qr_category' | 'qr_general' for payments made from a public QR page */
+  giving_source?: 'qr_category' | 'qr_general' | null;
+  payer_name?: string;
+  payer_contact?: string;
   transaction_date: string;
   fiscal_year?: number;
   notes?: string;

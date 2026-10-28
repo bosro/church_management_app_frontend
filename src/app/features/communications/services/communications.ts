@@ -245,7 +245,7 @@ createCommunication(communicationData: {
 
         if (!fnData?.success) {
           // Plan blocks (feature not in plan / SMS allowance used up) keep the message as a draft
-          const planBlocked = ['FEATURE_LOCKED', 'SMS_LIMIT_REACHED'].includes(fnData?.code);
+          const planBlocked = ['FEATURE_LOCKED', 'SMS_LIMIT_REACHED', 'SMS_BLOCKED', 'SMS_CAP_REACHED'].includes(fnData?.code);
           await this.supabase.client
             .from('communications')
             .update({ status: planBlocked ? 'draft' : 'failed' })

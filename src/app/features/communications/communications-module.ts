@@ -5,11 +5,12 @@ import { SharedModule } from '../../shared/shared-module';
 import { CommunicationsRoutingModule } from './communications-routing.module';
 import { CreateCommunication } from './components/create-communication/create-communication/create-communication';
 import { EmailLogs } from './components/email-logs/email-logs/email-logs';
+import { SenderIdPage } from './components/sender-id/sender-id';
 import { SmsLogs } from './components/sms-logs/sms-logs/sms-logs';
 import { CommunicationsList } from './components/communications-list/communications-list/communications-list';
 
 @NgModule({
-  declarations: [CommunicationsList, CreateCommunication, SmsLogs, EmailLogs],
+  declarations: [CommunicationsList, CreateCommunication, SmsLogs, EmailLogs, SenderIdPage],
   imports: [
     CommonModule,
     ReactiveFormsModule,

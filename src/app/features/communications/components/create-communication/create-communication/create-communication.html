@@ -13,6 +13,9 @@
             <div>
               <h1>New Message</h1>
               <p class="subtitle">Send SMS or email to your members</p>
+              <a *ngIf="sendingAs" routerLink="/main/communications/sender-id" class="sending-as" title="Change sender ID">
+                <i class="ri-broadcast-line"></i> SMS sent as <strong>{{ sendingAs }}</strong>
+              </a>
             </div>
           </div>
         </div>

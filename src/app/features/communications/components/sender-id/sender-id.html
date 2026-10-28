@@ -1,0 +1,141 @@
+<!-- src/app/features/communications/components/sender-id/sender-id.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+
+  <div class="dashboard-content">
+    <app-header></app-header>
+
+    <div class="dashboard-body">
+      <div class="sender-container">
+
+        <button class="btn-back" (click)="goBack()"><i class="ri-arrow-left-line"></i><span>Back</span></button>
+
+        <div class="page-header">
+          <h1>SMS Sender ID</h1>
+          <p class="subtitle">The name your members see when they get an SMS from your church</p>
+        </div>
+
+        <div *ngIf="successMessage" class="alert success"><i class="ri-checkbox-circle-line"></i><span>{{ successMessage }}</span></div>
+        <div *ngIf="errorMessage" class="alert error"><i class="ri-error-warning-line"></i><span>{{ errorMessage }}</span></div>
+
+        <div *ngIf="loading" class="loading"><div class="spinner"></div><p>Loading…</p></div>
+
+        <ng-container *ngIf="!loading && info?.found">
+
+          <!-- ── Current sender ─────────────────────────────── -->
+          <div class="card current-card">
+            <div class="current-main">
+              <p class="eyebrow">Your messages are sent as</p>
+              <div class="sender-pill" [class.own]="usingOwn">
+                <i [class]="usingOwn ? 'ri-verified-badge-fill' : 'ri-broadcast-line'"></i>
+                {{ info?.effective_sender_id }}
+              </div>
+              <p class="muted" *ngIf="!usingOwn">
+                This is the platform’s default sender. Every church without its own sender ID uses it.
+              </p>
+              <p class="muted" *ngIf="usingOwn">
+                This is your church’s own sender ID. It is used for all SMS you send from Churchman.
+              </p>
+              <button class="link-btn" *ngIf="usingOwn && info?.can_request" (click)="useDefault()" [disabled]="working">
+                Switch back to “{{ info?.default_sender_id }}”
+              </button>
+            </div>
+
+            <div class="phone" aria-hidden="true">
+              <div class="phone-top">{{ previewName }}</div>
+              <div class="bubble">Dear member, join us this Sunday at 8:00am. God bless you!</div>
+            </div>
+          </div>
+
+          <!-- ── Open request ───────────────────────────────── -->
+          <div class="card status-card" *ngIf="info?.open_request as open">
+            <div class="status-head">
+              <span class="badge" [ngClass]="open.status">{{ statusLabel(open.status) }}</span>
+              <h3>Request for “{{ open.requested_sender_id }}”</h3>
+            </div>
+            <p class="muted" *ngIf="open.status === 'pending'">
+              We received your request on {{ open.created_at | date:'mediumDate' }}. Until it is approved your messages keep using
+              “{{ info?.default_sender_id }}”.
+            </p>
+            <p class="muted" *ngIf="open.status === 'processing'">
+              Your sender ID has been sent to the SMS network for registration. Networks can take a few days to approve it.
+              We’ll email you as soon as it is live. Until then your messages keep using “{{ info?.default_sender_id }}”.
+            </p>
+            <div class="row-actions" *ngIf="info?.can_request">
+              <button class="btn-secondary" (click)="cancel(open)" [disabled]="working">Cancel request</button>
+            </div>
+          </div>
+
+          <!-- ── New request form ───────────────────────────── -->
+          <div class="card" *ngIf="!info?.open_request && info?.can_request">
+            <h3>{{ usingOwn ? 'Request a different sender ID' : 'Request your own sender ID' }}</h3>
+            <p class="muted">
+              Pick the name members will see instead of “{{ info?.default_sender_id }}” — usually your church’s name or
+              short form. We register it with the SMS network for you, then switch it on.
+            </p>
+
+            <form (ngSubmit)="submit()" novalidate>
+              <div class="field">
+                <label for="sender">Sender ID *</label>
+                <div class="input-wrap" [class.invalid]="validationError">
+                  <input id="sender" name="sender" type="text" maxlength="11" autocomplete="off"
+                    placeholder="e.g. GRACECHAPEL" [(ngModel)]="senderId" (blur)="touched = true" />
+                  <span class="count" [class.limit]="normalized.length >= 11">{{ normalized.length }}/11</span>
+                </div>
+                <span class="err" *ngIf="validationError">{{ validationError }}</span>
+                <span class="hint" *ngIf="!validationError">3–11 characters. Letters and numbers only. No symbols.</span>
+              </div>
+
+              <div class="field">
+                <label for="notes">Anything we should know? <span class="opt">(optional)</span></label>
+                <textarea id="notes" name="notes" rows="3" maxlength="500"
+                  placeholder="e.g. Full church name, branch, or why you chose this name"
+                  [(ngModel)]="notes"></textarea>
+              </div>
+
+              <ul class="rules">
+                <li><i class="ri-information-line"></i> Choose a name that clearly identifies your church. Names that look like banks, mobile-money or government names are usually refused by the networks.</li>
+                <li><i class="ri-time-line"></i> Approval depends on the SMS network and can take a few days. Until then you keep sending with “{{ info?.default_sender_id }}”.</li>
+              </ul>
+
+              <button type="submit" class="btn-primary" [disabled]="!canSubmit">
+                <ng-container *ngIf="!submitting"><i class="ri-send-plane-line"></i> Send request</ng-container>
+                <ng-container *ngIf="submitting"><i class="ri-loader-4-line spin"></i> Sending…</ng-container>
+              </button>
+            </form>
+          </div>
+
+          <div class="card" *ngIf="!info?.can_request">
+            <p class="muted no-margin">
+              Only a church admin or pastor can request a sender ID. Ask them to open
+              <strong>Communications → Sender ID</strong>.
+            </p>
+          </div>
+
+          <!-- ── History ────────────────────────────────────── -->
+          <div class="card" *ngIf="requests.length">
+            <h3>Request history</h3>
+            <div class="history">
+              <div class="h-row" *ngFor="let r of requests">
+                <div class="h-main">
+                  <strong>{{ r.requested_sender_id }}</strong>
+                  <span class="muted small">{{ r.created_at | date:'mediumDate' }}</span>
+                  <p class="reason" *ngIf="r.status === 'rejected' && r.rejection_reason">
+                    <i class="ri-chat-1-line"></i> {{ r.rejection_reason }}
+                  </p>
+                </div>
+                <span class="badge" [ngClass]="r.status">{{ statusLabel(r.status) }}</span>
+              </div>
+            </div>
+          </div>
+
+        </ng-container>
+
+        <div *ngIf="!loading && info && !info.found" class="card">
+          <p class="muted no-margin">We could not find your church. Please sign in again.</p>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>

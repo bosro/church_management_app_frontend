@@ -17,6 +17,7 @@ import { PlanFeatureGuard } from '../../core/guards/plan-feature.guard';
 import { CommunicationsList } from './components/communications-list/communications-list/communications-list';
 import { CreateCommunication } from './components/create-communication/create-communication/create-communication';
 import { SmsLogs } from './components/sms-logs/sms-logs/sms-logs';
+import { SenderIdPage } from './components/sender-id/sender-id';
 import { EmailLogs } from './components/email-logs/email-logs//email-logs';
 
 const COMMS_VIEW_ROLES = [
@@ -53,6 +54,17 @@ const routes: Routes = [
       breadcrumb: 'New Message',
       permission: 'communications.send',
       roles: COMMS_SEND_ROLES,
+    },
+  },
+  {
+    path: 'sender-id',
+    component: SenderIdPage,
+    canActivate: [PermissionGuard],
+    data: {
+      title: 'SMS Sender ID',
+      breadcrumb: 'Sender ID',
+      permission: 'communications.view',
+      roles: COMMS_VIEW_ROLES,
     },
   },
   {
