@@ -164,22 +164,19 @@ export class CommunicationsList implements OnInit, OnDestroy {
       return;
     }
 
+    // Progress + "Done" toast are handled by the service; this just refreshes the list when it finishes.
     this.communicationsService
-      .sendCommunication(communicationId)
-      .pipe(takeUntil(this.destroy$))
+      .sendWithProgress(communicationId, communication.communication_type, communication.title)
       .subscribe({
-        next: () => {
-          this.successMessage = 'Communication sent successfully!';
+        next: (progress) => {
+          if (!progress.done) return;
           this.loadCommunications();
           this.loadStatistics();
-
-          setTimeout(() => {
-            this.successMessage = '';
-          }, 3000);
         },
         error: (error) => {
           this.errorMessage = error.message || 'Failed to send communication';
           console.error('Send error:', error);
+          this.loadCommunications();
         },
       });
   }

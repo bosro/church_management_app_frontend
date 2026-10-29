@@ -8,6 +8,9 @@
 <div *ngIf="authInitialized">
   <router-outlet></router-outlet>
 
+  <!-- App-wide toasts (e.g. message sending progress) -->
+  <app-toast-container></app-toast-container>
+
   <!-- ── PWA Install Banner (Goatfunded-style bottom bar) ─────────────── -->
   <!-- Shows only when browser fires beforeinstallprompt AND user hasn't dismissed -->
   <div class="pwa-install-banner" *ngIf="showInstallBanner" @slideUp>

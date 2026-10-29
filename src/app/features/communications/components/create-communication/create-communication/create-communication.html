@@ -63,7 +63,7 @@
             <div class="progress-counts" *ngIf="sendProgress.total > 0">
               <div class="count-item count-sent"><i class="ri-check-line"></i><span>{{ sendProgress.sent }} sent</span></div>
               <div class="count-item count-failed" *ngIf="sendProgress.failed > 0"><i class="ri-close-line"></i><span>{{ sendProgress.failed }} failed</span></div>
-              <div class="count-item count-total"><i class="ri-group-line"></i><span>{{ sendProgress.total }} total</span></div>
+              <div class="count-item count-total"><i class="ri-group-line"></i><span>{{ sendProgress.processed }} of {{ sendProgress.total }} recipients</span></div>
             </div>
             <div class="progress-waiting" *ngIf="sendProgress.total === 0 && !sendProgress.done">
               <i class="ri-loader-4-line spin"></i>

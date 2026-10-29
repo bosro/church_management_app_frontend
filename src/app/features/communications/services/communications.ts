@@ -6,10 +6,11 @@
 // 4. Everything else unchanged
 
 import { Injectable } from '@angular/core';
-import { Observable, from, throwError, interval, of } from 'rxjs';
+import { Observable, ReplaySubject, from, throwError, interval, of } from 'rxjs';
 import { map, catchError, switchMap, takeWhile, startWith } from 'rxjs/operators';
 import { SupabaseService } from '../../../core/services/supabase';
 import { AuthService } from '../../../core/services/auth';
+import { ToastService } from '../../../core/services/toast.service';
 import {
   Communication,
   CommunicationType,
@@ -21,8 +22,13 @@ import {
 } from '../../../models/communication.model';
 
 export interface SendProgress {
+  /** recipients being messaged (known as soon as the server starts sending); 0 = not known yet */
   total: number;
+  /** recipients already processed */
+  processed: number;
+  /** individual SMS / emails delivered so far */
   sent: number;
+  /** individual SMS / emails that failed so far */
   failed: number;
   percent: number;
   done: boolean;
@@ -35,6 +41,7 @@ export class CommunicationsService {
   constructor(
     private supabase: SupabaseService,
     private authService: AuthService,
+    private toast: ToastService,
   ) {}
 
   // ==================== PERMISSIONS ====================
@@ -287,7 +294,7 @@ createCommunication(communicationData: {
         // Keep polling while not done and under attempt limit
         return !progress.done && attempts < maxAttempts;
       }, true), // emit the final value that fails the predicate
-      catchError(() => of({ total: 0, sent: 0, failed: 0, percent: 0, done: true })),
+      catchError(() => of({ total: 0, processed: 0, sent: 0, failed: 0, percent: 0, done: true })),
     );
   }
 
@@ -300,26 +307,113 @@ createCommunication(communicationData: {
     return from(this.fetchProgress(communicationId, type));
   }
 
+  /**
+   * Sends a message AND reports live progress while the server is working.
+   * Emits a SendProgress about every second; the last emission has done = true.
+   * Errors (plan limit, blocked, failed) are thrown exactly like sendCommunication().
+   */
+  /**
+   * Sends a message with a live progress toast ("Sending… 40%") that turns into a "Done" toast.
+   * The send and the toast keep going even if the user leaves the page; pages can also subscribe for the numbers.
+   */
+  sendWithProgress(communicationId: string, type: CommunicationType, title?: string): Observable<SendProgress> {
+    const toastId = `send-${communicationId}`;
+    const label = title ? ` “${title.length > 40 ? title.slice(0, 40) + '…' : title}”` : '';
+    const out = new ReplaySubject<SendProgress>(1);
+
+    this.toast.progress(toastId, `Sending${label}`, 0, 'Starting…');
+
+    this.sendAndPoll(communicationId, type).subscribe({
+      next: (p) => {
+        out.next(p);
+        if (!p.done) {
+          this.toast.progress(toastId, `Sending${label}`, p.percent,
+            p.total > 0 ? `${p.processed} of ${p.total} recipient${p.total === 1 ? '' : 's'}` : 'Starting…');
+          return;
+        }
+        if (p.failed === 0) {
+          this.toast.finish(toastId, 'success', 'Done — message sent',
+            p.sent > 0 ? `Delivered to ${p.sent} recipient${p.sent === 1 ? '' : 's'}.` : undefined);
+        } else if (p.sent > 0) {
+          this.toast.finish(toastId, 'warning', 'Sent with some failures',
+            `${p.sent} delivered, ${p.failed} failed. Check the SMS / email logs for details.`, 9000);
+        } else {
+          this.toast.finish(toastId, 'error', 'Message could not be delivered',
+            `${p.failed} failed. Check the SMS / email logs for the reason.`, 9000);
+        }
+      },
+      error: (e) => {
+        this.toast.finish(toastId, 'error', 'Message not sent', e?.message || 'Something went wrong.', 10000);
+        out.error(e);
+      },
+      complete: () => out.complete(),
+    });
+
+    return out.asObservable();
+  }
+
+  private sendAndPoll(communicationId: string, type: CommunicationType, pollMs = 1000): Observable<SendProgress> {
+    return new Observable<SendProgress>((subscriber) => {
+      let finished = false;
+
+      const loop = async () => {
+        while (!finished) {
+          try {
+            const p = await this.fetchProgress(communicationId, type);
+            // while the server is still working never report "done" and never reach 100%
+            if (!finished) subscriber.next({ ...p, done: false, percent: Math.min(p.percent, 99) });
+          } catch { /* a missed poll is fine */ }
+          await new Promise((r) => setTimeout(r, pollMs));
+        }
+      };
+      loop();
+
+      this.sendCommunication(communicationId).subscribe({
+        next: async () => {
+          finished = true;
+          let last: SendProgress;
+          try { last = await this.fetchProgress(communicationId, type); }
+          catch { last = { total: 0, processed: 0, sent: 0, failed: 0, percent: 100, done: true }; }
+          subscriber.next({ ...last, percent: 100, processed: last.total || last.processed, done: true });
+          subscriber.complete();
+        },
+        error: (e) => { finished = true; subscriber.error(e); },
+      });
+
+      return () => { finished = true; };
+    });
+  }
+
   private async fetchProgress(
     communicationId: string,
     type: CommunicationType,
   ): Promise<SendProgress> {
     const churchId = this.authService.getChurchId();
 
-    // First get the communication status to know if we're done
-    const { data: comm } = await this.supabase.client
+    // Status + server-side counters. If the counters don't exist yet (migration not run) fall back to status only.
+    let status: string | undefined;
+    let sendTotal = 0;
+    let sendDone = 0;
+    const withCounters = await this.supabase.client
       .from('communications')
-      .select('status')
+      .select('status, send_total, send_done')
       .eq('id', communicationId)
       .single();
-
-    const isSendingOrSent = comm?.status === 'sending' || comm?.status === 'sent';
-    const isDone = comm?.status === 'sent' || comm?.status === 'failed';
+    if (!withCounters.error && withCounters.data) {
+      status = withCounters.data.status;
+      sendTotal = withCounters.data.send_total || 0;
+      sendDone = withCounters.data.send_done || 0;
+    } else {
+      const { data: comm } = await this.supabase.client
+        .from('communications').select('status').eq('id', communicationId).single();
+      status = comm?.status;
+    }
+    const isDone = status === 'sent' || status === 'failed';
 
     // Count logs based on type
     let sent = 0;
     let failed = 0;
-    let total = 0;
+    let logRows = 0;
 
     if (type === 'sms' || type === 'both') {
       const { data: smsData } = await this.supabase.client
@@ -329,9 +423,9 @@ createCommunication(communicationData: {
         .eq('church_id', churchId);
 
       const smsRows = smsData || [];
-      sent += smsRows.filter(r => r.status === 'sent' || r.status === 'delivered').length;
-      failed += smsRows.filter(r => r.status === 'failed').length;
-      total += smsRows.length;
+      sent += smsRows.filter((r) => r.status === 'sent' || r.status === 'delivered').length;
+      failed += smsRows.filter((r) => r.status === 'failed').length;
+      logRows += smsRows.length;
     }
 
     if (type === 'email' || type === 'both') {
@@ -342,22 +436,18 @@ createCommunication(communicationData: {
         .eq('church_id', churchId);
 
       const emailRows = emailData || [];
-      sent += emailRows.filter(r => r.status === 'sent' || r.status === 'delivered' || r.status === 'opened').length;
-      failed += emailRows.filter(r => r.status === 'failed').length;
-      total += emailRows.length;
+      sent += emailRows.filter((r) => r.status === 'sent' || r.status === 'delivered' || r.status === 'opened').length;
+      failed += emailRows.filter((r) => r.status === 'failed').length;
+      logRows += emailRows.length;
     }
 
-    const resolved = sent + failed;
-    const percent = total > 0 ? Math.round((resolved / total) * 100) : (isDone ? 100 : 0);
+    // Preferred: the server told us how many recipients there are and how many it has finished.
+    // Fallback (older function): count what has been logged, total unknown until finished.
+    const total = sendTotal > 0 ? sendTotal : 0;
+    const processed = sendTotal > 0 ? Math.min(sendDone, sendTotal) : logRows;
+    const percent = total > 0 ? Math.round((processed / total) * 100) : isDone ? 100 : 0;
 
-    return {
-      total,
-      sent,
-      failed,
-      percent,
-      // Done when: comm is sent/failed, OR all logs are resolved
-      done: isDone || (total > 0 && resolved === total),
-    };
+    return { total, processed, sent, failed, percent, done: isDone };
   }
 
   // ==================== SMS LOGS ====================

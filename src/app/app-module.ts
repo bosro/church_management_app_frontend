@@ -8,6 +8,7 @@ import {
   withInterceptorsFromDi,
 } from '@angular/common/http';
 import { ServiceWorkerModule } from '@angular/service-worker';
+import { ToastContainer } from './shared/components/toast-container/toast-container';
 
 @NgModule({
   declarations: [App],
@@ -15,6 +16,7 @@ import { ServiceWorkerModule } from '@angular/service-worker';
     BrowserModule,
     BrowserAnimationsModule, // ← ADD THIS HERE
     AppRoutingModule,
+    ToastContainer,
     ServiceWorkerModule.register('ngsw-worker.js', {
       enabled: !isDevMode(),
       registrationStrategy: 'registerImmediately',

@@ -542,50 +542,38 @@ export class CreateCommunication implements OnInit, OnDestroy {
 
   private triggerSendWithProgress(communicationId: string, type: CommunicationType): void {
     this.sending = true;
-    this.sendProgress = { total: 0, sent: 0, failed: 0, percent: 0, done: false };
-
-    this.communicationsService
-      .sendCommunication(communicationId)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: () => { this.startPolling(communicationId, type); },
-        error: (error) => {
-          this.loading = false;
-          this.sending = false;
-          this.errorMessage = error.message || 'Failed to send message';
-          this.scrollToTop();
-        },
-      });
-  }
-
-  private startPolling(communicationId: string, type: CommunicationType): void {
+    this.sendProgress = { total: 0, processed: 0, sent: 0, failed: 0, percent: 0, done: false };
     this.progressSub?.unsubscribe();
+
+    // Live progress starts immediately (not after the send finishes). The toast is handled by the service,
+    // so it keeps updating even if the user leaves this page.
     this.progressSub = this.communicationsService
-      .pollSendProgress(communicationId, type, 2000, 60)
+      .sendWithProgress(communicationId, type, this.communicationForm.value?.title)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (progress) => {
           this.sendProgress = progress;
-          if (progress.done) {
-            this.loading = false;
-            this.sending = false;
-            if (progress.failed === 0 && progress.sent > 0) {
-              this.successMessage = `Message sent to ${progress.sent} recipient${progress.sent > 1 ? 's' : ''}!`;
-            } else if (progress.failed > 0 && progress.sent > 0) {
-              this.successMessage = `Sent to ${progress.sent}. ${progress.failed} failed.`;
-            } else if (progress.failed > 0 && progress.sent === 0) {
-              this.errorMessage = `Send failed — ${progress.failed} message${progress.failed > 1 ? 's' : ''} could not be delivered.`;
-            } else {
-              this.successMessage = 'Message sent successfully!';
-            }
-            setTimeout(() => this.router.navigate(['main/communications']), 2500);
-          }
-        },
-        error: () => {
+          if (!progress.done) return;
+
           this.loading = false;
           this.sending = false;
-          this.successMessage = 'Message sent. Check SMS/Email logs for delivery status.';
-          setTimeout(() => this.router.navigate(['main/communications']), 2000);
+          if (progress.failed === 0 && progress.sent > 0) {
+            this.successMessage = `Message sent to ${progress.sent} recipient${progress.sent > 1 ? 's' : ''}!`;
+          } else if (progress.failed > 0 && progress.sent > 0) {
+            this.successMessage = `Sent to ${progress.sent}. ${progress.failed} failed.`;
+          } else if (progress.failed > 0 && progress.sent === 0) {
+            this.errorMessage = `Send failed — ${progress.failed} message${progress.failed > 1 ? 's' : ''} could not be delivered.`;
+          } else {
+            this.successMessage = 'Message sent successfully!';
+          }
+          setTimeout(() => this.router.navigate(['main/communications']), 2500);
+        },
+        error: (error) => {
+          this.loading = false;
+          this.sending = false;
+          this.sendProgress = null;
+          this.errorMessage = error.message || 'Failed to send message';
+          this.scrollToTop();
         },
       });
   }
