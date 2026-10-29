@@ -2,13 +2,15 @@
 // Route: /main/admin/sender-id-requests
 import { Component, OnInit } from '@angular/core';
 import {
+  AdminSenderIdRow,
+  ProviderSender,
   ReviewAction,
   SenderIdRequest,
   SenderIdService,
   SenderRequestStatus,
 } from '../../../core/services/sender-id.service';
 
-type Filter = 'open' | 'approved' | 'rejected' | 'all';
+type Filter = 'open' | 'approved' | 'rejected' | 'all' | 'ids';
 
 @Component({
   selector: 'app-sender-id-requests',
@@ -26,6 +28,15 @@ export class SenderIdRequestsPage implements OnInit {
   requests: SenderIdRequest[] = [];
   openCount = 0;
 
+  // GiantSMS status of each name (looked up live from the provider)
+  providerMap = new Map<string, ProviderSender>();
+  providerLoaded = false;
+  providerError = '';
+  autoGrant = true;
+
+  // every sender ID of every church
+  allIds: AdminSenderIdRow[] = [];
+
   // dialog state
   dialog: { req: SenderIdRequest; action: ReviewAction } | null = null;
   reason = '';
@@ -35,6 +46,72 @@ export class SenderIdRequestsPage implements OnInit {
 
   ngOnInit(): void {
     this.load();
+    this.refreshProvider();
+    this.svc.getAutoGrant().then((v) => (this.autoGrant = v)).catch(() => {});
+  }
+
+  async refreshProvider(): Promise<void> {
+    this.providerError = '';
+    const r = await this.svc.getProviderSenders();
+    this.providerLoaded = !!r.senders;
+    this.providerError = r.error || '';
+    this.providerMap = new Map((r.senders || []).map((x) => [x.name.toLowerCase(), x]));
+  }
+
+  /** approved / pending / declined at GiantSMS, 'not_registered' if GiantSMS doesn't know the name, null if unknown */
+  providerStatus(r: SenderIdRequest): string | null {
+    if (!this.providerLoaded) return null;
+    return this.providerMap.get(r.requested_sender_id.toLowerCase())?.status ?? 'not_registered';
+  }
+
+  providerLabel(st: string | null): string {
+    return ({ approved: 'Approved at GiantSMS', pending: 'Pending at GiantSMS', declined: 'Declined by GiantSMS', not_registered: 'Not registered at GiantSMS' } as Record<string, string>)[st || ''] || '';
+  }
+
+  async registerAtProvider(r: SenderIdRequest): Promise<void> {
+    if (this.working) return;
+    this.working = true;
+    this.errorMessage = '';
+    try {
+      const msg = await this.svc.registerAtProvider(r.id);
+      this.flash(`Sent to GiantSMS: ${msg}`);
+      await this.refreshProvider();
+    } catch (e: any) {
+      this.errorMessage = e?.message || 'Could not register at GiantSMS.';
+    } finally {
+      this.working = false;
+    }
+  }
+
+  async toggleAutoGrant(): Promise<void> {
+    const next = !this.autoGrant;
+    try {
+      await this.svc.setAutoGrant(next);
+      this.autoGrant = next;
+      this.flash(next ? 'Names already approved at GiantSMS are now granted automatically.' : 'Every new sender ID now waits for your approval.');
+    } catch (e: any) {
+      this.errorMessage = e?.message || 'Could not change the setting.';
+    }
+  }
+
+  async toggleActive(row: AdminSenderIdRow): Promise<void> {
+    const to = !row.is_active;
+    if (!to && !confirm(`Switch off “${row.sender_id}” for ${row.church_name}? They will no longer be able to send with it.`)) return;
+    try {
+      await this.svc.setSenderIdActive(row.id, to);
+      this.flash(`“${row.sender_id}” is ${to ? 'on' : 'off'} for ${row.church_name}.`);
+      await this.load();
+    } catch (e: any) {
+      this.errorMessage = e?.message || 'Could not update.';
+    }
+  }
+
+  /** Warn when approving a name that GiantSMS has not approved yet */
+  get approveWarning(): string {
+    if (this.dialog?.action !== 'approve') return '';
+    const st = this.providerStatus(this.dialog.req);
+    if (st === null || st === 'approved') return '';
+    return `GiantSMS shows this name as “${this.providerLabel(st).replace(' at GiantSMS', '').replace(' by GiantSMS', '').toLowerCase()}”. Messages sent with it may fail until GiantSMS approves it.`;
   }
 
   async setFilter(f: Filter): Promise<void> {
@@ -46,6 +123,10 @@ export class SenderIdRequestsPage implements OnInit {
     this.loading = true;
     this.errorMessage = '';
     try {
+      if (this.filter === 'ids') {
+        this.allIds = await this.svc.listAllSenderIds();
+        return;
+      }
       const [list, count] = await Promise.all([
         this.svc.listRequests(this.filter === 'all' ? undefined : this.filter),
         this.svc.countOpen().catch(() => 0),

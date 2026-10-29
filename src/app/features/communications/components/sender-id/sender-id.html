@@ -12,7 +12,7 @@
 
         <div class="page-header">
           <h1>SMS Sender ID</h1>
-          <p class="subtitle">The name your members see when they get an SMS from your church</p>
+          <p class="subtitle">The names your members see when they get an SMS from your church</p>
         </div>
 
         <div *ngIf="successMessage" class="alert success"><i class="ri-checkbox-circle-line"></i><span>{{ successMessage }}</span></div>
@@ -47,19 +47,37 @@
             </div>
           </div>
 
-          <!-- ── Open request ───────────────────────────────── -->
-          <div class="card status-card" *ngIf="info?.open_request as open">
+          <!-- ── Your sender IDs ────────────────────────────── -->
+          <div class="card" *ngIf="info?.sender_ids?.length">
+            <h3>Your sender IDs</h3>
+            <p class="muted">You can choose any of these when you write a message. Messages with no choice use the default.</p>
+            <div class="history">
+              <div class="h-row" *ngFor="let s of info?.sender_ids">
+                <div class="h-main">
+                  <strong>{{ s.sender_id }}</strong>
+                  <span class="badge approved" *ngIf="s.is_default">Default</span>
+                  <span class="muted small" *ngIf="s.source === 'provider_auto'"> · ready instantly (already approved)</span>
+                </div>
+                <div class="row-actions" *ngIf="info?.can_request">
+                  <button class="btn-secondary" *ngIf="!s.is_default" (click)="makeDefault(s)" [disabled]="working">Make default</button>
+                  <button class="btn-secondary" (click)="removeId(s)" [disabled]="working">Remove</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── Open requests ──────────────────────────────── -->
+          <div class="card status-card" *ngFor="let open of info?.open_requests">
             <div class="status-head">
               <span class="badge" [ngClass]="open.status">{{ statusLabel(open.status) }}</span>
               <h3>Request for “{{ open.requested_sender_id }}”</h3>
             </div>
             <p class="muted" *ngIf="open.status === 'pending'">
-              We received your request on {{ open.created_at | date:'mediumDate' }}. Until it is approved your messages keep using
-              “{{ info?.default_sender_id }}”.
+              We received your request on {{ open.created_at | date:'mediumDate' }}. Until it is approved you can keep sending with your other sender IDs.
             </p>
             <p class="muted" *ngIf="open.status === 'processing'">
-              Your sender ID has been sent to the SMS network for registration. Networks can take a few days to approve it.
-              We’ll email you as soon as it is live. Until then your messages keep using “{{ info?.default_sender_id }}”.
+              This name has been sent to the SMS network for registration. Networks can take a few days to approve it.
+              We’ll email you as soon as it is live.
             </p>
             <div class="row-actions" *ngIf="info?.can_request">
               <button class="btn-secondary" (click)="cancel(open)" [disabled]="working">Cancel request</button>
@@ -67,11 +85,11 @@
           </div>
 
           <!-- ── New request form ───────────────────────────── -->
-          <div class="card" *ngIf="!info?.open_request && info?.can_request">
-            <h3>{{ usingOwn ? 'Request a different sender ID' : 'Request your own sender ID' }}</h3>
+          <div class="card" *ngIf="info?.can_request">
+            <h3>{{ info?.sender_ids?.length ? 'Add another sender ID' : 'Add your own sender ID' }}</h3>
             <p class="muted">
-              Pick the name members will see instead of “{{ info?.default_sender_id }}” — usually your church’s name or
-              short form. We register it with the SMS network for you, then switch it on.
+              Type the name members should see — for example your church name, or a name for one ministry or occasion.
+              If the SMS network has already approved it, you can use it straight away. Otherwise we register it for you.
             </p>
 
             <form (ngSubmit)="submit()" novalidate>
@@ -95,12 +113,12 @@
 
               <ul class="rules">
                 <li><i class="ri-information-line"></i> Choose a name that clearly identifies your church. Names that look like banks, mobile-money or government names are usually refused by the networks.</li>
-                <li><i class="ri-time-line"></i> Approval depends on the SMS network and can take a few days. Until then you keep sending with “{{ info?.default_sender_id }}”.</li>
+                <li><i class="ri-time-line"></i> If it still needs approval, that can take a few days. Until then you keep sending with your other sender IDs.</li>
               </ul>
 
               <button type="submit" class="btn-primary" [disabled]="!canSubmit">
-                <ng-container *ngIf="!submitting"><i class="ri-send-plane-line"></i> Send request</ng-container>
-                <ng-container *ngIf="submitting"><i class="ri-loader-4-line spin"></i> Sending…</ng-container>
+                <ng-container *ngIf="!submitting"><i class="ri-add-line"></i> Add sender ID</ng-container>
+                <ng-container *ngIf="submitting"><i class="ri-loader-4-line spin"></i> Checking…</ng-container>
               </button>
             </form>
           </div>
@@ -108,7 +126,7 @@
           <div class="card" *ngIf="!info?.can_request">
             <p class="muted no-margin">
               Only a church admin or pastor can request a sender ID. Ask them to open
-              <strong>Communications → Sender ID</strong>.
+              <strong>Communications → SMS Sender ID</strong>.
             </p>
           </div>
 

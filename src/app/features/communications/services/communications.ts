@@ -119,6 +119,7 @@ createCommunication(communicationData: {
     scheduled_at?: string;
     target_member_id?: string | null;
     custom_member_ids?: string[] | null;   // ← NEW
+    sender_id?: string | null;             // SMS sender ID chosen for this message
   }): Observable<Communication> {
     const churchId = this.authService.getChurchId();
     const userId = this.authService.getUserId();
@@ -134,6 +135,8 @@ createCommunication(communicationData: {
         target_audience: communicationData.target_audience,
         target_member_id: communicationData.target_member_id || null,
         custom_member_ids: communicationData.custom_member_ids || null,  // ← NEW
+        // only included when a sender ID was chosen, so nothing changes for churches with a single ID
+        ...(communicationData.sender_id ? { sender_id: communicationData.sender_id } : {}),
         scheduled_at: communicationData.scheduled_at || null,
         status: communicationData.scheduled_at ? 'scheduled' : 'draft',
         created_by: userId,

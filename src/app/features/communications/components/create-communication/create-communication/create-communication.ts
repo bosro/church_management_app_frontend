@@ -115,6 +115,9 @@ export class CreateCommunication implements OnInit, OnDestroy {
 
   canManageCommunications = false;
   sendingAs = '';
+  /** The church's approved sender IDs; the message can use any of them */
+  senderOptions: string[] = [];
+  selectedSender = '';
 
   constructor(
     private fb: FormBuilder,
@@ -129,7 +132,12 @@ export class CreateCommunication implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    this.senderIdService.getMyInfo().then((i) => (this.sendingAs = i?.effective_sender_id || '')).catch(() => {});
+    this.senderIdService.getMyInfo().then((i) => {
+      this.sendingAs = i?.effective_sender_id || '';
+      this.senderOptions = (i?.sender_ids || []).map((x) => x.sender_id);
+      // default choice = the church's default ID (or the first one)
+      this.selectedSender = i?.current_sender_id || this.senderOptions[0] || '';
+    }).catch(() => {});
     this.checkPermissions();
     this.initForm();
     this.setupMemberSearch();
@@ -500,6 +508,8 @@ export class CreateCommunication implements OnInit, OnDestroy {
       target_audience:    this.communicationForm.value.target_audience,
       scheduled_at:       this.communicationForm.value.scheduled_at || undefined,
       target_member_id:   this.selectedMember?.id || null,
+      // Only sent when the church has more than one sender ID to choose from
+      sender_id:          this.senderOptions.length > 1 ? this.selectedSender || null : null,
       // Pass custom member IDs array for custom list sends
       custom_member_ids:  this.isCustomTarget
         ? this.customSelectedMembers.map(m => m.id)

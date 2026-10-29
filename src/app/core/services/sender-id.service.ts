@@ -1,6 +1,6 @@
 // src/app/core/services/sender-id.service.ts
 // SMS sender ID requests.
-//   Church side:  see current/default sender ID, request a new one, cancel, go back to default
+//   Church side:  see their sender IDs, add one (instantly if GiantSMS already approved it), pick a default, cancel/remove
 //   Super admin:  list requests, mark "processing", approve (switches it on), reject
 // All writes go through database functions (see 20261028_sms_sender_id_requests.sql).
 import { Injectable } from '@angular/core';
@@ -25,6 +25,42 @@ export interface MySenderInfo {
     notes?: string | null;
     created_at: string;
   } | null;
+  /** every open request (a church can have several at once) */
+  open_requests?: NonNullable<MySenderInfo['open_request']>[];
+  /** every sender ID the church may use; the one with is_default is used when a message doesn't pick one */
+  sender_ids?: ChurchSenderId[];
+}
+
+export interface ChurchSenderId {
+  id: string;
+  sender_id: string;
+  source: 'request' | 'provider_auto' | 'admin' | 'legacy';
+  is_default: boolean;
+  created_at: string;
+}
+
+export type CheckOutcome =
+  | 'granted' | 'already_yours' | 'taken' | 'provider_declined' | 'needs_request' | 'unverified';
+
+export interface CheckResult {
+  outcome: CheckOutcome;
+  message?: string;
+  sender_id?: string;
+  provider_status?: string;
+}
+
+export type ProviderStatus = 'approved' | 'pending' | 'declined';
+export interface ProviderSender { name: string; status: ProviderStatus; raw_status: string }
+
+export interface AdminSenderIdRow {
+  id: string;
+  church_id: string;
+  church_name: string;
+  sender_id: string;
+  source: string;
+  is_active: boolean;
+  is_default: boolean;
+  created_at: string;
 }
 
 export interface SenderIdRequest {
@@ -100,7 +136,93 @@ export class SenderIdService {
     if (!r?.success) throw new Error(r?.error || 'Could not switch back to the default.');
   }
 
+  /**
+   * Add a sender ID: asks the server whether GiantSMS has already approved the name.
+   * - granted: the church can use it straight away
+   * - needs_request: submitted as a normal request for the platform admin to review
+   * Throws with a friendly message when the name can't be used.
+   */
+  async addSenderId(senderId: string, notes: string): Promise<CheckResult> {
+    const { data, error } = await this.supabase.client.functions.invoke('sender-id-check', {
+      body: { action: 'check', sender_id: senderId },
+    });
+
+    let check: CheckResult | null = null;
+    if (!error && data?.success) check = data as CheckResult;
+    else if (!error && data?.error) throw new Error(data.error);
+    // If the check function is unreachable or not deployed yet, fall back to the normal request flow
+    if (!check) check = { outcome: 'unverified' };
+
+    switch (check.outcome) {
+      case 'granted':
+        return check;
+      case 'already_yours':
+      case 'taken':
+      case 'provider_declined':
+        throw new Error(check.message || 'That sender ID cannot be used.');
+      default:
+        await this.submitRequest(senderId, notes);
+        return check;
+    }
+  }
+
+  async setDefaultSenderId(id: string): Promise<void> {
+    const { data, error } = await this.supabase.client.rpc('set_my_default_sender_id', { p_id: id });
+    if (error) throw new Error(error.message);
+    if (!(data as RpcResult)?.success) throw new Error((data as RpcResult)?.error || 'Could not change the default.');
+  }
+
+  async removeSenderId(id: string): Promise<void> {
+    const { data, error } = await this.supabase.client.rpc('remove_my_sender_id', { p_id: id });
+    if (error) throw new Error(error.message);
+    if (!(data as RpcResult)?.success) throw new Error((data as RpcResult)?.error || 'Could not remove the sender ID.');
+  }
+
   // ── Super admin side ───────────────────────────────────────
+
+  /** Every sender ID at GiantSMS with its approval status (null if GiantSMS can't be reached). */
+  async getProviderSenders(): Promise<{ senders: ProviderSender[] | null; error?: string }> {
+    const { data, error } = await this.supabase.client.functions.invoke('sender-id-check', {
+      body: { action: 'provider_list' },
+    });
+    if (error) return { senders: null, error: error.message };
+    if (!data?.success) return { senders: null, error: data?.error || 'Could not reach GiantSMS.' };
+    return { senders: data.senders as ProviderSender[] };
+  }
+
+  /** Registers the requested name at GiantSMS (it then shows as pending there). */
+  async registerAtProvider(requestId: string): Promise<string> {
+    const { data, error } = await this.supabase.client.functions.invoke('sender-id-check', {
+      body: { action: 'register', request_id: requestId },
+    });
+    if (error) throw new Error(error.message);
+    if (!data?.success) throw new Error(data?.message || data?.error || 'GiantSMS did not accept the registration.');
+    return data.message || 'Registered at GiantSMS.';
+  }
+
+  async listAllSenderIds(): Promise<AdminSenderIdRow[]> {
+    const { data, error } = await this.supabase.client.rpc('admin_list_sender_ids');
+    if (error) throw new Error(error.message);
+    return (data || []) as AdminSenderIdRow[];
+  }
+
+  async setSenderIdActive(id: string, active: boolean): Promise<void> {
+    const { data, error } = await this.supabase.client.rpc('admin_set_sender_id_active', { p_id: id, p_active: active });
+    if (error) throw new Error(error.message);
+    if (!(data as RpcResult)?.success) throw new Error((data as RpcResult)?.error || 'Could not update.');
+  }
+
+  async getAutoGrant(): Promise<boolean> {
+    const { data } = await this.supabase.client.from('platform_settings').select('value').eq('key', 'sender_id_auto_grant').maybeSingle();
+    return (data?.value ?? 'true') === 'true';
+  }
+
+  async setAutoGrant(on: boolean): Promise<void> {
+    const { error } = await this.supabase.client
+      .from('platform_settings')
+      .upsert({ key: 'sender_id_auto_grant', value: on ? 'true' : 'false' }, { onConflict: 'key' });
+    if (error) throw new Error(error.message);
+  }
 
   async listRequests(status?: SenderRequestStatus | 'open'): Promise<SenderIdRequest[]> {
     let q = this.supabase.client

@@ -13,9 +13,15 @@
             <div>
               <h1>New Message</h1>
               <p class="subtitle">Send SMS or email to your members</p>
-              <a *ngIf="sendingAs" routerLink="/main/communications/sender-id" class="sending-as" title="Change sender ID">
+              <a *ngIf="sendingAs && senderOptions.length <= 1" routerLink="/main/communications/sender-id" class="sending-as" title="Change sender ID">
                 <i class="ri-broadcast-line"></i> SMS sent as <strong>{{ sendingAs }}</strong>
               </a>
+              <label *ngIf="senderOptions.length > 1" class="sending-as sender-pick">
+                <i class="ri-broadcast-line"></i> SMS sent as
+                <select [(ngModel)]="selectedSender" [ngModelOptions]="{ standalone: true }">
+                  <option *ngFor="let s of senderOptions" [value]="s">{{ s }}</option>
+                </select>
+              </label>
             </div>
           </div>
         </div>

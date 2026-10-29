@@ -86,16 +86,53 @@ export class SenderIdPage implements OnInit {
 
     this.submitting = true;
     try {
-      await this.senderService.submitRequest(this.normalized, this.notes);
+      const name = this.normalized;
+      const result = await this.senderService.addSenderId(name, this.notes);
       this.senderId = '';
       this.notes = '';
       this.touched = false;
-      this.flash('Request sent. We will let you know by email once it is reviewed.');
+      if (result.outcome === 'granted') {
+        this.flash(`“${result.sender_id || name}” is already approved by the SMS network, so it is ready now. Choose it when you send a message.`);
+      } else if (result.provider_status === 'pending') {
+        this.flash(`“${name}” is already being registered with the SMS network. We will email you once it is approved.`);
+      } else {
+        this.flash('Request sent. We will let you know by email once it is reviewed.');
+      }
       await this.load();
     } catch (e: any) {
-      this.errorMessage = e?.message || 'Could not send the request.';
+      this.errorMessage = e?.message || 'Could not add the sender ID.';
     } finally {
       this.submitting = false;
+    }
+  }
+
+  async makeDefault(row: { id: string; sender_id: string }): Promise<void> {
+    this.working = true;
+    this.errorMessage = '';
+    try {
+      await this.senderService.setDefaultSenderId(row.id);
+      this.flash(`“${row.sender_id}” is now your default sender ID.`);
+      await this.load();
+    } catch (e: any) {
+      this.errorMessage = e?.message || 'Could not change the default.';
+    } finally {
+      this.working = false;
+    }
+  }
+
+  async removeId(row: { id: string; sender_id: string; is_default: boolean }): Promise<void> {
+    const extra = row.is_default ? ` It is your default, so messages will go back to “${this.info?.default_sender_id}” until you choose another.` : '';
+    if (!confirm(`Remove “${row.sender_id}” from your church?${extra} You would need to add it again to use it.`)) return;
+    this.working = true;
+    this.errorMessage = '';
+    try {
+      await this.senderService.removeSenderId(row.id);
+      this.flash(`“${row.sender_id}” was removed.`);
+      await this.load();
+    } catch (e: any) {
+      this.errorMessage = e?.message || 'Could not remove the sender ID.';
+    } finally {
+      this.working = false;
     }
   }
 

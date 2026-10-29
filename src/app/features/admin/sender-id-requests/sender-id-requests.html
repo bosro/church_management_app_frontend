@@ -24,16 +24,40 @@
           <button [class.active]="filter==='approved'" (click)="setFilter('approved')">Approved</button>
           <button [class.active]="filter==='rejected'" (click)="setFilter('rejected')">Rejected</button>
           <button [class.active]="filter==='all'" (click)="setFilter('all')">All</button>
+          <button [class.active]="filter==='ids'" (click)="setFilter('ids')">Sender IDs in use</button>
+        </div>
+
+        <div class="auto-grant">
+          <label><input type="checkbox" [checked]="autoGrant" (change)="toggleAutoGrant()" />
+            Grant automatically when GiantSMS has already approved the name and no other church uses it</label>
+          <span class="pv-err" *ngIf="providerError">GiantSMS status unavailable: {{ providerError }}</span>
+          <button class="btn ghost sm" (click)="refreshProvider()"><i class="ri-refresh-line"></i> Refresh GiantSMS status</button>
         </div>
 
         <div *ngIf="loading" class="loading"><div class="spinner"></div></div>
 
-        <div *ngIf="!loading && !requests.length" class="empty">
+        <div *ngIf="!loading && filter !== 'ids' && !requests.length" class="empty">
           <i class="ri-inbox-line"></i>
           <p>No requests here.</p>
         </div>
 
-        <div class="list" *ngIf="!loading">
+        <div class="ids-table" *ngIf="!loading && filter === 'ids'">
+          <div class="empty" *ngIf="!allIds.length"><i class="ri-inbox-line"></i><p>No sender IDs yet.</p></div>
+          <table *ngIf="allIds.length">
+            <thead><tr><th>Church</th><th>Sender ID</th><th>How</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+              <tr *ngFor="let x of allIds" [class.off]="!x.is_active">
+                <td>{{ x.church_name }}</td>
+                <td><strong>{{ x.sender_id }}</strong> <span class="chip" *ngIf="x.is_default">default</span></td>
+                <td>{{ x.source === 'provider_auto' ? 'Auto (already approved)' : x.source === 'request' ? 'Approved request' : x.source === 'legacy' ? 'Existing' : 'Set by admin' }}</td>
+                <td><span class="badge" [ngClass]="x.is_active ? 'approved' : 'cancelled'">{{ x.is_active ? 'On' : 'Off' }}</span></td>
+                <td class="r"><button class="btn ghost sm" (click)="toggleActive(x)">{{ x.is_active ? 'Switch off' : 'Switch on' }}</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="list" *ngIf="!loading && filter !== 'ids'">
           <div class="req" *ngFor="let r of requests">
             <div class="req-top">
               <div>
@@ -42,7 +66,10 @@
                   <span class="current" *ngIf="r.church?.sms_sender_id">· currently {{ r.church?.sms_sender_id }}</span>
                 </div>
               </div>
-              <span class="badge" [ngClass]="r.status">{{ statusLabel(r.status) }}</span>
+              <div class="chips">
+                <span class="pv" *ngIf="providerStatus(r) as ps" [ngClass]="ps">{{ providerLabel(ps) }}</span>
+                <span class="badge" [ngClass]="r.status">{{ statusLabel(r.status) }}</span>
+              </div>
             </div>
 
             <div class="meta">
@@ -55,6 +82,7 @@
             <p class="note adm" *ngIf="r.admin_notes"><i class="ri-sticky-note-line"></i> {{ r.admin_notes }}</p>
 
             <div class="actions" *ngIf="isOpen(r)">
+              <button class="btn ghost" *ngIf="providerStatus(r) === 'not_registered'" (click)="registerAtProvider(r)" [disabled]="working"><i class="ri-send-plane-line"></i> Register at GiantSMS</button>
               <button class="btn ghost" *ngIf="r.status==='pending'" (click)="open(r,'processing')">Mark in progress</button>
               <button class="btn ok" (click)="open(r,'approve')"><i class="ri-check-line"></i> Approve</button>
               <button class="btn bad" (click)="open(r,'reject')"><i class="ri-close-line"></i> Reject</button>
@@ -72,9 +100,10 @@
     <h3>{{ dialogTitle }}</h3>
 
     <p class="d-text" *ngIf="dialog.action==='approve'">
-      {{ dialog.req.church?.name }} will start sending SMS as <strong>{{ dialog.req.requested_sender_id }}</strong> straight away,
-      and they’ll be emailed. Make sure your SMS provider has already activated this name.
+      {{ dialog.req.church?.name }} can send SMS as <strong>{{ dialog.req.requested_sender_id }}</strong> straight away (it is added to their sender IDs,
+      their current default stays the same), and they’ll be emailed. Make sure your SMS provider has already activated this name.
     </p>
+    <p class="d-warn" *ngIf="approveWarning"><i class="ri-alarm-warning-line"></i> {{ approveWarning }}</p>
     <p class="d-text" *ngIf="dialog.action==='processing'">The church will see that registration is in progress.</p>
 
     <label *ngIf="dialog.action==='reject'">Reason (shown to the church) *
