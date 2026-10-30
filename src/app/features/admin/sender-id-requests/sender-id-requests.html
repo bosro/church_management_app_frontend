@@ -54,6 +54,7 @@
                 <td><span class="badge" [ngClass]="x.is_active ? 'approved' : 'cancelled'">{{ x.is_active ? 'On' : 'Off' }}</span></td>
                 <td class="r">
                   <button class="btn ghost sm" (click)="openFixId(x)">Rename / Move</button>
+                  <button class="btn ghost sm" *ngIf="x.is_active" (click)="revertRow(x)" [disabled]="working">Revert to pending</button>
                   <button class="btn ghost sm" (click)="toggleActive(x)">{{ x.is_active ? 'Switch off' : 'Switch on' }}</button>
                 </td>
               </tr>
@@ -85,6 +86,11 @@
             <p class="note rej" *ngIf="r.rejection_reason"><i class="ri-close-circle-line"></i> {{ r.rejection_reason }}</p>
             <p class="note adm" *ngIf="r.admin_notes"><i class="ri-sticky-note-line"></i> {{ r.admin_notes }}</p>
 
+            <div class="actions" *ngIf="r.status === 'approved'">
+              <span class="pv-hint" *ngIf="providerStatus(r) && providerStatus(r) !== 'approved'"><i class="ri-alarm-warning-line"></i> Approved here, but {{ providerLabel(providerStatus(r)).toLowerCase() }} — it will not work yet.</span>
+              <button class="btn ghost" (click)="revertRequest(r)" [disabled]="working"><i class="ri-arrow-go-back-line"></i> Revert to pending</button>
+            </div>
+
             <div class="actions" *ngIf="isOpen(r)">
               <button class="btn ghost" *ngIf="providerStatus(r) === 'not_registered'" (click)="registerAtProvider(r)" [disabled]="working"><i class="ri-send-plane-line"></i> Register at GiantSMS</button>
               <button class="btn ghost" *ngIf="r.status==='pending' || r.status==='processing'" (click)="openFixRequest(r)">Edit name / church</button>
@@ -109,6 +115,7 @@
       their current default stays the same), and they’ll be emailed. Make sure your SMS provider has already activated this name.
     </p>
     <p class="d-warn" *ngIf="approveWarning"><i class="ri-alarm-warning-line"></i> {{ approveWarning }}</p>
+    <label class="ack" *ngIf="approveWarning"><input type="checkbox" [(ngModel)]="ackNotApproved" /> I understand — approve anyway</label>
     <p class="d-text" *ngIf="dialog.action==='processing'">The church will see that registration is in progress.</p>
 
     <label *ngIf="dialog.action==='reject'">Reason (shown to the church) *

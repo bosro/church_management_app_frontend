@@ -167,6 +167,32 @@ export class SenderIdRequestsPage implements OnInit {
   }
 
   /** Make every saved name use exactly the capital letters GiantSMS shows. */
+  /** Approved here, but not (yet) approved at GiantSMS: take it back so it can't be used until it really works. */
+  async revertRequest(r: SenderIdRequest): Promise<void> {
+    await this.doRevert({ requestId: r.id }, r.requested_sender_id, r.church?.name);
+  }
+
+  async revertRow(row: AdminSenderIdRow): Promise<void> {
+    await this.doRevert({ senderRowId: row.id }, row.sender_id, row.church_name);
+  }
+
+  private async doRevert(opts: { requestId?: string; senderRowId?: string }, name: string, church?: string | null): Promise<void> {
+    if (this.working) return;
+    const who = church?.trim() || 'the church';
+    if (!confirm(`Revert “${name}” to pending?\n\n${who} will no longer be able to send with it (and it stops being their default) until you approve it again. The request goes back to “in progress”.`)) return;
+    this.working = true;
+    this.errorMessage = '';
+    try {
+      await this.svc.revertApproval(opts);
+      this.flash(`“${name}” is back to pending. Approve it again once GiantSMS has approved it.`);
+      await this.load();
+    } catch (e: any) {
+      this.errorMessage = e?.message || 'Could not revert.';
+    } finally {
+      this.working = false;
+    }
+  }
+
   async matchCasing(): Promise<void> {
     if (this.working) return;
     if (!this.providerLoaded) { this.errorMessage = 'GiantSMS names are not loaded. Press “Refresh GiantSMS status” first.'; return; }
@@ -248,6 +274,7 @@ export class SenderIdRequestsPage implements OnInit {
 
   open(req: SenderIdRequest, action: ReviewAction): void {
     this.dialog = { req, action };
+    this.ackNotApproved = false;
     this.reason = '';
     this.adminNotes = req.admin_notes || '';
     this.errorMessage = '';
@@ -268,8 +295,12 @@ export class SenderIdRequestsPage implements OnInit {
     }[this.dialog.action];
   }
 
+  /** ticked when approving a name GiantSMS has not approved yet */
+  ackNotApproved = false;
+
   get canConfirm(): boolean {
     if (!this.dialog || this.working) return false;
+    if (this.dialog.action === 'approve' && this.approveWarning && !this.ackNotApproved) return false;
     return this.dialog.action !== 'reject' || this.reason.trim().length >= 3;
   }
 

@@ -55,3 +55,6 @@
 .dialog select { width: 100%; box-sizing: border-box; margin-top: .375rem; padding: .5625rem .75rem; border: 1.5px solid #D1D5DB; border-radius: 10px; font-family: inherit; background: #fff; }
 .dialog input[type=text], .dialog input[type=email] { width: 100%; box-sizing: border-box; margin-top: .375rem; padding: .5625rem .75rem; border: 1.5px solid #D1D5DB; border-radius: 10px; font-family: inherit; }
 .dialog .small { font-size: .78rem; color: #6B7280; display: block; margin-top: .25rem; }
+
+.pv-hint { color: #92400E; background: #FEF3C7; border-radius: 8px; padding: .375rem .625rem; font-size: .8125rem; margin-right: auto; display: inline-flex; gap: .375rem; align-items: center; }
+.ack { display: flex !important; gap: .5rem; align-items: center; font-size: .875rem; font-weight: 700; color: #92400E; margin: 0 0 .75rem; }

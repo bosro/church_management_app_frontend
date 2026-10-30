@@ -191,6 +191,16 @@ export class SenderIdService {
     return data;
   }
 
+  /**
+   * Undo an approval made too early (the SMS provider hasn't approved the name yet).
+   * The church loses the name (and it stops being its default); the request goes back to "in progress".
+   */
+  revertApproval(opts: { senderRowId?: string; requestId?: string; note?: string }): Promise<any> {
+    return this.adminRpc('admin_revert_sender_id',
+      { p_sender_row_id: opts.senderRowId ?? null, p_request_id: opts.requestId ?? null, p_note: opts.note ?? null },
+      'Could not revert the approval.');
+  }
+
   renameSenderId(id: string, newName: string): Promise<any> {
     return this.adminRpc('admin_rename_sender_id', { p_id: id, p_new_name: newName }, 'Could not rename.');
   }
