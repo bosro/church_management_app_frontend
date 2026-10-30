@@ -50,3 +50,8 @@
   th { text-align: left; padding: .75rem 1rem; background: #F9FAFB; color: #6B7280; font-size: .75rem; text-transform: uppercase; }
   td { padding: .75rem 1rem; border-top: 1px solid #F3F4F6; } tr.off td { opacity: .55; } .r { text-align: right; }
   .chip { background: #EDE9FE; color: #5B21B6; border-radius: 999px; padding: 0 .5rem; font-size: .6875rem; font-weight: 700; margin-left: .375rem; } }
+
+.find-row { display: flex; gap: .5rem; align-items: center; input { flex: 1; } }
+.dialog select { width: 100%; box-sizing: border-box; margin-top: .375rem; padding: .5625rem .75rem; border: 1.5px solid #D1D5DB; border-radius: 10px; font-family: inherit; background: #fff; }
+.dialog input[type=text], .dialog input[type=email] { width: 100%; box-sizing: border-box; margin-top: .375rem; padding: .5625rem .75rem; border: 1.5px solid #D1D5DB; border-radius: 10px; font-family: inherit; }
+.dialog .small { font-size: .78rem; color: #6B7280; display: block; margin-top: .25rem; }

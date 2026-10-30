@@ -3,6 +3,7 @@
 import { Component, OnInit } from '@angular/core';
 import {
   AdminSenderIdRow,
+  ChurchPick,
   ProviderSender,
   ReviewAction,
   SenderIdRequest,
@@ -33,6 +34,13 @@ export class SenderIdRequestsPage implements OnInit {
   providerLoaded = false;
   providerError = '';
   autoGrant = true;
+
+
+  // rename / move / edit dialog
+  fix: { kind: 'id' | 'request'; id: string; label: string; name: string; churchId: string; currentChurchId: string } | null = null;
+  churches: ChurchPick[] = [];
+  lookupEmail = '';
+  lookupMsg = '';
 
   // every sender ID of every church
   allIds: AdminSenderIdRow[] = [];
@@ -78,6 +86,100 @@ export class SenderIdRequestsPage implements OnInit {
       await this.refreshProvider();
     } catch (e: any) {
       this.errorMessage = e?.message || 'Could not register at GiantSMS.';
+    } finally {
+      this.working = false;
+    }
+  }
+
+
+  // ── fix-up tools ──────────────────────────────────────────
+  async openFixId(row: AdminSenderIdRow): Promise<void> {
+    await this.ensureChurches();
+    this.fix = { kind: 'id', id: row.id, label: `${row.sender_id} (${row.church_name})`, name: row.sender_id, churchId: row.church_id, currentChurchId: row.church_id };
+    this.lookupEmail = ''; this.lookupMsg = '';
+  }
+
+  async openFixRequest(r: SenderIdRequest): Promise<void> {
+    await this.ensureChurches();
+    this.fix = { kind: 'request', id: r.id, label: `${r.requested_sender_id} (${r.church?.name?.trim() || 'church'})`, name: r.requested_sender_id, churchId: r.church_id, currentChurchId: r.church_id };
+    this.lookupEmail = ''; this.lookupMsg = '';
+  }
+
+  private async ensureChurches(): Promise<void> {
+    if (this.churches.length) return;
+    try { this.churches = await this.svc.listChurchesForPicker(); }
+    catch (e: any) { this.errorMessage = e?.message || 'Could not load churches.'; }
+  }
+
+  churchLabel(c: ChurchPick): string {
+    return c.emails.length ? `${c.name} — ${c.emails[0]}` : c.name;
+  }
+
+  async findByEmail(): Promise<void> {
+    if (!this.fix) return;
+    const email = this.lookupEmail.trim();
+    if (!email) return;
+    this.lookupMsg = '';
+    let id = await this.svc.churchIdForUserEmail(email).catch(() => null);
+    if (!id) id = this.churches.find((c) => c.emails.some((e) => e.toLowerCase() === email.toLowerCase()))?.id ?? null;
+    if (id) {
+      this.fix.churchId = id;
+      this.lookupMsg = `Found: ${this.churches.find((c) => c.id === id)?.name || 'church'}`;
+    } else {
+      this.lookupMsg = 'No church found for that email.';
+    }
+  }
+
+  get fixChanged(): boolean {
+    return !!this.fix && (this.fix.churchId !== this.fix.currentChurchId || this.fix.name.trim() !== this.fixOriginalName);
+  }
+
+  private get fixOriginalName(): string {
+    if (!this.fix) return '';
+    return this.fix.label.split(' (')[0];
+  }
+
+  closeFix(): void { if (!this.working) this.fix = null; }
+
+  async saveFix(): Promise<void> {
+    if (!this.fix || this.working || !this.fixChanged) return;
+    this.working = true;
+    this.errorMessage = '';
+    const f = this.fix;
+    try {
+      const nameChanged = f.name.trim() !== this.fixOriginalName;
+      const churchChanged = f.churchId !== f.currentChurchId;
+      if (f.kind === 'id') {
+        if (nameChanged) await this.svc.renameSenderId(f.id, f.name.trim());
+        if (churchChanged) await this.svc.moveSenderId(f.id, f.churchId);
+      } else {
+        await this.svc.editOpenRequest(f.id, nameChanged ? f.name.trim() : null, churchChanged ? f.churchId : null);
+      }
+      const to = this.churches.find((c) => c.id === f.churchId)?.name;
+      this.fix = null;
+      this.flash(churchChanged ? `Saved. “${f.name.trim()}” now belongs to ${to}.` : `Saved. Renamed to “${f.name.trim()}”.`);
+      await this.load();
+    } catch (e: any) {
+      this.errorMessage = e?.message || 'Could not save.';
+    } finally {
+      this.working = false;
+    }
+  }
+
+  /** Make every saved name use exactly the capital letters GiantSMS shows. */
+  async matchCasing(): Promise<void> {
+    if (this.working) return;
+    if (!this.providerLoaded) { this.errorMessage = 'GiantSMS names are not loaded. Press “Refresh GiantSMS status” first.'; return; }
+    this.working = true;
+    this.errorMessage = '';
+    try {
+      const changed = await this.svc.syncCasing([...this.providerMap.values()].map((s) => s.name));
+      this.flash(changed.length
+        ? `Updated ${changed.length}: ${changed.map((c) => `${c.from} → ${c.to}`).join(', ')}`
+        : 'Everything already matches GiantSMS.');
+      await this.load();
+    } catch (e: any) {
+      this.errorMessage = e?.message || 'Could not match names.';
     } finally {
       this.working = false;
     }

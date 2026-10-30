@@ -32,6 +32,7 @@
             Grant automatically when GiantSMS has already approved the name and no other church uses it</label>
           <span class="pv-err" *ngIf="providerError">GiantSMS status unavailable: {{ providerError }}</span>
           <button class="btn ghost sm" (click)="refreshProvider()"><i class="ri-refresh-line"></i> Refresh GiantSMS status</button>
+          <button class="btn ghost sm" (click)="matchCasing()" [disabled]="working || !providerLoaded" title="Make saved names use exactly the capital letters GiantSMS shows"><i class="ri-text"></i> Match capital letters to GiantSMS</button>
         </div>
 
         <div *ngIf="loading" class="loading"><div class="spinner"></div></div>
@@ -51,7 +52,10 @@
                 <td><strong>{{ x.sender_id }}</strong> <span class="chip" *ngIf="x.is_default">default</span></td>
                 <td>{{ x.source === 'provider_auto' ? 'Auto (already approved)' : x.source === 'request' ? 'Approved request' : x.source === 'legacy' ? 'Existing' : 'Set by admin' }}</td>
                 <td><span class="badge" [ngClass]="x.is_active ? 'approved' : 'cancelled'">{{ x.is_active ? 'On' : 'Off' }}</span></td>
-                <td class="r"><button class="btn ghost sm" (click)="toggleActive(x)">{{ x.is_active ? 'Switch off' : 'Switch on' }}</button></td>
+                <td class="r">
+                  <button class="btn ghost sm" (click)="openFixId(x)">Rename / Move</button>
+                  <button class="btn ghost sm" (click)="toggleActive(x)">{{ x.is_active ? 'Switch off' : 'Switch on' }}</button>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -83,6 +87,7 @@
 
             <div class="actions" *ngIf="isOpen(r)">
               <button class="btn ghost" *ngIf="providerStatus(r) === 'not_registered'" (click)="registerAtProvider(r)" [disabled]="working"><i class="ri-send-plane-line"></i> Register at GiantSMS</button>
+              <button class="btn ghost" *ngIf="r.status==='pending' || r.status==='processing'" (click)="openFixRequest(r)">Edit name / church</button>
               <button class="btn ghost" *ngIf="r.status==='pending'" (click)="open(r,'processing')">Mark in progress</button>
               <button class="btn ok" (click)="open(r,'approve')"><i class="ri-check-line"></i> Approve</button>
               <button class="btn bad" (click)="open(r,'reject')"><i class="ri-close-line"></i> Reject</button>
@@ -119,6 +124,41 @@
       <button class="btn" [ngClass]="dialog.action==='reject' ? 'bad' : 'ok'" (click)="confirm()" [disabled]="!canConfirm">
         {{ working ? 'Working…' : (dialog.action==='approve' ? 'Approve' : dialog.action==='reject' ? 'Reject' : 'Save') }}
       </button>
+    </div>
+  </div>
+</div>
+
+<!-- rename / move dialog -->
+<div class="overlay" *ngIf="fix" (click)="closeFix()">
+  <div class="dialog" (click)="$event.stopPropagation()">
+    <h3>{{ fix.kind === 'id' ? 'Rename / move sender ID' : 'Edit request' }}</h3>
+    <p class="d-text">{{ fix.label }}</p>
+
+    <label>Exact name (capital letters matter)
+      <input type="text" [(ngModel)]="fix.name" maxlength="11" />
+    </label>
+
+    <label>Belongs to church
+      <select [(ngModel)]="fix.churchId">
+        <option *ngFor="let c of churches" [value]="c.id">{{ churchLabel(c) }}</option>
+      </select>
+    </label>
+
+    <label>…or find the church by one of its user's email
+      <div class="find-row">
+        <input type="email" [(ngModel)]="lookupEmail" placeholder="e.g. church-admin@gmail.com" (keyup.enter)="findByEmail()" />
+        <button class="btn ghost sm" (click)="findByEmail()" type="button">Find</button>
+      </div>
+      <span class="small" *ngIf="lookupMsg">{{ lookupMsg }}</span>
+    </label>
+
+    <p class="d-text small" *ngIf="fix.kind === 'id' && fix.churchId !== fix.currentChurchId">
+      It is removed from the old church (and from its default if it was one) and added to the new church. If the new church has no default yet, this becomes it.
+    </p>
+
+    <div class="d-actions">
+      <button class="btn ghost" (click)="closeFix()" [disabled]="working">Cancel</button>
+      <button class="btn ok" (click)="saveFix()" [disabled]="working || !fixChanged">{{ working ? 'Saving…' : 'Save' }}</button>
     </div>
   </div>
 </div>

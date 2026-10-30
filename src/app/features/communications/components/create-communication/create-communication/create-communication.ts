@@ -466,6 +466,19 @@ export class CreateCommunication implements OnInit, OnDestroy {
 
   // ── Submit ─────────────────────────────────────────────────────────────────
 
+  /** Variables the server fills in for each person. */
+  readonly autoVariables = ['name', 'first_name', 'last_name', 'church_name'];
+
+  /** Placeholders like {date} that nobody fills in automatically (anything in {braces} that isn't an auto variable). */
+  private unfilledPlaceholders(text: string): string[] {
+    const found = new Set<string>();
+    for (const m of text.matchAll(/\{\s*([A-Za-z_]+)\s*\}/g)) {
+      const key = m[1].toLowerCase();
+      if (!this.autoVariables.includes(key)) found.add(m[1]);
+    }
+    return [...found];
+  }
+
   onSubmit(): void {
     if (this.communicationForm.invalid) {
       this.markFormGroupTouched(this.communicationForm);
@@ -493,6 +506,17 @@ export class CreateCommunication implements OnInit, OnDestroy {
         this.scrollToTop();
         return;
       }
+    }
+
+    // {date}, {time}, {event_name}, {amount} … are not filled in automatically. Warn instead of sending them as-is.
+    const leftover = this.unfilledPlaceholders(this.communicationForm.value.message || '');
+    if (leftover.length) {
+      const list = leftover.map((v) => `{${v}}`).join(', ');
+      const ok = confirm(
+        `Your message still contains ${list}, which will NOT be filled in automatically and will be sent exactly like that.\n\n` +
+        `Replace ${leftover.length > 1 ? 'them' : 'it'} with the real details first.\n\nSend anyway?`,
+      );
+      if (!ok) return;
     }
 
     this.loading = true;

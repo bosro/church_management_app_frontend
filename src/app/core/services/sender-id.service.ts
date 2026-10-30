@@ -52,6 +52,8 @@ export interface CheckResult {
 export type ProviderStatus = 'approved' | 'pending' | 'declined';
 export interface ProviderSender { name: string; status: ProviderStatus; raw_status: string }
 
+export interface ChurchPick { id: string; name: string; emails: string[] }
+
 export interface AdminSenderIdRow {
   id: string;
   church_id: string;
@@ -179,6 +181,54 @@ export class SenderIdService {
   }
 
   // ── Super admin side ───────────────────────────────────────
+
+  // ── Super admin fix-up tools ───────────────────────────────
+
+  private async adminRpc(fn: string, args: Record<string, unknown>, fallback: string): Promise<any> {
+    const { data, error } = await this.supabase.client.rpc(fn, args);
+    if (error) throw new Error(error.message);
+    if (!(data as RpcResult)?.success) throw new Error((data as RpcResult)?.error || fallback);
+    return data;
+  }
+
+  renameSenderId(id: string, newName: string): Promise<any> {
+    return this.adminRpc('admin_rename_sender_id', { p_id: id, p_new_name: newName }, 'Could not rename.');
+  }
+
+  moveSenderId(id: string, toChurchId: string): Promise<any> {
+    return this.adminRpc('admin_move_sender_id', { p_id: id, p_to_church: toChurchId }, 'Could not move.');
+  }
+
+  editOpenRequest(requestId: string, newName: string | null, toChurchId: string | null): Promise<any> {
+    return this.adminRpc('admin_edit_sender_request',
+      { p_request_id: requestId, p_new_name: newName, p_to_church: toChurchId }, 'Could not update the request.');
+  }
+
+  /** Fix capital letters to match exactly what GiantSMS lists. Returns what changed. */
+  async syncCasing(providerNames: string[]): Promise<{ from: string; to: string }[]> {
+    const data = await this.adminRpc('admin_sync_sender_id_casing', { p_names: providerNames }, 'Could not match names.');
+    return (data.changed || []) as { from: string; to: string }[];
+  }
+
+  async listChurchesForPicker(): Promise<ChurchPick[]> {
+    const { data, error } = await this.supabase.client
+      .from('churches')
+      .select('id, name, email, contact_email, billing_email, admin_notification_email')
+      .order('name');
+    if (error) throw new Error(error.message);
+    return (data || []).map((c: any) => ({
+      id: c.id,
+      name: (c.name || '').trim(),
+      emails: [c.email, c.contact_email, c.billing_email, c.admin_notification_email].filter(Boolean),
+    }));
+  }
+
+  /** The church that a user account (by email) belongs to. */
+  async churchIdForUserEmail(email: string): Promise<string | null> {
+    const { data } = await this.supabase.client
+      .from('profiles').select('church_id').ilike('email', email.trim()).not('church_id', 'is', null).limit(1);
+    return data?.[0]?.church_id ?? null;
+  }
 
   /** Every sender ID at GiantSMS with its approval status (null if GiantSMS can't be reached). */
   async getProviderSenders(): Promise<{ senders: ProviderSender[] | null; error?: string }> {
