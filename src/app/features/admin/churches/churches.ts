@@ -419,7 +419,7 @@ export class Churches implements OnInit {
 
   reactivateChurch(church: Church): void {
     if (!confirm(`Reactivate ${church.name}? Its users will be able to sign in again and everything will be as it was.`)) return;
-    this.adminService.setChurchActive(church.id, true).subscribe({
+    this.adminService.reactivateChurch(church.id).subscribe({
       next: () => {
         this.successMessage = `${church.name} reactivated.`;
         this.loadChurches();
@@ -427,31 +427,47 @@ export class Churches implements OnInit {
       },
       error: (error) => {
         this.errorMessage = error.message || 'Failed to reactivate church';
-        setTimeout(() => (this.errorMessage = ''), 3000);
+        setTimeout(() => (this.errorMessage = ''), 4000);
       },
     });
   }
 
-  deactivateChurch(church: Church): void {
-    if (
-      !confirm(
-        `Deactivate ${church.name}?\n\n` +
-          `• It will disappear from the signup list\n` +
-          `• All its users will be signed out and cannot sign in\n` +
-          `• Its public links and teacher PIN page stop working\n` +
-          `• No data is deleted — you can reactivate it any time.`,
-      )
-    )
-      return;
-    this.adminService.deleteChurch(church.id).subscribe({
+  // ── Suspend with a reason ─────────────────────────────────────
+  suspendTarget: Church | null = null;
+  suspendReason = '';
+  suspending = false;
+
+  openSuspend(church: Church): void {
+    this.suspendTarget = church;
+    this.suspendReason = '';
+    this.errorMessage = '';
+  }
+
+  closeSuspend(): void {
+    if (!this.suspending) this.suspendTarget = null;
+  }
+
+  get suspendValid(): boolean {
+    const n = this.suspendReason.trim().length;
+    return n >= 3 && n <= 300;
+  }
+
+  confirmSuspend(): void {
+    if (!this.suspendTarget || !this.suspendValid || this.suspending) return;
+    this.suspending = true;
+    const church = this.suspendTarget;
+    this.adminService.suspendChurch(church.id, this.suspendReason.trim()).subscribe({
       next: () => {
-        this.successMessage = 'Church deactivated successfully!';
+        this.suspending = false;
+        this.suspendTarget = null;
+        this.successMessage = `${church.name} suspended. Its users are signed out and will see your reason.`;
         this.loadChurches();
-        setTimeout(() => (this.successMessage = ''), 3000);
+        setTimeout(() => (this.successMessage = ''), 5000);
       },
       error: (error) => {
-        this.errorMessage = error.message || 'Failed to deactivate church';
-        setTimeout(() => (this.errorMessage = ''), 3000);
+        this.suspending = false;
+        this.errorMessage = error.message || 'Failed to suspend church';
+        setTimeout(() => (this.errorMessage = ''), 5000);
       },
     });
   }

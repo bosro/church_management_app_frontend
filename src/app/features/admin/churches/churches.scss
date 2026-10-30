@@ -942,3 +942,17 @@
 .members-toolbar { display: flex; gap: 8px; input { flex: 1; } }
 .members-pager { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 12px; }
 .muted { color: #6b7280; font-size: 13px; }
+
+
+// ── suspended state + dialog ──
+.status-badge.suspended { background: #FEF3C7; color: #92400E; }
+.suspend-note { display: flex; gap: .5rem; align-items: flex-start; background: #FFFBEB; border: 1px solid #FDE68A; color: #92400E; border-radius: 10px; padding: .625rem .75rem; margin: .75rem 0; font-size: .8125rem; line-height: 1.45;
+  i { font-size: 1.125rem; } em { color: #B45309; font-style: normal; opacity: .8; } }
+.sus-overlay { position: fixed; inset: 0; background: rgba(17,24,39,.55); display: flex; align-items: center; justify-content: center; padding: 1rem; z-index: 3000; }
+.sus-dialog { background: #fff; border-radius: 16px; padding: 1.5rem; width: 100%; max-width: 460px; font-family: 'Nunito Sans', sans-serif;
+  h3 { margin: 0 0 .75rem; font-size: 1.125rem; font-weight: 800; display: flex; gap: .5rem; align-items: center; }
+  ul { margin: 0 0 1rem; padding-left: 1.125rem; color: #4B5563; font-size: .875rem; line-height: 1.6; }
+  label { display: block; font-weight: 700; font-size: .8125rem; color: #374151; }
+  textarea { width: 100%; box-sizing: border-box; margin-top: .375rem; padding: .625rem .75rem; border: 1.5px solid #D1D5DB; border-radius: 10px; font-family: inherit; resize: vertical; }
+  .sus-count { text-align: right; font-size: .72rem; color: #9CA3AF; margin-top: .125rem; }
+  .sus-actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: 1rem; } }

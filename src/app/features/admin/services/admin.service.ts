@@ -300,24 +300,52 @@ export class AdminService {
    * Get all churches with subscription info and usage
    */
   getAllChurchesWithSubscription(): Observable<any[]> {
-    return from(
-      this.supabase.client
-        .from('churches')
-        .select(
-          `
-      id, name, location, is_active, created_at,
+    const base = `id, name, location, is_active, created_at,
       subscription_plan, subscription_tier,
       subscription_expires_at, subscription_started_at,
       billing_email, payment_reference,
       contact_email, contact_phone, size_category,
-      enabled_features, is_complimentary, billing_cycle
-    `,
-        )
-        .order('created_at', { ascending: false }),
+      enabled_features, is_complimentary, billing_cycle`;
+
+    return from(
+      (async () => {
+        // Newer columns (suspension note) — fall back quietly if the SQL hasn't been run yet
+        let res: { data: any[] | null; error: any } = await this.supabase.client
+          .from('churches')
+          .select(`${base}, suspended_at, suspended_reason`)
+          .order('created_at', { ascending: false });
+        if (res.error && /suspended_/i.test(res.error.message || '')) {
+          res = await this.supabase.client
+            .from('churches')
+            .select(base)
+            .order('created_at', { ascending: false });
+        }
+        if (res.error) throw res.error;
+        return res.data || [];
+      })(),
+    );
+  }
+
+  /** Suspend a church with a reason the church will see (super admin only). */
+  suspendChurch(churchId: string, reason: string): Observable<any> {
+    return from(
+      this.supabase.client.rpc('admin_suspend_church', { p_church_id: churchId, p_reason: reason }),
     ).pipe(
       map(({ data, error }) => {
-        if (error) throw error;
-        return data || [];
+        if (error) throw new Error(error.message);
+        if (!data?.success) throw new Error(data?.error || 'Could not suspend the church.');
+        return data;
+      }),
+    );
+  }
+
+  /** Reactivate a suspended / inactive church (super admin only). */
+  reactivateChurch(churchId: string): Observable<any> {
+    return from(this.supabase.client.rpc('admin_reactivate_church', { p_church_id: churchId })).pipe(
+      map(({ data, error }) => {
+        if (error) throw new Error(error.message);
+        if (!data?.success) throw new Error(data?.error || 'Could not reactivate the church.');
+        return data;
       }),
     );
   }

@@ -1,0 +1,14 @@
+<div class="paused-wrap">
+  <div class="paused-card">
+    <div class="icon"><i class="ri-pause-circle-line"></i></div>
+    <h1>Account paused</h1>
+    <p class="lead">
+      <ng-container *ngIf="churchName"><strong>{{ churchName }}</strong>’s account </ng-container>
+      <ng-container *ngIf="!churchName">This church account </ng-container>
+      is currently paused, so you have been signed out.
+    </p>
+    <div class="reason" *ngIf="reason"><span>Reason</span>{{ reason }}</div>
+    <p class="help">Your data is safe and nothing has been deleted. Please contact support to have the account switched back on.</p>
+    <a routerLink="/auth/signin" class="btn">Back to sign in</a>
+  </div>
+</div>

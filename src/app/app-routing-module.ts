@@ -5,6 +5,7 @@ import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { AuthGuard } from './core/guards/auth-guard';
 import { Unauthorized } from './shared/components/unauthorized/unauthorized';
+import { AccountPaused } from './shared/components/account-paused/account-paused';
 import { MemberRegistration } from './features/public/member-registration/member-registration';
 import { LinkCheckin } from './features/public/link-checkin/link-checkin';
 
@@ -37,6 +38,10 @@ const routes: Routes = [
   {
     path: 'unauthorized',
     component: Unauthorized,
+  },
+  {
+    path: 'account-paused',
+    component: AccountPaused,
   },
   // Catch-all: redirect to auth instead of creating a loop
   {

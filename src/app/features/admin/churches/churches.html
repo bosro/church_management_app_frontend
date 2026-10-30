@@ -56,8 +56,8 @@
             {{ church.location || church.city || 'Location not set' }}
           </p>
         </div>
-        <span class="status-badge" [class.active]="church.is_active" [class.inactive]="!church.is_active">
-          {{ church.is_active ? 'Active' : 'Inactive' }}
+        <span class="status-badge" [class.active]="church.is_active" [class.inactive]="!church.is_active" [class.suspended]="!!church.suspended_at">
+          {{ church.is_active ? 'Active' : (church.suspended_at ? 'Suspended' : 'Inactive') }}
         </span>
       </div>
 
@@ -88,6 +88,12 @@
         </div>
       </div>
 
+      <div class="suspend-note" *ngIf="church.suspended_at">
+        <i class="ri-pause-circle-line"></i>
+        <span><strong>Reason shown to the church:</strong> {{ church.suspended_reason }}
+          <em>({{ church.suspended_at | date:'mediumDate' }})</em></span>
+      </div>
+
       <div class="church-subscription">
         <span class="plan-badge" [ngClass]="getPlanBadgeClass(church.subscription_plan || 'free')">
           <i class="ri-vip-crown-line"></i>
@@ -112,9 +118,9 @@
           <i class="ri-edit-line"></i>
           Edit
         </button>
-        <button class="btn btn-danger" (click)="deactivateChurch(church)" *ngIf="church.is_active">
-          <i class="ri-close-circle-line"></i>
-          Deactivate
+        <button class="btn btn-danger" (click)="openSuspend(church)" *ngIf="church.is_active" title="Block this church's users and show them a reason">
+          <i class="ri-pause-circle-line"></i>
+          Suspend
         </button>
         <button class="btn btn-secondary" (click)="reactivateChurch(church)" *ngIf="!church.is_active">
           <i class="ri-checkbox-circle-line"></i>
@@ -665,6 +671,28 @@
       <button class="btn btn-secondary" (click)="closeDetails()">Close</button>
       <button class="btn btn-subscription" (click)="closeDetails(); openSubscriptionModal(detailChurchRow)" *ngIf="detailChurchRow">
         <i class="ri-vip-crown-line"></i> Manage subscription
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- suspend dialog -->
+<div class="sus-overlay" *ngIf="suspendTarget" (click)="closeSuspend()">
+  <div class="sus-dialog" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+    <h3><i class="ri-pause-circle-line"></i> Suspend {{ suspendTarget.name }}?</h3>
+    <ul>
+      <li>Its users are signed out and cannot sign in.</li>
+      <li>Its public links and teacher PIN page stop working.</li>
+      <li>No data is deleted. You can reactivate it any time.</li>
+    </ul>
+    <label>Reason (the church will see this)
+      <textarea rows="3" maxlength="300" [(ngModel)]="suspendReason" placeholder="e.g. Subscription unpaid since September"></textarea>
+    </label>
+    <div class="sus-count">{{ suspendReason.trim().length }}/300</div>
+    <div class="sus-actions">
+      <button class="btn btn-secondary" (click)="closeSuspend()" [disabled]="suspending">Cancel</button>
+      <button class="btn btn-danger" (click)="confirmSuspend()" [disabled]="!suspendValid || suspending">
+        {{ suspending ? 'Suspending…' : 'Suspend church' }}
       </button>
     </div>
   </div>

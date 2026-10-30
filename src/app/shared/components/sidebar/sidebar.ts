@@ -107,6 +107,13 @@ export class Sidebar implements OnInit {
           active: false,
           roles: ['super_admin'],
         },
+        {
+          icon: 'ri-history-line',
+          label: 'Audit Log',
+          route: '/main/admin/audit-log',
+          active: false,
+          roles: ['super_admin'],
+        },
       ],
     },
     {

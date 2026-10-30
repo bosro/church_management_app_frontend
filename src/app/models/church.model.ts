@@ -14,6 +14,8 @@ export interface Church {
   timezone?: string;
   currency?: string;
   is_active: boolean;
+  suspended_at?: string | null;
+  suspended_reason?: string | null;
   subscription_tier?: string;
   enabled_features?: string[];
   created_at?: string;

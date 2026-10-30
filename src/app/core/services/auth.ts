@@ -68,11 +68,13 @@ export class AuthService {
         if (user) {
           // Already signed in, but the church was deactivated meanwhile
           if (!(await this.isMyChurchActive())) {
+            const info = await this.getPausedInfo(); // must be read BEFORE signing out
             await this.supabase.client.auth.signOut();
             this.currentProfileSubject.next(null);
             this.getUserRolesService().clearCurrentUserPermissions();
             this.authReadySubject.next(true);
-            this.router.navigate(['/auth/signin']);
+            try { sessionStorage.setItem('churchman_paused', JSON.stringify(info || {})); } catch { /* ignore */ }
+            this.router.navigate(['/account-paused']);
             return;
           }
           await this.loadUserProfile(user.id);
@@ -107,6 +109,24 @@ export class AuthService {
     } catch {
       return true;
     }
+  }
+
+  /** Why the church is paused (null if the database function isn't installed yet). */
+  private async getPausedInfo(): Promise<{ church_name?: string; reason?: string | null; suspended?: boolean } | null> {
+    try {
+      const { data, error } = await this.supabase.client.rpc('get_my_church_access');
+      if (error || !data) return null;
+      return data as any;
+    } catch {
+      return null;
+    }
+  }
+
+  private pausedMessage(info: { church_name?: string; reason?: string | null; suspended?: boolean } | null): string {
+    if (info?.suspended && info.reason) {
+      return `This church account is paused. Reason: ${info.reason}. Please contact support.`;
+    }
+    return 'This church account has been deactivated. Please contact support.';
   }
 
   private async loadUserProfile(userId: string) {
@@ -152,10 +172,9 @@ export class AuthService {
 
         // A deactivated church cannot sign in (checked before anything else)
         if (!(await this.isMyChurchActive())) {
+          const info = await this.getPausedInfo(); // must be read BEFORE signing out
           await this.supabase.client.auth.signOut();
-          throw new Error(
-            'This church account has been deactivated. Please contact support.',
-          );
+          throw new Error(this.pausedMessage(info));
         }
 
         const { data: profile } = await this.supabase.query<User>('profiles', {

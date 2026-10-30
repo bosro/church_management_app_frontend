@@ -16,6 +16,7 @@ import { Finance } from './admin-layout/finance/finance';
 import { SmsSettings } from './sms-settings/sms-settings';
 import { SenderIdRequestsPage } from './sender-id-requests/sender-id-requests';
 import { SmsCredits } from './sms-credits/sms-credits';
+import { AuditLog } from './audit-log/audit-log';
 
 const routes: Routes = [
   {
@@ -33,6 +34,7 @@ const routes: Routes = [
       { path: 'sms-settings', component: SmsSettings },
       { path: 'sender-id-requests', component: SenderIdRequestsPage },
       { path: 'sms-credits', component: SmsCredits },
+      { path: 'audit-log', component: AuditLog },
       { path: '',                 redirectTo: 'dashboard', pathMatch: 'full' },
     ],
   },
@@ -50,6 +52,7 @@ const routes: Routes = [
     SmsSettings,   // ← NEW
     SenderIdRequestsPage,
     SmsCredits,
+    AuditLog,
   ],
   imports: [
     CommonModule,

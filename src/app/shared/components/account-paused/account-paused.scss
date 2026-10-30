@@ -1,0 +1,9 @@
+.paused-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #F9FAFB; padding: 1.5rem; font-family: 'Nunito Sans', sans-serif; }
+.paused-card { background: #fff; border: 1px solid #E5E7EB; border-radius: 18px; padding: 2.25rem 2rem; max-width: 460px; width: 100%; text-align: center; box-shadow: 0 10px 30px rgba(17,24,39,.06); }
+.icon { font-size: 3rem; color: #D97706; line-height: 1; }
+h1 { margin: .5rem 0; font-size: 1.625rem; font-weight: 800; color: #111827; }
+.lead { color: #374151; margin: 0 0 1rem; line-height: 1.55; }
+.reason { text-align: left; background: #FFFBEB; border: 1px solid #FDE68A; color: #92400E; border-radius: 12px; padding: .75rem 1rem; margin-bottom: 1rem; line-height: 1.5;
+  span { display: block; font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; margin-bottom: .125rem; } }
+.help { color: #6B7280; font-size: .875rem; margin: 0 0 1.25rem; line-height: 1.55; }
+.btn { display: inline-block; background: #5B21B6; color: #fff; text-decoration: none; font-weight: 800; padding: .625rem 1.25rem; border-radius: 10px; }

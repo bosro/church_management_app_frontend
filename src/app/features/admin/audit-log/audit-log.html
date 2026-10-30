@@ -1,0 +1,89 @@
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+  <div class="dashboard-content">
+    <app-header></app-header>
+    <div class="dashboard-body">
+      <div class="al-container">
+
+        <div class="page-header">
+          <h1>Audit Log</h1>
+          <p class="subtitle">Who changed what, and when, across all churches</p>
+        </div>
+
+        <div *ngIf="errorMessage" class="alert error"><i class="ri-error-warning-line"></i><span>{{ errorMessage }}</span></div>
+
+        <div class="filters">
+          <label>From<input type="date" [(ngModel)]="filters.from" /></label>
+          <label>To<input type="date" [(ngModel)]="filters.to" /></label>
+          <label>Church
+            <select [(ngModel)]="filters.churchId">
+              <option value="">All churches</option>
+              <option *ngFor="let c of churches" [value]="c.id">{{ c.name }}</option>
+            </select>
+          </label>
+          <label>What
+            <select [(ngModel)]="filters.table">
+              <option value="">Everything</option>
+              <option *ngFor="let t of tables" [value]="t">{{ tableLabel(t) }}</option>
+            </select>
+          </label>
+          <label>Action
+            <select [(ngModel)]="filters.action">
+              <option value="">Any</option>
+              <option value="INSERT">Created</option>
+              <option value="UPDATE">Changed</option>
+              <option value="DELETE">Deleted</option>
+            </select>
+          </label>
+          <label class="grow">Person
+            <input type="text" [(ngModel)]="filters.userSearch" placeholder="Name or email" (keyup.enter)="load(true)" />
+          </label>
+          <div class="f-actions">
+            <button class="btn primary" (click)="load(true)" [disabled]="loading"><i class="ri-search-line"></i> Search</button>
+            <button class="btn ghost" (click)="clear()" [disabled]="loading">Clear</button>
+          </div>
+        </div>
+
+        <div class="meta-row">
+          <span>{{ rangeText }}</span>
+          <div class="pager">
+            <button class="btn ghost sm" (click)="go(-1)" [disabled]="loading || page === 0"><i class="ri-arrow-left-s-line"></i> Newer</button>
+            <span>Page {{ page + 1 }} of {{ pages }}</span>
+            <button class="btn ghost sm" (click)="go(1)" [disabled]="loading || page + 1 >= pages">Older <i class="ri-arrow-right-s-line"></i></button>
+          </div>
+        </div>
+
+        <div *ngIf="loading" class="loading"><div class="spinner"></div></div>
+        <div *ngIf="!loading && !rows.length && !errorMessage" class="empty"><i class="ri-history-line"></i><p>No activity matches these filters.</p></div>
+
+        <div class="list" *ngIf="!loading && rows.length">
+          <div class="row" *ngFor="let r of rows" [class.open]="open.has(r.id)">
+            <button class="row-main" (click)="toggle(r.id)">
+              <span class="when">{{ r.created_at | date:'MMM d, y' }}<small>{{ r.created_at | date:'h:mm:ss a' }}</small></span>
+              <span class="act" [ngClass]="r.action">{{ actionLabel(r.action) }}</span>
+              <span class="what"><strong>{{ tableLabel(r.table_name) }}</strong><small>{{ summary(r) }}</small></span>
+              <span class="who">{{ who(r) }}<small>{{ r.church_name || '' }}</small></span>
+              <i class="ri-arrow-down-s-line chev"></i>
+            </button>
+
+            <div class="detail" *ngIf="open.has(r.id)">
+              <table *ngIf="r.action === 'UPDATE'">
+                <tr><th>Field</th><th>Before</th><th>After</th></tr>
+                <tr *ngFor="let c of changeEntries(r)"><td>{{ c.field }}</td><td class="from">{{ c.from }}</td><td class="to">{{ c.to }}</td></tr>
+              </table>
+              <table *ngIf="r.action !== 'UPDATE'">
+                <tr *ngFor="let d of dataEntries(r)"><td>{{ d.field }}</td><td>{{ d.value }}</td></tr>
+              </table>
+              <div class="ids">
+                <span *ngIf="r.user_email">By {{ r.user_email }}</span>
+                <span *ngIf="r.record_id">Record {{ r.record_id }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <p class="hint">Passwords, tokens and keys are always hidden. Changes made from the database editor or by automatic jobs show as “System / automatic”.</p>
+      </div>
+    </div>
+  </div>
+</div>
