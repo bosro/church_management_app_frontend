@@ -344,7 +344,7 @@ export class CommitmentForm implements OnInit, OnDestroy {
     }
 
     this.campaignService
-      .createCommitment(dto)
+      .createCommitment(dto, { public: this.isPublic })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (commitment) => {

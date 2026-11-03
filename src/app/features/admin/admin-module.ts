@@ -17,6 +17,7 @@ import { SmsSettings } from './sms-settings/sms-settings';
 import { SenderIdRequestsPage } from './sender-id-requests/sender-id-requests';
 import { SmsCredits } from './sms-credits/sms-credits';
 import { AuditLog } from './audit-log/audit-log';
+import { PaymentReconciliation } from './payment-reconciliation/payment-reconciliation';
 
 const routes: Routes = [
   {
@@ -35,6 +36,7 @@ const routes: Routes = [
       { path: 'sender-id-requests', component: SenderIdRequestsPage },
       { path: 'sms-credits', component: SmsCredits },
       { path: 'audit-log', component: AuditLog },
+      { path: 'payment-reconciliation', component: PaymentReconciliation },
       { path: '',                 redirectTo: 'dashboard', pathMatch: 'full' },
     ],
   },
@@ -53,6 +55,7 @@ const routes: Routes = [
     SenderIdRequestsPage,
     SmsCredits,
     AuditLog,
+    PaymentReconciliation,
   ],
   imports: [
     CommonModule,

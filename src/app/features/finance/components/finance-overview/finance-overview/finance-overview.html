@@ -29,6 +29,12 @@
             <button class="btn-primary" (click)="recordGiving()">
               <i class="ri-add-line"></i><span>Record Giving</span>
             </button>
+            <button class="btn-secondary" *ngIf="canManageFinance" (click)="openServiceEntry()" title="Quick entry for payments received during service">
+              <i class="ri-hand-coin-line"></i><span>Service Entry</span>
+            </button>
+            <button class="btn-secondary" *ngIf="canManageFinance" (click)="openTreasurerAccess()" title="Set up the treasurer's PIN link">
+              <i class="ri-key-2-line"></i><span>Treasurer Link</span>
+            </button>
             <button class="btn-primary" *ngIf="permissionService.isAdmin || permissionService.finance.manage"
               (click)="viewWithdrawals()">
               <i class="ri-bank-card-line"></i><span>Withdrawals</span>

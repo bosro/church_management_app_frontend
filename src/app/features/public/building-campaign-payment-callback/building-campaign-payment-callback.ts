@@ -63,14 +63,23 @@ export class BuildingCampaignPaymentCallback implements OnInit {
     // Poll for up to 10s for the webhook to process
     let attempts = 0;
     const check = async () => {
-      const { data } = await this.supabase.client
-        .from('giving_transactions')
-        .select('payment_status, amount')
-        .or(`paystack_reference.eq.${this.reference},transaction_reference.eq.${this.reference}`)
-        .single();
+      // Ask the server only for THIS payment's status (no table access needed)
+      let data: { payment_status?: string | null; amount?: number } | null = null;
+      const viaRpc = await this.supabase.client.rpc('get_public_payment_status', { p_reference: this.reference });
+      if (!viaRpc.error && viaRpc.data) {
+        data = viaRpc.data as any;
+      } else {
+        // older database without the function: previous behaviour
+        const old = await this.supabase.client
+          .from('giving_transactions')
+          .select('payment_status, amount')
+          .or(`paystack_reference.eq.${this.reference},transaction_reference.eq.${this.reference}`)
+          .maybeSingle();
+        data = old.data as any;
+      }
 
       if (data?.payment_status === 'completed') {
-        this.amount = data.amount;
+        this.amount = data.amount ?? 0;
         this.success = true;
         this.loading = false;
       } else if (attempts++ < 5) {

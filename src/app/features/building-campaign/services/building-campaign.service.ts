@@ -99,7 +99,41 @@ export class BuildingCampaignService {
     );
   }
 
-  createCommitment(dto: CreateCommitmentDto): Observable<BuildingCommitment> {
+  /**
+   * Saves a commitment.
+   * - opts.public = true (the shared public link, nobody signed in): goes through the create_public_commitment
+   *   database function, which checks everything server-side. Direct table access for visitors is being closed.
+   * - otherwise (church staff): normal insert, protected by the church's own row-security rules.
+   */
+  createCommitment(dto: CreateCommitmentDto, opts?: { public?: boolean }): Observable<BuildingCommitment> {
+    if (opts?.public) {
+      if (!dto.church_id) {
+        return throwError(() => new Error('Church not identified. Please use the shared link.'));
+      }
+      return from(
+        this.supabase.client.rpc('create_public_commitment', {
+          p_church_id: dto.church_id,
+          p_visitor_name: dto.visitor_name || null,
+          p_visitor_contact: dto.visitor_contact || null,
+          p_total_pledge_amount: dto.total_pledge_amount,
+          p_initial_payment: dto.initial_payment,
+          p_instalment_frequency: dto.instalment_frequency,
+          p_instalment_count: dto.instalment_count,
+          p_currency: dto.currency || 'GHS',
+          p_payment_method: dto.payment_method || null,
+          p_campaign_name: dto.campaign_name || null,
+          p_notes: dto.notes || null,
+          p_member_id: dto.member_id || null,
+        }),
+      ).pipe(
+        map(({ data, error }) => {
+          if (error) throw new Error(error.message);
+          return data as BuildingCommitment;
+        }),
+        catchError((err) => throwError(() => err)),
+      );
+    }
+
     let churchId: string;
     try {
       churchId = dto.church_id || this.getChurchId();

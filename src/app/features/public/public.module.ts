@@ -8,6 +8,7 @@ import { QrCodeModule } from 'ng-qrcode';
 import { LinkCheckin } from './link-checkin/link-checkin';
 import { MemberRegistration } from './member-registration/member-registration';
 import { FeedingRecord } from './feeding-record/feeding-record';
+import { TreasurerEntry } from './treasurer-entry/treasurer-entry';
 import { PublicStudentRegistration } from './public-student-registration/public-student-registration';
 import { PublicEventRegistration } from './event-registration/event-registration';
 import { GivingThankYouPage } from './giving-thank-you/giving-thank-you';
@@ -37,6 +38,11 @@ const routes: Routes = [
   {
     path: 'register/:token',
     component: MemberRegistration,
+  },
+  {
+    // Treasurer Service Entry (PIN link, like the teacher feeding page)
+    path: 'treasurer/:churchId',
+    component: TreasurerEntry,
   },
   {
     path: 'feeding-fees/:churchId', // ← was :token

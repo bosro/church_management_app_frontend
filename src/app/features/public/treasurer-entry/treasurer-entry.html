@@ -1,0 +1,173 @@
+<div class="te" [class.embedded]="!isPublic">
+
+  <!-- ══ loading ══ -->
+  <div class="center" *ngIf="screen === 'loading'"><div class="spinner"></div><p>Opening…</p></div>
+
+  <!-- ══ not available ══ -->
+  <div class="card narrow" *ngIf="screen === 'off'">
+    <div class="big-icon"><i class="ri-lock-line"></i></div>
+    <h1>Service entry is not available</h1>
+    <p class="muted">{{ churchName || 'This church' }} has not switched this page on (or it has been paused). Please ask the church admin.</p>
+  </div>
+
+  <!-- ══ error ══ -->
+  <div class="card narrow" *ngIf="screen === 'error'">
+    <div class="big-icon warn"><i class="ri-error-warning-line"></i></div>
+    <h1>We could not open this page</h1>
+    <p class="muted">{{ errorText }}</p>
+    <button class="btn primary block" (click)="start()">Try again</button>
+  </div>
+
+  <!-- ══ PIN ══ -->
+  <div class="card narrow" *ngIf="screen === 'pin'">
+    <div class="big-icon"><i class="ri-hand-coin-line"></i></div>
+    <h1>Service Entry</h1>
+    <p class="muted" *ngIf="churchName">{{ churchName }}</p>
+    <p class="muted">Enter your name and the PIN the church admin gave you.</p>
+
+    <label class="lab">Your name
+      <input type="text" [(ngModel)]="recorderName" placeholder="e.g. Sister Grace" maxlength="60" autocomplete="name" />
+    </label>
+    <label class="lab">PIN
+      <input class="pin" type="password" inputmode="numeric" autocomplete="off" maxlength="8" placeholder="• • • •"
+             [(ngModel)]="pin" (keyup.enter)="submitPin()" [disabled]="verifying" />
+    </label>
+    <p class="err" *ngIf="pinError">{{ pinError }}</p>
+    <p class="hint" *ngIf="attemptsLeft !== null && attemptsLeft > 0">{{ attemptsLeft }} attempt(s) left before a 15-minute wait.</p>
+    <button class="btn primary block" (click)="submitPin()" [disabled]="verifying || !pin.trim() || recorderName.trim().length < 2">
+      {{ verifying ? 'Checking…' : 'Continue' }}
+    </button>
+    <p class="foot">Forgot the PIN? Ask the church admin.</p>
+  </div>
+
+  <!-- ══ ENTRY ══ -->
+  <ng-container *ngIf="screen === 'ready' && boot">
+
+    <div class="topbar">
+      <div>
+        <div class="church">{{ churchName }}</div>
+        <div class="sub">Recording as <strong>{{ boot.recorder_name }}</strong> · {{ dateIsToday ? 'today' : dateLabel }}</div>
+      </div>
+      <div class="today-chip">
+        <span>{{ dateIsToday ? 'Today' : 'This date' }}</span>
+        <strong>{{ money(today?.total || 0) }}</strong>
+        <small>{{ today?.count || 0 }} entr{{ (today?.count || 0) === 1 ? 'y' : 'ies' }}</small>
+      </div>
+      <button class="btn ghost sm" *ngIf="isPublic" (click)="endSession()"><i class="ri-logout-box-r-line"></i> End</button>
+    </div>
+
+    <div class="grid">
+
+      <!-- ── form ── -->
+      <div class="card">
+        <div class="ok-banner" *ngIf="lastSaved">
+          <i class="ri-checkbox-circle-fill"></i>
+          <div>
+            <strong>Saved {{ money(lastSaved.total) }} for {{ lastSaved.who }}</strong>
+            <div class="rcpts"><span *ngFor="let r of lastSaved.receipts">{{ r.category }} {{ money(r.amount) }}<ng-container *ngIf="r.receipt"> · {{ r.receipt }}</ng-container></span></div>
+          </div>
+          <button class="x" (click)="lastSaved = null" aria-label="Dismiss"><i class="ri-close-line"></i></button>
+        </div>
+
+        <h2>Who gave?</h2>
+        <div class="seg">
+          <button type="button" [class.on]="who === 'member'" (click)="setWho('member')">Member</button>
+          <button type="button" [class.on]="who === 'visitor'" (click)="setWho('visitor')">Visitor / other</button>
+          <button type="button" [class.on]="who === 'anonymous'" (click)="setWho('anonymous')">Anonymous</button>
+        </div>
+
+        <ng-container *ngIf="who === 'member'">
+          <div class="chosen" *ngIf="member">
+            <div class="avatar">{{ member.name.charAt(0) }}</div>
+            <div class="who"><strong>{{ member.name }}</strong><small>{{ member.member_number }}<ng-container *ngIf="member.phone_hint"> · …{{ member.phone_hint }}</ng-container></small></div>
+            <button class="btn ghost sm" (click)="clearMember()">Change</button>
+          </div>
+          <div *ngIf="!member">
+            <div class="search">
+              <i class="ri-search-line"></i>
+              <input type="text" [(ngModel)]="query" (ngModelChange)="onQuery()" placeholder="Type a name, member number or phone" autocomplete="off" />
+              <i class="ri-loader-4-line spin" *ngIf="searching"></i>
+            </div>
+            <div class="hits" *ngIf="hits.length">
+              <button type="button" *ngFor="let h of hits" (click)="pickMember(h)">
+                <span class="avatar sm">{{ h.name.charAt(0) }}</span>
+                <span class="who"><strong>{{ h.name }}</strong><small>{{ h.member_number }}<ng-container *ngIf="h.phone_hint"> · …{{ h.phone_hint }}</ng-container></small></span>
+              </button>
+            </div>
+            <p class="hint" *ngIf="query.trim().length >= 2 && !searching && !hits.length">No member found. Try fewer letters, or use “Visitor / other”.</p>
+            <p class="hint" *ngIf="query.trim().length < 2">Type at least 2 letters.</p>
+          </div>
+        </ng-container>
+
+        <ng-container *ngIf="who === 'visitor'">
+          <div class="two">
+            <label class="lab">Name<input type="text" [(ngModel)]="visitorName" placeholder="Full name" maxlength="100" /></label>
+            <label class="lab">Phone (optional)<input type="tel" [(ngModel)]="visitorPhone" placeholder="024…" maxlength="30" /></label>
+          </div>
+        </ng-container>
+        <p class="hint" *ngIf="who === 'anonymous'">Recorded as “Anonymous”, for loose offerings with no name.</p>
+
+        <h2>How much, and for what?</h2>
+        <div class="line" *ngFor="let l of lines; let i = index; trackBy: trackByIndex">
+          <select [(ngModel)]="l.category_id" [attr.aria-label]="'Category ' + (i + 1)">
+            <option value="">Choose category…</option>
+            <option *ngFor="let c of boot.categories" [value]="c.id">{{ c.name }}</option>
+          </select>
+          <input class="amt" type="number" inputmode="decimal" min="0" step="0.01" [(ngModel)]="l.amount" placeholder="0.00" [attr.aria-label]="'Amount ' + (i + 1)" />
+          <button type="button" class="rm" *ngIf="lines.length > 1" (click)="removeLine(i)" aria-label="Remove line"><i class="ri-close-line"></i></button>
+        </div>
+        <button type="button" class="link" (click)="addLine()" *ngIf="lines.length < 8"><i class="ri-add-line"></i> Add another category for this person</button>
+
+        <h2>Paid by</h2>
+        <div class="pills">
+          <button type="button" *ngFor="let m of boot.methods" [class.on]="method === m.value" (click)="method = m.value">{{ m.label }}</button>
+        </div>
+
+        <div class="datebar">
+          <span><i class="ri-calendar-line"></i> {{ dateIsToday ? 'Today · ' : '' }}{{ dateLabel }}</span>
+          <button type="button" class="link" (click)="showDate = !showDate">{{ showDate ? 'Done' : 'Change date' }}</button>
+        </div>
+        <input *ngIf="showDate" class="datein" type="date" [(ngModel)]="date" [min]="minDate" [max]="boot.server_today" (change)="loadToday()" />
+
+        <button type="button" class="link" (click)="showMore = !showMore">{{ showMore ? 'Hide' : 'Add' }} reference / note</button>
+        <div class="two" *ngIf="showMore">
+          <label class="lab">Reference (MoMo ID, cheque no.)<input type="text" [(ngModel)]="reference" maxlength="60" /></label>
+          <label class="lab">Note<input type="text" [(ngModel)]="notes" maxlength="300" /></label>
+        </div>
+
+        <p class="err" *ngIf="saveError">{{ saveError }}</p>
+        <button class="btn primary big block" (click)="save()" [disabled]="!canSave">
+          <i class="ri-loader-4-line spin" *ngIf="saving"></i>
+          {{ saving ? 'Saving…' : total > 0 ? 'Save ' + money(total) : 'Save' }}
+        </button>
+        <p class="hint center-t" *ngIf="problem && !saving && (member || who !== 'member' || total > 0)">{{ problem }}</p>
+      </div>
+
+      <!-- ── today ── -->
+      <div class="card">
+        <div class="row-h">
+          <h2>{{ dateIsToday ? 'Entered today' : 'Entered on ' + dateLabel }}</h2>
+          <button class="btn ghost sm" (click)="loadToday()" [disabled]="loadingToday"><i class="ri-refresh-line" [class.spin]="loadingToday"></i></button>
+        </div>
+
+        <div class="empty" *ngIf="today && !today.rows.length"><i class="ri-inbox-line"></i><p>Nothing recorded yet.</p></div>
+
+        <div class="cats" *ngIf="today?.by_category?.length">
+          <div *ngFor="let c of today!.by_category"><span>{{ c.name }} <small>({{ c.count }})</small></span><strong>{{ money(c.total) }}</strong></div>
+        </div>
+
+        <div class="entries">
+          <div class="entry" *ngFor="let r of today?.rows">
+            <div class="e-main">
+              <strong>{{ r.who }}</strong>
+              <small>{{ r.category }} · {{ methodLabel(r.method) }} · {{ r.time | date:'h:mm a' }}<ng-container *ngIf="r.recorder"> · {{ r.recorder }}</ng-container><ng-container *ngIf="r.receipt"> · {{ r.receipt }}</ng-container></small>
+            </div>
+            <div class="e-amt">{{ money(r.amount) }}</div>
+            <button class="btn ghost sm undo" *ngIf="r.can_undo" (click)="undo(r)" [disabled]="undoingId === r.id" title="Remove this mistaken entry">Undo</button>
+          </div>
+        </div>
+        <p class="hint" *ngIf="today?.rows?.length">“Undo” is available for your own entries for {{ boot.undo_minutes }} minutes. After that, ask the church admin.</p>
+      </div>
+    </div>
+  </ng-container>
+</div>

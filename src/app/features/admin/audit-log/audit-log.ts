@@ -19,7 +19,7 @@ const TABLE_LABELS: Record<string, string> = {
 })
 export class AuditLog implements OnInit {
   readonly pageSize = 50;
-  filters: AuditFilters = {};
+  filters: AuditFilters = { churchId: '', table: '', action: '' };
   tables: string[] = [];
   churches: { id: string; name: string }[] = [];
 
@@ -59,7 +59,7 @@ export class AuditLog implements OnInit {
   }
 
   clear(): void {
-    this.filters = {};
+    this.filters = { churchId: '', table: '', action: '' };
     this.load(true);
   }
 
@@ -77,28 +77,53 @@ export class AuditLog implements OnInit {
     await this.load();
   }
 
-  tableLabel(t: string): string { return TABLE_LABELS[t] || t.replace(/_/g, ' '); }
+  /** Names are looked up defensively: rows written by the app itself (not a database trigger) can lack a table name. */
+  tableLabel(t: string | null | undefined): string {
+    if (!t) return 'Other activity';
+    return TABLE_LABELS[t] || String(t).replace(/_/g, ' ');
+  }
 
-  actionLabel(a: string): string {
-    return a === 'INSERT' ? 'Created' : a === 'UPDATE' ? 'Changed' : a === 'DELETE' ? 'Deleted' : a;
+  actionLabel(a: string | null | undefined): string {
+    if (a === 'INSERT') return 'Created';
+    if (a === 'UPDATE') return 'Changed';
+    if (a === 'DELETE') return 'Deleted';
+    if (!a) return 'Event';
+    const x = String(a).toLowerCase().replace(/_/g, ' ');
+    return x.charAt(0).toUpperCase() + x.slice(1);
+  }
+
+  /** CSS class for the action chip (unknown actions get a neutral one) */
+  actionClass(a: string | null | undefined): string {
+    return a === 'INSERT' || a === 'UPDATE' || a === 'DELETE' ? a : 'OTHER';
   }
 
   who(r: AuditRow): string {
     return r.user_name || (r.user_id ? 'Unknown user' : 'System / automatic');
   }
 
-  /** one-line summary shown in the table */
+  /** one-line summary shown in the table — never throws, whatever the row looks like */
   summary(r: AuditRow): string {
-    if (r.action === 'UPDATE' && r.changes) {
-      const keys = Object.keys(r.changes);
-      if (!keys.length) return 'No visible changes';
-      const shown = keys.slice(0, 4).map((k) => k.replace(/_/g, ' ')).join(', ');
-      return keys.length > 4 ? `${shown} +${keys.length - 4} more` : shown;
+    try {
+      if (r.action === 'UPDATE' && r.changes && typeof r.changes === 'object') {
+        const keys = Object.keys(r.changes);
+        if (!keys.length) return 'No visible changes';
+        const shown = keys.slice(0, 4).map((k) => k.replace(/_/g, ' ')).join(', ');
+        return keys.length > 4 ? `${shown} +${keys.length - 4} more` : shown;
+      }
+      const d = r.data && typeof r.data === 'object' && !Array.isArray(r.data) ? (r.data as Record<string, unknown>) : {};
+      const pick = (...ks: string[]): string => {
+        for (const k of ks) {
+          const v = d[k];
+          if (typeof v === 'string' || typeof v === 'number') return String(v);
+        }
+        return '';
+      };
+      const name = pick('name', 'title', 'full_name', 'first_name', 'sender_id', 'requested_sender_id', 'key');
+      const last = pick('last_name');
+      return `${name} ${last}`.trim();
+    } catch {
+      return '';
     }
-    const d = r.data || {};
-    const name = (d['name'] ?? d['title'] ?? d['full_name'] ?? d['first_name'] ?? d['sender_id'] ?? d['requested_sender_id'] ?? d['key'] ?? '') as string;
-    const last = (d['last_name'] ?? '') as string;
-    return `${name} ${last}`.trim();
   }
 
   toggle(id: string): void {
@@ -106,18 +131,25 @@ export class AuditLog implements OnInit {
   }
 
   changeEntries(r: AuditRow): { field: string; from: string; to: string }[] {
-    return Object.entries(r.changes || {}).map(([field, v]) => ({ field: field.replace(/_/g, ' '), from: this.fmt(v.from), to: this.fmt(v.to) }));
+    if (!r.changes || typeof r.changes !== 'object') return [];
+    return Object.entries(r.changes).map(([field, v]) => ({
+      field: field.replace(/_/g, ' '), from: this.fmt(v?.from), to: this.fmt(v?.to),
+    }));
   }
 
   dataEntries(r: AuditRow): { field: string; value: string }[] {
-    return Object.entries(r.data || {})
+    const d = r.data;
+    if (d === null || d === undefined) return [];
+    if (typeof d !== 'object' || Array.isArray(d)) return [{ field: 'details', value: this.fmt(d) }];
+    return Object.entries(d)
       .filter(([, v]) => v !== null && v !== '' && v !== undefined)
       .map(([field, v]) => ({ field: field.replace(/_/g, ' '), value: this.fmt(v) }));
   }
 
   private fmt(v: unknown): string {
     if (v === null || v === undefined || v === '') return '—';
-    const s = typeof v === 'object' ? JSON.stringify(v) : String(v);
+    let s: string;
+    try { s = typeof v === 'object' ? JSON.stringify(v) : String(v); } catch { s = '[unreadable]'; }
     return s.length > 160 ? s.slice(0, 160) + '…' : s;
   }
 }

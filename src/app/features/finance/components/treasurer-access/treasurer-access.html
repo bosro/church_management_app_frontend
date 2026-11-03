@@ -1,0 +1,119 @@
+<div class="ta-container">
+  <div class="page-header">
+    <div>
+      <h1>Treasurer Service Entry</h1>
+      <p class="subtitle">Let your treasurer record payments received during service from a phone or tablet</p>
+    </div>
+    <a routerLink="/main/finance/service-entry" class="btn ghost"><i class="ri-hand-coin-line"></i> Open Service Entry</a>
+  </div>
+
+  <div *ngIf="successMessage" class="alert success"><i class="ri-checkbox-circle-line"></i><span>{{ successMessage }}</span></div>
+  <div *ngIf="errorMessage" class="alert error"><i class="ri-error-warning-line"></i><span>{{ errorMessage }}</span></div>
+  <div *ngIf="loading" class="loading"><div class="spinner"></div></div>
+
+  <ng-container *ngIf="!loading && settings">
+
+    <div class="info">
+      <i class="ri-information-line"></i>
+      <span>Entries made here are <strong>normal giving records</strong>. They appear straight away in Finance → Giving Transactions and in your reports, with a receipt number, and are marked with who recorded them.</span>
+    </div>
+
+    <!-- 1. link on/off -->
+    <div class="card">
+      <div class="row-h">
+        <div>
+          <h3>1. The link</h3>
+          <p class="muted">{{ enabled ? 'The treasurer can open this link and sign in with the PIN.' : 'The link is switched off — nobody can use it.' }}</p>
+        </div>
+        <button class="switch" [class.on]="enabled" (click)="toggleEnabled()" [disabled]="working || !settings.has_pin" role="switch" [attr.aria-checked]="enabled">
+          <span></span>
+        </button>
+      </div>
+      <p class="warn" *ngIf="!settings.has_pin"><i class="ri-alarm-warning-line"></i> Set a PIN below first, then switch the link on.</p>
+
+      <div class="linkbox">
+        <input type="text" readonly [value]="link" (focus)="$any($event.target).select()" />
+        <button class="btn ghost" (click)="copy()"><i [class]="copied ? 'ri-check-line' : 'ri-file-copy-line'"></i> {{ copied ? 'Copied' : 'Copy' }}</button>
+        <button class="btn ghost" (click)="showQr = !showQr"><i class="ri-qr-code-line"></i> QR</button>
+      </div>
+      <div class="qr" *ngIf="showQr">
+        <qr-code [value]="link" [size]="200" [errorCorrectionLevel]="'M'"></qr-code>
+        <p class="muted small">Scan on the treasurer’s phone or tablet and add it to the home screen.</p>
+      </div>
+    </div>
+
+    <!-- 2. PIN -->
+    <div class="card">
+      <h3>2. PIN</h3>
+      <p class="muted">
+        <ng-container *ngIf="settings.has_pin">A PIN is set<ng-container *ngIf="settings.pin_set_at"> (last changed {{ settings.pin_set_at | date:'mediumDate' }})</ng-container>. </ng-container>
+        <ng-container *ngIf="!settings.has_pin">No PIN yet. </ng-container>
+        Give it only to the treasurer. Changing it signs everyone out and clears any wrong-PIN lock.
+      </p>
+      <p class="warn" *ngIf="settings.locked_until"><i class="ri-lock-line"></i> Locked after too many wrong attempts until {{ settings.locked_until | date:'shortTime' }}. Setting a new PIN unlocks it now.</p>
+      <div class="pinrow">
+        <input type="password" inputmode="numeric" maxlength="8" placeholder="4 to 8 digits" [(ngModel)]="newPin" (keyup.enter)="savePin()" autocomplete="new-password" />
+        <button class="btn primary" (click)="savePin()" [disabled]="!pinValid || working">{{ settings.has_pin ? 'Change PIN' : 'Set PIN' }}</button>
+      </div>
+    </div>
+
+    <!-- 3. limits -->
+    <div class="card">
+      <h3>3. Safety limits</h3>
+      <div class="grid3">
+        <label>Largest single amount
+          <input type="number" min="1" step="100" [(ngModel)]="maxAmount" />
+          <small>Bigger amounts must be recorded by an admin.</small>
+        </label>
+        <label>How many days back can a date be?
+          <input type="number" min="0" max="90" [(ngModel)]="maxBackdateDays" />
+          <small>0 = today only.</small>
+        </label>
+        <label>Undo a mistake within (minutes)
+          <input type="number" min="0" max="120" [(ngModel)]="undoMinutes" />
+          <small>0 = treasurer cannot undo.</small>
+        </label>
+      </div>
+      <div class="actions">
+        <button class="btn primary" (click)="saveSettings()" [disabled]="!settingsValid || working">Save limits</button>
+        <span class="muted small">{{ settings.open_sessions }} open session(s)</span>
+        <button class="btn ghost" (click)="signEveryoneOut()" [disabled]="working || !settings.open_sessions">Sign everyone out</button>
+      </div>
+    </div>
+
+    <!-- 4. what was entered -->
+    <div class="card">
+      <div class="row-h">
+        <h3>4. Entered through Service Entry</h3>
+        <button class="btn ghost" (click)="exportCsv()" [disabled]="!entries?.rows?.length"><i class="ri-download-line"></i> Export</button>
+      </div>
+      <div class="range">
+        <label>From <input type="date" [(ngModel)]="from" /></label>
+        <label>To <input type="date" [(ngModel)]="to" /></label>
+        <button class="btn ghost" (click)="loadEntries()" [disabled]="loadingEntries"><i class="ri-search-line"></i> Show</button>
+        <div class="tot" *ngIf="entries">
+          <span>{{ entries.count }} entr{{ entries.count === 1 ? 'y' : 'ies' }}</span>
+          <strong>{{ entries.total | number:'1.2-2' }}</strong>
+        </div>
+      </div>
+
+      <div class="empty" *ngIf="entries && !entries.rows.length"><i class="ri-inbox-line"></i><p>Nothing entered in this period.</p></div>
+      <div class="table-wrap" *ngIf="entries?.rows?.length">
+        <table>
+          <thead><tr><th>Date</th><th>Who</th><th>Category</th><th class="r">Amount</th><th>Method</th><th>Receipt</th><th>Recorded by</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let r of entries!.rows">
+              <td>{{ r.date | date:'MMM d, y' }}</td>
+              <td>{{ r.who }}</td>
+              <td>{{ r.category }}</td>
+              <td class="r">{{ r.amount | number:'1.2-2' }}</td>
+              <td>{{ methodLabel(r.method) }}</td>
+              <td class="mono">{{ r.receipt }}</td>
+              <td>{{ r.recorder || (r.via === 'treasurer_staff' ? 'Staff (signed in)' : '') }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </ng-container>
+</div>

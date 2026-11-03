@@ -344,6 +344,12 @@ paystackBalance: { confirmed_balance: number; pending_balance: number; transacti
     }
     this.router.navigate(['main/finance/record-giving']);
   }
+  openServiceEntry(): void {
+    this.router.navigate(['main/finance/service-entry']);
+  }
+  openTreasurerAccess(): void {
+    this.router.navigate(['main/finance/treasurer-access']);
+  }
   viewAllGiving(): void {
     this.router.navigate(['main/finance/giving']);
   }

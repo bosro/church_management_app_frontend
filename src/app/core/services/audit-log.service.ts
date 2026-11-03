@@ -65,7 +65,7 @@ export class AuditLogService {
   async getTables(): Promise<string[]> {
     const { data, error } = await this.supabase.client.rpc('admin_audit_tables');
     if (error) throw new Error(error.message);
-    return (data || []) as string[];
+    return ((data || []) as (string | null)[]).filter((t): t is string => !!t);
   }
 
   async getChurches(): Promise<{ id: string; name: string }[]> {

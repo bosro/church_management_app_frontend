@@ -1,0 +1,84 @@
+<div class="pr-container">
+
+  <div class="page-header">
+    <h1>Payment Check</h1>
+    <p class="subtitle">Online payments that were started but never confirmed. Pending payments are <strong>not</strong> counted as money received.</p>
+  </div>
+
+  <div *ngIf="errorMessage" class="alert error"><i class="ri-error-warning-line"></i><span>{{ errorMessage }}</span></div>
+  <div *ngIf="infoMessage" class="alert info"><i class="ri-information-line"></i><span>{{ infoMessage }}</span></div>
+
+  <div class="cards">
+    <div class="card"><div class="c-label">Pending</div><div class="c-value">{{ total | number }}</div><div class="c-sub">older than the age chosen</div></div>
+    <div class="card"><div class="c-label">Amount in limbo</div><div class="c-value">GHS {{ totalAmount | number:'1.2-2' }}</div><div class="c-sub">not yet confirmed by Paystack</div></div>
+    <div class="card" [class.attn]="problems.length"><div class="c-label">Webhook problems</div><div class="c-value">{{ problems.length }}</div>
+      <button class="link" (click)="showProblems = !showProblems">{{ showProblems ? 'Hide' : 'Show' }}</button></div>
+  </div>
+
+  <div class="problems" *ngIf="showProblems">
+    <p class="small" *ngIf="!problems.length">No failed or unprocessed webhook events.</p>
+    <table *ngIf="problems.length">
+      <thead><tr><th>When</th><th>Reference</th><th>Event</th><th>Problem</th></tr></thead>
+      <tbody>
+        <tr *ngFor="let p of problems">
+          <td>{{ p.created_at | date:'medium' }}</td>
+          <td class="mono">{{ p.reference }}</td>
+          <td>{{ p.event }}</td>
+          <td>{{ p.error || (p.processed ? '' : 'Received but never processed') }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="toolbar">
+    <label>Show payments pending for more than
+      <select [(ngModel)]="minAge" (change)="load()">
+        <option *ngFor="let o of ageOptions" [ngValue]="o.v">{{ o.l }}</option>
+      </select>
+    </label>
+    <div class="grow"></div>
+    <button class="btn ghost" (click)="load()" [disabled]="loading || checking"><i class="ri-refresh-line"></i> Refresh</button>
+    <button class="btn ghost" (click)="checkSelected()" [disabled]="checking || !selected.size">Check selected ({{ selected.size }})</button>
+    <button class="btn primary" (click)="checkShown()" [disabled]="checking || !rows.length">
+      <i [class]="checking ? 'ri-loader-4-line spin' : 'ri-shield-check-line'"></i> {{ checking ? 'Checking with Paystack…' : 'Check all shown with Paystack' }}
+    </button>
+  </div>
+  <p class="small" *ngIf="total > rows.length">Showing the oldest {{ rows.length }} of {{ total }}. Checks run 50 at a time.</p>
+
+  <div *ngIf="loading" class="loading"><div class="spinner"></div></div>
+  <div *ngIf="!loading && !rows.length && !errorMessage" class="empty"><i class="ri-checkbox-circle-line"></i><p>No pending online payments. Everything is settled.</p></div>
+
+  <div class="table-wrap" *ngIf="!loading && rows.length">
+    <table>
+      <thead>
+        <tr>
+          <th class="chk"><input type="checkbox" [checked]="allSelected" (change)="toggleAll()" aria-label="Select all" /></th>
+          <th>Started</th><th>Church</th><th>For</th><th>Payer</th><th class="r">Amount</th><th>Reference</th><th>Result</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let r of rows; trackBy: trackById">
+          <td class="chk"><input type="checkbox" [checked]="selected.has(r.id)" (change)="toggle(r.id)" /></td>
+          <td>{{ r.created_at | date:'MMM d, h:mm a' }}<small>{{ age(r.age_minutes) }} ago</small></td>
+          <td>{{ r.church_name || '—' }}</td>
+          <td>{{ r.category || (r.is_commitment ? 'Building campaign' : '—') }}<small *ngIf="r.source">{{ r.source }}</small></td>
+          <td>{{ r.payer_name || '—' }}<small>{{ r.payer_contact }}</small></td>
+          <td class="r">{{ r.currency || 'GHS' }} {{ r.amount | number:'1.2-2' }}</td>
+          <td class="mono">{{ r.reference }}</td>
+          <td>
+            <ng-container *ngIf="results.get(r.id) as res">
+              <span class="out" [ngClass]="res.outcome">{{ outcomeLabel(res.outcome) }}</span>
+              <small>{{ res.detail }}</small>
+            </ng-container>
+          </td>
+          <td class="r"><button class="btn ghost sm" (click)="checkOne(r)" [disabled]="checking">{{ checkingId === r.id ? 'Checking…' : 'Check' }}</button></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="hint">
+    “Check” asks Paystack directly. A payment is marked <strong>completed</strong> only when Paystack itself says it succeeded and the amount covers
+    what was expected; failed or abandoned ones stop counting as pending; anything unclear is left for you to review. Cash and manual records are never touched.
+  </p>
+</div>

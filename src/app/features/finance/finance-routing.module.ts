@@ -13,6 +13,8 @@ import { PledgeDetails } from './pledge-details/pledge-details';
 import { CategoryExpenses } from './components/category-expenses/category-expenses';
 import { PaymentLinks } from './components/payment-links/payment-links';
 import { WithdrawalRequests } from './components/withdrawal-requests/withdrawal-requests';
+import { TreasurerAccess } from './components/treasurer-access/treasurer-access';
+import { TreasurerEntry } from '../public/treasurer-entry/treasurer-entry';
 
 const FINANCE_VIEW_ROLES = [
   'super_admin',
@@ -44,6 +46,27 @@ const routes: Routes = [
       title: 'Giving Transactions',
       permission: 'finance.view',
       roles: FINANCE_VIEW_ROLES,
+    },
+  },
+  {
+    // Service Entry for a signed-in finance officer / church admin (same screen as the PIN link, no PIN)
+    path: 'service-entry',
+    component: TreasurerEntry,
+    canActivate: [PermissionGuard],
+    data: {
+      title: 'Service Entry',
+      permission: 'finance.record',
+      roles: FINANCE_MANAGE_ROLES,
+    },
+  },
+  {
+    path: 'treasurer-access',
+    component: TreasurerAccess,
+    canActivate: [PermissionGuard],
+    data: {
+      title: 'Treasurer Service Entry',
+      permission: 'finance.manage',
+      roles: FINANCE_MANAGE_ROLES,
     },
   },
   {

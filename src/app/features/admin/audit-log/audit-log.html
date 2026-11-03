@@ -1,9 +1,4 @@
-<div class="dashboard-layout">
-  <app-sidebar></app-sidebar>
-  <div class="dashboard-content">
-    <app-header></app-header>
-    <div class="dashboard-body">
-      <div class="al-container">
+<div class="al-container">
 
         <div class="page-header">
           <h1>Audit Log</h1>
@@ -58,9 +53,9 @@
 
         <div class="list" *ngIf="!loading && rows.length">
           <div class="row" *ngFor="let r of rows" [class.open]="open.has(r.id)">
-            <button class="row-main" (click)="toggle(r.id)">
+            <button type="button" class="row-main" (click)="toggle(r.id)">
               <span class="when">{{ r.created_at | date:'MMM d, y' }}<small>{{ r.created_at | date:'h:mm:ss a' }}</small></span>
-              <span class="act" [ngClass]="r.action">{{ actionLabel(r.action) }}</span>
+              <span class="act" [ngClass]="actionClass(r.action)">{{ actionLabel(r.action) }}</span>
               <span class="what"><strong>{{ tableLabel(r.table_name) }}</strong><small>{{ summary(r) }}</small></span>
               <span class="who">{{ who(r) }}<small>{{ r.church_name || '' }}</small></span>
               <i class="ri-arrow-down-s-line chev"></i>
@@ -83,7 +78,4 @@
         </div>
 
         <p class="hint">Passwords, tokens and keys are always hidden. Changes made from the database editor or by automatic jobs show as “System / automatic”.</p>
-      </div>
-    </div>
-  </div>
 </div>

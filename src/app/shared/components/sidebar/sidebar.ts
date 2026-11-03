@@ -114,6 +114,13 @@ export class Sidebar implements OnInit {
           active: false,
           roles: ['super_admin'],
         },
+        {
+          icon: 'ri-shield-check-line',
+          label: 'Payment Check',
+          route: '/main/admin/payment-reconciliation',
+          active: false,
+          roles: ['super_admin'],
+        },
       ],
     },
     {

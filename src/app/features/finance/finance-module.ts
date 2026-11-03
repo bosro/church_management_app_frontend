@@ -4,7 +4,7 @@ import { GivingList } from './components/giving-list/giving-list';
 import { RecordGiving } from './components/record-giving/record-giving';
 import { Pledges } from './components/pledges/pledges';
 import { FinanceReports } from './components/finance-reports/finance-reports';
-import { ReactiveFormsModule } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { FinanceRoutingModule } from './finance-routing.module';
 import { SharedModule } from '../../shared/shared-module';
 import { FinanceOverview } from './components/finance-overview/finance-overview/finance-overview';
@@ -16,12 +16,14 @@ import { CategoryExpenses } from './components/category-expenses/category-expens
 import { PaymentLinks } from './components/payment-links/payment-links';
 import { WithdrawalRequests } from './components/withdrawal-requests/withdrawal-requests';
 import { QrCodeComponent } from 'ng-qrcode';
+import { TreasurerAccess } from './components/treasurer-access/treasurer-access';
 
 
 
 @NgModule({
   declarations: [
     GivingList,
+    TreasurerAccess,
     RecordGiving,
     Pledges,
     FinanceReports,
@@ -37,6 +39,7 @@ import { QrCodeComponent } from 'ng-qrcode';
   imports: [
       CommonModule,
     ReactiveFormsModule,
+    FormsModule,
     SharedModule,
     QrCodeComponent,
     FinanceRoutingModule
