@@ -1,6 +1,7 @@
 // Church admin / finance officer: set up the Treasurer Service Entry link.
 // Route: /main/finance/treasurer-access
 import { Component, OnInit } from '@angular/core';
+import { filter, firstValueFrom, timeout } from 'rxjs';
 import { copyToClipboard } from '../../../../core/utils/copy-to-clipboard';
 import { AuthService } from '../../../../core/services/auth';
 import { TreasurerAdminService, TreasurerEntryRow, TreasurerSettings } from '../../../../core/services/treasurer-admin.service';
@@ -19,6 +20,7 @@ export class TreasurerAccess implements OnInit {
 
   settings: TreasurerSettings | null = null;
   enabled = false;
+  requirePin = true;     // true = locked with a PIN, false = open link (name only)
   maxBackdateDays = 14;
   maxAmount = 50000;
   undoMinutes = 15;
@@ -34,6 +36,8 @@ export class TreasurerAccess implements OnInit {
   constructor(private svc: TreasurerAdminService, private auth: AuthService) {}
 
   async ngOnInit(): Promise<void> {
+    // the signed-in session is restored a moment after the page starts; wait for it before the first request
+    try { await firstValueFrom(this.auth.authReady$.pipe(filter(Boolean), timeout(10000))); } catch { /* carry on */ }
     const t = new Date();
     const p = (n: number) => String(n).padStart(2, '0');
     const fmt = (d: Date) => `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
@@ -56,6 +60,7 @@ export class TreasurerAccess implements OnInit {
     try {
       this.settings = await this.svc.getSettings();
       this.enabled = this.settings.is_enabled;
+      this.requirePin = this.settings.require_pin;
       this.maxBackdateDays = this.settings.max_backdate_days;
       this.maxAmount = Number(this.settings.max_amount);
       this.undoMinutes = this.settings.undo_minutes;
@@ -107,7 +112,7 @@ export class TreasurerAccess implements OnInit {
     this.errorMessage = '';
     try {
       await this.svc.saveSettings({
-        enabled: this.enabled, maxBackdateDays: Number(this.maxBackdateDays), maxAmount: Number(this.maxAmount), undoMinutes: Number(this.undoMinutes),
+        enabled: this.enabled, requirePin: this.requirePin, maxBackdateDays: Number(this.maxBackdateDays), maxAmount: Number(this.maxAmount), undoMinutes: Number(this.undoMinutes),
       });
       this.flash(this.enabled ? 'Saved. The link is ON.' : 'Saved. The link is OFF.');
       await this.load();
@@ -119,9 +124,25 @@ export class TreasurerAccess implements OnInit {
     }
   }
 
+  /** the link can be switched on when it is open, or when a PIN exists */
+  get canEnable(): boolean { return !this.requirePin || !!this.settings?.has_pin; }
+
   async toggleEnabled(): Promise<void> {
+    if (!this.enabled && !this.requirePin &&
+        !confirm('Switch ON an OPEN link?\n\nAnyone who has the link will be able to record payments after typing a name. Only share it with people you trust.')) return;
     this.enabled = !this.enabled;
     await this.saveSettings();
+  }
+
+  /** choose locked (PIN) or open (no PIN) */
+  async setMode(requirePin: boolean): Promise<void> {
+    if (requirePin === this.requirePin || this.working) return;
+    if (!requirePin && !confirm('Make the link OPEN (no PIN)?\n\nAnyone who has the link will be able to record payments after typing their name. Every entry is still labelled with that name and the limits still apply, but you should only share the link with people you trust.')) return;
+    this.requirePin = requirePin;
+    // going back to "PIN" without a PIN set: switch the link off until one is set
+    if (requirePin && !this.settings?.has_pin) this.enabled = false;
+    await this.saveSettings();
+    if (requirePin && !this.settings?.has_pin) this.flash('Locked mode needs a PIN. Set one below, then switch the link on.');
   }
 
   async signEveryoneOut(): Promise<void> {
@@ -145,6 +166,10 @@ export class TreasurerAccess implements OnInit {
   }
 
   // ── entries ─────────────────────────────────────────────────
+  viaLabel(v: string | null): string {
+    return ({ treasurer_pin: 'PIN link', treasurer_open: 'Open link', treasurer_staff: 'Signed in' } as Record<string, string>)[v || ''] || '';
+  }
+
   methodLabel(m: string | null): string {
     return ({ cash: 'Cash', mobile_money: 'Mobile Money', bank_transfer: 'Bank Transfer', check: 'Cheque', card: 'Card' } as Record<string, string>)[m || ''] || (m || '');
   }
@@ -154,7 +179,7 @@ export class TreasurerAccess implements OnInit {
     if (!rows.length) return;
     const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
     const head = ['Date', 'Receipt', 'Who', 'Category', 'Amount', 'Method', 'Recorded by'];
-    const lines = rows.map((r) => [r.date, r.receipt, r.who, r.category, r.amount, this.methodLabel(r.method), r.recorder || (r.via === 'treasurer_staff' ? 'Staff (signed in)' : '')].map(esc).join(','));
+    const lines = rows.map((r) => [r.date, r.receipt, r.who, r.category, r.amount, this.methodLabel(r.method), [r.recorder, this.viaLabel(r.via)].filter(Boolean).join(' · ')].map(esc).join(','));
     const blob = new Blob(['\ufeff' + [head.map(esc).join(','), ...lines].join('\n')], { type: 'text/csv;charset=utf-8' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -165,8 +190,11 @@ export class TreasurerAccess implements OnInit {
 
   private friendly(e: any): string {
     const m = e?.message || 'Something went wrong.';
-    if (/treasurer_(get_settings|admin_entries)/i.test(m) && /not exist|could not find/i.test(m)) {
-      return 'The Service Entry database migration has not been run yet (20261107_treasurer_service_entry.sql).';
+    if (/treasurer_(get_settings|admin_entries|save_settings)/i.test(m) && /not exist|could not find/i.test(m)) {
+      return 'The Service Entry database migrations have not both been run yet (20261107 and 20261108).';
+    }
+    if (/please sign in/i.test(m)) {
+      return 'Your sign-in has not finished loading. Please refresh the page and try again.';
     }
     return m;
   }

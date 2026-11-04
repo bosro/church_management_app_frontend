@@ -5,6 +5,7 @@ import { SupabaseService } from './supabase';
 export interface TreasurerSettings {
   church_id: string;
   is_enabled: boolean;
+  require_pin: boolean;
   has_pin: boolean;
   pin_set_at: string | null;
   locked_until: string | null;
@@ -37,9 +38,9 @@ export class TreasurerAdminService {
 
   getSettings(): Promise<TreasurerSettings> { return this.rpc('treasurer_get_settings'); }
 
-  saveSettings(s: { enabled: boolean; maxBackdateDays: number; maxAmount: number; undoMinutes: number }): Promise<any> {
+  saveSettings(s: { enabled: boolean; requirePin: boolean; maxBackdateDays: number; maxAmount: number; undoMinutes: number }): Promise<any> {
     return this.rpcOk('treasurer_save_settings', {
-      p_enabled: s.enabled, p_max_backdate_days: s.maxBackdateDays, p_max_amount: s.maxAmount, p_undo_minutes: s.undoMinutes,
+      p_enabled: s.enabled, p_require_pin: s.requirePin, p_max_backdate_days: s.maxBackdateDays, p_max_amount: s.maxAmount, p_undo_minutes: s.undoMinutes,
     }, 'Could not save the settings.');
   }
 

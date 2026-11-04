@@ -6,7 +6,8 @@ import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
-import { Subscription } from 'rxjs';
+import { Subscription, filter, firstValueFrom, timeout } from 'rxjs';
+import { AuthService } from '../../../core/services/auth';
 import {
   MemberHit,
   RecordResult,
@@ -38,6 +39,7 @@ export class TreasurerEntry implements OnInit, OnDestroy {
 
   // PIN screen
   recorderName = '';
+  requiresPin = true;      // false when the church chose an open link (name only)
   pin = '';
   pinError = '';
   attemptsLeft: number | null = null;
@@ -74,7 +76,7 @@ export class TreasurerEntry implements OnInit, OnDestroy {
   private searchSeq = 0;
   private sub?: Subscription;
 
-  constructor(private route: ActivatedRoute, private svc: TreasurerPublicService) {}
+  constructor(private route: ActivatedRoute, private svc: TreasurerPublicService, private auth: AuthService) {}
 
   async ngOnInit(): Promise<void> {
     this.churchId = this.route.snapshot.paramMap.get('churchId');
@@ -100,12 +102,20 @@ export class TreasurerEntry implements OnInit, OnDestroy {
     }
   }
 
+  /** The signed-in session is restored a moment after the page starts; wait for it before the first request. */
+  private async waitForAuth(): Promise<void> {
+    try {
+      await firstValueFrom(this.auth.authReady$.pipe(filter(Boolean), timeout(10000)));
+    } catch { /* carry on; the server will say if we are not signed in */ }
+  }
+
   async start(): Promise<void> {
     this.starting = true;
     this.screen = 'loading';
     this.errorText = '';
     try {
       if (!this.isPublic) {
+        await this.waitForAuth();
         const r = await this.svc.openStaffSession();
         if (!r.ok) { this.errorText = r.error || 'You cannot use Service Entry.'; this.screen = 'error'; return; }
         await this.enter();
@@ -116,6 +126,7 @@ export class TreasurerEntry implements OnInit, OnDestroy {
       }
       const info = await this.svc.accessInfo(this.churchId!);
       this.churchName = info.church_name || '';
+      this.requiresPin = info.requires_pin !== false;
       this.screen = info.enabled ? 'pin' : 'off';
     } catch (e: any) {
       this.errorText = e?.message || 'Something went wrong. Please try again.';
@@ -129,32 +140,40 @@ export class TreasurerEntry implements OnInit, OnDestroy {
     if (this.starting) return;
     if (this.isPublic) {
       this.pin = '';
-      this.pinError = 'Your session ended. Please enter the PIN again.';
+      this.pinError = 'Your session ended. Please sign in again.';
       this.screen = 'pin';
+      // the church may have changed between "PIN" and "open link", or switched the link off
+      this.svc.accessInfo(this.churchId!).then((i) => {
+        this.requiresPin = i.requires_pin !== false;
+        if (!i.enabled) this.screen = 'off';
+      }).catch(() => {});
     } else {
       this.start();
     }
   }
 
   async submitPin(): Promise<void> {
-    if (this.verifying || !this.pin.trim() || this.recorderName.trim().length < 2) return;
+    if (this.verifying || this.recorderName.trim().length < 2 || (this.requiresPin && !this.pin.trim())) return;
     this.verifying = true;
     this.pinError = '';
     try {
-      const r = await this.svc.verifyPin(this.churchId!, this.pin.trim(), this.recorderName.trim());
+      const name = this.recorderName.trim();
+      const r = this.requiresPin
+        ? await this.svc.verifyPin(this.churchId!, this.pin.trim(), name)
+        : await this.svc.openSession(this.churchId!, name);
       if (r.ok) {
-        try { localStorage.setItem(NAME_KEY, this.recorderName.trim()); } catch { /* ignore */ }
+        try { localStorage.setItem(NAME_KEY, name); } catch { /* ignore */ }
         this.pin = '';
         this.attemptsLeft = null;
         this.starting = true;
         try { await this.enter(); } finally { this.starting = false; }
       } else {
-        this.pinError = r.error || 'That PIN is not correct.';
-        this.attemptsLeft = r.attempts_left ?? null;
+        this.pinError = r.error || (this.requiresPin ? 'That PIN is not correct.' : 'Could not sign in.');
+        this.attemptsLeft = (r as { attempts_left?: number }).attempts_left ?? null;
         this.pin = '';
       }
     } catch (e: any) {
-      this.pinError = e?.message || 'Could not check the PIN. Please try again.';
+      this.pinError = e?.message || 'Could not sign in. Please try again.';
     } finally {
       this.verifying = false;
     }

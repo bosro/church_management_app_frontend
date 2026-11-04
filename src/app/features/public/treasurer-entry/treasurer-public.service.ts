@@ -69,15 +69,25 @@ export class TreasurerPublicService {
   }
 
   // ── Opening a session ───────────────────────────────────────
-  async accessInfo(churchId: string): Promise<{ enabled: boolean; church_name: string | null }> {
+  async accessInfo(churchId: string): Promise<{ enabled: boolean; requires_pin?: boolean; church_name: string | null }> {
     const { data, error } = await this.supabase.client.rpc('treasurer_access_info', { p_church_id: churchId });
     if (error) throw new Error(error.message);
-    return data as { enabled: boolean; church_name: string | null };
+    return data as { enabled: boolean; requires_pin?: boolean; church_name: string | null };
   }
 
   async verifyPin(churchId: string, pin: string, recorderName: string): Promise<{ ok: boolean; error?: string; locked?: boolean; attempts_left?: number }> {
     const { data, error } = await this.supabase.client.rpc('treasurer_verify_pin', {
       p_church_id: churchId, p_pin: pin, p_recorder_name: recorderName,
+    });
+    if (error) throw new Error(error.message);
+    if (data?.ok && data.token) this.setToken(data.token);
+    return data;
+  }
+
+  /** Open link (the church chose "no PIN"): only a name is needed. */
+  async openSession(churchId: string, recorderName: string): Promise<{ ok: boolean; error?: string }> {
+    const { data, error } = await this.supabase.client.rpc('treasurer_open_session', {
+      p_church_id: churchId, p_recorder_name: recorderName,
     });
     if (error) throw new Error(error.message);
     if (data?.ok && data.token) this.setToken(data.token);

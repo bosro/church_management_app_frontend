@@ -23,13 +23,13 @@
       <div class="row-h">
         <div>
           <h3>1. The link</h3>
-          <p class="muted">{{ enabled ? 'The treasurer can open this link and sign in with the PIN.' : 'The link is switched off — nobody can use it.' }}</p>
+          <p class="muted">{{ enabled ? (requirePin ? 'The treasurer can open this link and sign in with the PIN.' : 'The link is OPEN: anyone with it can use it after typing a name.') : 'The link is switched off — nobody can use it.' }}</p>
         </div>
-        <button class="switch" [class.on]="enabled" (click)="toggleEnabled()" [disabled]="working || !settings.has_pin" role="switch" [attr.aria-checked]="enabled">
+        <button class="switch" [class.on]="enabled" (click)="toggleEnabled()" [disabled]="working || !canEnable" role="switch" [attr.aria-checked]="enabled">
           <span></span>
         </button>
       </div>
-      <p class="warn" *ngIf="!settings.has_pin"><i class="ri-alarm-warning-line"></i> Set a PIN below first, then switch the link on.</p>
+      <p class="warn" *ngIf="!canEnable"><i class="ri-alarm-warning-line"></i> Set a PIN below first, then switch the link on (or choose “Open link”).</p>
 
       <div class="linkbox">
         <input type="text" readonly [value]="link" (focus)="$any($event.target).select()" />
@@ -42,19 +42,38 @@
       </div>
     </div>
 
-    <!-- 2. PIN -->
+    <!-- 2. who can open it -->
     <div class="card">
-      <h3>2. PIN</h3>
-      <p class="muted">
-        <ng-container *ngIf="settings.has_pin">A PIN is set<ng-container *ngIf="settings.pin_set_at"> (last changed {{ settings.pin_set_at | date:'mediumDate' }})</ng-container>. </ng-container>
-        <ng-container *ngIf="!settings.has_pin">No PIN yet. </ng-container>
-        Give it only to the treasurer. Changing it signs everyone out and clears any wrong-PIN lock.
-      </p>
-      <p class="warn" *ngIf="settings.locked_until"><i class="ri-lock-line"></i> Locked after too many wrong attempts until {{ settings.locked_until | date:'shortTime' }}. Setting a new PIN unlocks it now.</p>
-      <div class="pinrow">
-        <input type="password" inputmode="numeric" maxlength="8" placeholder="4 to 8 digits" [(ngModel)]="newPin" (keyup.enter)="savePin()" autocomplete="new-password" />
-        <button class="btn primary" (click)="savePin()" [disabled]="!pinValid || working">{{ settings.has_pin ? 'Change PIN' : 'Set PIN' }}</button>
+      <h3>2. Who can open the link?</h3>
+      <div class="modes">
+        <button type="button" class="mode" [class.on]="requirePin" (click)="setMode(true)" [disabled]="working">
+          <i class="ri-lock-2-line"></i>
+          <strong>Locked with a PIN</strong>
+          <small>Recommended. Only someone who knows the PIN can open it.</small>
+        </button>
+        <button type="button" class="mode" [class.on]="!requirePin" (click)="setMode(false)" [disabled]="working">
+          <i class="ri-lock-unlock-line"></i>
+          <strong>Open link</strong>
+          <small>No PIN. Anyone with the link can open it after typing their name.</small>
+        </button>
       </div>
+
+      <p class="warn" *ngIf="!requirePin"><i class="ri-alarm-warning-line"></i>
+        Open link: anyone who gets this link (for example if it is forwarded) can record payments. Every entry is labelled with the name typed in and the
+        limits below still apply, but share it only with people you trust. You can switch to a PIN at any time.</p>
+
+      <ng-container *ngIf="requirePin">
+        <p class="muted">
+          <ng-container *ngIf="settings.has_pin">A PIN is set<ng-container *ngIf="settings.pin_set_at"> (last changed {{ settings.pin_set_at | date:'mediumDate' }})</ng-container>. </ng-container>
+          <ng-container *ngIf="!settings.has_pin">No PIN yet. </ng-container>
+          Give it only to the treasurer. Changing it signs everyone out and clears any wrong-PIN lock.
+        </p>
+        <p class="warn" *ngIf="settings.locked_until"><i class="ri-lock-line"></i> Locked after too many wrong attempts until {{ settings.locked_until | date:'shortTime' }}. Setting a new PIN unlocks it now.</p>
+        <div class="pinrow">
+          <input type="password" inputmode="numeric" maxlength="8" placeholder="4 to 8 digits" [(ngModel)]="newPin" (keyup.enter)="savePin()" autocomplete="new-password" />
+          <button class="btn primary" (click)="savePin()" [disabled]="!pinValid || working">{{ settings.has_pin ? 'Change PIN' : 'Set PIN' }}</button>
+        </div>
+      </ng-container>
     </div>
 
     <!-- 3. limits -->
@@ -109,7 +128,7 @@
               <td class="r">{{ r.amount | number:'1.2-2' }}</td>
               <td>{{ methodLabel(r.method) }}</td>
               <td class="mono">{{ r.receipt }}</td>
-              <td>{{ r.recorder || (r.via === 'treasurer_staff' ? 'Staff (signed in)' : '') }}</td>
+              <td>{{ r.recorder }}<small class="via" *ngIf="viaLabel(r.via)"> · {{ viaLabel(r.via) }}</small></td>
             </tr>
           </tbody>
         </table>

@@ -18,26 +18,28 @@
     <button class="btn primary block" (click)="start()">Try again</button>
   </div>
 
-  <!-- ══ PIN ══ -->
+  <!-- ══ PIN / name ══ -->
   <div class="card narrow" *ngIf="screen === 'pin'">
-    <div class="big-icon"><i class="ri-hand-coin-line"></i></div>
+    <div class="big-icon"><i [class]="requiresPin ? 'ri-hand-coin-line' : 'ri-lock-unlock-line'"></i></div>
     <h1>Service Entry</h1>
     <p class="muted" *ngIf="churchName">{{ churchName }}</p>
-    <p class="muted">Enter your name and the PIN the church admin gave you.</p>
+    <p class="muted" *ngIf="requiresPin">Enter your name and the PIN the church admin gave you.</p>
+    <p class="muted" *ngIf="!requiresPin">Enter your name to continue. It is saved with everything you record.</p>
 
     <label class="lab">Your name
-      <input type="text" [(ngModel)]="recorderName" placeholder="e.g. Sister Grace" maxlength="60" autocomplete="name" />
+      <input type="text" [(ngModel)]="recorderName" placeholder="e.g. Sister Grace" maxlength="60" autocomplete="name"
+             (keyup.enter)="!requiresPin && submitPin()" />
     </label>
-    <label class="lab">PIN
+    <label class="lab" *ngIf="requiresPin">PIN
       <input class="pin" type="password" inputmode="numeric" autocomplete="off" maxlength="8" placeholder="• • • •"
              [(ngModel)]="pin" (keyup.enter)="submitPin()" [disabled]="verifying" />
     </label>
     <p class="err" *ngIf="pinError">{{ pinError }}</p>
     <p class="hint" *ngIf="attemptsLeft !== null && attemptsLeft > 0">{{ attemptsLeft }} attempt(s) left before a 15-minute wait.</p>
-    <button class="btn primary block" (click)="submitPin()" [disabled]="verifying || !pin.trim() || recorderName.trim().length < 2">
-      {{ verifying ? 'Checking…' : 'Continue' }}
+    <button class="btn primary block" (click)="submitPin()" [disabled]="verifying || (requiresPin && !pin.trim()) || recorderName.trim().length < 2">
+      {{ verifying ? (requiresPin ? 'Checking…' : 'Opening…') : 'Continue' }}
     </button>
-    <p class="foot">Forgot the PIN? Ask the church admin.</p>
+    <p class="foot" *ngIf="requiresPin">Forgot the PIN? Ask the church admin.</p>
   </div>
 
   <!-- ══ ENTRY ══ -->
