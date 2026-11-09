@@ -39,7 +39,7 @@ export class MemberService {
     private authService: AuthService,
     private subscriptionService: SubscriptionService,
     private cellGroupsService: CellGroupsService,
-  ) {}
+  ) { }
 
   private getChurchId(): string {
     const id = this.authService.getChurchId();
@@ -780,7 +780,7 @@ export class MemberService {
             m.join_date || '—',
             m.membership_status
               ? m.membership_status.charAt(0).toUpperCase() +
-                m.membership_status.slice(1)
+              m.membership_status.slice(1)
               : '—',
           ]),
           styles: { fontSize: 8, cellPadding: 3, overflow: 'linebreak' },
@@ -1579,6 +1579,7 @@ export class MemberService {
           { count: 'exact' },
         )
         .eq('member_id', memberId)
+        .or('payment_status.eq.completed,payment_status.is.null')
         .order('transaction_date', { ascending: false })
         .range(offset, offset + pageSize - 1),
     ).pipe(
@@ -1706,9 +1707,9 @@ export class MemberService {
       const remaining = Math.max(0, limit - current);
       throw new Error(
         `QUOTA_EXCEEDED:members:${current}:${limit}` +
-          `\nYour plan allows ${limit} members. You currently have ${current} and are importing ${incomingRowCount} rows, ` +
-          `but only ${remaining} slot${remaining !== 1 ? 's' : ''} remain. ` +
-          `Upgrade your plan or reduce the import file to ${remaining} row${remaining !== 1 ? 's' : ''}.`,
+        `\nYour plan allows ${limit} members. You currently have ${current} and are importing ${incomingRowCount} rows, ` +
+        `but only ${remaining} slot${remaining !== 1 ? 's' : ''} remain. ` +
+        `Upgrade your plan or reduce the import file to ${remaining} row${remaining !== 1 ? 's' : ''}.`,
       );
     }
   }

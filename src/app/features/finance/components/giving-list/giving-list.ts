@@ -63,6 +63,63 @@ export class GivingList implements OnInit, OnDestroy {
   paymentMethodControl = new FormControl('');
   paystackOnlyControl = new FormControl(false);
 
+
+  // ── Payment-method totals ─────────────────────────────────────
+  methodBreakdown: { method_key: string; payments: number; total: number }[] = [];
+  activeMethodKey: string | null = null;
+
+  private readonly methodLabels: Record<string, string> = {
+    cash: 'Cash', mobile_money: 'Mobile Money', bank_transfer: 'Bank Transfer',
+    card: 'Card', cheque: 'Cheque',
+    paystack_momo: 'Paystack · MoMo', paystack_card: 'Paystack · Card',
+    paystack_bank: 'Paystack · Bank', paystack_other: 'Paystack · Other',
+  };
+
+  getMethodLabel(key: string): string {
+    return this.methodLabels[key] || key.replace(/_/g, ' ');
+  }
+
+  /** Total for whatever method filter is applied (date + category filters included). */
+  get selectedMethodTotal(): { label: string; payments: number; total: number } {
+    let rows = this.methodBreakdown;
+    let label = 'All methods';
+    const dropdown = this.paymentMethodControl.value;
+    if (this.activeMethodKey) {
+      rows = rows.filter((r) => r.method_key === this.activeMethodKey);
+      label = this.getMethodLabel(this.activeMethodKey);
+    } else if (this.paystackOnlyControl.value) {
+      rows = rows.filter((r) => r.method_key.startsWith('paystack_'));
+      label = 'All Paystack';
+    } else if (dropdown) {
+      rows = rows.filter((r) => r.method_key === dropdown);
+      label = this.getMethodLabel(dropdown);
+    }
+    return {
+      label,
+      payments: rows.reduce((s, r) => s + r.payments, 0),
+      total: rows.reduce((s, r) => s + r.total, 0),
+    };
+  }
+
+  selectMethodChip(key: string): void {
+    this.activeMethodKey = this.activeMethodKey === key ? null : key;
+    this.paymentMethodControl.setValue('', { emitEvent: false });
+    this.paystackOnlyControl.setValue(false, { emitEvent: false });
+    this.currentPage = 1;
+    this.loadTransactions();
+  }
+
+  private loadMethodBreakdown(): void {
+    this.financeService
+      .getMethodBreakdown({
+        startDate: this.startDateControl.value || undefined,
+        endDate: this.endDateControl.value || undefined,
+        categoryId: this.activeCategoryId || undefined,
+      })
+      .then((rows) => (this.methodBreakdown = rows))
+      .catch((err) => console.error('Method breakdown failed:', err));
+  }
+
   paymentMethods: { value: PaymentMethod | ''; label: string }[] = [
     { value: '', label: 'All Methods' },
     { value: 'cash', label: 'Cash' },
@@ -107,7 +164,7 @@ export class GivingList implements OnInit, OnDestroy {
     public permissionService: PermissionService,
     private authService: AuthService,
     private location: Location,
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.checkPermissions();
@@ -251,6 +308,7 @@ export class GivingList implements OnInit, OnDestroy {
     this.paymentMethodControl.valueChanges
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => {
+        this.activeMethodKey = null;
         this.currentPage = 1;
         this.loadTransactions();
       });
@@ -258,6 +316,7 @@ export class GivingList implements OnInit, OnDestroy {
     this.paystackOnlyControl.valueChanges
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => {
+        this.activeMethodKey = null;
         this.currentPage = 1;
         this.loadTransactions();
       });
@@ -316,12 +375,14 @@ export class GivingList implements OnInit, OnDestroy {
     if (this.endDateControl.value) filters.endDate = this.endDateControl.value;
     if (this.activeCategoryId) filters.categoryId = this.activeCategoryId;
     // If paystackOnly is checked, it overrides the payment method dropdown
-    if (this.paystackOnlyControl.value) {
+    if (this.activeMethodKey) {
+      filters.methodKey = this.activeMethodKey;
+    } else if (this.paystackOnlyControl.value) {
       filters.paymentMethod = 'paystack';
     } else if (this.paymentMethodControl.value) {
       filters.paymentMethod = this.paymentMethodControl.value;
     }
-
+    this.loadMethodBreakdown();
     this.financeService
       .getGivingTransactions(this.currentPage, this.pageSize, filters)
       .pipe(takeUntil(this.destroy$))
@@ -346,6 +407,7 @@ export class GivingList implements OnInit, OnDestroy {
     this.categoryControl.setValue('', { emitEvent: false });
     this.paymentMethodControl.setValue('', { emitEvent: false });
     this.paystackOnlyControl.setValue(false, { emitEvent: false });
+    this.activeMethodKey = null;
     this.activeCategoryId = null;
     this.activeCategoryName = null;
 
@@ -375,12 +437,12 @@ export class GivingList implements OnInit, OnDestroy {
     this.editingTransaction = transaction;
     this.editSelectedMember = transaction.member
       ? ({
-          id: transaction.member_id,
-          first_name: transaction.member.first_name,
-          last_name: transaction.member.last_name,
-          member_number: transaction.member.member_number,
-          photo_url: transaction.member.photo_url,
-        } as Member)
+        id: transaction.member_id,
+        first_name: transaction.member.first_name,
+        last_name: transaction.member.last_name,
+        member_number: transaction.member.member_number,
+        photo_url: transaction.member.photo_url,
+      } as Member)
       : null;
 
     this.editForm.patchValue({

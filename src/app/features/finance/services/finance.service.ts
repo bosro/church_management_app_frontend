@@ -57,7 +57,7 @@ export class FinanceService {
   constructor(
     private supabase: SupabaseService,
     private authService: AuthService,
-  ) {}
+  ) { }
 
   private getChurchId(): string {
     const churchId = this.authService.getChurchId();
@@ -260,6 +260,7 @@ export class FinanceService {
       categoryId?: string;
       memberId?: string;
       paymentMethod?: PaymentMethod | '';
+      methodKey?: string;
     },
   ): Observable<{ data: any[]; count: number }> {
     return from(this.fetchGivingTransactions(page, pageSize, filters));
@@ -294,6 +295,7 @@ export class FinanceService {
     if (filters?.memberId) query = query.eq('member_id', filters.memberId);
     if (filters?.paymentMethod)
       query = query.eq('payment_method', filters.paymentMethod);
+    if (filters?.methodKey) query = this.applyMethodKey(query, filters.methodKey);
     // Only show completed Paystack transactions — hide pending/failed/abandoned.
     // Manual payments (cash, mobile_money manual etc.) have null payment_status
     // and are always shown. This mirrors what members see in their own history.
@@ -306,6 +308,42 @@ export class FinanceService {
 
     if (error) throw new Error(error.message);
     return { data: data || [], count: count || 0 };
+  }
+
+  private applyMethodKey(query: any, key: string): any {
+    switch (key) {
+      case 'paystack_momo':
+        return query.eq('payment_channel', 'mobile_money');
+      case 'paystack_card':
+        return query.eq('payment_channel', 'card');
+      case 'paystack_bank':
+        return query.in('payment_channel', ['bank', 'bank_transfer']);
+      case 'paystack_other':
+        return query.or(
+          'and(payment_method.eq.paystack,payment_channel.is.null),' +
+          'and(payment_channel.not.is.null,payment_channel.not.in.(mobile_money,card,bank,bank_transfer))',
+        );
+      case 'cheque':
+        return query.in('payment_method', ['check', 'cheque']).is('payment_channel', null);
+      default:
+        return query.eq('payment_method', key).is('payment_channel', null);
+    }
+  }
+
+  async getMethodBreakdown(filters: {
+    startDate?: string; endDate?: string; categoryId?: string;
+  }): Promise<{ method_key: string; payments: number; total: number }[]> {
+    const { data, error } = await this.supabase.client.rpc('get_giving_method_breakdown', {
+      p_church_id: this.getChurchId(),
+      p_start: filters.startDate || null,
+      p_end: filters.endDate || null,
+      p_category_id: filters.categoryId || null,
+      p_branch_id: this.isBranchPastor() ? this.getBranchId() : null,
+    });
+    if (error) throw new Error(error.message);
+    return (data || []).map((r: any) => ({
+      method_key: r.method_key, payments: Number(r.payments), total: Number(r.total),
+    }));
   }
 
   getGivingTransactionById(transactionId: string): Observable<any> {
@@ -1128,7 +1166,7 @@ export class FinanceService {
           const pledgerName = pledge.member
             ? `${pledge.member.first_name} ${pledge.member.last_name}`
             : `${pledge.visitor_first_name || ''} ${pledge.visitor_last_name || ''}`.trim() ||
-              'Visitor';
+            'Visitor';
           const balance = pledge.pledge_amount - pledge.amount_paid;
           return [
             pledgerName,

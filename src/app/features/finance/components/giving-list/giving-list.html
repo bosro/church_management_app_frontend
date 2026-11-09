@@ -125,6 +125,30 @@
           </div>
         </div>
 
+
+                <div class="method-breakdown" *ngIf="methodBreakdown.length > 0">
+          <div class="mb-header">
+            <span class="mb-title">Totals by payment method</span>
+            <span class="mb-hint">Respects the dates and category above · click a method to filter the list</span>
+          </div>
+          <div class="mb-chips">
+            <button type="button" class="mb-chip" *ngFor="let m of methodBreakdown"
+              [class.active]="activeMethodKey === m.method_key"
+              [class.paystack]="m.method_key.startsWith('paystack_')"
+              (click)="selectMethodChip(m.method_key)">
+              <span class="mb-name">{{ getMethodLabel(m.method_key) }}</span>
+              <span class="mb-amount">{{ formatCurrency(m.total) }}</span>
+              <span class="mb-count">{{ m.payments }} payment{{ m.payments !== 1 ? 's' : '' }}</span>
+            </button>
+          </div>
+          <div class="mb-total">
+            <span class="mb-total-label">{{ selectedMethodTotal.label }}</span>
+            <strong class="mb-total-amount">{{ formatCurrency(selectedMethodTotal.total) }}</strong>
+            <span class="mb-total-count">{{ selectedMethodTotal.payments }} payment{{ selectedMethodTotal.payments !== 1 ? 's' : '' }}</span>
+          </div>
+        </div>
+
+        
         <!-- Summary Strip -->
         <div class="summary-strip" *ngIf="!loading && transactions.length > 0">
           <div class="summary-item">
