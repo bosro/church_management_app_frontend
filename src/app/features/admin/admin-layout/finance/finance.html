@@ -75,6 +75,15 @@
         </div>
       </div>
 
+      <div class="stat-card">
+        <div class="stat-icon green"><i class="ri-hand-coin-line"></i></div>
+        <div class="stat-info">
+          <p class="stat-label">Churchman Earnings</p>
+          <h2 class="stat-value">{{ formatCurrency(totalEarned) }}</h2>
+          <p class="stat-meta">{{ selectedYear }} · from {{ earningsPayments | number }} Paystack payments</p>
+        </div>
+      </div>
+
       <div class="stat-card stat-alert" *ngIf="pendingWithdrawals.length > 0">
         <div class="stat-icon red"><i class="ri-bank-card-line"></i></div>
         <div class="stat-info">
@@ -132,6 +141,57 @@
         </div>
       </div>
     </div>
+
+    <div class="section-card">
+      <div class="section-header">
+        <div>
+          <h3><i class="ri-hand-coin-line"></i> Earnings by Church</h3>
+          <p>Platform fees collected from completed Paystack payments · {{ selectedYear }}</p>
+        </div>
+      </div>
+      <div class="table-wrapper earnings-table">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Church</th>
+              <th class="center-col">Payments</th>
+              <th>Church received</th>
+              <th>Payers paid</th>
+              <th>Paystack fees (est.)</th>
+              <th>Your earnings</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let e of earningChurches">
+              <td><strong>{{ e.church_name }}</strong></td>
+              <td class="center-col">{{ e.paid_transactions }}</td>
+              <td>{{ formatCurrency(e.church_received) }}</td>
+              <td>{{ formatCurrency(e.payer_charged) }}</td>
+              <td>{{ formatCurrency(e.paystack_fees_est) }}</td>
+              <td><strong class="amount-val">{{ formatCurrency(e.platform_earned) }}</strong></td>
+            </tr>
+            <tr *ngIf="earningChurches.length === 0">
+              <td colspan="6" class="center-col">No Paystack payments with fees in {{ selectedYear }} yet.</td>
+            </tr>
+          </tbody>
+          <tfoot *ngIf="earningChurches.length > 0">
+            <tr>
+              <td><strong>Total</strong></td>
+              <td class="center-col"><strong>{{ earningsPayments }}</strong></td>
+              <td></td>
+              <td><strong>{{ formatCurrency(earningsVolume) }}</strong></td>
+              <td></td>
+              <td><strong class="amount-val">{{ formatCurrency(totalEarned) }}</strong></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <p class="earnings-note">
+        Counts completed Paystack payments only. Payments from before fees were introduced count as GHS 0.
+        Paystack fees are estimated from what the payer was charged.
+      </p>
+    </div>
+
 
     <!-- ══════════════════════════════════════════════════════════
          SECTION 3 — Fee Settings (Super Admin Control)

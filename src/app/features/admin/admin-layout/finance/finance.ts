@@ -24,6 +24,16 @@ export interface MonthlyTrend {
   church_count: number;
 }
 
+export interface ChurchEarning {
+  church_id: string;
+  church_name: string;
+  paid_transactions: number;
+  church_received: number;
+  payer_charged: number;
+  paystack_fees_est: number;
+  platform_earned: number;
+}
+
 export interface RecentTransaction {
   id: string;
   church_name: string;
@@ -84,11 +94,18 @@ export class Finance implements OnInit, OnDestroy {
   get activeChurches(): number { return this.churchStats.length; }
   get pendingWithdrawals(): WithdrawalRequest[] { return this.withdrawalRequests.filter((r) => r.status === 'pending'); }
 
+
+  earnings: ChurchEarning[] = [];
+  get totalEarned(): number { return this.earnings.reduce((s, e) => s + Number(e.platform_earned), 0); }
+  get earningsPayments(): number { return this.earnings.reduce((s, e) => s + Number(e.paid_transactions), 0); }
+  get earningsVolume(): number { return this.earnings.reduce((s, e) => s + Number(e.payer_charged), 0); }
+  get earningChurches(): ChurchEarning[] { return this.earnings.filter((e) => Number(e.paid_transactions) > 0); }
+
   // ── Withdrawal filters + pagination ──────────────────────
   withdrawalFilterStatus = '';
   withdrawalFilterChurch = '';
-  withdrawalPage         = 1;
-  withdrawalPageSize     = 10;
+  withdrawalPage = 1;
+  withdrawalPageSize = 10;
 
   get filteredWithdrawals(): WithdrawalRequest[] {
     return this.withdrawalRequests.filter((r) => {
@@ -110,8 +127,8 @@ export class Finance implements OnInit, OnDestroy {
   // ── Recent transactions filters + pagination ───────────
   txnFilterChurch = '';
   txnFilterMethod = '';
-  txnPage         = 1;
-  txnPageSize     = 10;
+  txnPage = 1;
+  txnPageSize = 10;
 
   get filteredTransactions(): RecentTransaction[] {
     return this.recentTransactions.filter((t) => {
@@ -132,8 +149,8 @@ export class Finance implements OnInit, OnDestroy {
 
   // ── Church breakdown filters + pagination ───────────────
   churchFilterName = '';
-  churchPage       = 1;
-  churchPageSize   = 10;
+  churchPage = 1;
+  churchPageSize = 10;
 
   get filteredChurchStats(): ChurchGivingStat[] {
     return this.churchStats.filter((c) =>
@@ -163,9 +180,9 @@ export class Finance implements OnInit, OnDestroy {
 
   // ── Fee settings state ────────────────────────────────────
   platformFeeInput = 0.20;
-  passFeesToPayer  = true;
-  savingSettings   = false;
-  settingsSaved    = false;
+  passFeesToPayer = true;
+  savingSettings = false;
+  settingsSaved = false;
 
   constructor(
     private supabase: SupabaseService,
@@ -190,10 +207,11 @@ export class Finance implements OnInit, OnDestroy {
     this.loadChurchStats();
     this.loadMonthlyTrend();
     this.loadRecentTransactions();
+    this.loadEarnings();
     this.loadWithdrawalRequests();
   }
 
-  onYearChange(): void { this.loadChurchStats(); this.loadMonthlyTrend(); }
+  onYearChange(): void { this.loadChurchStats(); this.loadMonthlyTrend(); this.loadEarnings(); }
 
   private loadChurchStats(): void {
     this.supabase.client
@@ -210,6 +228,15 @@ export class Finance implements OnInit, OnDestroy {
       .rpc('get_platform_monthly_trend', { fiscal_year_filter: this.selectedYear })
       .then(({ data, error }) => {
         if (!error) this.monthlyTrend = data || [];
+      });
+  }
+
+    private loadEarnings(): void {
+    this.supabase.client
+      .rpc('get_platform_earnings', { fiscal_year_filter: this.selectedYear })
+      .then(({ data, error }) => {
+        if (error) { console.error('get_platform_earnings failed:', error.message); return; }
+        this.earnings = data || [];
       });
   }
 
@@ -356,7 +383,7 @@ export class Finance implements OnInit, OnDestroy {
 
   formatCompact(amount: number): string {
     if (amount >= 1_000_000) return `GHS ${(amount / 1_000_000).toFixed(1)}M`;
-    if (amount >= 1_000)     return `GHS ${(amount / 1_000).toFixed(1)}K`;
+    if (amount >= 1_000) return `GHS ${(amount / 1_000).toFixed(1)}K`;
     return this.formatCurrency(amount);
   }
 
@@ -376,7 +403,7 @@ export class Finance implements OnInit, OnDestroy {
         const map: Record<string, string> = {};
         data.forEach((s: any) => { map[s.key] = s.value; });
         if (map['platform_fee_percent']) this.platformFeeInput = parseFloat(map['platform_fee_percent']);
-        if (map['pass_fees_to_payer'])   this.passFeesToPayer  = map['pass_fees_to_payer'] !== 'false';
+        if (map['pass_fees_to_payer']) this.passFeesToPayer = map['pass_fees_to_payer'] !== 'false';
       });
   }
 
@@ -386,14 +413,14 @@ export class Finance implements OnInit, OnDestroy {
 
     const upserts = [
       {
-        key:        'platform_fee_percent',
-        value:      this.platformFeeInput.toString(),
+        key: 'platform_fee_percent',
+        value: this.platformFeeInput.toString(),
         updated_by: userId,
         updated_at: new Date().toISOString(),
       },
       {
-        key:        'pass_fees_to_payer',
-        value:      this.passFeesToPayer.toString(),
+        key: 'pass_fees_to_payer',
+        value: this.passFeesToPayer.toString(),
         updated_by: userId,
         updated_at: new Date().toISOString(),
       },
@@ -423,7 +450,7 @@ export class Finance implements OnInit, OnDestroy {
     return (parseFloat(this.previewChargeAmount) * (this.platformFeeInput / 100)).toFixed(2);
   }
   get previewChurchReceives(): string {
-    const charge   = parseFloat(this.previewChargeAmount);
+    const charge = parseFloat(this.previewChargeAmount);
     const paystack = parseFloat(this.previewPaystackFee);
     const platform = parseFloat(this.previewPlatformFee);
     return (charge - paystack - platform).toFixed(2);

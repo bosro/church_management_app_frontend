@@ -1182,3 +1182,16 @@
     color: #2563eb;
   }
 }
+
+
+.earnings-table .data-table {
+  min-width: 640px;
+  td, th { white-space: nowrap; }
+  tfoot td { padding: 0.875rem 1.25rem; border-top: 2px solid #e5e7eb; background: #f9fafb; }
+}
+.earnings-note {
+  margin: 0;
+  padding: 0.875rem 1.25rem;
+  font-size: 0.8125rem;
+  color: #9ca3af;
+}
