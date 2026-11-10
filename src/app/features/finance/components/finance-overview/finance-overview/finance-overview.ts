@@ -32,7 +32,7 @@ export class FinanceOverview implements OnInit, OnDestroy {
   recentTransactions: any[] = [];
   topGivers: TopGiver[] = [];
 
-paystackBalance: { confirmed_balance: number; pending_balance: number; transaction_count: number } | null = null;
+  paystackBalance: { confirmed_balance: number; pending_balance: number; transaction_count: number } | null = null;
   withdrawnTotal = 0;
   get availableToWithdraw(): number {
     if (!this.paystackBalance) return 0;
@@ -156,22 +156,22 @@ paystackBalance: { confirmed_balance: number; pending_balance: number; transacti
         error: (error) => console.error('Error loading top givers:', error),
       });
 
-   this.financeService.getPaystackBalance()
-  .pipe(takeUntil(this.destroy$))
-  .subscribe({
-    next: (balance) => {
-      // Only show card if there's actual confirmed money
-      this.paystackBalance = balance.confirmed_balance > 0 ? balance : null;
-    },
-    error: () => {}
-  });
+    this.financeService.getPaystackBalance()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (balance) => {
+          // Only show card if there's actual confirmed money
+          this.paystackBalance = balance.confirmed_balance > 0 ? balance : null;
+        },
+        error: () => { }
+      });
 
-  this.financeService.getWithdrawnTotal()
-  .pipe(takeUntil(this.destroy$))
-  .subscribe({
-    next: (total) => { this.withdrawnTotal = total; },
-    error: () => { this.withdrawnTotal = 0; },
-  });
+    this.financeService.getWithdrawnTotal()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (total) => { this.withdrawnTotal = total; },
+        error: () => { this.withdrawnTotal = 0; },
+      });
 
     // Category summaries
     this.loadCategorySummaries();
@@ -188,7 +188,7 @@ paystackBalance: { confirmed_balance: number; pending_balance: number; transacti
         next: (stats) => {
           this.statistics = stats;
         },
-        error: () => {},
+        error: () => { },
       });
   }
 
@@ -275,6 +275,10 @@ paystackBalance: { confirmed_balance: number; pending_balance: number; transacti
 
   viewWithdrawals(): void {
     this.router.navigate(['main/finance/withdrawals']);
+  }
+
+  viewWelfare(): void {
+    this.router.navigate(['main/finance/welfare']);
   }
 
   onYearChange(): void {
@@ -389,20 +393,20 @@ paystackBalance: { confirmed_balance: number; pending_balance: number; transacti
     }).format(amount || 0);
   }
   getMemberName(transaction: any): string {
-  if (transaction.member) return `${transaction.member.first_name} ${transaction.member.last_name}`;
-  if (transaction.payer_name?.trim()) return transaction.payer_name.trim();
-  return 'Anonymous';
-}
-
-getMemberInitials(transaction: any): string {
-  if (transaction.member) return `${transaction.member.first_name[0]}${transaction.member.last_name[0]}`.toUpperCase();
-  if (transaction.payer_name?.trim()) {
-    const parts = transaction.payer_name.trim().split(' ');
-    return parts.length >= 2
-      ? `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
-      : parts[0][0].toUpperCase();
+    if (transaction.member) return `${transaction.member.first_name} ${transaction.member.last_name}`;
+    if (transaction.payer_name?.trim()) return transaction.payer_name.trim();
+    return 'Anonymous';
   }
-  return 'A';
-}
+
+  getMemberInitials(transaction: any): string {
+    if (transaction.member) return `${transaction.member.first_name[0]}${transaction.member.last_name[0]}`.toUpperCase();
+    if (transaction.payer_name?.trim()) {
+      const parts = transaction.payer_name.trim().split(' ');
+      return parts.length >= 2
+        ? `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
+        : parts[0][0].toUpperCase();
+    }
+    return 'A';
+  }
 
 }

@@ -1,0 +1,219 @@
+<!-- src/app/features/finance/components/welfare-list/welfare-list.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+  <div class="dashboard-content">
+    <app-header></app-header>
+    <div class="dashboard-body">
+      <div class="wf-container">
+
+        <button class="btn-back" (click)="goBack()"><i class="ri-arrow-left-line"></i><span>Back</span></button>
+
+        <div class="page-header">
+          <div class="header-left">
+            <h1>Welfare</h1>
+            <p class="subtitle">Track monthly welfare contributions for members on the insurance scheme</p>
+          </div>
+          <div class="header-actions" *ngIf="settings">
+            <button class="btn-secondary" (click)="exportCsv()" [disabled]="rows.length === 0">
+              <i class="ri-download-line"></i><span>Export</span>
+            </button>
+            <button class="btn-secondary" *ngIf="canManage" (click)="openSettings()">
+              <i class="ri-settings-3-line"></i><span>Settings</span>
+            </button>
+            <button class="btn-primary" *ngIf="canManage" (click)="openEnrol()">
+              <i class="ri-user-add-line"></i><span>Enrol Members</span>
+            </button>
+          </div>
+        </div>
+
+        <div *ngIf="successMessage" class="success-alert"><i class="ri-checkbox-circle-line"></i><span>{{ successMessage }}</span></div>
+        <div *ngIf="errorMessage" class="error-alert"><i class="ri-error-warning-line"></i><span>{{ errorMessage }}</span></div>
+
+        <div *ngIf="loading" class="loading-container">
+          <app-loading-spinner message="Loading welfare..."></app-loading-spinner>
+        </div>
+
+        <ng-container *ngIf="!loading">
+
+          <!-- Scheme settings (first-time setup or edit) -->
+          <div class="card" *ngIf="showSettings">
+            <h3>{{ settings ? 'Welfare settings' : 'Set up the welfare scheme' }}</h3>
+            <p class="muted" *ngIf="!settings">
+              Choose which giving category is Welfare, the fixed monthly amount every member pays, and the first month of the scheme.
+            </p>
+            <div class="form-grid">
+              <label>
+                <span>Welfare category</span>
+                <select [(ngModel)]="formCategoryId">
+                  <option value="">Select category…</option>
+                  <option *ngFor="let c of categories" [value]="c.id">{{ c.name }}</option>
+                </select>
+              </label>
+              <label>
+                <span>Monthly amount (GHS)</span>
+                <input type="number" min="1" step="0.01" [(ngModel)]="formMonthly" placeholder="e.g. 20" />
+              </label>
+              <label>
+                <span>First month of the scheme</span>
+                <input type="month" [(ngModel)]="formStartMonth" />
+              </label>
+            </div>
+            <p class="muted small" *ngIf="settings">
+              Changing the amount re-calculates everyone's months covered using the new amount.
+            </p>
+            <div class="form-actions">
+              <button class="btn-secondary" *ngIf="settings" (click)="showSettings = false">Cancel</button>
+              <button class="btn-primary" (click)="saveSettings()" [disabled]="savingSettings || !canManage">
+                {{ savingSettings ? 'Saving…' : 'Save settings' }}
+              </button>
+            </div>
+          </div>
+
+          <ng-container *ngIf="settings && !showSettings">
+
+            <div class="scheme-banner">
+              <i class="ri-shield-check-line"></i>
+              <span>
+                <strong>{{ formatCurrency(settings.monthly_amount) }}</strong> per member per month ·
+                starting <strong>{{ formatMonth(settings.start_month) }}</strong>
+              </span>
+            </div>
+
+            <!-- Summary cards (click to filter) -->
+            <div class="stats-row">
+              <div class="stat" [class.active]="standingFilter === ''" (click)="setStandingFilter('')">
+                <span class="stat-label">Enrolled</span>
+                <span class="stat-value">{{ rows.length }}</span>
+              </div>
+              <div class="stat good" [class.active]="standingFilter === 'up_to_date'" (click)="setStandingFilter('up_to_date')">
+                <span class="stat-label">Up to date</span>
+                <span class="stat-value">{{ inGoodStanding }}</span>
+              </div>
+              <div class="stat warn" [class.active]="standingFilter === 'behind'" (click)="setStandingFilter('behind')">
+                <span class="stat-label">Behind</span>
+                <span class="stat-value">{{ count('behind') }}</span>
+              </div>
+              <div class="stat bad" [class.active]="standingFilter === 'not_paying'" (click)="setStandingFilter('not_paying')">
+                <span class="stat-label">Not paying</span>
+                <span class="stat-value">{{ count('not_paying') }}</span>
+              </div>
+              <div class="stat">
+                <span class="stat-label">Collected</span>
+                <span class="stat-value sm">{{ formatCurrency(totalCollected) }}</span>
+              </div>
+              <div class="stat">
+                <span class="stat-label">Still owed</span>
+                <span class="stat-value sm">{{ formatCurrency(totalOwed) }}</span>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="toolbar">
+                <div class="search-box">
+                  <i class="ri-search-line"></i>
+                  <input type="text" [(ngModel)]="search" placeholder="Search name, member number or phone…" />
+                </div>
+                <button class="btn-link" *ngIf="canManage" (click)="addPastPayers()" [disabled]="addingPastPayers"
+                  title="Enrol everyone who has already paid into the welfare category">
+                  <i class="ri-magic-line"></i>
+                  {{ addingPastPayers ? 'Adding…' : 'Add members who have already paid' }}
+                </button>
+                <span class="count">{{ filteredRows.length }} of {{ rows.length }}</span>
+              </div>
+
+              <div class="table-wrapper" *ngIf="rows.length > 0">
+                <table class="wf-table">
+                  <thead>
+                    <tr>
+                      <th>Member</th>
+                      <th>Standing</th>
+                      <th>Paid through</th>
+                      <th>Months covered</th>
+                      <th>Total paid</th>
+                      <th>Owed</th>
+                      <th>Last payment</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let r of filteredRows" (click)="openMember(r)">
+                      <td>
+                        <div class="member-cell">
+                          <span class="avatar">{{ initials(r) }}</span>
+                          <div>
+                            <strong>{{ r.first_name }} {{ r.last_name }}</strong>
+                            <small>{{ r.member_number }}</small>
+                          </div>
+                        </div>
+                      </td>
+                      <td><span class="badge" [ngClass]="r.standing">{{ standingLabel(r.standing) }}</span></td>
+                      <td>{{ formatMonth(r.paid_through) }}</td>
+                      <td>{{ r.months_covered }} of {{ r.months_expected }}</td>
+                      <td>{{ formatCurrency(r.total_paid) }}</td>
+                      <td [class.owed]="r.amount_owed > 0">{{ r.amount_owed > 0 ? formatCurrency(r.amount_owed) : '—' }}</td>
+                      <td>{{ r.last_payment_date ? (r.last_payment_date | date:'MMM d, y') : '—' }}</td>
+                    </tr>
+                    <tr *ngIf="filteredRows.length === 0">
+                      <td colspan="7" class="empty">No members match.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="empty-state" *ngIf="rows.length === 0">
+                <i class="ri-team-line"></i>
+                <p>No members enrolled yet.</p>
+                <p class="muted" *ngIf="canManage">
+                  Use <strong>Enrol Members</strong>, or <strong>Add members who have already paid</strong> to start with everyone who has paid welfare.
+                </p>
+              </div>
+            </div>
+
+            <p class="note">
+              A member is "up to date" when their total paid covers every month from their start month up to the current month.
+              Part-payments carry over until they add up to a full month, and paying several months at once covers those months.
+              Payments are only counted when they are linked to the member.
+            </p>
+          </ng-container>
+        </ng-container>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Enrol modal -->
+<div class="modal-backdrop" *ngIf="showEnrol" (click)="showEnrol = false">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Enrol members</h3>
+      <button class="icon-btn" (click)="showEnrol = false"><i class="ri-close-line"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="search-box">
+        <i class="ri-search-line"></i>
+        <input type="text" [formControl]="memberSearch" placeholder="Search members by name or number…" autofocus />
+      </div>
+      <div class="search-results">
+        <div *ngIf="searching" class="muted">Searching…</div>
+        <button type="button" class="result" *ngFor="let m of searchResults"
+          [disabled]="isEnrolled(m.id)" [class.picked]="isPicked(m.id)" (click)="togglePick(m)">
+          <span><strong>{{ m.first_name }} {{ m.last_name }}</strong> <small>{{ m.member_number }}</small></span>
+          <span class="tag" *ngIf="isEnrolled(m.id)">Already enrolled</span>
+          <i class="ri-check-line" *ngIf="isPicked(m.id)"></i>
+        </button>
+      </div>
+      <div class="picked-list" *ngIf="picked.length > 0">
+        <span class="chip" *ngFor="let m of picked">
+          {{ m.first_name }} {{ m.last_name }}
+          <i class="ri-close-line" (click)="togglePick(m)"></i>
+        </span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" (click)="showEnrol = false">Cancel</button>
+      <button class="btn-primary" (click)="confirmEnrol()" [disabled]="enrolling || picked.length === 0">
+        {{ enrolling ? 'Enrolling…' : 'Enrol ' + picked.length + ' member' + (picked.length === 1 ? '' : 's') }}
+      </button>
+    </div>
+  </div>
+</div>

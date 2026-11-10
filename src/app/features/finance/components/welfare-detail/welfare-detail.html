@@ -1,0 +1,125 @@
+<!-- src/app/features/finance/components/welfare-detail/welfare-detail.html -->
+<div class="dashboard-layout">
+  <app-sidebar></app-sidebar>
+  <div class="dashboard-content">
+    <app-header></app-header>
+    <div class="dashboard-body">
+      <div class="wf-container">
+
+        <button class="btn-back" (click)="goBack()"><i class="ri-arrow-left-line"></i><span>Back</span></button>
+
+        <div *ngIf="successMessage" class="success-alert"><i class="ri-checkbox-circle-line"></i><span>{{ successMessage }}</span></div>
+        <div *ngIf="errorMessage" class="error-alert"><i class="ri-error-warning-line"></i><span>{{ errorMessage }}</span></div>
+
+        <div *ngIf="loading" class="loading-container">
+          <app-loading-spinner message="Loading member..."></app-loading-spinner>
+        </div>
+
+        <div class="card" *ngIf="!loading && !row">
+          <p class="muted">This member is not enrolled in the welfare scheme (or welfare has not been set up yet).</p>
+        </div>
+
+        <ng-container *ngIf="!loading && row && settings">
+
+          <div class="page-header">
+            <div class="header-left">
+              <h1>{{ row.first_name }} {{ row.last_name }}</h1>
+              <p class="subtitle">
+                {{ row.member_number }}<span *ngIf="row.phone"> · {{ row.phone }}</span> ·
+                <span class="badge" [ngClass]="row.standing">{{ standingLabel(row.standing) }}</span>
+              </p>
+            </div>
+            <div class="header-actions">
+              <button class="btn-secondary" (click)="openMemberProfile()"><i class="ri-user-line"></i><span>Member profile</span></button>
+              <ng-container *ngIf="canManage">
+                <button class="btn-secondary" *ngIf="row.enrol_status === 'active'" (click)="setStatus('paused')" [disabled]="busy">Pause</button>
+                <button class="btn-secondary" *ngIf="row.enrol_status !== 'active'" (click)="setStatus('active')" [disabled]="busy">Re-activate</button>
+                <button class="btn-secondary" *ngIf="row.enrol_status !== 'left'" (click)="setStatus('left')" [disabled]="busy">Mark as left</button>
+                <button class="btn-danger" (click)="removeFromScheme()" [disabled]="busy">Remove</button>
+              </ng-container>
+            </div>
+          </div>
+
+          <div class="stats-row">
+            <div class="stat">
+              <span class="stat-label">Total paid</span>
+              <span class="stat-value sm">{{ formatCurrency(row.total_paid) }}</span>
+              <small>{{ row.payments }} payment{{ row.payments === 1 ? '' : 's' }}</small>
+            </div>
+            <div class="stat good">
+              <span class="stat-label">Paid through</span>
+              <span class="stat-value sm">{{ formatMonth(row.paid_through) }}</span>
+              <small>{{ row.months_covered }} of {{ row.months_expected }} months covered</small>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Towards next month</span>
+              <span class="stat-value sm">{{ formatCurrency(row.credit) }}</span>
+              <small>of {{ formatCurrency(row.monthly_amount) }}</small>
+            </div>
+            <div class="stat" [class.bad]="row.amount_owed > 0">
+              <span class="stat-label">Owed now</span>
+              <span class="stat-value sm">{{ formatCurrency(row.amount_owed) }}</span>
+              <small>{{ row.last_payment_date ? 'Last paid ' + (row.last_payment_date | date:'MMM d, y') : 'No payments yet' }}</small>
+            </div>
+          </div>
+
+          <div class="card start-card">
+            <div>
+              <span class="muted">Counting from</span>
+              <strong>{{ formatMonth(row.start_month) }}</strong>
+            </div>
+            <ng-container *ngIf="canManage">
+              <button class="btn-link" *ngIf="!editingStart" (click)="editingStart = true">Change</button>
+              <div class="inline-edit" *ngIf="editingStart">
+                <input type="month" [(ngModel)]="startMonthInput" />
+                <button class="btn-primary" (click)="saveStartMonth()" [disabled]="busy">Save</button>
+                <button class="btn-secondary" (click)="editingStart = false">Cancel</button>
+              </div>
+            </ng-container>
+          </div>
+
+          <div class="two-col">
+            <div class="card">
+              <h3>Month by month</h3>
+              <div class="months">
+                <div class="month" *ngFor="let m of months" [ngClass]="m.state">
+                  <span class="dot"></span>
+                  <span class="m-label">{{ m.label }}</span>
+                  <span class="m-note">{{ m.note }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <h3>Payments</h3>
+              <div *ngIf="paymentsLoading" class="muted">Loading…</div>
+              <div class="table-wrapper" *ngIf="!paymentsLoading && payments.length > 0">
+                <table class="wf-table">
+                  <thead><tr><th>Date</th><th>Amount</th><th>Method</th><th>Reference</th></tr></thead>
+                  <tbody>
+                    <tr *ngFor="let t of payments">
+                      <td>{{ t.transaction_date | date:'MMM d, y' }}</td>
+                      <td><strong>{{ formatCurrency(t.amount) }}</strong></td>
+                      <td>{{ methodLabel(t) }}</td>
+                      <td class="ref">{{ t.paystack_reference || t.transaction_reference || '—' }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="muted" *ngIf="!paymentsLoading && payments.length === 0">
+                No welfare payments linked to this member since {{ formatMonth(row.start_month) }}.
+                If they paid through the public link, open that payment in Finance → Giving and use Edit to link it to this member.
+              </p>
+              <div class="pager" *ngIf="totalPages > 1">
+                <button class="btn-secondary" (click)="loadPayments(page - 1)" [disabled]="page <= 1">Previous</button>
+                <span>Page {{ page }} of {{ totalPages }}</span>
+                <button class="btn-secondary" (click)="loadPayments(page + 1)" [disabled]="page >= totalPages">Next</button>
+              </div>
+            </div>
+          </div>
+        </ng-container>
+
+      </div>
+    </div>
+  </div>
+</div>

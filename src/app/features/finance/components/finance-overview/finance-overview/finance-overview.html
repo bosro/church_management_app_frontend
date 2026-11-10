@@ -29,15 +29,20 @@
             <button class="btn-primary" (click)="recordGiving()">
               <i class="ri-add-line"></i><span>Record Giving</span>
             </button>
-            <button class="btn-secondary" *ngIf="canManageFinance" (click)="openServiceEntry()" title="Quick entry for payments received during service">
+            <button class="btn-secondary" *ngIf="canManageFinance" (click)="openServiceEntry()"
+              title="Quick entry for payments received during service">
               <i class="ri-hand-coin-line"></i><span>Service Entry</span>
             </button>
-            <button class="btn-secondary" *ngIf="canManageFinance" (click)="openTreasurerAccess()" title="Set up the treasurer's PIN link">
+            <button class="btn-secondary" *ngIf="canManageFinance" (click)="openTreasurerAccess()"
+              title="Set up the treasurer's PIN link">
               <i class="ri-key-2-line"></i><span>Treasurer Link</span>
             </button>
             <button class="btn-primary" *ngIf="permissionService.isAdmin || permissionService.finance.manage"
               (click)="viewWithdrawals()">
               <i class="ri-bank-card-line"></i><span>Withdrawals</span>
+            </button>
+            <button class="btn-secondary" (click)="viewWelfare()">
+              <i class="ri-shield-check-line"></i><span>Welfare</span>
             </button>
           </div>
         </div>
@@ -57,48 +62,51 @@
           <!-- ── Quick Actions (moved to top so they are always visible) ── -->
           <div class="quick-actions-bar">
             <div class="quick-actions-grid quick-actions-row">
-                    <button class="action-btn action-green" (click)="recordGiving()"
-                      *ngIf="permissionService.isAdmin || permissionService.finance.record || permissionService.finance.manage">
-                      <i class="ri-money-dollar-circle-line"></i>
-                      <span>Record Giving</span>
-                    </button>
-                    <button class="action-btn action-blue" (click)="viewPledges()"
-                      *ngIf="permissionService.isAdmin || permissionService.finance.view">
-                      <i class="ri-hand-heart-line"></i>
-                      <span>Pledges</span>
-                    </button>
-                    <button class="action-btn action-purple" (click)="viewReports()"
-                      *ngIf="permissionService.isAdmin || permissionService.finance.reports">
-                      <i class="ri-file-chart-line"></i>
-                      <span>Reports</span>
-                    </button>
-                    <button class="action-btn action-orange" (click)="manageCategories()"
-                      *ngIf="permissionService.isAdmin || permissionService.finance.manage">
-                      <i class="ri-settings-3-line"></i>
-                      <span>Categories</span>
-                    </button>
-                    <button class="action-btn action-red" (click)="viewExpenses()"
-                      *ngIf="permissionService.isAdmin || permissionService.finance.view">
-                      <i class="ri-receipt-line"></i>
-                      <span>Expenses</span>
-                    </button>
-            
-                    <button class="action-btn action-indigo" (click)="viewPaymentLinks()"
-                      *ngIf="permissionService.isAdmin || permissionService.finance.manage">
-                      <i class="ri-link-m"></i>
-                      <span>Payment Links</span>
-                    </button>
-                    <button class="action-btn action-orange" (click)="viewWithdrawals()"
-                      *ngIf="permissionService.isAdmin || permissionService.finance.manage">
-                      <i class="ri-bank-card-line"></i>
-                      <span>Withdrawals</span>
-                    </button>
-                    <button class="action-btn action-teal" (click)="viewAllGiving()"
-                      *ngIf="permissionService.isAdmin || permissionService.finance.view">
-                      <i class="ri-list-check"></i>
-                      <span>All Giving</span>
-                    </button>
-                  </div>
+              <button class="action-btn action-green" (click)="recordGiving()"
+                *ngIf="permissionService.isAdmin || permissionService.finance.record || permissionService.finance.manage">
+                <i class="ri-money-dollar-circle-line"></i>
+                <span>Record Giving</span>
+              </button>
+              <button class="action-btn action-blue" (click)="viewPledges()"
+                *ngIf="permissionService.isAdmin || permissionService.finance.view">
+                <i class="ri-hand-heart-line"></i>
+                <span>Pledges</span>
+              </button>
+              <button class="action-btn action-purple" (click)="viewReports()"
+                *ngIf="permissionService.isAdmin || permissionService.finance.reports">
+                <i class="ri-file-chart-line"></i>
+                <span>Reports</span>
+              </button>
+              <button class="action-btn action-orange" (click)="manageCategories()"
+                *ngIf="permissionService.isAdmin || permissionService.finance.manage">
+                <i class="ri-settings-3-line"></i>
+                <span>Categories</span>
+              </button>
+              <button class="action-btn action-red" (click)="viewExpenses()"
+                *ngIf="permissionService.isAdmin || permissionService.finance.view">
+                <i class="ri-receipt-line"></i>
+                <span>Expenses</span>
+              </button>
+
+              <button class="action-btn action-indigo" (click)="viewPaymentLinks()"
+                *ngIf="permissionService.isAdmin || permissionService.finance.manage">
+                <i class="ri-link-m"></i>
+                <span>Payment Links</span>
+              </button>
+              <button class="action-btn action-orange" (click)="viewWithdrawals()"
+                *ngIf="permissionService.isAdmin || permissionService.finance.manage">
+                <i class="ri-bank-card-line"></i>
+                <span>Withdrawals</span>
+              </button>
+              <button class="btn-secondary" (click)="viewWelfare()">
+                <i class="ri-shield-check-line"></i><span>Welfare</span>
+              </button>
+              <button class="action-btn action-teal" (click)="viewAllGiving()"
+                *ngIf="permissionService.isAdmin || permissionService.finance.view">
+                <i class="ri-list-check"></i>
+                <span>All Giving</span>
+              </button>
+            </div>
           </div>
 
           <!-- ── Top Stats ────────────────────────────────────── -->

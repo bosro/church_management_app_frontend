@@ -17,6 +17,15 @@ export interface ChurchGivingStat {
   payment_links_count: number;
 }
 
+export interface ChurchBalance {
+  church_id: string; church_name: string; payments: number; received: number;
+  paid_out: number; in_progress: number; balance_due: number; last_payment_at: string | null;
+}
+export interface PaystackSettlement {
+  id: number | string; status: string; currency: string; settlement_date: string | null;
+  total_amount: number; total_fees: number; effective_amount: number; settled_by: string | null;
+}
+
 export interface MonthlyTrend {
   month: number;
   month_name: string;
@@ -92,6 +101,25 @@ export class Finance implements OnInit, OnDestroy {
   get platformExpenses(): number { return this.churchStats.reduce((s, c) => s + Number(c.total_expenses), 0); }
   get platformNetBalance(): number { return this.churchStats.reduce((s, c) => s + Number(c.net_balance), 0); }
   get activeChurches(): number { return this.churchStats.length; }
+  churchBalances: ChurchBalance[] = [];
+  get activeBalances(): ChurchBalance[] {
+    return this.churchBalances.filter((b) => Number(b.received) > 0 || Number(b.paid_out) > 0 || Number(b.in_progress) > 0);
+  }
+  get totalHeld(): number { return this.churchBalances.reduce((s, b) => s + Number(b.balance_due), 0); }
+  get totalReceivedForChurches(): number { return this.churchBalances.reduce((s, b) => s + Number(b.received), 0); }
+  get totalPaidOutToChurches(): number { return this.churchBalances.reduce((s, b) => s + Number(b.paid_out), 0); }
+  get totalPendingPayouts(): number { return this.churchBalances.reduce((s, b) => s + Number(b.in_progress), 0); }
+
+  paystackBalance: number | null = null;
+  settlements: PaystackSettlement[] = [];
+  settlementsLoading = false;
+  settlementsError = '';
+  get settledTotal(): number {
+    return this.settlements.filter((s) => s.status === 'success').reduce((t, s) => t + Number(s.effective_amount), 0);
+  }
+  get settlementsInTransit(): number {
+    return this.settlements.filter((s) => s.status !== 'success' && s.status !== 'failed').reduce((t, s) => t + Number(s.effective_amount), 0);
+  }
   get pendingWithdrawals(): WithdrawalRequest[] { return this.withdrawalRequests.filter((r) => r.status === 'pending'); }
 
 
@@ -209,6 +237,8 @@ export class Finance implements OnInit, OnDestroy {
     this.loadRecentTransactions();
     this.loadEarnings();
     this.loadWithdrawalRequests();
+    this.loadBalances();
+    this.loadSettlements();
   }
 
   onYearChange(): void { this.loadChurchStats(); this.loadMonthlyTrend(); this.loadEarnings(); }
@@ -223,6 +253,34 @@ export class Finance implements OnInit, OnDestroy {
       });
   }
 
+  private loadBalances(): void {
+    this.supabase.client.rpc('get_church_balances').then(({ data, error }) => {
+      if (error) { console.error('get_church_balances failed:', error.message); return; }
+      this.churchBalances = data || [];
+    });
+  }
+
+  loadSettlements(): void {
+    this.settlementsLoading = true;
+    this.settlementsError = '';
+    this.supabase.client.functions.invoke('paystack-settlements').then(({ data, error }) => {
+      this.settlementsLoading = false;
+      if (error || !data?.success) {
+        this.settlementsError = data?.error || error?.message || 'Could not load Paystack payouts.';
+        return;
+      }
+      const ghs = (data.balances || []).find((b: any) => b.currency === 'GHS');
+      this.paystackBalance = ghs ? Number(ghs.balance) : null;
+      this.settlements = data.settlements || [];
+      if (data.warnings?.length) this.settlementsError = data.warnings.join(' · ');
+    });
+  }
+
+  getSettlementLabel(status: string): string {
+    const map: Record<string, string> = { success: 'Paid to you', pending: 'Pending', processing: 'Processing', failed: 'Failed' };
+    return map[status] || status;
+  }
+
   private loadMonthlyTrend(): void {
     this.supabase.client
       .rpc('get_platform_monthly_trend', { fiscal_year_filter: this.selectedYear })
@@ -231,7 +289,7 @@ export class Finance implements OnInit, OnDestroy {
       });
   }
 
-    private loadEarnings(): void {
+  private loadEarnings(): void {
     this.supabase.client
       .rpc('get_platform_earnings', { fiscal_year_filter: this.selectedYear })
       .then(({ data, error }) => {

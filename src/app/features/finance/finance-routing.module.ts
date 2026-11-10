@@ -15,6 +15,8 @@ import { PaymentLinks } from './components/payment-links/payment-links';
 import { WithdrawalRequests } from './components/withdrawal-requests/withdrawal-requests';
 import { TreasurerAccess } from './components/treasurer-access/treasurer-access';
 import { TreasurerEntry } from '../public/treasurer-entry/treasurer-entry';
+import { WelfareList } from './components/welfare-list/welfare-list';
+import { WelfareDetail } from './components/welfare-detail/welfare-detail';
 
 const FINANCE_VIEW_ROLES = [
   'super_admin',
@@ -89,7 +91,7 @@ const routes: Routes = [
       roles: FINANCE_VIEW_ROLES,
     },
   },
-   {
+  {
     path: 'withdrawals',
     component: WithdrawalRequests,
     canActivate: [PermissionGuard],
@@ -159,6 +161,20 @@ const routes: Routes = [
       permission: 'finance.view',
       roles: FINANCE_VIEW_ROLES,
     },
+
+  },
+
+  {
+    path: 'welfare',
+    component: WelfareList,
+    canActivate: [PermissionGuard],
+    data: { title: 'Welfare', permission: 'finance.view', roles: FINANCE_VIEW_ROLES },
+  },
+  {
+    path: 'welfare/:memberId',
+    component: WelfareDetail,
+    canActivate: [PermissionGuard],
+    data: { title: 'Welfare Member', permission: 'finance.view', roles: FINANCE_VIEW_ROLES },
   },
 ];
 
@@ -166,4 +182,4 @@ const routes: Routes = [
   imports: [RouterModule.forChild(routes)],
   exports: [RouterModule],
 })
-export class FinanceRoutingModule {}
+export class FinanceRoutingModule { }

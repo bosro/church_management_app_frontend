@@ -17,6 +17,8 @@ import { PaymentLinks } from './components/payment-links/payment-links';
 import { WithdrawalRequests } from './components/withdrawal-requests/withdrawal-requests';
 import { QrCodeComponent } from 'ng-qrcode';
 import { TreasurerAccess } from './components/treasurer-access/treasurer-access';
+import { WelfareDetail } from './components/welfare-detail/welfare-detail';
+import { WelfareList } from './components/welfare-list/welfare-list';
 
 
 
@@ -34,7 +36,9 @@ import { TreasurerAccess } from './components/treasurer-access/treasurer-access'
     FinanceRevenueChart,
     CategoryExpenses,
     PaymentLinks,
-    WithdrawalRequests
+    WithdrawalRequests,
+    WelfareDetail,
+    WelfareList
   ],
   imports: [
       CommonModule,
