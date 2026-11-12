@@ -67,6 +67,8 @@
         <div class="status-icon success"><i class="ri-checkbox-circle-line"></i></div>
         <h2>You're registered!</h2>
         <p>Thank you, {{ name }}. We look forward to seeing you at {{ event.title }}.</p>
+        <p *ngIf="registrationCode" class="reg-code">Your ID Number: <strong>{{ registrationCode }}</strong></p>
+        <p *ngIf="smsPending" class="reg-sms-note">A confirmation SMS is on its way to {{ phone }}.</p>
         <button type="button" class="btn-secondary" (click)="registerAnother()">
           <i class="ri-user-add-line"></i> Register another person
         </button>
@@ -82,8 +84,8 @@
 
         <div class="field">
           <label for="reg-name">Full name <span class="req">*</span></label>
-          <input id="reg-name" name="name" type="text" [(ngModel)]="name" required maxlength="100"
-            autocomplete="name" placeholder="Your full name" />
+          <input id="reg-name" name="name" type="text" [(ngModel)]="name" required maxlength="100" autocomplete="name"
+            placeholder="Your full name" />
         </div>
 
         <div class="field">
@@ -94,8 +96,10 @@
 
         <div class="field">
           <label for="reg-phone">Phone <span class="opt">(optional)</span></label>
-          <input id="reg-phone" name="phone" type="tel" [(ngModel)]="phone" maxlength="30"
-            autocomplete="tel" placeholder="e.g. 024 000 0000" />
+          <span class="opt" *ngIf="!event.sms_confirmation">(optional)</span>
+          <span class="req" *ngIf="event.sms_confirmation">*</span>
+          <input id="reg-phone" name="phone" type="tel" [(ngModel)]="phone" maxlength="30" autocomplete="tel"
+            placeholder="e.g. 024 000 0000" [required]="!!event.sms_confirmation" />
         </div>
 
         <div class="field">

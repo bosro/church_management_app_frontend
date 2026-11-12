@@ -28,6 +28,7 @@ interface PublicEvent {
   closed_reason?: string | null;
   church_name?: string | null;
   church_logo?: string | null;
+  sms_confirmation?: boolean;
 }
 
 @Component({
@@ -50,11 +51,15 @@ export class PublicEventRegistration implements OnInit {
   submitting = false;
   errorMessage = '';
 
+
+  registrationCode = '';
+  smsPending = false;
+
   constructor(
     private route: ActivatedRoute,
     private supabase: SupabaseService,
     private cdr: ChangeDetectorRef,
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.eventId = this.route.snapshot.paramMap.get('eventId') || '';
@@ -96,6 +101,11 @@ export class PublicEventRegistration implements OnInit {
       return;
     }
 
+    if (this.event.sms_confirmation && !this.phone.trim()) {
+      this.errorMessage = 'Please enter your phone number so we can send your confirmation.';
+      return;
+    }
+
     this.submitting = true;
     try {
       const { data, error } = await this.supabase.client.rpc('register_for_event_public', {
@@ -115,7 +125,15 @@ export class PublicEventRegistration implements OnInit {
           await this.loadEvent();
         }
       } else {
+        this.registrationCode = data.registration_code || '';
+        this.smsPending = !!data.sms_pending;
         this.pageState = 'success';
+        if (data.sms_pending && data.registration_id) {
+          // fire-and-forget: a failed SMS must never undo the registration
+          this.supabase.client.functions
+            .invoke('send-event-registration-sms', { body: { registration_id: data.registration_id } })
+            .catch(() => { });
+        }
       }
     } catch {
       this.errorMessage = 'Network error. Please check your connection and try again.';
@@ -131,6 +149,8 @@ export class PublicEventRegistration implements OnInit {
     this.phone = '';
     this.notes = '';
     this.errorMessage = '';
+    this.registrationCode = '';
+    this.smsPending = false;
     this.loadEvent(); // refresh spots left
   }
 }

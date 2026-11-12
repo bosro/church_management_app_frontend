@@ -49,6 +49,18 @@ export class EditEvent implements OnInit, OnDestroy {
   uploadingFlyer = false;
   flyerError = '';
 
+
+
+  readonly smsPlaceholders = ['{name}', '{first_name}', '{event}', '{date}', '{time}', '{location}', '{id}', '{church_name}'];
+
+  readonly smsExample =
+    'Thank you {name} for registering for the {event} on {date} at {time}. Your ID Number is {id}\n\n' +
+    'Kindly pay $5 (GHS 60 or above) as your level of support, or feel free to sponsor the seminar.\n\n' +
+    'Payment Details: Momo 0244564343 (Ernest Osei-Nimako)\n\n' +
+    'Please whatsapp your payment confirmation to 0244564343. Thank you for your support, see you there!';
+
+
+
   constructor(
     private fb: FormBuilder,
     private eventsService: EventsService,
@@ -56,7 +68,32 @@ export class EditEvent implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     public permissionService: PermissionService,
     private authService: AuthService,
-  ) {}
+  ) { }
+
+
+  insertPlaceholder(token: string, box: HTMLTextAreaElement): void {
+    const ctl = this.eventForm.get('confirmation_sms_template')!;
+    const cur: string = ctl.value || '';
+    const s = box.selectionStart ?? cur.length;
+    const e = box.selectionEnd ?? cur.length;
+    ctl.setValue(cur.slice(0, s) + token + cur.slice(e));
+    ctl.markAsDirty();
+    setTimeout(() => { box.focus(); box.setSelectionRange(s + token.length, s + token.length); });
+  }
+
+  useSmsExample(): void {
+    this.eventForm.get('confirmation_sms_template')!.setValue(this.smsExample);
+  }
+
+  /** Rough SMS length: GSM text = 160 per part (153 if several); anything else (e.g. the cedi sign) = 70 per part (67). */
+  get smsInfo(): { chars: number; parts: number; unicode: boolean } {
+    const t: string = this.eventForm.get('confirmation_sms_template')?.value || '';
+    const unicode = /[^\x20-\x7E\n\r£¥èéùìòÇØøÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ¤¡ÄÖÑÜ§¿äöñüà€]/.test(t);
+    const single = unicode ? 70 : 160, multi = unicode ? 67 : 153;
+    const parts = t.length === 0 ? 0 : t.length <= single ? 1 : Math.ceil(t.length / multi);
+    return { chars: t.length, parts, unicode };
+  }
+
 
   ngOnInit(): void {
     this.checkPermissions();
@@ -112,6 +149,9 @@ export class EditEvent implements OnInit, OnDestroy {
       registration_deadline: [''],
       requires_registration: [false],
       is_public: [true],
+      confirmation_sms_enabled: [false],
+      confirmation_sms_template: ['', [Validators.maxLength(600)]],
+      registration_id_prefix: ['', [Validators.maxLength(8)]],
     });
   }
 
@@ -199,6 +239,9 @@ export class EditEvent implements OnInit, OnDestroy {
       registration_deadline: event.registration_deadline || '',
       requires_registration: event.registration_required || false,
       is_public: event.is_public !== undefined ? event.is_public : true,
+      confirmation_sms_enabled: event.confirmation_sms_enabled || false,
+      confirmation_sms_template: event.confirmation_sms_template || '',
+      registration_id_prefix: event.registration_id_prefix || '',
     });
   }
 
@@ -255,6 +298,10 @@ export class EditEvent implements OnInit, OnDestroy {
       registration_deadline: v.registration_deadline || undefined,
       registration_required: v.requires_registration || false,
       is_public: v.is_public !== undefined ? v.is_public : true,
+
+      confirmation_sms_enabled: !!v.requires_registration && !!v.confirmation_sms_enabled,
+      confirmation_sms_template: v.confirmation_sms_template?.trim() || null,
+      registration_id_prefix: v.registration_id_prefix?.trim() || null,
       // Move flyer_url INSIDE the object instead of assigning after:
       flyer_url:
         !this.existingFlyerUrl && !this.selectedFlyer ? null : undefined,

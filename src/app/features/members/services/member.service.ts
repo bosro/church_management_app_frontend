@@ -1713,4 +1713,74 @@ export class MemberService {
       );
     }
   }
+
+
+  // ───────────────────────── Ghana Card images (private bucket) ─────────────────────────
+  private readonly ID_BUCKET = 'member-id-cards';
+
+  /** Temporary (1 hour) viewing link for a stored card image. Returns null if it can't be read. */
+  async getIdCardUrl(path: string): Promise<string | null> {
+    try {
+      const { data, error } = await this.supabase.client.storage
+        .from(this.ID_BUCKET)
+        .createSignedUrl(path, 3600);
+      return error ? null : data.signedUrl;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Saves the chosen Ghana Card images for a member (uploads new, removes deleted) and
+   * updates members.ghana_card_front_path / ghana_card_back_path.
+   * Never throws: returns an error text (or null) so a card problem never blocks saving the member.
+   */
+  async saveIdCards(
+    memberId: string,
+    sel: { frontFile: File | null; backFile: File | null; removeFront: boolean; removeBack: boolean },
+    current: { front?: string | null; back?: string | null } = {},
+  ): Promise<string | null> {
+    try {
+      const churchId = this.getChurchId();
+      const bucket = this.supabase.client.storage.from(this.ID_BUCKET);
+      const update: Record<string, string | null> = {};
+      const toDelete: string[] = [];
+
+      const handle = async (
+        side: 'front' | 'back',
+        file: File | null,
+        remove: boolean,
+        old?: string | null,
+      ) => {
+        if (file) {
+          const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '');
+          const path = `${churchId}/${memberId}/${side}_${Date.now()}.${ext}`;
+          const { error } = await bucket.upload(path, file, { contentType: file.type, upsert: false });
+          if (error) throw new Error(error.message);
+          update[`ghana_card_${side}_path`] = path;
+          if (old) toDelete.push(old);
+        } else if (remove && old) {
+          update[`ghana_card_${side}_path`] = null;
+          toDelete.push(old);
+        }
+      };
+
+      await handle('front', sel.frontFile, sel.removeFront, current.front);
+      await handle('back', sel.backFile, sel.removeBack, current.back);
+
+      if (Object.keys(update).length === 0) return null;
+
+      const { error: upErr } = await this.supabase.client
+        .from('members')
+        .update({ ...update, updated_at: new Date().toISOString() })
+        .eq('id', memberId)
+        .eq('church_id', churchId);
+      if (upErr) throw new Error(upErr.message);
+
+      if (toDelete.length) await bucket.remove(toDelete); // tidy up replaced/removed files
+      return null;
+    } catch (e: any) {
+      return e?.message || 'Could not save the Ghana Card images.';
+    }
+  }
 }

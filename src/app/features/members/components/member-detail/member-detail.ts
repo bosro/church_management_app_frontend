@@ -66,13 +66,17 @@ export class MemberDetail implements OnInit, OnDestroy {
   showConfirmModal = false;
   confirmModalLoading = false;
 
+
+  idCardUrls: { front: string | null; back: string | null } = { front: null, back: null };
+
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private memberService: MemberService,
     private authService: AuthService,
     public permissionService: PermissionService,
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.checkPermissions();
@@ -394,6 +398,13 @@ export class MemberDetail implements OnInit, OnDestroy {
       online: 'Online',
     };
     return map[method] ?? method;
+  }
+
+  private async loadIdCards(m: Member): Promise<void> {
+    this.idCardUrls = {
+      front: m.ghana_card_front_path ? await this.memberService.getIdCardUrl(m.ghana_card_front_path) : null,
+      back: m.ghana_card_back_path ? await this.memberService.getIdCardUrl(m.ghana_card_back_path) : null,
+    };
   }
 }
 

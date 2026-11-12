@@ -7,6 +7,7 @@ import { MemberService } from '../../services/member.service';
 import { AuthService } from '../../../../core/services/auth';
 import { Member, CellGroup } from '../../../../models/member.model';
 import { PermissionService } from '../../../../core/services/permission.service';
+import { IdCardSelection } from '../ghana-card-upload/ghana-card-upload';
 
 @Component({
   selector: 'app-edit-member',
@@ -28,6 +29,10 @@ export class EditMember implements OnInit, OnDestroy {
   photoPreview: string | null = null;
   uploadingPhoto = false;
   originalPhotoUrl: string | null = null;
+
+  idCards: IdCardSelection | null = null;
+  idFrontPath: string | null = null;
+  idBackPath: string | null = null;
 
   genderOptions = [
     { value: 'male', label: 'Male' },
@@ -71,7 +76,7 @@ export class EditMember implements OnInit, OnDestroy {
     private router: Router,
     private route: ActivatedRoute,
     public permissionService: PermissionService,
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.checkPermissions();
@@ -189,6 +194,8 @@ export class EditMember implements OnInit, OnDestroy {
           this.memberCurrentCellGroupId = member.cell_group_id || null;
 
           this.populateForm(member);
+          this.idFrontPath = member.ghana_card_front_path ?? null;
+          this.idBackPath = member.ghana_card_back_path ?? null;
           if (member.photo_url) {
             this.photoPreview = member.photo_url;
             this.originalPhotoUrl = member.photo_url;
@@ -305,12 +312,16 @@ export class EditMember implements OnInit, OnDestroy {
       .updateMember(this.memberId, memberData)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (member) => {
-          if (this.selectedPhoto) {
-            this.uploadPhoto(member.id);
-          } else {
-            this.showSuccessAndRedirect(member.id);
+        next: async (member) => {
+          if (this.idCards) {
+            this.uploadingPhoto = true;
+            const cardErr = await this.memberService.saveIdCards(member.id, this.idCards, {
+              front: this.idFrontPath, back: this.idBackPath,
+            });
+            this.uploadingPhoto = false;
+            if (cardErr) alert('Member saved, but the Ghana Card images could not be saved: ' + cardErr);
           }
+          if (this.selectedPhoto) { this.uploadPhoto(member.id); } else { this.showSuccessAndRedirect(member.id); }
         },
         error: (error) => {
           this.loading = false;

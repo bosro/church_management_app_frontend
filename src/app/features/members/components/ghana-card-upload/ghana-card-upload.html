@@ -1,0 +1,28 @@
+<div class="gc-grid">
+  <ng-container *ngFor="let side of ['front', 'back']">
+    <div class="gc-slot">
+      <p class="gc-label">{{ side === 'front' ? 'Front' : 'Back' }}</p>
+      <div class="gc-preview">
+        <img *ngIf="shown($any(side)) as src" [src]="src" [alt]="'Ghana Card ' + side" />
+        <div *ngIf="!shown($any(side))" class="gc-empty">
+          <i class="ri-id-card-line"></i>
+          <span>No image</span>
+        </div>
+      </div>
+      <div class="gc-actions">
+        <label class="gc-btn" [class.disabled]="disabled">
+          <i class="ri-upload-2-line"></i>
+          <span>{{ shown($any(side)) ? 'Change' : 'Upload' }}</span>
+          <input type="file" accept="image/jpeg,image/png,image/webp" capture="environment"
+            (change)="onPick($any(side), $event)" [disabled]="disabled" hidden />
+        </label>
+        <button *ngIf="shown($any(side))" type="button" class="gc-btn gc-remove" (click)="remove($any(side))"
+          [disabled]="disabled">
+          <i class="ri-delete-bin-line"></i> Remove
+        </button>
+      </div>
+    </div>
+  </ng-container>
+</div>
+<p class="gc-hint">JPG, PNG or WEBP, max 5MB each. Stored privately; only church staff can view these.</p>
+<p class="gc-error" *ngIf="error">{{ error }}</p>

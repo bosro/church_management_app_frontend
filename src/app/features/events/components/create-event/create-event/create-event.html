@@ -147,6 +147,46 @@
                   <p class="help-text">Members must register to attend this event</p>
                 </div>
 
+                <div class="form-group sms-confirm" *ngIf="eventForm.get('requires_registration')?.value">
+                  <div class="checkbox-group">
+                    <label class="checkbox-label">
+                      <input type="checkbox" formControlName="confirmation_sms_enabled" class="checkbox-input" />
+                      <span class="checkbox-text">Send a confirmation SMS after registration</span>
+                    </label>
+                    <p class="help-text">Registrants get this message right after they register. Phone number becomes
+                      required on the form.</p>
+                  </div>
+
+                  <ng-container *ngIf="eventForm.get('confirmation_sms_enabled')?.value">
+                    <label for="confirmation_sms_template">Message</label>
+                    <textarea #smsBox id="confirmation_sms_template" formControlName="confirmation_sms_template"
+                      rows="10" maxlength="600" class="form-control"
+                      placeholder="Thank you {name} for registering for {event} on {date}. Your ID Number is {id}"></textarea>
+
+                    <div class="sms-chips">
+                      <span class="help-text">Tap to insert:</span>
+                      <button type="button" class="sms-chip" *ngFor="let p of smsPlaceholders"
+                        (click)="insertPlaceholder(p, smsBox)">{{ p }}</button>
+                    </div>
+
+                    <p class="help-text">
+                      {{ smsInfo.chars }} characters ≈ {{ smsInfo.parts }} SMS per person.
+                      <span *ngIf="smsInfo.unicode"> The cedi sign (₵) or curly quotes make it a "special character"
+                        message (70 per SMS instead of 160): use "GHS" to keep it cheaper.</span>
+                    </p>
+                    <button type="button" class="sms-chip" (click)="useSmsExample()">Use the Life Matters
+                      example</button>
+
+                    <label for="registration_id_prefix" style="margin-top:1rem;display:block">ID prefix <span
+                        class="opt">(optional)</span></label>
+                    <input id="registration_id_prefix" type="text" formControlName="registration_id_prefix"
+                      maxlength="8" class="form-control" placeholder="Leave empty to use the event's initials" />
+                    <p class="help-text">IDs look like <strong>LMS261115100</strong>: prefix + event date (yymmdd) + a
+                      number starting at 100.
+                      "Life Matters Seminar" automatically becomes LMS.</p>
+                  </ng-container>
+                </div>
+
                 <!-- Is Public -->
                 <div class="form-group checkbox-group">
                   <label class="checkbox-label">

@@ -31,6 +31,9 @@ export interface ChurchEvent {  // Changed from Event to ChurchEvent
   created_at: string;
   updated_at: string;
   flyer_url?: string
+  confirmation_sms_enabled?: boolean;
+  confirmation_sms_template?: string | null;
+  registration_id_prefix?: string | null;
 }
 
 export interface EventRegistration {
@@ -46,6 +49,10 @@ export interface EventRegistration {
   checked_in_at?: string;
   registered_at: string;
   flyer_url?: string;
+
+  registration_code?: string | null;
+  sms_status?: 'sending' | 'sent' | 'failed' | 'skipped' | null;
+  sms_error?: string | null;
 
   // Relations
   member?: {

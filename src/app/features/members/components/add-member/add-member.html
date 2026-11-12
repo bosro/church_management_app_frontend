@@ -65,6 +65,13 @@
               </div>
             </div>
 
+            <div class="form-card">
+              <h3>Ghana Card</h3>
+              <!-- edit-member: add [frontPath]="idFrontPath" [backPath]="idBackPath" -->
+              <app-ghana-card-upload [disabled]="loading || uploadingPhoto"
+                (changed)="idCards = $event"></app-ghana-card-upload>
+            </div>
+
             <!-- Basic Information -->
             <div class="form-card">
               <h3>Basic Information <span class="required-indicator">* Required fields</span></h3>

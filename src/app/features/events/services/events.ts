@@ -19,7 +19,7 @@ export class EventsService {
     private supabase: SupabaseService,
     private authService: AuthService,
     private subscriptionService: SubscriptionService,
-  ) {}
+  ) { }
 
   // ==================== PERMISSIONS ====================
 
@@ -155,7 +155,9 @@ export class EventsService {
     max_attendees?: number;
     registration_deadline?: string;
     registration_required?: boolean;
-    is_public?: boolean;
+    is_public?: boolean; confirmation_sms_enabled?: boolean;
+    confirmation_sms_template?: string;
+    registration_id_prefix?: string;
   }): Observable<ChurchEvent> {
     const churchId = this.authService.getChurchId();
     const userId = this.authService.getUserId();
@@ -191,7 +193,9 @@ export class EventsService {
             registration_required: eventData.registration_required || false,
             is_public:
               eventData.is_public !== undefined ? eventData.is_public : true,
-            created_by: userId,
+            created_by: userId, confirmation_sms_enabled: eventData.confirmation_sms_enabled || false,
+            confirmation_sms_template: eventData.confirmation_sms_template || null,
+            registration_id_prefix: eventData.registration_id_prefix || null,
           } as any),
         );
       }),
@@ -224,6 +228,9 @@ export class EventsService {
       registration_required?: boolean;
       is_public?: boolean;
       flyer_url?: string | null; // ← add this line
+      confirmation_sms_enabled?: boolean;
+      confirmation_sms_template?: string | null;
+      registration_id_prefix?: string | null;
     },
   ): Observable<ChurchEvent> {
     const churchId = this.authService.getChurchId();

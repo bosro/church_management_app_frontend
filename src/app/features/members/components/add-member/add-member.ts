@@ -9,6 +9,7 @@ import { AuthService } from '../../../../core/services/auth';
 import { MemberCreateInput, CellGroup } from '../../../../models/member.model';
 import { PermissionService } from '../../../../core/services/permission.service';
 import { SubscriptionService } from '../../../../core/services/subscription.service';
+import { IdCardSelection } from '../ghana-card-upload/ghana-card-upload';
 
 @Component({
   selector: 'app-add-member',
@@ -28,6 +29,8 @@ export class AddMember implements OnInit, OnDestroy {
   selectedPhoto: File | null = null;
   photoPreview: string | null = null;
   uploadingPhoto = false;
+
+  idCards: IdCardSelection | null = null;
 
   // Options
   genderOptions = [
@@ -74,7 +77,7 @@ export class AddMember implements OnInit, OnDestroy {
     private router: Router,
     public permissionService: PermissionService,
     private subscriptionService: SubscriptionService,
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.checkPermissions();
@@ -258,7 +261,13 @@ export class AddMember implements OnInit, OnDestroy {
       .createMember(memberData)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (member) => {
+        next: async (member) => {
+          if (this.idCards) {
+            this.uploadingPhoto = true; // reuses the "saving" lock
+            const cardErr = await this.memberService.saveIdCards(member.id, this.idCards);
+            this.uploadingPhoto = false;
+            if (cardErr) alert('Member saved, but the Ghana Card images could not be saved: ' + cardErr + '\nOpen the member and use Edit to try again.');
+          }
           if (this.selectedPhoto) {
             this.uploadPhoto(member.id);
           } else {

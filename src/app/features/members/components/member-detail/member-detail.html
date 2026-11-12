@@ -262,6 +262,26 @@
                 </div>
               </div>
 
+              <div class="info-card" *ngIf="member.ghana_card_front_path || member.ghana_card_back_path">
+                <h3><i class="ri-id-card-line"></i> Ghana Card</h3>
+                <div class="id-card-grid">
+                  <div *ngIf="member.ghana_card_front_path">
+                    <p class="info-label">Front</p>
+                    <a *ngIf="idCardUrls.front" [href]="idCardUrls.front" target="_blank" rel="noopener">
+                      <img [src]="idCardUrls.front" alt="Ghana Card front" />
+                    </a>
+                    <p *ngIf="!idCardUrls.front" class="info-value">Loading…</p>
+                  </div>
+                  <div *ngIf="member.ghana_card_back_path">
+                    <p class="info-label">Back</p>
+                    <a *ngIf="idCardUrls.back" [href]="idCardUrls.back" target="_blank" rel="noopener">
+                      <img [src]="idCardUrls.back" alt="Ghana Card back" />
+                    </a>
+                    <p *ngIf="!idCardUrls.back" class="info-value">Loading…</p>
+                  </div>
+                </div>
+              </div>
+
               <!-- Emergency Contact -->
               <div class="info-card" *ngIf="member.emergency_contact_name || member.emergency_contact_phone">
                 <h3>
@@ -705,17 +725,11 @@
     </div>
   </div>
 
-   <app-confirm-modal
-    [show]="showConfirmModal"
-    title="Delete Member"
+  <app-confirm-modal [show]="showConfirmModal" title="Delete Member"
     [message]="'You are about to permanently delete ' + getMemberFullName() + '.'"
     submessage="All their attendance, giving, pledge, and ministry records will also be permanently removed."
     warningText="This action cannot be undone. The member will be removed from the system entirely."
-    confirmLabel="Yes, Delete Permanently"
-    variant="danger"
-    icon="ri-delete-bin-line"
-    [loading]="confirmModalLoading"
-    (confirmed)="onDeleteConfirmed()"
-    (cancelled)="onDeleteCancelled()">
+    confirmLabel="Yes, Delete Permanently" variant="danger" icon="ri-delete-bin-line" [loading]="confirmModalLoading"
+    (confirmed)="onDeleteConfirmed()" (cancelled)="onDeleteCancelled()">
   </app-confirm-modal>
 </div>

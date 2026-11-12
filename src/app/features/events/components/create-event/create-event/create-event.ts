@@ -52,13 +52,47 @@ export class CreateEvent implements OnInit, OnDestroy {
   uploadingFlyer = false;
   flyerError = '';
 
+
+  readonly smsPlaceholders = ['{name}', '{first_name}', '{event}', '{date}', '{time}', '{location}', '{id}', '{church_name}'];
+
+  readonly smsExample =
+    'Thank you {name} for registering for the {event} on {date} at {time}. Your ID Number is {id}\n\n' +
+    'Kindly pay $5 (GHS 60 or above) as your level of support, or feel free to sponsor the seminar.\n\n' +
+    'Payment Details: Momo 0244564343 (Ernest Osei-Nimako)\n\n' +
+    'Please whatsapp your payment confirmation to 0244564343. Thank you for your support, see you there!';
+
+
   constructor(
     private fb: FormBuilder,
     private eventsService: EventsService,
     private router: Router,
     public permissionService: PermissionService,
     private authService: AuthService,
-  ) {}
+  ) { }
+
+
+  insertPlaceholder(token: string, box: HTMLTextAreaElement): void {
+    const ctl = this.eventForm.get('confirmation_sms_template')!;
+    const cur: string = ctl.value || '';
+    const s = box.selectionStart ?? cur.length;
+    const e = box.selectionEnd ?? cur.length;
+    ctl.setValue(cur.slice(0, s) + token + cur.slice(e));
+    ctl.markAsDirty();
+    setTimeout(() => { box.focus(); box.setSelectionRange(s + token.length, s + token.length); });
+  }
+
+  useSmsExample(): void {
+    this.eventForm.get('confirmation_sms_template')!.setValue(this.smsExample);
+  }
+
+  /** Rough SMS length: GSM text = 160 per part (153 if several); anything else (e.g. the cedi sign) = 70 per part (67). */
+  get smsInfo(): { chars: number; parts: number; unicode: boolean } {
+    const t: string = this.eventForm.get('confirmation_sms_template')?.value || '';
+    const unicode = /[^\x20-\x7E\n\r£¥èéùìòÇØøÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ¤¡ÄÖÑÜ§¿äöñüà€]/.test(t);
+    const single = unicode ? 70 : 160, multi = unicode ? 67 : 153;
+    const parts = t.length === 0 ? 0 : t.length <= single ? 1 : Math.ceil(t.length / multi);
+    return { chars: t.length, parts, unicode };
+  }
 
   ngOnInit(): void {
     this.checkPermissions();
@@ -115,6 +149,9 @@ export class CreateEvent implements OnInit, OnDestroy {
       // FIX: was 'registration_required', template uses 'requires_registration'
       requires_registration: [false],
       is_public: [true],
+      confirmation_sms_enabled: [false],
+      confirmation_sms_template: ['', [Validators.maxLength(600)]],
+      registration_id_prefix: ['', [Validators.maxLength(8)]],
     });
   }
 
@@ -167,6 +204,12 @@ export class CreateEvent implements OnInit, OnDestroy {
       registration_required: formValue.requires_registration || false,
       registration_deadline: formValue.registration_deadline || undefined,
       is_public: formValue.is_public !== undefined ? formValue.is_public : true,
+      start_time: formValue.start_time || undefined,
+      end_time: formValue.end_time || undefined,
+      confirmation_sms_enabled: !!formValue.requires_registration && !!formValue.confirmation_sms_enabled,
+      confirmation_sms_template: formValue.confirmation_sms_template?.trim() || undefined,
+      registration_id_prefix: formValue.registration_id_prefix?.trim() || undefined,
+      
     };
 
     this.eventsService

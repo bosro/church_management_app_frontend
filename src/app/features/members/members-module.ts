@@ -10,6 +10,7 @@ import { SharedModule } from '../../shared/shared-module';
 import { EditMember } from './components/edit-member/edit-member';
 import { RegistrationLinks } from './components/registration-links/registration-links';
 import { QrCodeComponent } from 'ng-qrcode';
+import { GhanaCardUpload } from './components/ghana-card-upload/ghana-card-upload';
 
 @NgModule({
   declarations: [
@@ -19,6 +20,7 @@ import { QrCodeComponent } from 'ng-qrcode';
     ImportMembers,
     EditMember,
     RegistrationLinks,
+    GhanaCardUpload,
   ],
   imports: [
     CommonModule,
