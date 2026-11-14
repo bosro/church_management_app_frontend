@@ -458,6 +458,14 @@ export class EventsService {
     );
   }
 
+  /** Staff: send / resend the confirmation SMS. */
+  async sendRegistrationSms(body: { registration_id?: string; resend?: boolean; event_id?: string; send_pending?: boolean }): Promise<any> {
+    const { data, error } = await this.supabase.client.functions.invoke('send-event-registration-sms', { body });
+    if (error) throw new Error(error.message || 'Could not send');
+    if (data?.success === false) throw new Error(data.error || 'Could not send');
+    return data;
+  }
+
   // ==================== STATISTICS ====================
 
   getEventStatistics(eventId: string): Observable<any> {

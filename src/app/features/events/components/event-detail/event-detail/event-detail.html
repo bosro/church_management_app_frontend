@@ -292,6 +292,17 @@
               </div>
             </div>
 
+            <div class="sms-bulk"
+              *ngIf="event?.confirmation_sms_enabled && (permissionService.isAdmin || permissionService.events.edit)"
+              style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;margin:0 0 1rem">
+              <button class="btn-submit" type="button" (click)="sendPendingSms()"
+                [disabled]="sendingSms || smsPendingCount === 0">
+                <i [class]="sendingSms ? 'ri-loader-4-line spin' : 'ri-message-2-line'"></i>
+                {{ sendingSms ? 'Sending…' : 'Send confirmation SMS to ' + smsPendingCount + ' not yet messaged' }}
+              </button>
+              <span class="help-text" *ngIf="smsMessage">{{ smsMessage }}</span>
+            </div>
+
             <!-- Registrations List -->
             <div class="registrations-grid">
               <div *ngFor="let registration of registrations" class="registration-card">
@@ -350,6 +361,12 @@
                   </div>
 
                   <div class="registration-actions">
+                    <button class="btn-action" type="button"
+                      *ngIf="event?.confirmation_sms_enabled && registration.phone && (permissionService.isAdmin || permissionService.events.edit)"
+                      (click)="resendSms(registration)">
+                      <i class="ri-message-2-line"></i> {{ registration.sms_status === 'sent' ? 'Resend SMS' : 'Send
+                      SMS' }}
+                    </button>
                     <button *ngIf="!registration.checked_in &&
                (permissionService.isAdmin || permissionService.events.edit)" class="btn-action btn-checkin"
                       (click)="checkInRegistration(registration.id)">

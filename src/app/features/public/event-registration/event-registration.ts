@@ -128,11 +128,13 @@ export class PublicEventRegistration implements OnInit {
         this.registrationCode = data.registration_code || '';
         this.smsPending = !!data.sms_pending;
         this.pageState = 'success';
-        if (data.sms_pending && data.registration_id) {
-          // fire-and-forget: a failed SMS must never undo the registration
+        if (data.registration_id) {
           this.supabase.client.functions
             .invoke('send-event-registration-sms', { body: { registration_id: data.registration_id } })
-            .catch(() => { });
+            .then(({ data: d, error: e }) => {
+              if (e || d?.success === false) console.warn('Confirmation SMS problem:', e?.message || d?.error || d?.status);
+            })
+            .catch((e) => console.warn('Confirmation SMS problem:', e));
         }
       }
     } catch {

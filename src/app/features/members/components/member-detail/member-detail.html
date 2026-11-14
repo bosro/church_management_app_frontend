@@ -270,7 +270,8 @@
                     <a *ngIf="idCardUrls.front" [href]="idCardUrls.front" target="_blank" rel="noopener">
                       <img [src]="idCardUrls.front" alt="Ghana Card front" />
                     </a>
-                    <p *ngIf="!idCardUrls.front" class="info-value">Loading…</p>
+                    <p *ngIf="!idCardUrls.front" class="info-value">{{ idCardsLoading ? 'Loading…' : 'Could not load
+                      this image' }}</p>
                   </div>
                   <div *ngIf="member.ghana_card_back_path">
                     <p class="info-label">Back</p>

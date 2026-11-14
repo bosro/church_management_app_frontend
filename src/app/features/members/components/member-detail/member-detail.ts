@@ -69,6 +69,8 @@ export class MemberDetail implements OnInit, OnDestroy {
 
   idCardUrls: { front: string | null; back: string | null } = { front: null, back: null };
 
+  idCardsLoading = false;
+
 
   constructor(
     private route: ActivatedRoute,
@@ -117,6 +119,8 @@ export class MemberDetail implements OnInit, OnDestroy {
       .subscribe({
         next: (member) => {
           this.member = member;
+          this.loadIdCards(member);
+
           this.loading = false;
         },
         error: (error) => {
@@ -125,6 +129,9 @@ export class MemberDetail implements OnInit, OnDestroy {
         },
       });
   }
+
+
+
 
   // Helper to get the creator's name from the joined profile
   getCreatedByName(): string {
@@ -400,11 +407,17 @@ export class MemberDetail implements OnInit, OnDestroy {
     return map[method] ?? method;
   }
 
+
   private async loadIdCards(m: Member): Promise<void> {
-    this.idCardUrls = {
-      front: m.ghana_card_front_path ? await this.memberService.getIdCardUrl(m.ghana_card_front_path) : null,
-      back: m.ghana_card_back_path ? await this.memberService.getIdCardUrl(m.ghana_card_back_path) : null,
-    };
+    this.idCardsLoading = true;
+    try {
+      this.idCardUrls = {
+        front: m.ghana_card_front_path ? await this.memberService.getIdCardUrl(m.ghana_card_front_path) : null,
+        back: m.ghana_card_back_path ? await this.memberService.getIdCardUrl(m.ghana_card_back_path) : null,
+      };
+    } finally {
+      this.idCardsLoading = false;
+    }
   }
 }
 

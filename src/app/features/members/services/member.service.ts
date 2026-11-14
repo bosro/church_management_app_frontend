@@ -1724,8 +1724,13 @@ export class MemberService {
       const { data, error } = await this.supabase.client.storage
         .from(this.ID_BUCKET)
         .createSignedUrl(path, 3600);
-      return error ? null : data.signedUrl;
-    } catch {
+      if (error || !data?.signedUrl) {
+        console.error('Ghana Card link failed:', path, error?.message);
+        return null;
+      }
+      return data.signedUrl;
+    } catch (e) {
+      console.error('Ghana Card link failed:', path, e);
       return null;
     }
   }

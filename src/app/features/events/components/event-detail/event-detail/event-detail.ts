@@ -51,13 +51,16 @@ export class EventDetail implements OnInit, OnDestroy {
   linkCopied = false;
   showQr = false;
 
+  sendingSms = false;
+  smsMessage = '';
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private eventsService: EventsService,
     public permissionService: PermissionService,
     private authService: AuthService,
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.checkPermissions();
@@ -471,10 +474,51 @@ export class EventDetail implements OnInit, OnDestroy {
   }
 
   openFlyerLightbox(): void {
-  if (this.event?.flyer_url) {
-    window.open(this.event.flyer_url, '_blank');
+    if (this.event?.flyer_url) {
+      window.open(this.event.flyer_url, '_blank');
+    }
   }
-}
+
+  /** People we can still message: have a phone, not cancelled, and not sent yet. */
+  get smsPendingCount(): number {
+    if (!this.event?.confirmation_sms_enabled) return 0;
+    return this.registrations.filter(
+      (r) => r.phone && r.status !== 'cancelled' && r.sms_status !== 'sent' && r.sms_status !== 'sending',
+    ).length;
+  }
+
+  async sendPendingSms(): Promise<void> {
+    const n = this.smsPendingCount;
+    if (!n || this.sendingSms) return;
+    if (!confirm(`Send the confirmation SMS to ${n} registered ${n === 1 ? 'person' : 'people'}? Anyone without an ID number will be given one first. This uses SMS credits.`)) return;
+    this.sendingSms = true;
+    this.smsMessage = '';
+    let sent = 0, failed = 0;
+    try {
+      for (let i = 0; i < 20; i++) {                // up to 20 rounds of 60
+        const r = await this.eventsService.sendRegistrationSms({ event_id: this.eventId, send_pending: true });
+        sent += r.sent || 0; failed += r.failed || 0;
+        if (r.stopped) { this.smsMessage = `Stopped: ${r.stopped}. `; break; }
+        if (!r.more) break;
+      }
+      this.smsMessage += `Sent ${sent}${failed ? `, ${failed} failed (see the SMS note on each card)` : ''}.`;
+    } catch (e: any) {
+      this.errorMessage = e.message || 'Could not send the SMS messages';
+    }
+    this.sendingSms = false;
+    this.loadRegistrations();
+  }
+
+  async resendSms(reg: any): Promise<void> {
+    try {
+      await this.eventsService.sendRegistrationSms({ registration_id: reg.id, resend: true });
+      this.successMessage = 'SMS sent';
+      setTimeout(() => (this.successMessage = ''), 3000);
+    } catch (e: any) {
+      this.errorMessage = e.message || 'Could not send the SMS';
+    }
+    this.loadRegistrations();
+  }
 }
 
 
