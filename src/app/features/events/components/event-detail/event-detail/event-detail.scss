@@ -1173,3 +1173,10 @@
   justify-content: flex-end;
   flex-wrap: wrap;
 }
+
+
+.missing-contact { color: #B45309; }
+.contact-field { margin-bottom: .9rem; label { display: block; font-weight: 700; font-size: .85rem; margin-bottom: .25rem; }
+  input { width: 100%; padding: .7rem; border: 1px solid #D1D5DB; border-radius: 10px; font-size: 1rem; box-sizing: border-box; } }
+.contact-check { display: block; font-size: .9rem; margin: .5rem 0 1rem; input { margin-right: .4rem; } small { display: block; color: #6B7280; margin-left: 1.4rem; } }
+.contact-error { color: #B91C1C; font-size: .875rem; margin: 0 0 1rem; }

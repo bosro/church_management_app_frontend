@@ -303,7 +303,7 @@
               <button class="btn-submit" type="button" (click)="sendPendingSms()"
                 [disabled]="sendingSms || smsPendingCount === 0">
                 <i [class]="sendingSms ? 'ri-loader-4-line spin' : 'ri-message-2-line'"></i>
-                {{ sendingSms ? 'Sending…' : 'Send confirmation SMS to ' + smsPendingCount + ' not yet messaged' }}
+                {{ sendingSms ? 'Sending…' : 'Send confirmation to ' + smsPendingCount + ' not yet messaged' }}
               </button>
             </div>
 
@@ -343,10 +343,13 @@
                       <i class="ri-phone-line"></i>
                       {{ registration.phone }}
                     </p>
+                    <p *ngIf="!registration.phone" class="missing-contact"><i class="ri-phone-line"></i> No phone number
+                    </p>
                     <p *ngIf="registration.registration_code"><i class="ri-hashtag"></i> ID: <strong>{{
                         registration.registration_code }}</strong></p>
                     <p *ngIf="registration.sms_status"><i class="ri-message-2-line"></i>
-                      SMS {{ registration.sms_status === 'sent' ? 'sent' : registration.sms_status === 'failed' ?
+                      {{ registration.sent_via === 'email' ? 'Email' : 'SMS' }} {{ registration.sms_status === 'sent' ?
+                      'sent' : registration.sms_status === 'failed' ?
                       'failed' : registration.sms_status === 'skipped' ? 'not sent' : 'sending…' }}
                       <span *ngIf="registration.sms_error"> — {{ registration.sms_error }}</span>
                     </p>
@@ -366,11 +369,16 @@
 
                   <div class="registration-actions">
                     <button class="btn-action" type="button"
-                      *ngIf="event?.confirmation_sms_enabled && registration.phone && (permissionService.isAdmin || permissionService.events.edit)"
+                      *ngIf="permissionService.isAdmin || permissionService.events.edit"
+                      (click)="openEditContact(registration)">
+                      <i class="ri-edit-line"></i> Edit contact
+                    </button>
+                    <button class="btn-action" type="button"
+                      *ngIf="event?.confirmation_sms_enabled && (registration.phone || registration.email) && (permissionService.isAdmin || permissionService.events.edit)"
                       [disabled]="sendingSmsId !== null" (click)="resendSms(registration)">
                       <i [class]="sendingSmsId === registration.id ? 'ri-loader-4-line spin' : 'ri-message-2-line'"></i>
-                      {{ sendingSmsId === registration.id ? 'Sending…' : (registration.sms_status === 'sent' ? 'Resend
-                      SMS' : 'Send SMS') }}
+                      {{ sendingSmsId === registration.id ? 'Sending…' : (registration.sms_status === 'sent' ? 'Resend'
+                      : 'Send') + (registration.phone ? ' SMS' : ' email') }}
                     </button>
                     <button *ngIf="!registration.checked_in &&
                (permissionService.isAdmin || permissionService.events.edit)" class="btn-action btn-checkin"
@@ -412,9 +420,10 @@
 <!-- "Send the SMS again?" confirmation -->
 <div class="sms-modal-backdrop" *ngIf="smsResendTarget" (click)="cancelResend()">
   <div class="sms-modal" (click)="$event.stopPropagation()">
-    <h3>Send the SMS again?</h3>
-    <p><strong>{{ getAttendeeName(smsResendTarget) }}</strong> ({{ smsResendTarget.phone }}) has already been sent
-      the confirmation SMS. Sending it again uses another SMS credit.</p>
+    <h3>Send the message again?</h3>
+    <p><strong>{{ getAttendeeName(smsResendTarget) }}</strong> ({{ smsResendTarget.phone || smsResendTarget.email }})
+      has already been sent
+      the confirmation message. Sending it again may use another SMS credit.</p>
     <div class="sms-modal-actions">
       <button type="button" class="btn-action" (click)="cancelResend()">No, cancel</button>
       <button type="button" class="btn-submit" (click)="confirmResend()">Yes, send again</button>
@@ -422,6 +431,7 @@
   </div>
 </div>
 
+<!-- Undo check-in -->
 <div class="sms-modal-backdrop" *ngIf="undoTarget" (click)="cancelUndoCheckIn()">
   <div class="sms-modal" (click)="$event.stopPropagation()">
     <h3>Undo this check-in?</h3>
@@ -431,6 +441,36 @@
       <button type="button" class="btn-action" (click)="cancelUndoCheckIn()" [disabled]="undoing">No, keep</button>
       <button type="button" class="btn-submit" (click)="confirmUndoCheckIn()" [disabled]="undoing">{{ undoing ?
         'Undoing…' : 'Yes, undo check-in' }}</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit contact -->
+<div class="sms-modal-backdrop" *ngIf="contactTarget" (click)="cancelEditContact()">
+  <div class="sms-modal" (click)="$event.stopPropagation()">
+    <h3>Edit contact details</h3>
+    <p><strong>{{ getAttendeeName(contactTarget) }}</strong> ({{ contactTarget.registration_code }})</p>
+
+    <div class="contact-field">
+      <label for="c-phone">Phone number</label>
+      <input id="c-phone" type="tel" [(ngModel)]="contactPhone" placeholder="e.g. 024 456 4343" />
+    </div>
+    <div class="contact-field">
+      <label for="c-email">Email</label>
+      <input id="c-email" type="email" [(ngModel)]="contactEmail" placeholder="name@example.com" />
+    </div>
+    <label class="contact-check">
+      <input type="checkbox" [(ngModel)]="contactSendNow" />
+      Send the confirmation message after saving
+      <small>(SMS if there is a phone number, otherwise email)</small>
+    </label>
+
+    <p class="contact-error" *ngIf="contactError">{{ contactError }}</p>
+
+    <div class="sms-modal-actions">
+      <button type="button" class="btn-action" (click)="cancelEditContact()" [disabled]="contactSaving">Cancel</button>
+      <button type="button" class="btn-submit" (click)="saveContact()" [disabled]="contactSaving">{{ contactSaving ?
+        'Saving…' : 'Save' }}</button>
     </div>
   </div>
 </div>

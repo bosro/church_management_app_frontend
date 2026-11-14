@@ -681,4 +681,16 @@ export class EventsService {
     if (data?.status === 'forbidden') throw new Error(data.message || 'You are not allowed to do this.');
     if (data?.status !== 'ok' && data?.status !== 'not_checked_in') throw new Error(data?.message || 'Could not undo');
   }
+
+  /** Admin: add or fix a registrant's phone / email. Leave a field empty to keep it as it is. */
+  async updateRegistrationContact(registrationId: string, phone: string, email: string): Promise<any> {
+    const { data, error } = await this.supabase.client.rpc('update_registration_contact', {
+      p_registration_id: registrationId,
+      p_phone: phone?.trim() || null,
+      p_email: email?.trim() || null,
+    });
+    if (error) throw new Error(error.message || 'Could not save');
+    if (data?.status !== 'ok') throw new Error(data?.message || 'Could not save');
+    return data;
+  }
 }

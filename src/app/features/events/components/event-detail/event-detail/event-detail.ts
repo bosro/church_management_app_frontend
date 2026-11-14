@@ -62,6 +62,15 @@ export class EventDetail implements OnInit, OnDestroy {
   sendingSmsId: string | null = null;   // which registration is being sent right now
   smsResendTarget: any = null;
 
+
+  contactTarget: any = null;
+  contactPhone = '';
+  contactEmail = '';
+  contactSendNow = true;
+  contactSaving = false;
+  contactError = '';
+
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
@@ -492,7 +501,7 @@ export class EventDetail implements OnInit, OnDestroy {
   get smsPendingCount(): number {
     if (!this.event?.confirmation_sms_enabled) return 0;
     return this.registrations.filter(
-      (r) => r.phone && r.status !== 'cancelled' && r.sms_status !== 'sent' && r.sms_status !== 'sending',
+      (r) => (r.phone || r.email) && r.status !== 'cancelled' && r.sms_status !== 'sent' && r.sms_status !== 'sending',
     ).length;
   }
 
@@ -593,6 +602,42 @@ export class EventDetail implements OnInit, OnDestroy {
     this.undoTarget = null;
     this.loadRegistrations();
     this.loadStatistics();
+  }
+
+
+
+  openEditContact(reg: any): void {
+    this.contactTarget = reg;
+    this.contactPhone = reg.phone || '';
+    this.contactEmail = reg.email || '';
+    this.contactSendNow = reg.sms_status !== 'sent';   // tick by default only if they haven't been messaged yet
+    this.contactError = '';
+  }
+
+  cancelEditContact(): void {
+    if (!this.contactSaving) this.contactTarget = null;
+  }
+
+  async saveContact(): Promise<void> {
+    const reg = this.contactTarget;
+    if (!reg || this.contactSaving) return;
+    this.contactSaving = true;
+    this.contactError = '';
+    try {
+      const saved = await this.eventsService.updateRegistrationContact(reg.id, this.contactPhone, this.contactEmail);
+      this.toast.success('Contact saved', `${this.getAttendeeName(reg)}'s details were updated.`);
+      const sendNow = this.contactSendNow;
+      this.contactTarget = null;
+      this.contactSaving = false;
+      this.loadRegistrations();
+      if (sendNow && this.event?.confirmation_sms_enabled) {
+        await this.doSendSms({ ...reg, phone: saved.phone, email: saved.email });
+      }
+      return;
+    } catch (e: any) {
+      this.contactError = e?.message || 'Could not save. Please try again.';
+    }
+    this.contactSaving = false;
   }
 }
 
