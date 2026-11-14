@@ -71,6 +71,8 @@ export class EventDetail implements OnInit, OnDestroy {
   contactError = '';
 
 
+  searchTerm = '';
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
@@ -605,6 +607,20 @@ export class EventDetail implements OnInit, OnDestroy {
   }
 
 
+  /** Registrations filtered by the search box (name, phone, email, ID, member number). */
+  get filteredRegistrations(): any[] {
+    const q = (this.searchTerm || '').trim().toLowerCase();
+    if (!q) return this.registrations;
+    const digits = q.replace(/\D/g, '');
+    return this.registrations.filter((r) => {
+      const text = [
+        this.getAttendeeName(r), r.email, r.registration_code, r.member?.member_number, r.notes,
+      ].filter(Boolean).join(' ').toLowerCase();
+      if (text.includes(q)) return true;
+      const phone = String(r.phone || '').replace(/\D/g, '');
+      return digits.length >= 3 && phone.includes(digits.replace(/^0/, ''));
+    });
+  }
 
   openEditContact(reg: any): void {
     this.contactTarget = reg;

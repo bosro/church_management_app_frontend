@@ -307,9 +307,20 @@
               </button>
             </div>
 
+            <!-- Search -->
+            <div class="reg-search" *ngIf="registrations.length > 0">
+              <i class="ri-search-line"></i>
+              <input type="search" [(ngModel)]="searchTerm" placeholder="Search by name, phone, email or ID…" />
+              <button type="button" class="reg-search-clear" *ngIf="searchTerm" (click)="searchTerm = ''"
+                aria-label="Clear search">
+                <i class="ri-close-line"></i>
+              </button>
+              <span class="reg-search-count">{{ filteredRegistrations.length }} of {{ registrations.length }}</span>
+            </div>
+
             <!-- Registrations List -->
             <div class="registrations-grid">
-              <div *ngFor="let registration of registrations" class="registration-card">
+              <div *ngFor="let registration of filteredRegistrations" class="registration-card">
                 <div class="registration-header">
                   <div class="attendee-avatar">
                     <img *ngIf="registration.member?.photo_url" [src]="registration.member.photo_url"
@@ -401,6 +412,11 @@
               </div>
 
               <!-- Empty State -->
+              <div *ngIf="registrations.length > 0 && filteredRegistrations.length === 0" class="empty-state">
+                <i class="ri-search-line"></i>
+                <h3>No matches</h3>
+                <p>No registration matches "{{ searchTerm }}"</p>
+              </div>
               <div *ngIf="registrations.length === 0" class="empty-state">
                 <i class="ri-user-add-line"></i>
                 <h3>No Registrations Yet</h3>

@@ -1175,8 +1175,194 @@
 }
 
 
-.missing-contact { color: #B45309; }
-.contact-field { margin-bottom: .9rem; label { display: block; font-weight: 700; font-size: .85rem; margin-bottom: .25rem; }
-  input { width: 100%; padding: .7rem; border: 1px solid #D1D5DB; border-radius: 10px; font-size: 1rem; box-sizing: border-box; } }
-.contact-check { display: block; font-size: .9rem; margin: .5rem 0 1rem; input { margin-right: .4rem; } small { display: block; color: #6B7280; margin-left: 1.4rem; } }
-.contact-error { color: #B91C1C; font-size: .875rem; margin: 0 0 1rem; }
+.missing-contact {
+  color: #B45309;
+}
+
+.contact-field {
+  margin-bottom: .9rem;
+
+  label {
+    display: block;
+    font-weight: 700;
+    font-size: .85rem;
+    margin-bottom: .25rem;
+  }
+
+  input {
+    width: 100%;
+    padding: .7rem;
+    border: 1px solid #D1D5DB;
+    border-radius: 10px;
+    font-size: 1rem;
+    box-sizing: border-box;
+  }
+}
+
+.contact-check {
+  display: block;
+  font-size: .9rem;
+  margin: .5rem 0 1rem;
+
+  input {
+    margin-right: .4rem;
+  }
+
+  small {
+    display: block;
+    color: #6B7280;
+    margin-left: 1.4rem;
+  }
+}
+
+.contact-error {
+  color: #B91C1C;
+  font-size: .875rem;
+  margin: 0 0 1rem;
+}
+
+
+/* ---------- Search ---------- */
+.reg-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  margin: 0 0 1rem;
+  padding: 0 .85rem;
+  background: #fff;
+  border: 1px solid #E5E7EB;
+  border-radius: 10px;
+
+  >i {
+    color: #9CA3AF;
+    font-size: 1.1rem;
+  }
+
+  input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    padding: .8rem 0;
+    font-size: 1rem;
+    background: transparent;
+    font-family: inherit;
+  }
+
+  &:focus-within {
+    border-color: #5B21B6;
+    box-shadow: 0 0 0 3px rgba(91, 33, 182, .12);
+  }
+
+  .reg-search-clear {
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    color: #6B7280;
+    font-size: 1.1rem;
+    padding: .25rem;
+    display: flex;
+  }
+
+  .reg-search-count {
+    font-size: .8rem;
+    color: #6B7280;
+    white-space: nowrap;
+  }
+}
+
+/* ---------- Responsive: header buttons ---------- */
+.detail-header .header-actions {
+  flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+
+  /* header buttons: 2 per row instead of one long column */
+  .header-actions {
+    flex-direction: row !important;
+    flex-wrap: wrap;
+    gap: .5rem;
+
+    button {
+      flex: 1 1 calc(50% - .5rem);
+      width: auto !important;
+      min-width: 0;
+      padding: .7rem .75rem;
+      font-size: .875rem;
+      justify-content: center;
+    }
+  }
+
+  /* registration cards */
+  .registrations-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1rem;
+  }
+
+  .registrations-grid .registration-card {
+    .registration-header {
+      flex-wrap: wrap;
+      gap: .6rem;
+    }
+
+    .attendee-info {
+      min-width: 0;
+      flex: 1 1 8rem;
+
+      h4,
+      .attendee-meta {
+        overflow-wrap: anywhere;
+      }
+    }
+
+    .registration-details p {
+      overflow-wrap: anywhere;
+    }
+
+    .registration-actions {
+      flex-wrap: wrap;
+
+      .btn-action {
+        flex: 1 1 calc(50% - .5rem);
+        min-width: 0;
+        padding: .65rem .5rem;
+        font-size: .8125rem;
+      }
+    }
+  }
+
+  .sms-bulk .btn-submit {
+    width: 100%;
+    justify-content: center;
+    white-space: normal;
+  }
+
+  .sms-modal {
+    width: calc(100vw - 2rem);
+    max-width: 28rem;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .sms-modal-actions {
+    flex-wrap: wrap;
+
+    button {
+      flex: 1 1 8rem;
+    }
+  }
+
+  .reg-search .reg-search-count {
+    display: none;
+  }
+}
+
+@media (max-width: 380px) {
+
+  .header-actions button,
+  .registrations-grid .registration-card .registration-actions .btn-action {
+    flex-basis: 100% !important;
+  }
+}
