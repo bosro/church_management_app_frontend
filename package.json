@@ -26,6 +26,7 @@
     "install": "^0.13.0",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.7",
+    "jsqr": "^1.4.0",
     "ng-qrcode": "^21.0.0",
     "ng2-charts": "^8.0.0",
     "ngx-toastr": "^20.0.4",

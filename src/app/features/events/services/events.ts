@@ -461,9 +461,9 @@ export class EventsService {
   /** Staff: send / resend the confirmation SMS. */
   async sendRegistrationSms(body: { registration_id?: string; resend?: boolean; event_id?: string; send_pending?: boolean }): Promise<any> {
     const { data, error } = await this.supabase.client.functions.invoke('send-event-registration-sms', { body });
-    if (error) throw new Error(error.message || 'Could not send');
-    if (data?.success === false) throw new Error(data.error || 'Could not send');
-    return data;
+    if (error) throw new Error(error.message || 'Could not reach the SMS service');
+    if (data?.success === false) throw new Error(data.error || 'The SMS could not be sent');
+    return data;   // { success, status: 'sent' | 'skipped' | 'already' | ..., detail? }
   }
 
   // ==================== STATISTICS ====================
@@ -658,5 +658,27 @@ export class EventsService {
       }),
       catchError(() => of(undefined)), // Non-blocking — don't fail if delete fails
     );
+  }
+
+  // ── Gate check-in (paste inside the EventsService class) ──────────────────
+  /** Check someone in by scanned QR text or typed ID. Returns { status: 'ok' | 'already' | 'notfound' | 'wrong_event' | 'cancelled' | 'forbidden' | 'error', ... } */
+  async checkInByCode(eventId: string, input: string, method: 'qr' | 'id' = 'qr'): Promise<any> {
+    const { data, error } = await this.supabase.client.rpc('check_in_by_code', {
+      p_event_id: eventId,
+      p_input: input,
+      p_method: method,
+    });
+    if (error) throw new Error(error.message || 'Could not check in');
+    return data;
+  }
+
+  /** Undo a check-in (checked in by mistake). */
+  async undoCheckIn(registrationId: string): Promise<void> {
+    const { data, error } = await this.supabase.client.rpc('undo_check_in', {
+      p_registration_id: registrationId,
+    });
+    if (error) throw new Error(error.message || 'Could not undo');
+    if (data?.status === 'forbidden') throw new Error(data.message || 'You are not allowed to do this.');
+    if (data?.status !== 'ok' && data?.status !== 'not_checked_in') throw new Error(data?.message || 'Could not undo');
   }
 }

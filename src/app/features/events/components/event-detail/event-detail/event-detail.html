@@ -30,6 +30,11 @@
                 <i class="ri-qr-code-line"></i> QR Code
               </button>
 
+              <button class="btn-secondary" (click)="openGate()"
+                *ngIf="permissionService.isAdmin || permissionService.events.edit">
+                <i class="ri-qr-scan-2-line"></i> Gate Check-in
+              </button>
+
               <button class="btn-secondary" (click)="exportRegistrations()"
                 *ngIf="permissionService.isAdmin || permissionService.events.view">
                 <i class="ri-download-line"></i>
@@ -300,7 +305,6 @@
                 <i [class]="sendingSms ? 'ri-loader-4-line spin' : 'ri-message-2-line'"></i>
                 {{ sendingSms ? 'Sending…' : 'Send confirmation SMS to ' + smsPendingCount + ' not yet messaged' }}
               </button>
-              <span class="help-text" *ngIf="smsMessage">{{ smsMessage }}</span>
             </div>
 
             <!-- Registrations List -->
@@ -363,15 +367,21 @@
                   <div class="registration-actions">
                     <button class="btn-action" type="button"
                       *ngIf="event?.confirmation_sms_enabled && registration.phone && (permissionService.isAdmin || permissionService.events.edit)"
-                      (click)="resendSms(registration)">
-                      <i class="ri-message-2-line"></i> {{ registration.sms_status === 'sent' ? 'Resend SMS' : 'Send
-                      SMS' }}
+                      [disabled]="sendingSmsId !== null" (click)="resendSms(registration)">
+                      <i [class]="sendingSmsId === registration.id ? 'ri-loader-4-line spin' : 'ri-message-2-line'"></i>
+                      {{ sendingSmsId === registration.id ? 'Sending…' : (registration.sms_status === 'sent' ? 'Resend
+                      SMS' : 'Send SMS') }}
                     </button>
                     <button *ngIf="!registration.checked_in &&
                (permissionService.isAdmin || permissionService.events.edit)" class="btn-action btn-checkin"
                       (click)="checkInRegistration(registration.id)">
                       <i class="ri-checkbox-circle-line"></i>
                       Check In
+                    </button>
+                    <button class="btn-action btn-cancel" type="button"
+                      *ngIf="registration.checked_in && (permissionService.isAdmin || permissionService.events.edit)"
+                      (click)="askUndoCheckIn(registration)">
+                      <i class="ri-arrow-go-back-line"></i> Undo check-in
                     </button>
                     <button class="btn-action btn-cancel" (click)="cancelRegistration(registration.id)"
                       *ngIf="permissionService.isAdmin || permissionService.events.edit">
@@ -398,3 +408,29 @@
 
 <app-event-qr-modal *ngIf="showQr && event" [eventId]="event.id" [title]="event.title"
   (closed)="showQr = false"></app-event-qr-modal>
+
+<!-- "Send the SMS again?" confirmation -->
+<div class="sms-modal-backdrop" *ngIf="smsResendTarget" (click)="cancelResend()">
+  <div class="sms-modal" (click)="$event.stopPropagation()">
+    <h3>Send the SMS again?</h3>
+    <p><strong>{{ getAttendeeName(smsResendTarget) }}</strong> ({{ smsResendTarget.phone }}) has already been sent
+      the confirmation SMS. Sending it again uses another SMS credit.</p>
+    <div class="sms-modal-actions">
+      <button type="button" class="btn-action" (click)="cancelResend()">No, cancel</button>
+      <button type="button" class="btn-submit" (click)="confirmResend()">Yes, send again</button>
+    </div>
+  </div>
+</div>
+
+<div class="sms-modal-backdrop" *ngIf="undoTarget" (click)="cancelUndoCheckIn()">
+  <div class="sms-modal" (click)="$event.stopPropagation()">
+    <h3>Undo this check-in?</h3>
+    <p><strong>{{ getAttendeeName(undoTarget) }}</strong> will be marked as <em>not</em> checked in. Use this if they
+      were checked in by mistake.</p>
+    <div class="sms-modal-actions">
+      <button type="button" class="btn-action" (click)="cancelUndoCheckIn()" [disabled]="undoing">No, keep</button>
+      <button type="button" class="btn-submit" (click)="confirmUndoCheckIn()" [disabled]="undoing">{{ undoing ?
+        'Undoing…' : 'Yes, undo check-in' }}</button>
+    </div>
+  </div>
+</div>

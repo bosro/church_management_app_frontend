@@ -8,6 +8,7 @@ import { EventsList } from './components/events-list/events-list';
 import { EventDetail } from './components/event-detail/event-detail/event-detail';
 import { EditEvent } from './components/edit-event/edit-event/edit-event';
 import { CreateEvent } from './components/create-event/create-event/create-event';
+import { EventCheckin } from './components/event-checkin/event-checkin';
 
 // NOTE: If your CreateEvent component file is at a different path within the
 // events folder, adjust the import above. The important thing is that it does
@@ -66,6 +67,12 @@ const routes: Routes = [
       permission: 'events.edit',
       roles: EVENTS_MANAGE_ROLES,
     },
+  },
+    {
+    path: ':id/check-in',
+    component: EventCheckin,
+    canActivate: [PermissionGuard],
+    data: { title: 'Gate Check-in', permission: 'events.edit', roles: EVENTS_MANAGE_ROLES },
   },
 ];
 

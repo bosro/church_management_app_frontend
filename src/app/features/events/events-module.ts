@@ -9,9 +9,10 @@ import { EventsRoutingModule } from './events-routing.module';
 import { QrCodeComponent } from 'ng-qrcode';
 import { EventQrModal } from './components/event-qr-modal/event-qr-modal';
 import { CreateEvent } from './components/create-event/create-event/create-event';
+import { EventCheckin } from './components/event-checkin/event-checkin';
 
 @NgModule({
-  declarations: [EventsList, CreateEvent, EditEvent, EventDetail, EventQrModal],
+  declarations: [EventsList, CreateEvent, EditEvent, EventDetail, EventQrModal, EventCheckin],
   imports: [
     CommonModule,
     ReactiveFormsModule,

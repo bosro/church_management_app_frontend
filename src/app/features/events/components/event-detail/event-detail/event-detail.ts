@@ -18,6 +18,7 @@ import { AuthService } from '../../../../../core/services/auth';
 import { copyToClipboard, eventRegistrationUrl } from '../../../../../core/utils/copy-to-clipboard';
 
 import { RequiresPlan } from '../../../../../core/plan-gate';
+import { ToastService } from '../../../../../core/services/toast.service';
 @Component({
   selector: 'app-event-detail',
   standalone: false,
@@ -51,8 +52,15 @@ export class EventDetail implements OnInit, OnDestroy {
   linkCopied = false;
   showQr = false;
 
+  undoTarget: any = null;
+  undoing = false;
+
+
   sendingSms = false;
   smsMessage = '';
+
+  sendingSmsId: string | null = null;   // which registration is being sent right now
+  smsResendTarget: any = null;
 
   constructor(
     private route: ActivatedRoute,
@@ -60,6 +68,7 @@ export class EventDetail implements OnInit, OnDestroy {
     private eventsService: EventsService,
     public permissionService: PermissionService,
     private authService: AuthService,
+    private toast: ToastService,
   ) { }
 
   ngOnInit(): void {
@@ -487,37 +496,103 @@ export class EventDetail implements OnInit, OnDestroy {
     ).length;
   }
 
+
+
+
+  confirmResend(): void {
+    const reg = this.smsResendTarget;
+    if (reg) this.doSendSms(reg);
+  }
+
+  cancelResend(): void {
+    if (!this.sendingSmsId) this.smsResendTarget = null;
+  }
+
+  private async doSendSms(reg: any): Promise<void> {
+    if (this.sendingSmsId) return;
+    this.sendingSmsId = reg.id;
+    this.smsResendTarget = null;                       // close the modal straight away
+    const who = `${this.getAttendeeName(reg)} (${reg.phone})`;
+    const wait = this.toast.info('Sending SMS…', `Sending to ${who}. Please wait a few seconds.`, 60000);
+    try {
+      const r = await this.eventsService.sendRegistrationSms({ registration_id: reg.id, resend: true });
+      this.toast.dismiss(wait);
+      if (r?.status === 'sent') {
+        this.toast.success('SMS sent', `Confirmation sent to ${who}.`);
+      } else {
+        this.toast.warning('SMS not sent', r?.detail || 'Nothing was sent for this person.');
+      }
+    } catch (e: any) {
+      this.toast.dismiss(wait);
+      this.toast.error('SMS failed', e?.message || 'Could not send the SMS.');
+    }
+    this.sendingSmsId = null;
+    this.loadRegistrations();
+  }
+
+
   async sendPendingSms(): Promise<void> {
     const n = this.smsPendingCount;
     if (!n || this.sendingSms) return;
     if (!confirm(`Send the confirmation SMS to ${n} registered ${n === 1 ? 'person' : 'people'}? Anyone without an ID number will be given one first. This uses SMS credits.`)) return;
     this.sendingSms = true;
     this.smsMessage = '';
-    let sent = 0, failed = 0;
+    let sent = 0, failed = 0, stopped = '';
     try {
-      for (let i = 0; i < 20; i++) {                // up to 20 rounds of 60
+      for (let i = 0; i < 20; i++) {
         const r = await this.eventsService.sendRegistrationSms({ event_id: this.eventId, send_pending: true });
         sent += r.sent || 0; failed += r.failed || 0;
-        if (r.stopped) { this.smsMessage = `Stopped: ${r.stopped}. `; break; }
+        if (r.stopped) { stopped = r.stopped; break; }
         if (!r.more) break;
       }
-      this.smsMessage += `Sent ${sent}${failed ? `, ${failed} failed (see the SMS note on each card)` : ''}.`;
+      if (stopped) this.toast.warning('Sending stopped', `${stopped}. Sent ${sent} before stopping.`);
+      else if (failed) this.toast.warning('Finished with problems', `Sent ${sent}, ${failed} failed. See the SMS note on each card.`);
+      else this.toast.success('SMS sent', `Confirmation sent to ${sent} ${sent === 1 ? 'person' : 'people'}.`);
     } catch (e: any) {
-      this.errorMessage = e.message || 'Could not send the SMS messages';
+      this.toast.error('SMS failed', e?.message || 'Could not send the SMS messages.');
     }
     this.sendingSms = false;
     this.loadRegistrations();
   }
 
-  async resendSms(reg: any): Promise<void> {
-    try {
-      await this.eventsService.sendRegistrationSms({ registration_id: reg.id, resend: true });
-      this.successMessage = 'SMS sent';
-      setTimeout(() => (this.successMessage = ''), 3000);
-    } catch (e: any) {
-      this.errorMessage = e.message || 'Could not send the SMS';
+  /** Resend button: asks first if this person was already sent the SMS. */
+  resendSms(reg: any): void {
+    if (this.sendingSmsId) return;
+    if (reg.sms_status === 'sent') {
+      this.smsResendTarget = reg;       // opens the confirmation modal
+      return;
     }
+    this.doSendSms(reg);
+  }
+
+
+
+  openGate(): void {
+    this.router.navigate(['main', 'events', this.eventId, 'check-in']);
+  }
+
+  askUndoCheckIn(reg: any): void {
+    this.undoTarget = reg;
+  }
+
+  cancelUndoCheckIn(): void {
+    if (!this.undoing) this.undoTarget = null;
+  }
+
+  async confirmUndoCheckIn(): Promise<void> {
+    const reg = this.undoTarget;
+    if (!reg || this.undoing) return;
+    this.undoing = true;
+    try {
+      await this.eventsService.undoCheckIn(reg.id);
+      this.toast.success('Check-in undone', `${this.getAttendeeName(reg)} is no longer marked as checked in.`);
+    } catch (e: any) {
+      this.toast.error('Could not undo', e?.message || 'Please try again.');
+    }
+    this.undoing = false;
+    this.undoTarget = null;
     this.loadRegistrations();
+    this.loadStatistics();
   }
 }
 

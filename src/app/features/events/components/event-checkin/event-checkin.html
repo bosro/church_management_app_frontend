@@ -1,0 +1,96 @@
+<div class="gate-page">
+  <header class="gate-top">
+    <button class="icon-btn" (click)="back()" aria-label="Back"><i class="ri-arrow-left-line"></i></button>
+    <div class="gate-title">
+      <h1>Gate Check-in</h1>
+      <p>{{ eventTitle }}</p>
+    </div>
+    <div class="counter">
+      <strong>{{ stats.checked_in }}</strong><span> / {{ stats.total_registrations }}</span>
+      <small>checked in</small>
+    </div>
+  </header>
+
+  <div class="date-note" *ngIf="!isToday">
+    <i class="ri-information-line"></i>
+    This event is on {{ eventDate | date:'EEEE, d MMMM' }}. You can check people in at any time.
+  </div>
+
+  <!-- Result of the last scan -->
+  <div class="result" *ngIf="result" [ngClass]="result.kind">
+    <div class="result-icon">
+      <i [class]="result.kind === 'ok' ? 'ri-checkbox-circle-fill' : result.kind === 'already' ? 'ri-time-fill' : 'ri-close-circle-fill'"></i>
+    </div>
+    <div class="result-body">
+      <h2>{{ result.title }}</h2>
+      <p>{{ result.detail }}</p>
+      <p class="rid" *ngIf="result.reg?.registration_code">{{ result.reg?.registration_code }}</p>
+    </div>
+    <div class="result-actions">
+      <button type="button" class="link-btn" *ngIf="result.reg" (click)="askUndo({ id: result.reg!.id, name: result.title })">
+        <i class="ri-arrow-go-back-line"></i> Undo
+      </button>
+      <button type="button" class="link-btn" (click)="dismissResult()" aria-label="Dismiss"><i class="ri-close-line"></i></button>
+    </div>
+  </div>
+
+  <!-- Scanner -->
+  <section class="scanner">
+    <div class="video-box" *ngIf="cameraOn">
+      <video #video playsinline muted></video>
+      <canvas #frame hidden></canvas>
+      <div class="aim"></div>
+    </div>
+    <div class="video-off" *ngIf="!cameraOn">
+      <i class="ri-qr-scan-2-line"></i>
+      <p>Scan a registration QR code</p>
+    </div>
+    <p class="cam-error" *ngIf="cameraError">{{ cameraError }}</p>
+    <button type="button" class="cam-btn" *ngIf="!cameraOn" (click)="startCamera()" [disabled]="cameraStarting">
+      <i class="ri-camera-line"></i> {{ cameraStarting ? 'Starting camera…' : 'Start scanning' }}
+    </button>
+    <button type="button" class="cam-btn stop" *ngIf="cameraOn" (click)="stopCamera()">
+      <i class="ri-stop-circle-line"></i> Stop camera
+    </button>
+  </section>
+
+  <!-- Type the ID number -->
+  <section class="manual">
+    <label for="manual-id">No phone? Type the ID number</label>
+    <form (ngSubmit)="submitManual()" class="manual-row">
+      <input id="manual-id" name="manualId" type="text" [(ngModel)]="manualId" placeholder="e.g. LMS261115110 or just 110"
+        autocomplete="off" autocapitalize="characters" />
+      <button type="submit" [disabled]="!manualId.trim() || busy">Check in</button>
+    </form>
+    <p class="hint">You can type the full ID or only its last digits (e.g. <strong>110</strong>).</p>
+  </section>
+
+  <!-- Recent -->
+  <section class="recent" *ngIf="recent.length">
+    <h3>Recently checked in</h3>
+    <div class="recent-item" *ngFor="let r of recent">
+      <div class="who">
+        <strong>{{ nameOf(r) }}</strong>
+        <span>{{ r.registration_code }} · {{ r.checked_in_at | date:'h:mm a' }}
+          <ng-container *ngIf="r.check_in_method"> · {{ r.check_in_method === 'qr' ? 'QR' : r.check_in_method === 'id' ? 'ID typed' : 'manual' }}</ng-container></span>
+      </div>
+      <button type="button" class="undo-btn" (click)="askUndo({ id: r.id, name: nameOf(r) })">
+        <i class="ri-arrow-go-back-line"></i> Undo
+      </button>
+    </div>
+  </section>
+</div>
+
+<!-- Undo confirmation -->
+<div class="gate-backdrop" *ngIf="undoTarget" (click)="cancelUndo()">
+  <div class="gate-modal" (click)="$event.stopPropagation()">
+    <h3>Undo this check-in?</h3>
+    <p><strong>{{ undoTarget.name }}</strong> will be marked as <em>not</em> checked in. Use this if they were checked in by mistake.</p>
+    <div class="gate-modal-actions">
+      <button type="button" class="ghost" (click)="cancelUndo()" [disabled]="undoing">No, keep</button>
+      <button type="button" class="danger" (click)="confirmUndo()" [disabled]="undoing">
+        {{ undoing ? 'Undoing…' : 'Yes, undo check-in' }}
+      </button>
+    </div>
+  </div>
+</div>

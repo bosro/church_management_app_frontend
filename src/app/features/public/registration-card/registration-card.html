@@ -1,0 +1,72 @@
+<div class="card-page">
+  <div class="card-wrap">
+
+    <div class="state-box" *ngIf="state === 'loading'">
+      <div class="spinner"></div>
+      <p>Loading your registration…</p>
+    </div>
+
+    <div class="state-box" *ngIf="state === 'notfound'">
+      <i class="ri-error-warning-line big-icon"></i>
+      <h2>Card not found</h2>
+      <p>This link isn't valid any more. Please check the message you received or contact the church.</p>
+    </div>
+
+    <ng-container *ngIf="state === 'ready' && card">
+      <div class="reg-card">
+        <!-- Event header -->
+        <div class="event-band">
+          <div class="church-line">
+            <img *ngIf="card.church_logo" [src]="card.church_logo" alt="" class="logo" />
+            <span>{{ card.church_name }}</span>
+          </div>
+          <h1>{{ card.event_title }}</h1>
+          <p class="when">
+            <i class="ri-calendar-line"></i>
+            {{ card.event_start | date:'EEEE, d MMMM y' }}
+            <span *ngIf="(card.event_start | date:'HH:mm') !== '00:00'"> · {{ card.event_start | date:'h:mm a' }}</span>
+          </p>
+        </div>
+
+        <!-- Same layout as a card in the registrations list -->
+        <div class="registration-header">
+          <div class="attendee-avatar"><div class="avatar-placeholder">{{ initials }}</div></div>
+          <div class="attendee-info">
+            <h4>{{ card.name }}</h4>
+            <p class="attendee-meta">{{ card.email }}</p>
+          </div>
+          <span class="status-badge" [class.status-checked-in]="card.checked_in">
+            <i [class]="card.checked_in ? 'ri-checkbox-circle-fill' : 'ri-time-line'"></i>
+            {{ card.checked_in ? 'Checked In' : 'Registered' }}
+          </span>
+        </div>
+
+        <div class="id-block">
+          <span class="id-label">ID Number</span>
+          <span class="id-value">{{ card.registration_code }}</span>
+        </div>
+
+        <!-- QR for the gate: the person at the entrance scans this -->
+        <div class="qr-block">
+          <div class="qr-holder" #qrHolder>
+            <qr-code [value]="cardUrl" [size]="190" [errorCorrectionLevel]="'M'" [darkColor]="'#000000FF'" [lightColor]="'#FFFFFFFF'"></qr-code>
+          </div>
+          <p>Show this QR code at the entrance to check in</p>
+        </div>
+
+        <div class="registration-details">
+          <p *ngIf="card.email"><i class="ri-mail-line"></i> {{ card.email }}</p>
+          <p *ngIf="card.phone"><i class="ri-phone-line"></i> {{ card.phone }}</p>
+          <p *ngIf="card.event_location"><i class="ri-map-pin-line"></i> {{ card.event_location }}</p>
+          <p class="registration-date"><i class="ri-calendar-line"></i> Registered: {{ card.registered_at | date:'MMM d, y h:mm a' }}</p>
+        </div>
+      </div>
+
+      <button type="button" class="save-btn" (click)="saveAsImage()">
+        <i class="ri-download-2-line"></i> Save as image
+      </button>
+      <p class="tip">Show this card (or the image) when you arrive.</p>
+    </ng-container>
+
+  </div>
+</div>

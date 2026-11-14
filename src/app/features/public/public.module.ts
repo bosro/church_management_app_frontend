@@ -16,6 +16,7 @@ import { CommitmentForm } from '../building-campaign/components/commitment-form/
 import { BuildingCampaignPaymentCallback } from './building-campaign-payment-callback/building-campaign-payment-callback';
 import { PublicGive } from './public-give/public-give';
 import { PublicGiveCallback } from './public-give-callback/public-give-callback';
+import { PublicRegistrationCard } from './registration-card/registration-card';
 
 const routes: Routes = [
   // ── QR giving (no login) ─ 'give/thank-you' must stay ABOVE 'give/:churchId'
@@ -28,9 +29,10 @@ const routes: Routes = [
     // No canActivate — anyone who paid via a payment link lands here
   },
   {
-  path: 'building-campaign/payment-callback',
-  component: BuildingCampaignPaymentCallback,
-},
+    path: 'building-campaign/payment-callback',
+    component: BuildingCampaignPaymentCallback,
+  },
+  { path: 'card/:code', component: PublicRegistrationCard },
   {
     path: 'link-checkin/:token',
     component: LinkCheckin,
@@ -56,7 +58,7 @@ const routes: Routes = [
     path: 'event-register/:eventId',
     component: PublicEventRegistration,
   },
-   {
+  {
     path: 'building-campaign/:churchId',
     component: CommitmentForm,
   },
@@ -73,6 +75,7 @@ const routes: Routes = [
     BuildingCampaignPaymentCallback,
     PublicGive,
     PublicGiveCallback,
+    PublicRegistrationCard,
   ],
   imports: [
     CommonModule,
@@ -82,4 +85,4 @@ const routes: Routes = [
     RouterModule.forChild(routes),
   ],
 })
-export class PublicModule {}
+export class PublicModule { }

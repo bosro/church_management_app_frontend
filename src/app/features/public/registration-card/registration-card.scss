@@ -1,0 +1,256 @@
+.card-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+  padding: 1.5rem 1rem 3rem;
+  display: flex;
+  justify-content: center;
+  font-family: "Nunito Sans", sans-serif;
+}
+
+.card-wrap {
+  width: 100%;
+  max-width: 460px;
+}
+
+.state-box {
+  background: #fff;
+  border-radius: 16px;
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+
+  h2 {
+    margin: .5rem 0;
+    color: #111827;
+  }
+
+  p {
+    color: #6B7280;
+    margin: 0;
+  }
+
+  .big-icon {
+    font-size: 2.5rem;
+    color: #DC2626;
+  }
+
+  .spinner {
+    width: 44px;
+    height: 44px;
+    border: 4px solid #E5E7EB;
+    border-top-color: #5B21B6;
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+    margin: 0 auto 1rem;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.reg-card {
+  background: #fff;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+}
+
+.event-band {
+  background: #5B21B6;
+  color: #fff;
+  padding: 1.25rem 1.5rem 1.25rem;
+
+  .church-line {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    font-weight: 700;
+    font-size: .875rem;
+    opacity: .9;
+    margin-bottom: .5rem;
+
+    .logo {
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      object-fit: cover;
+      background: #fff;
+    }
+  }
+
+  h1 {
+    margin: 0 0 .5rem;
+    font-size: 1.4rem;
+    font-weight: 800;
+    line-height: 1.25;
+  }
+
+  .when {
+    margin: 0;
+    font-size: .9rem;
+    color: #DDD6FE;
+    font-weight: 600;
+    display: flex;
+    gap: .4rem;
+    align-items: center;
+  }
+}
+
+.registration-header {
+  display: flex;
+  align-items: center;
+  gap: .875rem;
+  padding: 1.25rem 1.5rem .75rem;
+}
+
+.attendee-avatar .avatar-placeholder {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #EDE9FE;
+  color: #5B21B6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+}
+
+.attendee-info {
+  flex: 1;
+  min-width: 0;
+
+  h4 {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #111827;
+    word-break: break-word;
+  }
+
+  .attendee-meta {
+    margin: .125rem 0 0;
+    font-size: .8rem;
+    color: #6B7280;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  padding: .3rem .65rem;
+  border-radius: 999px;
+  background: #DBEAFE;
+  color: #1D4ED8;
+  font-size: .75rem;
+  font-weight: 700;
+  white-space: nowrap;
+
+  &.status-checked-in {
+    background: #D1FAE5;
+    color: #047857;
+  }
+}
+
+.id-block {
+  margin: .5rem 1.5rem 0;
+  padding: 1rem 1.25rem;
+  background: #F5F3FF;
+  border-radius: 14px;
+  text-align: center;
+
+  .id-label {
+    display: block;
+    font-size: .75rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: #6B7280;
+  }
+
+  .id-value {
+    display: block;
+    margin-top: .25rem;
+    font-size: 2rem;
+    font-weight: 900;
+    color: #5B21B6;
+    letter-spacing: .04em;
+    word-break: break-all;
+  }
+}
+
+.registration-details {
+  padding: 1rem 1.5rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: .6rem;
+
+  p {
+    margin: 0;
+    display: flex;
+    gap: .6rem;
+    align-items: flex-start;
+    color: #374151;
+    font-size: .9rem;
+    word-break: break-word;
+
+    i {
+      color: #9CA3AF;
+      font-size: 1.05rem;
+      margin-top: .05rem;
+    }
+  }
+
+  .registration-date {
+    color: #6B7280;
+    font-size: .825rem;
+  }
+}
+
+.save-btn {
+  margin-top: 1rem;
+  width: 100%;
+  padding: .9rem;
+  border: none;
+  border-radius: 12px;
+  background: #5B21B6;
+  color: #fff;
+  font-weight: 800;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  cursor: pointer;
+}
+
+.tip {
+  text-align: center;
+  color: #6B7280;
+  font-size: .825rem;
+  margin: .75rem 0 0;
+}
+
+.qr-block {
+  margin: 1rem 1.5rem 0;
+  text-align: center;
+
+  .qr-holder {
+    display: inline-block;
+    padding: .75rem;
+    background: #fff;
+    border: 2px solid #EDE9FE;
+    border-radius: 16px;
+  }
+
+  p {
+    margin: .5rem 0 0;
+    color: #6B7280;
+    font-size: .825rem;
+  }
+}
