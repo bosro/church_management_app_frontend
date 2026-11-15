@@ -39,7 +39,7 @@ export class FeedingPublicService {
 
   private churchId = '';
 
-  constructor(private supabase: SupabaseService) {}
+  constructor(private supabase: SupabaseService) { }
 
   init(churchId: string): void {
     this.churchId = churchId;
@@ -63,13 +63,13 @@ export class FeedingPublicService {
   private setToken(t: string): void {
     try {
       sessionStorage.setItem(this.tokenKey(), t);
-    } catch {}
+    } catch { }
   }
   clearSession(): void {
     try {
       sessionStorage.removeItem(this.tokenKey());
       sessionStorage.removeItem(this.termKey());
-    } catch {}
+    } catch { }
   }
 
   /** Has the teacher already confirmed this term in this tab? */
@@ -83,7 +83,7 @@ export class FeedingPublicService {
   markTermConfirmed(year: string, term: string): void {
     try {
       sessionStorage.setItem(this.termKey(), `${year}|${term}`);
-    } catch {}
+    } catch { }
   }
 
   // ── Login ───────────────────────────────────────────────────────
@@ -173,6 +173,15 @@ export class FeedingPublicService {
   async studentPayments(studentId: string, year: string, term: string): Promise<any[]> {
     return (
       (await this.call<any[]>('feeding_pub_student_payments', {
+        p_student: studentId,
+        p_year: year,
+        p_term: term,
+      })) || []
+    );
+  }
+  async studentAttendance(studentId: string, year: string, term: string): Promise<any[]> {
+    return (
+      (await this.call<any[]>('feeding_pub_student_attendance', {
         p_student: studentId,
         p_year: year,
         p_term: term,

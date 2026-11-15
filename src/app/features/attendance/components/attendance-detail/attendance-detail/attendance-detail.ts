@@ -21,6 +21,8 @@ import { RequiresPlan } from '../../../../../core/plan-gate';
 export class AttendanceDetail implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
+  statusFilter: 'all' | 'present' | 'absent' = 'all';
+
   eventId: string = '';
   event: AttendanceEvent | null = null;
   attendanceRecords: AttendanceRecord[] = [];
@@ -134,7 +136,7 @@ export class AttendanceDetail implements OnInit, OnDestroy {
       .subscribe({
         next: (records) => {
           this.attendanceRecords = records;
-          this.filteredAttendanceRecords = records; // start unfiltered
+          this.applyFilters(); // start unfiltered
 
           // Extract unique cell groups from the records
           const groupMap = new Map<string, string>();
@@ -152,27 +154,28 @@ export class AttendanceDetail implements OnInit, OnDestroy {
       });
   }
 
-  onCellGroupFilterChange(): void {
-    if (!this.selectedCellGroupFilter) {
-      this.filteredAttendanceRecords = this.attendanceRecords;
-      return;
-    }
-    this.filteredAttendanceRecords = this.attendanceRecords.filter((r) => {
-      const cg = (r.member as any)?.cell_group;
-      return cg?.id === this.selectedCellGroupFilter;
-    });
+    /** records after the cell-group filter only (so the counts always add up) */
+  private get groupFiltered(): AttendanceRecord[] {
+    if (!this.selectedCellGroupFilter) return this.attendanceRecords;
+    return this.attendanceRecords.filter((r) => (r.member as any)?.cell_group?.id === this.selectedCellGroupFilter);
   }
 
-  // ADD summary helpers:
-  get presentCount(): number {
-    return this.filteredAttendanceRecords.filter((r) => r.status === 'present')
-      .length;
+  applyFilters(): void {
+    this.filteredAttendanceRecords = this.groupFiltered.filter(
+      (r) => this.statusFilter === 'all' || r.status === this.statusFilter,
+    );
   }
 
-  get absentCount(): number {
-    return this.filteredAttendanceRecords.filter((r) => r.status === 'absent')
-      .length;
+  onCellGroupFilterChange(): void { this.applyFilters(); }
+
+  setStatusFilter(f: 'all' | 'present' | 'absent'): void {
+    this.statusFilter = f;
+    this.applyFilters();
   }
+
+  get totalCount(): number   { return this.groupFiltered.length; }
+  get presentCount(): number { return this.groupFiltered.filter((r) => r.status === 'present').length; }
+  get absentCount(): number  { return this.groupFiltered.filter((r) => r.status === 'absent').length; }
 
   goBack(): void {
     this.router.navigate(['main/attendance']);

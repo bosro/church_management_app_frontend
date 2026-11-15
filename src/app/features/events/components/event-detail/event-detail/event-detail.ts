@@ -70,6 +70,9 @@ export class EventDetail implements OnInit, OnDestroy {
   contactSaving = false;
   contactError = '';
 
+  statusFilter: 'all' | 'in' | 'out' = 'all';
+
+
 
   searchTerm = '';
 
@@ -612,18 +615,26 @@ export class EventDetail implements OnInit, OnDestroy {
 
 
   /** Registrations filtered by the search box (name, phone, email, ID, member number). */
-  get filteredRegistrations(): any[] {
+
+  private matchesSearch(r: any): boolean {
     const q = (this.searchTerm || '').trim().toLowerCase();
-    if (!q) return this.registrations;
+    if (!q) return true;
     const digits = q.replace(/\D/g, '');
-    return this.registrations.filter((r) => {
-      const text = [
-        this.getAttendeeName(r), r.email, r.registration_code, r.member?.member_number, r.notes,
-      ].filter(Boolean).join(' ').toLowerCase();
-      if (text.includes(q)) return true;
-      const phone = String(r.phone || '').replace(/\D/g, '');
-      return digits.length >= 3 && phone.includes(digits.replace(/^0/, ''));
-    });
+    const text = [this.getAttendeeName(r), r.email, r.registration_code, r.member?.member_number, r.notes]
+      .filter(Boolean).join(' ').toLowerCase();
+    if (text.includes(q)) return true;
+    const phone = String(r.phone || '').replace(/\D/g, '');
+    return digits.length >= 3 && phone.includes(digits.replace(/^0/, ''));
+  }
+
+  /** after search only — so the chip counts follow what you typed */
+  get searched(): any[] { return this.registrations.filter((r) => this.matchesSearch(r)); }
+  get checkedInCount(): number { return this.searched.filter((r) => r.checked_in).length; }
+  get notCheckedInCount(): number { return this.searched.filter((r) => !r.checked_in).length; }
+
+  get filteredRegistrations(): any[] {
+    return this.searched.filter((r) =>
+      this.statusFilter === 'all' || (this.statusFilter === 'in') === !!r.checked_in);
   }
 
   openEditContact(reg: any): void {

@@ -316,6 +316,14 @@
               <span class="reg-search-count">{{ filteredRegistrations.length }} of {{ registrations.length }}</span>
             </div>
 
+            <div class="status-chips" *ngIf="registrations.length > 0" style="margin:0 0 1rem">
+              <button type="button" [class.on]="statusFilter === 'all'" (click)="statusFilter = 'all'">All {{ searched.length }}</button>
+              <button type="button" class="p" [class.on]="statusFilter === 'in'" (click)="statusFilter = 'in'">
+                <i class="ri-checkbox-circle-line"></i> Checked in {{ checkedInCount }}</button>
+              <button type="button" class="a" [class.on]="statusFilter === 'out'" (click)="statusFilter = 'out'">
+                <i class="ri-time-line"></i> Not yet {{ notCheckedInCount }}</button>
+            </div>
+
             <!-- Registrations List -->
             <div class="registrations-grid">
               <div *ngFor="let registration of filteredRegistrations" class="registration-card">

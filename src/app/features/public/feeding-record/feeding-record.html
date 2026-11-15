@@ -6,9 +6,8 @@
     <p class="pin-sub" *ngIf="authState === 'checking'">Checking access…</p>
     <ng-container *ngIf="authState === 'locked'">
       <p class="pin-sub">Enter the PIN the admin gave you</p>
-      <input class="pin-input" type="password" inputmode="numeric" autocomplete="off"
-        maxlength="8" placeholder="• • • •" [(ngModel)]="pin"
-        (keyup.enter)="submitPin()" [disabled]="verifyingPin" />
+      <input class="pin-input" type="password" inputmode="numeric" autocomplete="off" maxlength="8"
+        placeholder="• • • •" [(ngModel)]="pin" (keyup.enter)="submitPin()" [disabled]="verifyingPin" />
       <p class="pin-error" *ngIf="pinError">{{ pinError }}</p>
       <p class="pin-hint" *ngIf="pinAttemptsLeft !== null && pinAttemptsLeft > 0">
         {{ pinAttemptsLeft }} attempt(s) left before a 15-minute wait.
@@ -84,7 +83,8 @@
     <div class="feeding-header-date">
       <i class="ri-calendar-line"></i>
       {{ selectedDate | date:'EEEE, MMMM d, y' }}
-      <button class="header-lock-btn" *ngIf="pinRequired" (click)="lockPage(); $event.stopPropagation()" title="Sign out">
+      <button class="header-lock-btn" *ngIf="pinRequired" (click)="lockPage(); $event.stopPropagation()"
+        title="Sign out">
         <i class="ri-logout-box-r-line"></i>
       </button>
     </div>
@@ -214,7 +214,8 @@
         {{ formatCurrency(-weekCashToHandOver) }}. Tell the admin.
       </p>
       <div class="cash-extra">
-        <span title="Money paid for days a student has not yet eaten (for example, absent days). It is still in the cash above and belongs to that student's future days.">
+        <span
+          title="Money paid for days a student has not yet eaten (for example, absent days). It is still in the cash above and belongs to that student's future days.">
           <i class="ri-refresh-line"></i>
           Leftover carried forward: <strong>{{ formatCurrency(termLeftoverTotal) }}</strong>
         </span>
@@ -406,7 +407,8 @@
                     </button>
 
                     <!-- Leftover credit (paid but not yet eaten) -->
-                    <span *ngIf="(studentStates[student.id]?.dailyStatus?.leftover_amount ?? 0) > 0" class="credit-badge"
+                    <span *ngIf="(studentStates[student.id]?.dailyStatus?.leftover_amount ?? 0) > 0"
+                      class="credit-badge"
                       [title]="'Leftover credit: ' + formatCurrency(studentStates[student.id]?.dailyStatus?.leftover_amount ?? 0) + ' (' + studentStates[student.id]?.dailyStatus?.credit_days + ' day(s)) carried forward'">
                       {{ formatCurrency(studentStates[student.id]?.dailyStatus?.leftover_amount ?? 0) }} left
                     </span>
@@ -461,7 +463,8 @@
         <i class="ri-information-line"></i>
         <span>
           Tap <strong>Pay</strong> to record a payment.
-          Use the <strong>Attendance</strong> column to mark a student <em>Absent</em> — this works even if they have not
+          Use the <strong>Attendance</strong> column to mark a student <em>Absent</em> — this works even if they have
+          not
           paid yet. A student who paid is treated as present unless marked absent.
           The money for an absent day is not used up: it shows as <strong>left</strong> and carries forward.
           A student who attended but has not paid shows what they <strong>owe</strong>.
@@ -612,87 +615,135 @@
   <div class="history-modal" (click)="$event.stopPropagation()">
     <div class="payment-modal-header">
       <div>
-        <h3>Payment History</h3>
+        <h3>{{ historyTab === 'attendance' ? 'Attendance History' : 'Payment History' }}</h3>
         <p>{{ getStudentName(historyStudent) }} · {{ selectedTerm }} {{ selectedYear }}</p>
       </div>
       <button class="close-btn" (click)="closeHistoryModal()">
         <i class="ri-close-line"></i>
       </button>
     </div>
-    <div class="history-fee-summary" *ngIf="(studentStates[historyStudent?.id]?.studentFeedingFees?.length || 0) > 0">
-      <div *ngFor="let sff of studentStates[historyStudent?.id]?.studentFeedingFees" class="sff-summary-row">
-        <div class="sff-summary-left">
-          <span class="sff-label">{{ sff.feeding_fee_structure?.fee_name || 'Feeding Fee' }}</span>
-          <span class="sff-rate-label">
-            {{ formatCurrency(sff.daily_amount) }}/day × {{ sff.total_days }} days
-          </span>
-        </div>
-        <div class="sff-summary-right">
-          <div class="sff-amount-row">
-            <span class="sff-amount-label">Due</span>
-            <span class="sff-amount-val">{{ formatCurrency(sff.amount_due) }}</span>
-          </div>
-          <div class="sff-amount-row">
-            <span class="sff-amount-label">Paid</span>
-            <span class="sff-amount-val green">{{ formatCurrency(sff.amount_paid) }}</span>
-          </div>
-          <div class="sff-amount-row">
-            <span class="sff-amount-label">Balance</span>
-            <span class="sff-amount-val" [class.red]="(sff.amount_due - sff.amount_paid) > 0"
-              [class.green]="(sff.amount_due - sff.amount_paid) <= 0">
-              {{ formatCurrency(sff.amount_due - sff.amount_paid) }}
+
+        <div class="hist-tabs">
+      <button type="button" [class.active]="historyTab === 'payments'" (click)="historyTab = 'payments'">
+        <i class="ri-money-dollar-circle-line"></i> Payments
+      </button>
+      <button type="button" [class.active]="historyTab === 'attendance'" (click)="historyTab = 'attendance'">
+        <i class="ri-calendar-check-line"></i> Attendance
+      </button>
+    </div>
+    <ng-container *ngIf="historyTab === 'payments'">
+      <div class="history-fee-summary" *ngIf="(studentStates[historyStudent?.id]?.studentFeedingFees?.length || 0) > 0">
+        <div *ngFor="let sff of studentStates[historyStudent?.id]?.studentFeedingFees" class="sff-summary-row">
+          <div class="sff-summary-left">
+            <span class="sff-label">{{ sff.feeding_fee_structure?.fee_name || 'Feeding Fee' }}</span>
+            <span class="sff-rate-label">
+              {{ formatCurrency(sff.daily_amount) }}/day × {{ sff.total_days }} days
             </span>
           </div>
-          <span class="status-chip-sm" [class.status-paid]="sff.status==='paid'"
-            [class.status-partial]="sff.status==='partial'" [class.status-unpaid]="sff.status==='unpaid'">
-            {{ sff.status | titlecase }}
-          </span>
+          <div class="sff-summary-right">
+            <div class="sff-amount-row">
+              <span class="sff-amount-label">Due</span>
+              <span class="sff-amount-val">{{ formatCurrency(sff.amount_due) }}</span>
+            </div>
+            <div class="sff-amount-row">
+              <span class="sff-amount-label">Paid</span>
+              <span class="sff-amount-val green">{{ formatCurrency(sff.amount_paid) }}</span>
+            </div>
+            <div class="sff-amount-row">
+              <span class="sff-amount-label">Balance</span>
+              <span class="sff-amount-val" [class.red]="(sff.amount_due - sff.amount_paid) > 0"
+                [class.green]="(sff.amount_due - sff.amount_paid) <= 0">
+                {{ formatCurrency(sff.amount_due - sff.amount_paid) }}
+              </span>
+            </div>
+            <span class="status-chip-sm" [class.status-paid]="sff.status==='paid'"
+              [class.status-partial]="sff.status==='partial'" [class.status-unpaid]="sff.status==='unpaid'">
+              {{ sff.status | titlecase }}
+            </span>
+          </div>
         </div>
       </div>
-    </div>
-    <div class="no-fee-notice" *ngIf="(studentStates[historyStudent?.id]?.studentFeedingFees?.length || 0) === 0
+      <div class="no-fee-notice" *ngIf="(studentStates[historyStudent?.id]?.studentFeedingFees?.length || 0) === 0
              && !studentStates[historyStudent?.id]?.loadingSummary">
-      <i class="ri-information-line"></i>
-      <span>No feeding fee assigned for {{ selectedTerm }} {{ selectedYear }}.</span>
-    </div>
-    <div *ngIf="loadingHistory" class="loading-state" style="padding:32px;">
-      <div class="spinner"></div>
-      <p>Loading payments...</p>
-    </div>
-    <div class="history-list" *ngIf="!loadingHistory && historyPayments.length > 0">
-      <div *ngFor="let p of historyPayments" class="history-item">
-        <div class="history-item-left">
-          <div class="history-icon"><i class="ri-money-dollar-circle-line"></i></div>
-          <div>
-            <p class="history-amount">{{ formatCurrency(p.amount_paid) }}</p>
-            <p class="history-date">{{ p.payment_date | date:'EEE, MMM d, y' }}</p>
-            <p class="history-meta">
-              <i class="ri-bank-card-line"></i> {{ p.payment_method || 'Cash' }}
-              &nbsp;·&nbsp;
-              {{ p.days_covered }} day{{ p.days_covered !== 1 ? 's' : '' }} covered
-            </p>
+        <i class="ri-information-line"></i>
+        <span>No feeding fee assigned for {{ selectedTerm }} {{ selectedYear }}.</span>
+      </div>
+      <div *ngIf="loadingHistory" class="loading-state" style="padding:32px;">
+        <div class="spinner"></div>
+        <p>Loading payments...</p>
+      </div>
+      <div class="history-list" *ngIf="!loadingHistory && historyPayments.length > 0">
+        <div *ngFor="let p of historyPayments" class="history-item">
+          <div class="history-item-left">
+            <div class="history-icon"><i class="ri-money-dollar-circle-line"></i></div>
+            <div>
+              <p class="history-amount">{{ formatCurrency(p.amount_paid) }}</p>
+              <p class="history-date">{{ p.payment_date | date:'EEE, MMM d, y' }}</p>
+              <p class="history-meta">
+                <i class="ri-bank-card-line"></i> {{ p.payment_method || 'Cash' }}
+                &nbsp;·&nbsp;
+                {{ p.days_covered }} day{{ p.days_covered !== 1 ? 's' : '' }} covered
+              </p>
+            </div>
           </div>
-        </div>
-        <div class="history-item-right">
-          <p class="history-notes" *ngIf="p.notes">{{ p.notes }}</p>
-          <div class="history-item-actions" *ngIf="isDateAllowed(p.payment_date)">
-            <button class="btn-edit-payment" (click)="openEditPayment(p)" title="Edit this payment">
-              <i class="ri-edit-line"></i>
-            </button>
-            <button class="btn-delete-payment" (click)="promptDeletePayment(p)" title="Delete this payment">
-              <i class="ri-delete-bin-line"></i>
-            </button>
+          <div class="history-item-right">
+            <p class="history-notes" *ngIf="p.notes">{{ p.notes }}</p>
+            <div class="history-item-actions" *ngIf="isDateAllowed(p.payment_date)">
+              <button class="btn-edit-payment" (click)="openEditPayment(p)" title="Edit this payment">
+                <i class="ri-edit-line"></i>
+              </button>
+              <button class="btn-delete-payment" (click)="promptDeletePayment(p)" title="Delete this payment">
+                <i class="ri-delete-bin-line"></i>
+              </button>
+            </div>
+            <span class="history-lock" *ngIf="!isDateAllowed(p.payment_date)"
+              title="Past record — contact admin to edit or delete">
+              <i class="ri-lock-line"></i>
+            </span>
           </div>
-          <span class="history-lock" *ngIf="!isDateAllowed(p.payment_date)"
-            title="Past record — contact admin to edit or delete">
-            <i class="ri-lock-line"></i>
-          </span>
         </div>
       </div>
-    </div>
-    <div *ngIf="!loadingHistory && historyPayments.length === 0" class="history-empty">
-      <i class="ri-inbox-line"></i>
-      <p>No payments recorded this term.</p>
+      <div *ngIf="!loadingHistory && historyPayments.length === 0" class="history-empty">
+        <i class="ri-inbox-line"></i>
+        <p>No payments recorded this term.</p>
+      </div>
+    </ng-container>
+
+        <div class="att-hist" *ngIf="historyTab === 'attendance'">
+      <div *ngIf="loadingHistory" class="loading-state" style="padding:32px;"><div class="spinner"></div><p>Loading attendance...</p></div>
+
+      <ng-container *ngIf="!loadingHistory">
+        <div class="att-chips">
+          <button type="button" [class.on]="attFilter === 'all'" (click)="attFilter = 'all'">All {{ historyAttendance.length }}</button>
+          <button type="button" class="p" [class.on]="attFilter === 'present'" (click)="attFilter = 'present'">Present {{ attPresentCount }}</button>
+          <button type="button" class="a" [class.on]="attFilter === 'absent'" (click)="attFilter = 'absent'">Absent {{ attAbsentCount }}</button>
+        </div>
+
+        <div class="att-date">
+          <label>Check a day</label>
+          <input type="date" [(ngModel)]="attDate" />
+          <button type="button" *ngIf="attDate" (click)="attDate = ''">Clear</button>
+        </div>
+        <p class="att-none" *ngIf="attDateHasNoRecord">No attendance was recorded for this day.</p>
+
+        <div class="att-list" *ngIf="shownAttendance.length > 0">
+          <div *ngFor="let a of shownAttendance" class="att-row" [class.absent]="!a.is_present">
+            <div class="att-day">
+              <strong>{{ a.date | date:'EEEE' }}</strong>
+              <span>{{ a.date | date:'MMM d, y' }}</span>
+            </div>
+            <div class="att-paid" *ngIf="paidOn(a.date) > 0">paid {{ formatCurrency(paidOn(a.date)) }}</div>
+            <span class="att-badge" [class.p]="a.is_present" [class.a]="!a.is_present">
+              <i [class]="a.is_present ? 'ri-checkbox-circle-fill' : 'ri-close-circle-fill'"></i>
+              {{ a.is_present ? 'Present' : 'Absent' }}
+            </span>
+          </div>
+        </div>
+        <div class="history-empty" *ngIf="historyAttendance.length === 0">
+          <i class="ri-calendar-line"></i><p>No attendance recorded for {{ selectedTerm }} {{ selectedYear }}.</p>
+        </div>
+        <p class="att-note" *ngIf="historyAttendance.length > 0">Showing days where attendance was recorded for {{ selectedTerm }} {{ selectedYear }}. Change the term at the top of the page to look at another term.</p>
+      </ng-container>
     </div>
   </div>
 </div>
@@ -785,7 +836,8 @@
     <div class="payment-modal-body">
       <div class="term-paid-notice">
         <i class="ri-information-line"></i>
-        <span>This will be <strong>deducted from the cash to hand over</strong> and shown to the admin with your name and reason. Expenses cannot be edited afterwards — ask the admin if you made a mistake.</span>
+        <span>This will be <strong>deducted from the cash to hand over</strong> and shown to the admin with your name
+          and reason. Expenses cannot be edited afterwards — ask the admin if you made a mistake.</span>
       </div>
       <div class="form-group">
         <label>Your name *</label>
@@ -793,7 +845,8 @@
       </div>
       <div class="form-group">
         <label>What was it used for? *</label>
-        <input type="text" [(ngModel)]="expenseTitle" maxlength="200" placeholder="e.g. Gas for cooking, bought rice, transport" />
+        <input type="text" [(ngModel)]="expenseTitle" maxlength="200"
+          placeholder="e.g. Gas for cooking, bought rice, transport" />
       </div>
       <div class="form-group">
         <label>Amount (GHS) *</label>

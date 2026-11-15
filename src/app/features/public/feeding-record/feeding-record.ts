@@ -134,6 +134,11 @@ export class FeedingRecord implements OnInit, OnDestroy {
   // ── Attendance dropdown open state ────────────────────────────
   openAttendanceDropdownId: string | null = null;
 
+    historyTab: 'payments' | 'attendance' = 'payments';
+  historyAttendance: { date: string; is_present: boolean }[] = [];
+  attFilter: 'all' | 'present' | 'absent' = 'all';
+  attDate = '';
+
   // ── Money summary (week) + expenses ───────────────────────────
   // 'day' = hand over cash every school day, 'week' = once a week
   cashView: 'day' | 'week' = 'week';
@@ -951,19 +956,24 @@ export class FeedingRecord implements OnInit, OnDestroy {
 
   // ── History Modal ─────────────────────────────────────────────
 
-  async openHistoryModal(student: any): Promise<void> {
+    async openHistoryModal(student: any): Promise<void> {
     this.historyStudent = student;
     this.historyPayments = [];
+    this.historyAttendance = [];
+    this.historyTab = 'payments';
+    this.attFilter = 'all';
+    this.attDate = '';
     this.loadingHistory = true;
     this.showHistoryModal = true;
     this.cdr.markForCheck();
 
     try {
-      this.historyPayments = await this.pub.studentPayments(
-        student.id,
-        this.selectedYear,
-        this.selectedTerm,
-      );
+      const [payments, attendance] = await Promise.all([
+        this.pub.studentPayments(student.id, this.selectedYear, this.selectedTerm),
+        this.pub.studentAttendance(student.id, this.selectedYear, this.selectedTerm).catch(() => []),
+      ]);
+      this.historyPayments = payments;
+      this.historyAttendance = attendance;
     } catch (err: any) {
       this.errorMessage = err.message || 'Failed to load history';
     } finally {
@@ -976,6 +986,7 @@ export class FeedingRecord implements OnInit, OnDestroy {
     this.showHistoryModal = false;
     this.historyStudent = null;
     this.historyPayments = [];
+    this.historyAttendance = [];
   }
 
   // ── Delete Payment ────────────────────────────────────────────
@@ -1058,6 +1069,27 @@ export class FeedingRecord implements OnInit, OnDestroy {
     } catch {
       return d;
     }
+  }
+
+    get attPresentCount(): number { return this.historyAttendance.filter((a) => a.is_present).length; }
+  get attAbsentCount(): number { return this.historyAttendance.filter((a) => !a.is_present).length; }
+
+  get shownAttendance(): { date: string; is_present: boolean }[] {
+    return this.historyAttendance.filter((a) =>
+      (this.attFilter === 'all' || (this.attFilter === 'present') === a.is_present) &&
+      (!this.attDate || a.date === this.attDate));
+  }
+
+  /** what was paid on a given day (sum), shown beside the attendance */
+  paidOn(date: string): number {
+    return this.historyPayments
+      .filter((p) => (p.payment_date || '').slice(0, 10) === date)
+      .reduce((s, p) => s + Number(p.amount_paid || 0), 0);
+  }
+
+  /** the day the teacher typed has no record: say so clearly */
+  get attDateHasNoRecord(): boolean {
+    return !!this.attDate && !this.historyAttendance.some((a) => a.date === this.attDate);
   }
 
   get today(): string {

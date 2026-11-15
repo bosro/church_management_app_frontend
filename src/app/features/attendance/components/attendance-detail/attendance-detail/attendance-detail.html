@@ -101,15 +101,17 @@
         <div class="records-card">
           <div class="records-header">
             <div class="records-header-left">
-              <h3>Attendance Records ({{ filteredAttendanceRecords.length }})</h3>
+             <h3>Attendance Records ({{ filteredAttendanceRecords.length }})</h3>
               <!-- Show present/absent summary when filtered -->
-              <div class="records-summary" *ngIf="selectedCellGroupFilter">
-                <span class="summary-pill present">
-                  <i class="ri-checkbox-circle-line"></i> {{ presentCount }} Present
-                </span>
-                <span class="summary-pill absent">
-                  <i class="ri-close-circle-line"></i> {{ absentCount }} Absent
-                </span>
+              <div class="status-chips">
+                <button type="button" [class.on]="statusFilter === 'all'" (click)="setStatusFilter('all')">All {{
+                  totalCount }}</button>
+                <button type="button" class="p" [class.on]="statusFilter === 'present'"
+                  (click)="setStatusFilter('present')">
+                  <i class="ri-checkbox-circle-line"></i> Present {{ presentCount }}</button>
+                <button type="button" class="a" [class.on]="statusFilter === 'absent'"
+                  (click)="setStatusFilter('absent')">
+                  <i class="ri-close-circle-line"></i> Absent {{ absentCount }}</button>
               </div>
             </div>
 
