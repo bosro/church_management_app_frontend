@@ -15,6 +15,37 @@
     </div>
   </div>
 
+  <div class="rate-bar"
+    style="background:#F5F3FF;border:1px solid #DDD6FE;border-radius:10px;padding:12px 14px;margin-bottom:16px;">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <i class="ri-exchange-dollar-line"></i>
+      <span><strong>$1 = GH₵{{ usd.rate | number:'1.2-4' }}</strong>
+        <span style="margin-left:6px;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:700;"
+          [style.background]="usd.mode === 'manual' ? '#FEF3C7' : '#D1FAE5'"
+          [style.color]="usd.mode === 'manual' ? '#92400E' : '#065F46'">
+          {{ usd.mode === 'manual' ? 'Your rate' : 'Live rate' }}</span>
+        <small style="color:#6B7280"><span *ngIf="usd.updatedAt"> · updated {{ usd.updatedAt | date:'MMM d, h:mm a'
+            }}</span></small></span>
+      <button class="btn btn-secondary" style="margin-left:auto" (click)="refreshRate(true)"
+        [disabled]="refreshingRate" *ngIf="usd.mode === 'auto'">
+        <i [class]="refreshingRate ? 'ri-loader-4-line spin' : 'ri-refresh-line'"></i> Refresh rate
+      </button>
+      <button class="btn btn-secondary" style="margin-left:auto" (click)="switchToLiveRate()" [disabled]="savingRate"
+        *ngIf="usd.mode === 'manual'">
+        <i class="ri-radar-line"></i> Switch back to live rate
+      </button>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;">
+      <label style="font-size:13px;font-weight:600;">Use my own rate: $1 = GH₵</label>
+      <input type="number" class="form-control" style="width:120px" [(ngModel)]="manualRate" min="0.01" step="0.01"
+        placeholder="e.g. 12" />
+      <button class="btn-primary" (click)="saveManualRate()" [disabled]="savingRate || !manualRate">
+        {{ savingRate ? 'Saving…' : 'Use this rate' }}
+      </button>
+      <small style="color:#6B7280">The live rate stops updating while your own rate is on.</small>
+    </div>
+  </div>
+
   <div *ngIf="successMessage" class="alert alert-success">
     <i class="ri-checkbox-circle-line"></i> {{ successMessage }}
   </div>
@@ -35,12 +66,26 @@
           <span class="plan-id">ID: {{ plan.id }}</span>
         </div>
         <div class="plan-price">
-          <span class="price-amount">{{ formatCurrency(plan.price_monthly) }}</span>
-          <span class="price-period">/month</span>
-          <div class="price-yearly" *ngIf="plan.price_yearly > 0" style="font-size:12px;color:#6b7280;margin-top:2px;">
-            or {{ formatCurrency(yearlyPerMonth(plan)) }}/mo billed {{ formatCurrency(plan.price_yearly) }} yearly
-            <span *ngIf="yearlySavingPercent(plan) > 0">(save {{ yearlySavingPercent(plan) }}%)</span>
-          </div>
+          <ng-container *ngIf="(plan.price_monthly_usd ?? 0) > 0; else cediOnly">
+            <span class="price-amount">{{ formatUsd(plan.price_monthly_usd) }}</span>
+            <span class="price-period">/month</span>
+            <div style="font-size:12px;color:#6b7280;margin-top:2px;">≈ {{ formatCurrency(plan.price_monthly) }} charged
+              in cedis</div>
+            <div class="price-yearly" *ngIf="(plan.price_yearly_usd ?? 0) > 0"
+              style="font-size:12px;color:#6b7280;margin-top:2px;">
+              or {{ formatUsd(plan.price_yearly_usd) }}/year (≈ {{ formatCurrency(plan.price_yearly) }})
+              <span *ngIf="yearlySavingPercent(plan) > 0">(save {{ yearlySavingPercent(plan) }}%)</span>
+            </div>
+          </ng-container>
+          <ng-template #cediOnly>
+            <span class="price-amount">{{ formatCurrency(plan.price_monthly) }}</span>
+            <span class="price-period">/month</span>
+            <div class="price-yearly" *ngIf="plan.price_yearly > 0"
+              style="font-size:12px;color:#6b7280;margin-top:2px;">
+              or {{ formatCurrency(yearlyPerMonth(plan)) }}/mo billed {{ formatCurrency(plan.price_yearly) }} yearly
+              <span *ngIf="yearlySavingPercent(plan) > 0">(save {{ yearlySavingPercent(plan) }}%)</span>
+            </div>
+          </ng-template>
         </div>
       </div>
 
@@ -104,7 +149,8 @@
       </div>
 
       <div class="plan-actions">
-        <button class="btn btn-secondary" (click)="exportPlanPdf(plan)" title="Download this tier as a PDF to send to a church">
+        <button class="btn btn-secondary" (click)="exportPlanPdf(plan)"
+          title="Download this tier as a PDF to send to a church">
           <i class="ri-file-pdf-line"></i> PDF
         </button>
         <button class="btn btn-secondary" (click)="openEditModal(plan)">
@@ -130,27 +176,42 @@
       <div class="form-row">
         <div class="form-group" *ngIf="showCreateModal">
           <label>Plan ID *</label>
-          <input type="text" class="form-control" [(ngModel)]="planForm.id"
-            placeholder="e.g. free, pro, growth" />
+          <input type="text" class="form-control" [(ngModel)]="planForm.id" placeholder="e.g. free, pro, growth" />
           <small class="help-text">Lowercase, no spaces. Cannot change after creation.</small>
         </div>
         <div class="form-group">
           <label>Plan Name *</label>
-          <input type="text" class="form-control" [(ngModel)]="planForm.name"
-            placeholder="e.g. Free, Pro, Growth" />
+          <input type="text" class="form-control" [(ngModel)]="planForm.name" placeholder="e.g. Free, Pro, Growth" />
         </div>
       </div>
 
       <div class="form-row">
         <div class="form-group">
-          <label>Monthly Price (GHS)</label>
-          <input type="number" class="form-control" [(ngModel)]="planForm.price_monthly"
-            min="0" step="0.01" />
+          <label>Monthly Price (USD $)</label>
+          <input type="number" class="form-control" [(ngModel)]="planForm.price_monthly_usd" min="0" step="0.01"
+            placeholder="e.g. 5" />
+          <small class="help-text" *ngIf="(planForm.price_monthly_usd ?? 0) > 0">≈ GH₵{{ usd.toGhs(planForm.price_monthly_usd)
+            | number:'1.2-2' }} at today's rate</small>
         </div>
         <div class="form-group">
-          <label>Yearly Price (GHS)</label>
-          <input type="number" class="form-control" [(ngModel)]="planForm.price_yearly"
-            min="0" step="0.01" />
+          <label>Yearly Price (USD $)</label>
+          <input type="number" class="form-control" [(ngModel)]="planForm.price_yearly_usd" min="0" step="0.01"
+            placeholder="e.g. 50" />
+          <small class="help-text" *ngIf="(planForm.price_yearly_usd ?? 0) > 0">≈ GH₵{{ usd.toGhs(planForm.price_yearly_usd) |
+            number:'1.2-2' }} at today's rate</small>
+        </div>
+      </div>
+      <p class="help-text" style="margin:-4px 0 12px">Users are charged the cedi amount. Leave a dollar box empty to
+        keep a fixed cedi price (Free plans: leave both empty).</p>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Fixed monthly price (GH₵) <small>— only used when the dollar box is empty</small></label>
+          <input type="number" class="form-control" [(ngModel)]="planForm.price_monthly" min="0" step="0.01" />
+        </div>
+        <div class="form-group">
+          <label>Fixed yearly price (GH₵) <small>— only used when the dollar box is empty</small></label>
+          <input type="number" class="form-control" [(ngModel)]="planForm.price_yearly" min="0" step="0.01" />
         </div>
       </div>
 
@@ -186,11 +247,13 @@
       <div class="form-row three-col">
         <div class="form-group">
           <label>SMS per month</label>
-          <input type="number" class="form-control" [(ngModel)]="planForm.sms_monthly_limit" min="0" placeholder="empty = unlimited" />
+          <input type="number" class="form-control" [(ngModel)]="planForm.sms_monthly_limit" min="0"
+            placeholder="empty = unlimited" />
         </div>
         <div class="form-group">
           <label>Support level</label>
-          <input type="text" class="form-control" [(ngModel)]="planForm.support_level" placeholder="Community / Email / Priority" />
+          <input type="text" class="form-control" [(ngModel)]="planForm.support_level"
+            placeholder="Community / Email / Priority" />
         </div>
         <div class="form-group">
           <label>Display order</label>
@@ -199,7 +262,8 @@
       </div>
       <div class="form-group">
         <label>Tagline (shown on the PDF)</label>
-        <input type="text" class="form-control" [(ngModel)]="planForm.tagline" placeholder="For small churches getting organised" />
+        <input type="text" class="form-control" [(ngModel)]="planForm.tagline"
+          placeholder="For small churches getting organised" />
       </div>
 
       <h4 class="section-label">Feature Access</h4>
@@ -248,9 +312,7 @@
 
     <div class="modal-footer">
       <button class="btn btn-secondary" (click)="closeModals()" [disabled]="processing">Cancel</button>
-      <button class="btn btn-primary"
-        (click)="showCreateModal ? createPlan() : updatePlan()"
-        [disabled]="processing">
+      <button class="btn btn-primary" (click)="showCreateModal ? createPlan() : updatePlan()" [disabled]="processing">
         <i class="ri-save-line"></i>
         {{ processing ? 'Saving...' : showCreateModal ? 'Create Plan' : 'Update Plan' }}
       </button>

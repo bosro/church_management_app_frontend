@@ -11,6 +11,7 @@ import { Router } from '@angular/router';
 import { SubscriptionService, SubscriptionPlan } from '../../../core/services/subscription.service';
 import { SubscriptionPaystackService } from '../../../core/services/subscription-paystack.service';
 import { AuthService } from '../../../core/services/auth';
+import { UsdRateService } from '../../../core/services/usd-rate-service';
 
 @Component({
   selector: 'app-upgrade-modal',
@@ -38,7 +39,8 @@ export class UpgradeModal implements OnInit {
     private subscriptionPaystack: SubscriptionPaystackService,
     private authService: AuthService,
     private router: Router,
-  ) {}
+    public usd: UsdRateService
+  ) { }
 
   ngOnInit(): void {
     // Pre-fill billing email from current user profile
@@ -57,8 +59,16 @@ export class UpgradeModal implements OnInit {
     if (!this.subscriptionPaystack.feeSettingsLoaded) {
       this.subscriptionPaystack.loadFeeSettings();
     }
+
+    this.usd.ensureFresh();
+
   }
 
+
+  getUsdTotal(): number {
+    if (!this.selectedPlan) return 0;
+    return (this.billingCycle === 'yearly' ? this.selectedPlan.price_yearly_usd : this.selectedPlan.price_monthly_usd) || 0;
+  }
   // ── Computed helpers ────────────────────────────────────────────────────────
 
   getPrice(plan: SubscriptionPlan): number {

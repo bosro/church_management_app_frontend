@@ -5,6 +5,7 @@ import { SubscriptionService, SubscriptionPlan } from '../../../core/services/su
 import { SupabaseService } from '../../../core/services/supabase';
 import { from } from 'rxjs';
 import { PlanPdfService } from '../../../core/services/plan-pdf.service';
+import { UsdRateService } from '../../../core/services/usd-rate-service';
 
 @Component({
   selector: 'app-plans',
@@ -22,6 +23,11 @@ export class Plans implements OnInit {
   showCreateModal = false;
   showEditModal = false;
   selectedPlan: SubscriptionPlan | null = null;
+
+  refreshingRate = false;
+
+  manualRate: number | null = null;
+  savingRate = false;
 
   planForm = {
     id: '',
@@ -45,13 +51,43 @@ export class Plans implements OnInit {
     support_level: '' as string | null,
     tagline: '' as string | null,
     sort_order: 0,
+    price_monthly_usd: null as number | null,
+    price_yearly_usd: null as number | null,
   };
 
   constructor(
     private subscriptionService: SubscriptionService,
     private supabase: SupabaseService,
     private planPdf: PlanPdfService,
-  ) {}
+    public usd: UsdRateService,
+  ) { }
+
+
+
+
+  async saveManualRate(): Promise<void> {
+    if (!this.manualRate || this.manualRate <= 0) { this.errorMessage = 'Enter a rate, e.g. 12'; return; }
+    this.savingRate = true; this.errorMessage = '';
+    try {
+      await this.usd.setManualRate(Number(this.manualRate));
+      this.successMessage = `Your rate is on: $1 = GH₵${this.usd.rate}. Plans repriced.`;
+      this.manualRate = null;
+      this.loadPlans();
+    } catch (e: any) { this.errorMessage = e?.message || 'Could not save the rate'; }
+    this.savingRate = false;
+    setTimeout(() => (this.successMessage = ''), 4000);
+  }
+
+  async switchToLiveRate(): Promise<void> {
+    this.savingRate = true; this.errorMessage = '';
+    try {
+      await this.usd.useLiveRate();
+      this.successMessage = `Live rate is back on: $1 = GH₵${this.usd.rate}`;
+      this.loadPlans();
+    } catch (e: any) { this.errorMessage = e?.message || 'Could not switch'; }
+    this.savingRate = false;
+    setTimeout(() => (this.successMessage = ''), 4000);
+  }
 
   // ── PDF export ────────────────────────────────────────────
   exportPlanPdf(plan: SubscriptionPlan): void {
@@ -70,6 +106,7 @@ export class Plans implements OnInit {
     const full = plan.price_monthly * 12;
     return full > 0 ? Math.round(((full - plan.price_yearly) / full) * 100) : 0;
   }
+
   smsLabel(plan: SubscriptionPlan): string {
     if (!plan.can_send_communications) return 'No SMS';
     return plan.sms_monthly_limit === null || plan.sms_monthly_limit === undefined
@@ -79,6 +116,7 @@ export class Plans implements OnInit {
 
   ngOnInit(): void {
     this.loadPlans();
+    this.refreshRate(false);
   }
 
   loadPlans(): void {
@@ -98,6 +136,8 @@ export class Plans implements OnInit {
       can_use_reports: false, can_custom_branding: false,
       sms_monthly_limit: 0, can_remove_ads: false, support_level: 'Community',
       tagline: '', sort_order: this.plans.length,
+      price_monthly_usd: null as number | null,
+      price_yearly_usd: null as number | null,
     };
     this.showCreateModal = true;
     this.errorMessage = '';
@@ -183,6 +223,19 @@ export class Plans implements OnInit {
 
   getLimitLabel(val: number | null): string {
     return val === null ? 'Unlimited' : val.toString();
+  }
+
+
+  async refreshRate(force = true): Promise<void> {
+    this.refreshingRate = true;
+    await this.usd.ensureFresh(force);
+    this.refreshingRate = false;
+    this.loadPlans();            // cedi prices were recalculated on the server
+    if (force) { this.successMessage = `Rate updated: $1 = GH₵${this.usd.rate}`; setTimeout(() => (this.successMessage = ''), 3000); }
+  }
+
+  formatUsd(amount: number | null | undefined): string {
+    return '$' + (Number(amount) || 0).toFixed(2).replace(/\.00$/, '');
   }
 }
 

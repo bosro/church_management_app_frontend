@@ -29,6 +29,8 @@ export interface SubscriptionPlan {
   tagline?: string | null;
   sort_order?: number;
   plan_features?: string[];
+    price_monthly_usd?: number | null;
+  price_yearly_usd?: number | null;
 }
 
 export type SubscriptionState = 'free' | 'active' | 'expiring' | 'grace' | 'expired' | 'complimentary';

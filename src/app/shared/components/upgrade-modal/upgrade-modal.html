@@ -43,6 +43,9 @@
             <span class="amount">GHS {{ getPrice(plan) | number:'1.0-0' }}</span>
             <span class="period">/month</span>
           </div>
+                    <p *ngIf="(plan.price_monthly_usd ?? 0) > 0" class="yearly-saving">
+            {{ billingCycle === 'yearly' ? ('$' + plan.price_yearly_usd + ' per year') : ('$' + plan.price_monthly_usd + ' per month') }} · paid in cedis
+          </p>
           <p *ngIf="billingCycle === 'yearly'" class="yearly-saving">
             Billed GHS {{ plan.price_yearly | number:'1.0-0' }} yearly &middot;
             you save GHS {{ getYearlySaving(plan) | number:'1.0-0' }}
@@ -142,9 +145,9 @@
             <span class="summary-label">Billing</span>
             <span class="summary-value">{{ billingCycle === 'yearly' ? 'Annual (12 months)' : 'Monthly' }}</span>
           </div>
-          <div class="summary-row">
+                   <div class="summary-row">
             <span class="summary-label">Plan price</span>
-            <span class="summary-value">GHS {{ getTotalPrice() | number:'1.2-2' }}</span>
+            <span class="summary-value"><ng-container *ngIf="getUsdTotal() > 0">${{ getUsdTotal() }} ≈ </ng-container>GHS {{ getTotalPrice() | number:'1.2-2' }}</span>
           </div>
 
           <!-- Fee breakdown — only shown when pass_fees_to_payer is true -->
