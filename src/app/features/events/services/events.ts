@@ -342,76 +342,25 @@ export class EventsService {
 
   registerForEvent(
     eventId: string,
-    registrationData: {
-      memberId?: string;
-      name?: string;
-      email?: string;
-      phone?: string;
-      notes?: string;
-    },
-  ): Observable<EventRegistration> {
+    registrationData: { memberId?: string; name?: string; email?: string; phone?: string; notes?: string },
+  ): Observable<any> {
     return from(
       (async () => {
-        // Check if already registered
-        if (registrationData.memberId) {
-          const { data: existing } = await this.supabase.client
-            .from('event_registrations')
-            .select('*')
-            .eq('event_id', eventId)
-            .eq('member_id', registrationData.memberId)
-            .maybeSingle();
-
-          if (existing) {
-            throw new Error('Already registered for this event');
-          }
-        }
-
-        // Check event capacity
-        const { data: event } = await this.supabase.client
-          .from('events')
-          .select('max_attendees')
-          .eq('id', eventId)
-          .single();
-
-        if (event?.max_attendees) {
-          const { count } = await this.supabase.client
-            .from('event_registrations')
-            .select('*', { count: 'exact', head: true })
-            .eq('event_id', eventId)
-            .in('status', ['confirmed', 'pending']);
-
-          if (count && count >= event.max_attendees) {
-            throw new Error('Event is full');
-          }
-        }
-
-        // Create registration
-        const { data, error } = await this.supabase.client
-          .from('event_registrations')
-          .insert({
-            event_id: eventId,
-            member_id: registrationData.memberId || null,
-            name: registrationData.name || null,
-            email: registrationData.email || null,
-            phone: registrationData.phone || null,
-            notes: registrationData.notes || null,
-            status: 'confirmed',
-            checked_in: false,
-            registered_at: new Date().toISOString(),
-          })
-          .select()
-          .single();
-
+        const { data, error } = await this.supabase.client.rpc('admin_register_attendee', {
+          p_event_id: eventId,
+          p_member_id: registrationData.memberId || null,
+          p_name: registrationData.name || null,
+          p_phone: registrationData.phone || null,
+          p_email: registrationData.email || null,
+          p_notes: registrationData.notes || null,
+        });
         if (error) throw new Error(error.message);
+        if (data?.status !== 'ok') throw new Error(data?.message || 'Could not register');
         return data;
       })(),
-    ).pipe(
-      catchError((err) => {
-        console.error('Error registering for event:', err);
-        return throwError(() => err);
-      }),
-    );
+    ).pipe(catchError((err) => throwError(() => err)));
   }
+
 
   updateRegistration(
     registrationId: string,
@@ -561,46 +510,12 @@ export class EventsService {
   // ==================== SEARCH MEMBERS FOR REGISTRATION ====================
 
   searchMembersForEvent(eventId: string, query: string): Observable<any[]> {
-    const churchId = this.authService.getChurchId();
-    const isBranchPastor = this.authService.isBranchPastor();
-    const branchId = this.authService.getBranchId();
-
     return from(
       (async () => {
-        const { data: registered } = await this.supabase.client
-          .from('event_registrations')
-          .select('member_id')
-          .eq('event_id', eventId)
-          .not('member_id', 'is', null);
-
-        const registeredIds =
-          registered?.map((r) => r.member_id).filter(Boolean) || [];
-
-        let searchQuery = this.supabase.client
-          .from('members')
-          .select(
-            'id, first_name, last_name, photo_url, member_number, phone_primary, email',
-          )
-          .eq('church_id', churchId);
-
-        // Branch pastor only searches their branch members
-        if (isBranchPastor && branchId) {
-          searchQuery = searchQuery.eq('branch_id', branchId);
-        }
-
-        if (registeredIds.length > 0) {
-          searchQuery = searchQuery.not(
-            'id',
-            'in',
-            `(${registeredIds.join(',')})`,
-          );
-        }
-
-        searchQuery = searchQuery.or(
-          `first_name.ilike.%${query}%,last_name.ilike.%${query}%,email.ilike.%${query}%,phone_primary.ilike.%${query}%`,
-        );
-
-        const { data, error } = await searchQuery.limit(10);
+        const { data, error } = await this.supabase.client.rpc('search_members_for_event', {
+          p_event_id: eventId,
+          p_query: query,
+        });
         if (error) throw new Error(error.message);
         return data || [];
       })(),

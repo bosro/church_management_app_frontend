@@ -230,20 +230,11 @@ export class EventDetail implements OnInit, OnDestroy {
   }
 
   registerAttendee(): void {
-    if (!this.selectedMember && (!this.guestName || !this.guestEmail)) {
-      this.errorMessage =
-        'Please select a member or provide guest details (name and email required)';
+    if (this.registering) return;
+    if (!this.selectedMember && !this.guestName.trim()) {
+      this.errorMessage = 'Please select a member, or type the guest\'s name';
       setTimeout(() => (this.errorMessage = ''), 5000);
       return;
-    }
-
-    if (!this.selectedMember && this.guestEmail) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(this.guestEmail)) {
-        this.errorMessage = 'Please provide a valid email address';
-        setTimeout(() => (this.errorMessage = ''), 5000);
-        return;
-      }
     }
 
     this.registering = true;
@@ -251,30 +242,43 @@ export class EventDetail implements OnInit, OnDestroy {
     this.successMessage = '';
 
     const registrationData: any = {};
-
     if (this.selectedMember) {
       registrationData.memberId = this.selectedMember.id;
     } else {
       registrationData.name = this.guestName.trim();
-      registrationData.email = this.guestEmail.trim();
+      registrationData.email = this.guestEmail.trim() || undefined;
       registrationData.phone = this.guestPhone.trim() || undefined;
     }
-
-    if (this.registrationNotes.trim()) {
-      registrationData.notes = this.registrationNotes.trim();
-    }
+    if (this.registrationNotes.trim()) registrationData.notes = this.registrationNotes.trim();
 
     this.eventsService
       .registerForEvent(this.eventId, registrationData)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: () => {
-          this.successMessage = 'Registration successful!';
+        next: async (res: any) => {
+          const name = this.selectedMember
+            ? `${this.selectedMember.first_name} ${this.selectedMember.last_name}`
+            : this.guestName.trim();
+          this.toast.success('Registered', `${name} — ID ${res.registration_code}`);
+          this.toggleRegistrationForm();     // also clears the form
+          this.registering = false;
           this.loadRegistrations();
           this.loadStatistics();
-          this.toggleRegistrationForm();
-          this.registering = false;
-          setTimeout(() => (this.successMessage = ''), 3000);
+
+          // send the confirmation straight away (SMS, or email if there is no phone)
+          if (this.event?.confirmation_sms_enabled && (res.phone || res.email)) {
+            try {
+              const r = await this.eventsService.sendRegistrationSms({ registration_id: res.registration_id, resend: true });
+              const what = r?.channel === 'email' ? 'Email' : 'SMS';
+              if (r?.status === 'sent') this.toast.success(`${what} sent`, `Confirmation sent to ${name}.`);
+              else this.toast.warning(`${what} not sent`, r?.detail || 'The confirmation could not be sent.');
+            } catch (e: any) {
+              this.toast.error('Message failed', e?.message || 'Could not send the confirmation.');
+            }
+            this.loadRegistrations();
+          } else if (this.event?.confirmation_sms_enabled) {
+            this.toast.info('No phone or email', `${name} has no phone or email yet. Tap "Edit contact" on their card to add one.`);
+          }
         },
         error: (error) => {
           this.errorMessage = error.message || 'Failed to register';
