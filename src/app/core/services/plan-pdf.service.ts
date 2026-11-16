@@ -5,6 +5,7 @@ import { Injectable } from '@angular/core';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { SubscriptionPlan } from './subscription.service';
+import { UsdRateService } from './usd-rate-service';
 
 const PURPLE: [number, number, number] = [91, 33, 182];
 const LIGHT: [number, number, number] = [245, 243, 255];
@@ -12,8 +13,32 @@ const GREY: [number, number, number] = [107, 114, 128];
 
 @Injectable({ providedIn: 'root' })
 export class PlanPdfService {
+  constructor(private usd: UsdRateService) {}
+
   private money(n: number): string {
     return `GHS ${Number(n).toLocaleString('en-GH', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+  }
+  private dollars(n: number): string {
+    return `$${Number(n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+  }
+  /** is this plan priced in dollars? */
+  private inUsd(p: SubscriptionPlan): boolean {
+    return Number(p.price_monthly_usd || 0) > 0 || Number(p.price_yearly_usd || 0) > 0;
+  }
+  /** "$20 (about GHS 234.95)" for dollar plans, "GHS 60" for fixed-cedi plans. cedis = what the church is charged. */
+  private price(usd: number | null | undefined, ghs: number): string {
+    return Number(usd || 0) > 0 ? `${this.dollars(Number(usd))} (about ${this.money(ghs)})` : this.money(ghs);
+  }
+  private monthlyText(p: SubscriptionPlan): string {
+    return this.price(p.price_monthly_usd, p.price_monthly);
+  }
+  private yearlyText(p: SubscriptionPlan): string {
+    const perMonthGhs = Math.round((p.price_yearly / 12) * 100) / 100;
+    if (Number(p.price_yearly_usd || 0) > 0) {
+      const perMonthUsd = Math.round((Number(p.price_yearly_usd) / 12) * 100) / 100;
+      return `${this.dollars(Number(p.price_yearly_usd))} per year (about ${this.money(p.price_yearly)})  -  ${this.dollars(perMonthUsd)} per month`;
+    }
+    return `${this.money(p.price_yearly)} per year  (${this.money(perMonthGhs)} per month)`;
   }
   private limit(v: number | null | undefined): string {
     return v === null || v === undefined ? 'Unlimited' : v.toLocaleString('en-GH');
@@ -42,6 +67,16 @@ export class PlanPdfService {
       pct: full > 0 ? Math.round(((full - p.price_yearly) / full) * 100) : 0,
     };
   }
+  /** the saving, written the same way the prices are (dollars first for dollar plans) */
+  private savingText(p: SubscriptionPlan): string {
+    const s = this.yearlySaving(p);
+    if (s.saved <= 0) return '-';
+    if (Number(p.price_monthly_usd || 0) > 0 && Number(p.price_yearly_usd || 0) > 0) {
+      const usdSaved = Math.max(0, Number(p.price_monthly_usd) * 12 - Number(p.price_yearly_usd));
+      return `${this.dollars(Math.round(usdSaved * 100) / 100)} (about ${this.money(s.saved)}) - ${s.pct}% less than paying monthly`;
+    }
+    return `${this.money(s.saved)} (${s.pct}%) compared with paying monthly`;
+  }
 
   private header(doc: jsPDF, title: string, subtitle: string): number {
     const w = doc.internal.pageSize.getWidth();
@@ -68,6 +103,8 @@ export class PlanPdfService {
     return 66;
   }
 
+  private footerNote = '';
+
   private footer(doc: jsPDF): void {
     const pages = doc.getNumberOfPages();
     const w = doc.internal.pageSize.getWidth();
@@ -78,13 +115,23 @@ export class PlanPdfService {
       doc.line(14, h - 18, w - 14, h - 18);
       doc.setFontSize(8);
       doc.setTextColor(...GREY);
-      doc.text('All prices in Ghana Cedis (GHS). Payment is a one-time charge per period; plans do not renew automatically.', 14, h - 12);
+      doc.text(this.footerNote, 14, h - 12);
       doc.text(`Page ${i} of ${pages}`, w - 14, h - 12, { align: 'right' });
     }
   }
 
+  private noteFor(plans: SubscriptionPlan[]): string {
+    const anyUsd = plans.some((p) => this.inUsd(p));
+    const rate = Number(this.usd.rate).toLocaleString('en-US', { maximumFractionDigits: 4 });
+    return anyUsd
+      ? `Prices are in US dollars; payment is charged in Ghana Cedis (GHS) at US$1 = GHS ${rate} (rate may change). One-time charge per period; plans do not renew automatically.`
+      : 'All prices in Ghana Cedis (GHS). Payment is a one-time charge per period; plans do not renew automatically.';
+  }
+
   /** One tier: pricing, limits, features */
-  exportPlan(plan: SubscriptionPlan): void {
+  async exportPlan(plan: SubscriptionPlan): Promise<void> {
+    await this.usd.ensureFresh();
+    this.footerNote = this.noteFor([plan]);
     const doc = new jsPDF({ unit: 'mm', format: 'a4' });
     let y = this.header(doc, `${plan.name} Plan`, plan.tagline || 'Subscription plan details');
     const free = plan.price_monthly === 0;
@@ -97,9 +144,9 @@ export class PlanPdfService {
       body: free
         ? [['Price', 'Free forever']]
         : [
-            ['Monthly billing', `${this.money(plan.price_monthly)} per month`],
-            ['Yearly billing', `${this.money(plan.price_yearly)} per year  (${this.money(Math.round(y1.perMonth * 100) / 100)} per month)`],
-            ['Yearly saving', y1.saved > 0 ? `Save ${this.money(y1.saved)} (${y1.pct}%) compared with paying monthly` : '—'],
+            ['Monthly billing', `${this.monthlyText(plan)} per month`],
+            ['Yearly billing', this.yearlyText(plan)],
+            ['Yearly saving', y1.saved > 0 ? `Save ${this.savingText(plan)}` : '-'],
           ],
       theme: 'grid',
       headStyles: { fillColor: PURPLE },
@@ -165,7 +212,9 @@ export class PlanPdfService {
   }
 
   /** All active tiers side by side */
-  exportComparison(plans: SubscriptionPlan[]): void {
+  async exportComparison(plans: SubscriptionPlan[]): Promise<void> {
+    await this.usd.ensureFresh();
+    this.footerNote = this.noteFor(plans);
     const sorted = [...plans].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.price_monthly - b.price_monthly);
     const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'landscape' });
     const y = this.header(doc, 'Plans & Pricing', 'Choose the Churchman plan that fits your church');
@@ -173,9 +222,9 @@ export class PlanPdfService {
     const head = [['', ...sorted.map((p) => p.name)]];
     const row = (label: string, f: (p: SubscriptionPlan) => string) => [label, ...sorted.map(f)];
     const body = [
-      row('Monthly price', (p) => (p.price_monthly === 0 ? 'Free' : this.money(p.price_monthly))),
-      row('Yearly price', (p) => (p.price_monthly === 0 ? '—' : `${this.money(p.price_yearly)}  (${this.money(Math.round((p.price_yearly / 12) * 100) / 100)}/mo)`)),
-      row('Yearly saving', (p) => { const s = this.yearlySaving(p); return p.price_monthly === 0 || s.saved <= 0 ? '—' : `${this.money(s.saved)} (${s.pct}%)`; }),
+      row('Monthly price', (p) => (p.price_monthly === 0 ? 'Free' : this.monthlyText(p))),
+      row('Yearly price', (p) => (p.price_monthly === 0 ? '-' : this.yearlyText(p))),
+      row('Yearly saving', (p) => (p.price_monthly === 0 ? '-' : this.savingText(p))),
       row('Members', (p) => this.limit(p.max_members)),
       row('Branches', (p) => this.limit(p.max_branches)),
       row('Staff / admin users', (p) => this.limit(p.max_users)),
