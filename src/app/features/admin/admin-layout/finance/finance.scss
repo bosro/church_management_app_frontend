@@ -163,7 +163,7 @@
       }
 
       .stat-value {
-        color: white;
+        color: 111827;
       }
     }
 
@@ -235,7 +235,7 @@
       .stat-value {
         font-size: 1.5rem;
         font-weight: 800;
-        color: #fff;
+        color: #111827;
         margin: 0;
       }
 
@@ -1396,4 +1396,31 @@
       color: #111827;
     }
   }
+}
+
+/* ADD AT THE BOTTOM of features/admin/admin-layout/finance/finance.scss */
+.stat-card .stat-info .stat-value {
+  color: #111827 !important;
+}
+
+.stat-card .stat-info .stat-label {
+  color: #6b7280 !important;
+}
+
+.stat-card.stat-primary .stat-info .stat-value {
+  color: #fff !important;
+}
+
+.stat-card.stat-primary .stat-info .stat-label {
+  color: rgba(255, 255, 255, .85) !important;
+}
+
+table th,
+table td {
+  padding: .75rem 1rem;
+  text-align: left;
+}
+
+select {
+  min-width: 110px;
 }

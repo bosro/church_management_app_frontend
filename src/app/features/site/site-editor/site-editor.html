@@ -1,0 +1,90 @@
+<div style="max-width:820px;margin:0 auto;padding:1rem;font-family:system-ui,sans-serif">
+  <h2>Church website</h2>
+  <p *ngIf="loading">Loading…</p>
+
+  <div *ngIf="!loading && !allowed" style="background:#fef3c7;border:1px solid #f59e0b;border-radius:12px;padding:1rem">
+    <b>Premium feature.</b> Your plan doesn’t include a church website. Upgrade to build and publish yours at
+    <code>{{ base }}/{{ slug }}</code>. You can still fill in the details below, but you can’t publish.
+  </div>
+
+  <ng-container *ngIf="!loading">
+    <div class="ed">
+      <style>
+        .ed label{display:block;font-size:.8rem;font-weight:600;margin:.6rem 0 .2rem}
+        .ed input,.ed textarea,.ed select{width:100%;padding:.55rem;border:1px solid #d1d5db;border-radius:8px;font:inherit}
+        .ed fieldset{border:1px solid #e5e7eb;border-radius:12px;margin:1rem 0;padding:.5rem 1rem 1rem}
+        .ed legend{font-weight:700;padding:0 .4rem}
+        .ed .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:.6rem;align-items:end;border-bottom:1px dashed #e5e7eb;padding-bottom:.6rem}
+        .ed button{padding:.55rem 1rem;border-radius:8px;border:0;background:#4f46e5;color:#fff;cursor:pointer;font:inherit}
+        .ed button.s{background:#e5e7eb;color:#111}
+        .ed button.d{background:#fee2e2;color:#b91c1c}
+      </style>
+
+      <fieldset><legend>Web address</legend>
+        <label>Your page</label>
+        <div style="display:flex;align-items:center;gap:.3rem;flex-wrap:wrap"><span>{{ base }}/</span><input style="flex:1;min-width:140px" [(ngModel)]="slug" placeholder="gracechapel"></div>
+        <label><input type="checkbox" style="width:auto" [(ngModel)]="published" [disabled]="!allowed"> Publish (make it public)</label>
+      </fieldset>
+
+      <fieldset><legend>Look &amp; hero</legend>
+        <label>Headline</label><input [(ngModel)]="c.headline" [placeholder]="'Welcome to ' + churchName">
+        <label>Tagline</label><input [(ngModel)]="c.tagline" placeholder="A place to belong">
+        <label>Brand colour</label><input type="color" style="height:42px;width:90px;padding:2px" [(ngModel)]="c.color">
+        <label>Banner image</label><input type="file" accept="image/*" (change)="upload($event, c, 'hero_image')">
+        <small *ngIf="uploading === 'hero_image'">Uploading…</small><img *ngIf="c.hero_image" [src]="c.hero_image" style="max-height:90px;border-radius:8px;margin-top:.4rem">
+      </fieldset>
+
+      <fieldset><legend>About</legend>
+        <label>About your church</label><textarea rows="5" [(ngModel)]="c.about"></textarea>
+        <label>Mission / vision</label><textarea rows="3" [(ngModel)]="c.mission"></textarea>
+      </fieldset>
+
+      <fieldset><legend>Service times</legend>
+        <div class="row" *ngFor="let s of c.services; let i = index">
+          <div><label>Name</label><input [(ngModel)]="s.name" placeholder="Sunday Service"></div>
+          <div><label>Day</label><input [(ngModel)]="s.day"></div>
+          <div><label>Time</label><input [(ngModel)]="s.time" placeholder="8:00 AM"></div>
+          <div style="grid-column:1/-1"><label>Image (optional)</label><input type="file" accept="image/*" (change)="upload($event, s, 'image')"><img *ngIf="s.image" [src]="s.image" alt="" style="height:60px;margin-top:.4rem;border-radius:8px"></div>
+          <button class="d" (click)="remove('services', i)">Remove</button>
+        </div>
+        <p><button class="s" (click)="add('services')">+ Add service</button></p>
+      </fieldset>
+
+      <fieldset><legend>Leaders</legend>
+        <div class="row" *ngFor="let l of c.leaders; let i = index">
+          <div><label>Name</label><input [(ngModel)]="l.name"></div>
+          <div><label>Role</label><input [(ngModel)]="l.role" placeholder="Senior Pastor"></div>
+          <div><label>Photo</label><input type="file" accept="image/*" (change)="upload($event, l, 'photo')">
+            <small *ngIf="uploading === 'photo'">Uploading…</small><img *ngIf="l.photo" [src]="l.photo" style="height:48px;border-radius:50%;margin-top:.3rem"></div>
+          <button class="d" (click)="remove('leaders', i)">Remove</button>
+        </div>
+        <p><button class="s" (click)="add('leaders')">+ Add leader</button></p>
+      </fieldset>
+
+      <fieldset><legend>News &amp; announcements</legend>
+        <div class="row" *ngFor="let a of c.announcements; let i = index">
+          <div><label>Title</label><input [(ngModel)]="a.title"></div>
+          <div><label>Date</label><input type="date" [(ngModel)]="a.date"></div>
+          <div style="grid-column:1/-1"><label>Text</label><textarea rows="2" [(ngModel)]="a.text"></textarea></div>
+          <div style="grid-column:1/-1"><label>Image (optional)</label><input type="file" accept="image/*" (change)="upload($event, a, 'image')"><img *ngIf="a.image" [src]="a.image" alt="" style="height:60px;margin-top:.4rem;border-radius:8px"></div>
+          <button class="d" (click)="remove('announcements', i)">Remove</button>
+        </div>
+        <p><button class="s" (click)="add('announcements')">+ Add announcement</button></p>
+      </fieldset>
+
+      <fieldset><legend>Contact &amp; links</legend>
+        <label>Address</label><input [(ngModel)]="c.address">
+        <label>Phone / WhatsApp</label><input [(ngModel)]="c.phone">
+        <label>Email</label><input [(ngModel)]="c.email">
+        <label>Facebook</label><input [(ngModel)]="c.facebook"><label>Instagram</label><input [(ngModel)]="c.instagram">
+        <label>YouTube</label><input [(ngModel)]="c.youtube">
+        <label>Giving link <small>(leave empty to use your Churchman giving page automatically)</small></label><input [(ngModel)]="c.give_url">
+        <p style="font-size:.85rem;color:#6b7280">Upcoming events and their Register buttons appear on your site automatically.</p>
+      </fieldset>
+
+      <p *ngIf="msg" style="color:#15803d">{{ msg }} <a *ngIf="published && allowed" [href]="base + '/' + slug" target="_blank">Open</a></p>
+      <p *ngIf="err" style="color:#b91c1c">{{ err }}</p>
+      <button (click)="save()" [disabled]="saving">{{ saving ? 'Saving…' : 'Save' }}</button>
+    </div>
+  </ng-container>
+</div>

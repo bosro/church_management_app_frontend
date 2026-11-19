@@ -135,6 +135,15 @@ export class Finance implements OnInit, OnDestroy {
   withdrawalPage = 1;
   withdrawalPageSize = 10;
 
+
+  live: { balance: number; settlements: any[]; error?: string } | null = null;
+  liability: any[] = [];
+  get totalOwed(): number { return this.liability.reduce((s, r) => s + Number(r.owed), 0); }
+  /** Positive = you must pay churches from your own account (Paystack no longer holds it). */
+  get gap(): number { return this.totalOwed - (this.live?.balance ?? 0); }
+
+
+
   get filteredWithdrawals(): WithdrawalRequest[] {
     return this.withdrawalRequests.filter((r) => {
       const statusMatch = !this.withdrawalFilterStatus || r.status === this.withdrawalFilterStatus;
@@ -223,12 +232,28 @@ export class Finance implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.loadAll();
     this.loadFeeSettings();
+    this.loadLive()
   }
 
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
   }
+
+
+  async loadLive() {
+    const sb = this.supabase.client;
+    const [liab, fn] = await Promise.all([
+      sb.rpc('admin_paystack_liability'),
+      sb.functions.invoke('paystack-settlements'),
+    ]);
+    this.liability = (liab.data as any[]) || [];
+    const d: any = fn.data;
+    this.live = d?.success
+      ? { balance: (d.balances.find((b: any) => b.currency === 'GHS')?.balance) ?? 0, settlements: d.settlements }
+      : { balance: 0, settlements: [], error: d?.error || fn.error?.message || 'Could not reach Paystack' };
+  }
+
 
   loadAll(): void {
     this.loading = true;

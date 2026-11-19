@@ -41,6 +41,7 @@ export class PublicEventRegistration implements OnInit {
   eventId = '';
   event: PublicEvent | null = null;
   pageState: PageState = 'loading';
+  brandColor = '';
 
   // Form fields
   name = '';
@@ -84,6 +85,11 @@ export class PublicEventRegistration implements OnInit {
         this.pageState = 'notfound';
       } else {
         this.event = data as PublicEvent;
+        // Custom branding colour (only for plans that include it)
+        this.supabase.client.rpc('get_event_brand', { p_event_id: this.eventId }).then(({ data: b }) => {
+          this.brandColor = (b as any)?.color || '';
+          this.cdr.detectChanges();
+        });
         this.pageState = this.event.registration_open ? 'form' : 'closed';
       }
     } catch {

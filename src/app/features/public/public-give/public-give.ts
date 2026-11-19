@@ -46,6 +46,7 @@ export class PublicGive implements OnInit {
 
   pageState: PageState = 'loading';
   page: PublicGivingPage | null = null;
+  brand: { color?: string | null; hide_powered_by?: boolean } | null = null;
 
   form!: FormGroup;
   submitting = false;
@@ -84,7 +85,7 @@ export class PublicGive implements OnInit {
   }
 
   get brandColor(): string {
-    const c = this.page?.primary_color || '';
+    const c = this.brand?.color || this.page?.primary_color || '';
     return /^#[0-9a-fA-F]{6}$/.test(c) ? c : '#5b21b6';
   }
 
@@ -124,6 +125,12 @@ export class PublicGive implements OnInit {
         return;
       }
       this.page = page;
+
+      // Custom branding (colour + "Powered by") — only applied for plans that include it
+      try {
+        const { data: b } = await this.supabase.client.rpc('get_church_brand', { p_church_id: this.churchId });
+        this.brand = b || null;
+      } catch { /* branding is optional */ }
 
       if (page.category_requested && !page.category_found) {
         this.pageState = 'unavailable';

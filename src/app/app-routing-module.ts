@@ -35,6 +35,15 @@ const routes: Routes = [
     canActivate: [AuthGuard],
   },
 
+  { path: '', loadChildren: () => import('./features/site/site-module').then(m => m.SiteModule) },
+{
+    path: 'two-factor',
+    loadChildren: () => import('./features/two-factor/two-factor-module').then((m) => m.TwoFactorModule),
+  },
+  {
+    path: '',
+    loadChildren: () => import('./features/site/site-module').then((m) => m.SiteModule),
+  },
   {
     path: 'unauthorized',
     component: Unauthorized,
@@ -60,7 +69,7 @@ const routes: Routes = [
   ],
   exports: [RouterModule],
 })
-export class AppRoutingModule {}
+export class AppRoutingModule { }
 
 
 

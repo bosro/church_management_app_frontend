@@ -16,7 +16,7 @@ import {
   WelfareRow,
   WelfareSettings,
   WelfareStanding,
-} from './../../services/welfare.service';
+} from '../../services/welfare.service';
 import { FinanceService } from '../../services/finance.service';
 import { MemberService } from '../../../members/services/member.service';
 import { PermissionService } from '../../../../core/services/permission.service';
@@ -69,7 +69,7 @@ export class WelfareList implements OnInit, OnDestroy {
     private router: Router,
     private location: Location,
     public permissionService: PermissionService,
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.canManage =
@@ -159,10 +159,19 @@ export class WelfareList implements OnInit, OnDestroy {
     return this.count('up_to_date') + this.count('ahead');
   }
   get totalCollected(): number {
-    return this.rows.reduce((s, r) => s + r.total_paid, 0);
+    return this.filteredRows.reduce((s, r) => s + r.total_paid, 0);
   }
   get totalOwed(): number {
-    return this.rows.reduce((s, r) => s + r.amount_owed, 0);
+    return this.filteredRows.reduce((s, r) => s + r.amount_owed, 0);
+  }
+  /** Money paid in advance (credit) for the rows currently shown */
+  get totalAhead(): number {
+    return this.filteredRows
+      .filter((r) => r.standing === 'ahead')
+      .reduce((s, r) => s + Math.max(0, r.total_paid - r.months_expected * r.monthly_amount), 0);
+  }
+  get filterLabel(): string {
+    return this.standingFilter ? this.standingLabel(this.standingFilter) : 'All enrolled';
   }
 
   setStandingFilter(f: '' | WelfareStanding): void {

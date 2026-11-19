@@ -1196,3 +1196,16 @@ button:disabled {
     padding: 0.625rem 0.875rem;
   }
 }
+
+
+
+.quick-actions-grid.quick-actions-row .action-btn.action-pink {
+  background: linear-gradient(135deg, #ec4899, #be185d);
+  color: #fff;
+  border: 0;
+  flex: 0 0 auto;
+  min-width: 9.5rem;
+  position: static;
+  margin: 0;
+  i, span { color: #fff; }
+}

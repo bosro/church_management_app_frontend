@@ -492,3 +492,48 @@
     width: 100%;
   }
 }
+
+/* ADD AT THE VERY BOTTOM of features/admin/plans/plans.scss */
+.plans-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(340px, 100%), 1fr));
+}
+
+.plan-card {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.plan-actions .btn {
+  white-space: nowrap;
+  min-width: 0;
+}
+
+@media (max-width: 600px) {
+  .plans-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+  }
+
+  .plan-card {
+    padding: 1rem;
+  }
+
+  .plan-header {
+    flex-wrap: wrap;
+    gap: .5rem;
+  }
+
+  .plan-actions {
+    flex-wrap: wrap;
+  }
+
+  .plan-actions .btn {
+    flex: 1 1 100%;
+  }
+
+  .form-row,
+  .form-row.three-col {
+    grid-template-columns: 1fr;
+  }
+}

@@ -22,6 +22,36 @@
     <app-loading-spinner message="Loading platform data..."></app-loading-spinner>
   </div>
 
+
+  <div class="card" style="padding:16px;margin-bottom:16px" *ngIf="live">
+    <h3>Paystack balance check</h3>
+    <p *ngIf="live.error" style="color:#b91c1c">{{ live.error }}</p>
+    <div style="display:flex;gap:24px;flex-wrap:wrap">
+      <div>Live Paystack balance<br><b>GH₵{{ live.balance | number:'1.2-2' }}</b></div>
+      <div>Owed to churches (app records)<br><b>GH₵{{ totalOwed | number:'1.2-2' }}</b></div>
+      <div>{{ gap > 0 ? 'You must pay from your own account' : 'Fully covered by Paystack' }}<br>
+        <b [style.color]="gap > 0 ? '#b91c1c' : '#15803d'">GH₵{{ (gap > 0 ? gap : 0) | number:'1.2-2' }}</b>
+      </div>
+    </div>
+    <table style="width:100%;margin-top:12px;font-size:14px">
+      <tr>
+        <th align="left">Church</th>
+        <th align="right">Confirmed</th>
+        <th align="right">Withdrawn</th>
+        <th align="right">Owed</th>
+      </tr>
+      <tr *ngFor="let r of liability">
+        <td>{{ r.church_name }}</td>
+        <td align="right">{{ r.confirmed | number:'1.2-2' }}</td>
+        <td align="right">{{ r.withdrawn | number:'1.2-2' }}</td>
+        <td align="right"><b>{{ r.owed | number:'1.2-2' }}</b></td>
+      </tr>
+    </table>
+    <p style="font-size:12px;opacity:.7;margin-top:8px">Recent Paystack payouts to you: {{ live.settlements.length }}
+      (latest {{ live.settlements[0]?.settlement_date | date:'mediumDate' }}, GH₵{{
+      live.settlements[0]?.effective_amount | number:'1.2-2' }})</p>
+  </div>
+
   <div *ngIf="!loading" class="finance-content">
 
     <!-- ══════════════════════════════════════════════════════════
@@ -193,14 +223,14 @@
     </div>
 
 
-          <div class="stat-card">
-        <div class="stat-icon amber"><i class="ri-safe-2-line"></i></div>
-        <div class="stat-info">
-          <p class="stat-label">Held for Churches</p>
-          <h2 class="stat-value">{{ formatCurrency(totalHeld) }}</h2>
-          <p class="stat-meta">Paystack money to pay out</p>
-        </div>
+    <div class="stat-card">
+      <div class="stat-icon amber"><i class="ri-safe-2-line"></i></div>
+      <div class="stat-info">
+        <p class="stat-label">Held for Churches</p>
+        <h2 class="stat-value">{{ formatCurrency(totalHeld) }}</h2>
+        <p class="stat-meta">Paystack money to pay out</p>
       </div>
+    </div>
 
     <!-- ══════════════════════════════════════════════════════════
          SECTION 3 — Fee Settings (Super Admin Control)

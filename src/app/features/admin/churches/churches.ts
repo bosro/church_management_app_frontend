@@ -59,6 +59,24 @@ export class Churches implements OnInit {
     complimentary: false,
   };
 
+
+ featureOptions = [
+    { key: 'members', label: 'Members', icon: 'ri-group-line' },
+    { key: 'attendance', label: 'Attendance', icon: 'ri-calendar-check-line' },
+    { key: 'finance', label: 'Finance', icon: 'ri-money-dollar-circle-line' },
+    { key: 'welfare', label: 'Welfare (inside Finance)', icon: 'ri-shield-check-line' },
+    { key: 'building_campaign', label: 'Giving / Building Campaign', icon: 'ri-building-4-line' },
+    { key: 'ministries', label: 'Departments / Ministries', icon: 'ri-team-line' },
+    { key: 'branches', label: 'Branches', icon: 'ri-building-line' },
+    { key: 'cell_groups', label: 'Cell Groups', icon: 'ri-bubble-chart-line' },
+    { key: 'events', label: 'Events', icon: 'ri-calendar-event-line' },
+    { key: 'communications', label: 'Communication', icon: 'ri-chat-3-line' },
+    { key: 'reports', label: 'Reports & School Module', icon: 'ri-bar-chart-line' },
+    { key: 'voting', label: 'Voting & Nominations', icon: 'ri-award-line' },
+    { key: 'job_hub', label: 'Job Hub', icon: 'ri-briefcase-line' },
+    { key: 'website_force', label: 'Church website (force on, ignores plan)', icon: 'ri-global-line' },
+  ];
+  
   // ── Church detail (summary + members) ─────────────────────────
   showDetailModal = false;
   detailChurchRow: any = null;

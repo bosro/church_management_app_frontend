@@ -34,6 +34,11 @@ export class FinanceOverview implements OnInit, OnDestroy {
 
   paystackBalance: { confirmed_balance: number; pending_balance: number; transaction_count: number } | null = null;
   withdrawnTotal = 0;
+
+  /** Welfare module switch (Admin → All Churches → Edit) */
+  get hasWelfare(): boolean {
+    return this.authService.hasChurchFeature('welfare');
+  }
   get availableToWithdraw(): number {
     if (!this.paystackBalance) return 0;
     return Math.max(0, this.paystackBalance.confirmed_balance - this.withdrawnTotal);

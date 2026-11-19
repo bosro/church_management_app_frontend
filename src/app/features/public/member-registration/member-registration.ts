@@ -26,6 +26,8 @@ export class MemberRegistration implements OnInit, OnDestroy {
   churchId = '';
   churchName = '';
   churchLogo: string | null = null;
+  brandColor = '';
+  hidePoweredBy = false;
 
   // ── Form state ────────────────────────────────────────────
   form!: FormGroup;
@@ -174,6 +176,13 @@ export class MemberRegistration implements OnInit, OnDestroy {
         this.churchName = row.name || '';
         this.churchLogo = row.logo_url || null;
       }
+
+      // Custom branding colour (only for plans that include it)
+      const { data: b } = await this.supabase.client.rpc('get_church_brand', {
+        p_church_id: churchId,
+      });
+      this.brandColor = b?.color || '';
+      this.hidePoweredBy = !!b?.hide_powered_by;
     } catch {
       /* non-critical */
     } finally {

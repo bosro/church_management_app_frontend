@@ -26,8 +26,10 @@
           </div>
         </div>
 
-        <div *ngIf="successMessage" class="success-alert"><i class="ri-checkbox-circle-line"></i><span>{{ successMessage }}</span></div>
-        <div *ngIf="errorMessage" class="error-alert"><i class="ri-error-warning-line"></i><span>{{ errorMessage }}</span></div>
+        <div *ngIf="successMessage" class="success-alert"><i class="ri-checkbox-circle-line"></i><span>{{ successMessage
+            }}</span></div>
+        <div *ngIf="errorMessage" class="error-alert"><i class="ri-error-warning-line"></i><span>{{ errorMessage
+            }}</span></div>
 
         <div *ngIf="loading" class="loading-container">
           <app-loading-spinner message="Loading welfare..."></app-loading-spinner>
@@ -39,7 +41,8 @@
           <div class="card" *ngIf="showSettings">
             <h3>{{ settings ? 'Welfare settings' : 'Set up the welfare scheme' }}</h3>
             <p class="muted" *ngIf="!settings">
-              Choose which giving category is Welfare, the fixed monthly amount every member pays, and the first month of the scheme.
+              Choose which giving category is Welfare, the fixed monthly amount every member pays, and the first month
+              of the scheme.
             </p>
             <div class="form-grid">
               <label>
@@ -85,25 +88,35 @@
                 <span class="stat-label">Enrolled</span>
                 <span class="stat-value">{{ rows.length }}</span>
               </div>
-              <div class="stat good" [class.active]="standingFilter === 'up_to_date'" (click)="setStandingFilter('up_to_date')">
+              <div class="stat good" [class.active]="standingFilter === 'up_to_date'"
+                (click)="setStandingFilter('up_to_date')">
                 <span class="stat-label">Up to date</span>
-                <span class="stat-value">{{ inGoodStanding }}</span>
+                <span class="stat-value">{{ count('up_to_date') }}</span>
+              </div>
+              <div class="stat good" [class.active]="standingFilter === 'ahead'" (click)="setStandingFilter('ahead')">
+                <span class="stat-label">Paid ahead</span>
+                <span class="stat-value">{{ count('ahead') }}</span>
               </div>
               <div class="stat warn" [class.active]="standingFilter === 'behind'" (click)="setStandingFilter('behind')">
                 <span class="stat-label">Behind</span>
                 <span class="stat-value">{{ count('behind') }}</span>
               </div>
-              <div class="stat bad" [class.active]="standingFilter === 'not_paying'" (click)="setStandingFilter('not_paying')">
+              <div class="stat bad" [class.active]="standingFilter === 'not_paying'"
+                (click)="setStandingFilter('not_paying')">
                 <span class="stat-label">Not paying</span>
                 <span class="stat-value">{{ count('not_paying') }}</span>
               </div>
               <div class="stat">
-                <span class="stat-label">Collected</span>
+                <span class="stat-label">Collected · {{ filterLabel }}</span>
                 <span class="stat-value sm">{{ formatCurrency(totalCollected) }}</span>
               </div>
               <div class="stat">
-                <span class="stat-label">Still owed</span>
+                <span class="stat-label">Still owed · {{ filterLabel }}</span>
                 <span class="stat-value sm">{{ formatCurrency(totalOwed) }}</span>
+              </div>
+              <div class="stat" *ngIf="totalAhead > 0">
+                <span class="stat-label">Paid in advance · {{ filterLabel }}</span>
+                <span class="stat-value sm">{{ formatCurrency(totalAhead) }}</span>
               </div>
             </div>
 
@@ -149,7 +162,8 @@
                       <td>{{ formatMonth(r.paid_through) }}</td>
                       <td>{{ r.months_covered }} of {{ r.months_expected }}</td>
                       <td>{{ formatCurrency(r.total_paid) }}</td>
-                      <td [class.owed]="r.amount_owed > 0">{{ r.amount_owed > 0 ? formatCurrency(r.amount_owed) : '—' }}</td>
+                      <td [class.owed]="r.amount_owed > 0">{{ r.amount_owed > 0 ? formatCurrency(r.amount_owed) : '—' }}
+                      </td>
                       <td>{{ r.last_payment_date ? (r.last_payment_date | date:'MMM d, y') : '—' }}</td>
                     </tr>
                     <tr *ngIf="filteredRows.length === 0">
@@ -163,14 +177,17 @@
                 <i class="ri-team-line"></i>
                 <p>No members enrolled yet.</p>
                 <p class="muted" *ngIf="canManage">
-                  Use <strong>Enrol Members</strong>, or <strong>Add members who have already paid</strong> to start with everyone who has paid welfare.
+                  Use <strong>Enrol Members</strong>, or <strong>Add members who have already paid</strong> to start
+                  with everyone who has paid welfare.
                 </p>
               </div>
             </div>
 
             <p class="note">
-              A member is "up to date" when their total paid covers every month from their start month up to the current month.
-              Part-payments carry over until they add up to a full month, and paying several months at once covers those months.
+              A member is "up to date" when their total paid covers every month from their start month up to the current
+              month.
+              Part-payments carry over until they add up to a full month, and paying several months at once covers those
+              months.
               Payments are only counted when they are linked to the member.
             </p>
           </ng-container>
@@ -195,8 +212,8 @@
       </div>
       <div class="search-results">
         <div *ngIf="searching" class="muted">Searching…</div>
-        <button type="button" class="result" *ngFor="let m of searchResults"
-          [disabled]="isEnrolled(m.id)" [class.picked]="isPicked(m.id)" (click)="togglePick(m)">
+        <button type="button" class="result" *ngFor="let m of searchResults" [disabled]="isEnrolled(m.id)"
+          [class.picked]="isPicked(m.id)" (click)="togglePick(m)">
           <span><strong>{{ m.first_name }} {{ m.last_name }}</strong> <small>{{ m.member_number }}</small></span>
           <span class="tag" *ngIf="isEnrolled(m.id)">Already enrolled</span>
           <i class="ri-check-line" *ngIf="isPicked(m.id)"></i>

@@ -256,31 +256,19 @@
       <div class="form-group">
         <label>Enabled Features</label>
         <div class="feature-toggles">
-          <label class="checkbox-label">
-            <input type="checkbox" [checked]="churchForm.enabled_features.includes('reports')"
-              (change)="toggleFeature('reports', $event)" />
-            <span>
-              <i class="ri-bar-chart-line"></i>
-              Reports &amp; School Module
-            </span>
+          <label class="checkbox-label" *ngFor="let f of featureOptions">
+            <input type="checkbox" [checked]="churchForm.enabled_features.includes(f.key)" (change)="toggleFeature(f.key, $event)" />
+            <span><i [class]="f.icon"></i> {{ f.label }}</span>
           </label>
 
-          <label class="checkbox-label">
-            <input type="checkbox" [checked]="churchForm.enabled_features.includes('voting')"
-              (change)="toggleFeature('voting', $event)" />
-            <span>
-              <i class="ri-award-line"></i>
-              Voting &amp; Nominations
-            </span>
+          <label class="checkbox-label" *ngFor="let f of featureOptions">
+            <input type="checkbox" [checked]="churchForm.enabled_features.includes(f.key)" (change)="toggleFeature(f.key, $event)" />
+            <span><i [class]="f.icon"></i> {{ f.label }}</span>
           </label>
 
-          <label class="checkbox-label">
-            <input type="checkbox" [checked]="churchForm.enabled_features.includes('job_hub')"
-              (change)="toggleFeature('job_hub', $event)" />
-            <span>
-              <i class="ri-briefcase-line"></i>
-              Job Hub
-            </span>
+          <label class="checkbox-label" *ngFor="let f of featureOptions">
+            <input type="checkbox" [checked]="churchForm.enabled_features.includes(f.key)" (change)="toggleFeature(f.key, $event)" />
+            <span><i [class]="f.icon"></i> {{ f.label }}</span>
           </label>
         </div>
         <small class="help-text">Enable or disable feature modules for this church</small>

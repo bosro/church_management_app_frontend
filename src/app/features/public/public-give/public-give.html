@@ -120,6 +120,6 @@
       </form>
     </div>
 
-    <p class="powered">Powered by <strong>Churchman</strong></p>
+    <p class="powered" *ngIf="!brand?.hide_powered_by">Powered by <strong>Churchman</strong></p>
   </div>
 </div>

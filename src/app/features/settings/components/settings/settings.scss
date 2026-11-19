@@ -11,7 +11,8 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  min-width: 0; /* prevents flex children from overflowing */
+  min-width: 0;
+  /* prevents flex children from overflowing */
   width: calc(100% - 280px);
 
   @media (max-width: 768px) {
@@ -358,7 +359,7 @@
               width: 0;
               height: 0;
 
-              &:checked + .slider {
+              &:checked+.slider {
                 background-color: #5b21b6;
 
                 &:before {
@@ -402,6 +403,7 @@
     opacity: 0;
     transform: translateY(-10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -412,6 +414,7 @@
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
@@ -758,7 +761,10 @@
     color: white;
     font-size: 0.9375rem;
     font-weight: 700;
-    i { font-size: 1rem; }
+
+    i {
+      font-size: 1rem;
+    }
   }
 
   .expired-badge {
@@ -800,21 +806,31 @@
   cursor: pointer;
   transition: all 0.2s;
   font-family: 'Nunito Sans', sans-serif;
-  i { font-size: 1rem; }
+
+  i {
+    font-size: 1rem;
+  }
 }
 
 .btn-upgrade-plan {
   background: #5B21B6;
   color: white;
   border: none;
-  &:hover { background: #6D28D9; transform: translateY(-1px); }
+
+  &:hover {
+    background: #6D28D9;
+    transform: translateY(-1px);
+  }
 }
 
 .btn-renew-plan {
   background: #F5F3FF;
   color: #5B21B6;
   border: 1px solid #C4B5FD;
-  &:hover { background: #EDE9FE; }
+
+  &:hover {
+    background: #EDE9FE;
+  }
 }
 
 .usage-section,
@@ -859,7 +875,10 @@
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
-      i { font-size: 1.25rem; }
+
+      i {
+        font-size: 1.25rem;
+      }
     }
 
     .usage-label {
@@ -947,8 +966,13 @@
     background: #F0FDF4;
     border-color: #BBF7D0;
 
-    i { color: #16A34A; }
-    span { color: #15803D; }
+    i {
+      color: #16A34A;
+    }
+
+    span {
+      color: #15803D;
+    }
   }
 }
 
@@ -986,24 +1010,122 @@ textarea {
   border-radius: 14px;
   background: #fff;
 
-  &--warn { border-color: #f59e0b; background: #fffbeb; }
-  &--danger { border-color: #dc2626; background: #fef2f2; }
+  &--warn {
+    border-color: #f59e0b;
+    background: #fffbeb;
+  }
+
+  &--danger {
+    border-color: #dc2626;
+    background: #fef2f2;
+  }
 
   &__head {
-    display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;
-    h3 { margin: 0; font-size: 16px; display: flex; gap: 8px; align-items: center; }
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+
+    h3 {
+      margin: 0;
+      font-size: 16px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
   }
+
   &__dates {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-bottom: 14px;
-    > div { display: flex; flex-direction: column; gap: 4px; }
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 14px;
+    margin-bottom: 14px;
+
+    >div {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
   }
 }
-.sub-label { font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: .04em; }
-.sub-big { font-size: 20px; color: #5b21b6; }
-.sub-chip { font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: #ede9fe; color: #5b21b6; }
-.sub-bar {
-  height: 8px; border-radius: 999px; background: #e5e7eb; overflow: hidden;
-  &__fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #7c3aed, #5b21b6); transition: width .4s; }
+
+.sub-label {
+  font-size: 12px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: .04em;
 }
-.sub-note { margin: 12px 0 0; font-size: 13px; color: #4b5563; line-height: 1.5; }
-.sub-sms { margin-top: 18px; &__row { display: flex; justify-content: space-between; margin-bottom: 6px; } }
+
+.sub-big {
+  font-size: 20px;
+  color: #5b21b6;
+}
+
+.sub-chip {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #ede9fe;
+  color: #5b21b6;
+}
+
+.sub-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  overflow: hidden;
+
+  &__fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #7c3aed, #5b21b6);
+    transition: width .4s;
+  }
+}
+
+.sub-note {
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: #4b5563;
+  line-height: 1.5;
+}
+
+.sub-sms {
+  margin-top: 18px;
+
+  &__row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+  }
+}
+
+
+/* ADD AT THE VERY BOTTOM of features/settings/components/settings/settings.scss */
+@media (max-width: 1024px) {
+  .settings-tabs {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    gap: .5rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: .5rem;
+    box-sizing: border-box;
+
+    .tab-btn {
+      flex: 0 0 auto;
+      white-space: nowrap;
+      padding: .6rem .9rem;
+      gap: .5rem;
+      font-size: .875rem;
+    }
+  }
+}
+
+@media (max-width: 600px) {
+  .settings-tabs .tab-btn {
+    padding: .5rem .75rem;
+  }
+}

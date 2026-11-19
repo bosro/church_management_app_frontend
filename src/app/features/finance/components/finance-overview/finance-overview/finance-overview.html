@@ -41,7 +41,7 @@
               (click)="viewWithdrawals()">
               <i class="ri-bank-card-line"></i><span>Withdrawals</span>
             </button>
-            <button class="btn-secondary" (click)="viewWelfare()">
+            <button class="btn-secondary" *ngIf="hasWelfare" (click)="viewWelfare()">
               <i class="ri-shield-check-line"></i><span>Welfare</span>
             </button>
           </div>
@@ -98,8 +98,9 @@
                 <i class="ri-bank-card-line"></i>
                 <span>Withdrawals</span>
               </button>
-              <button class="btn-secondary" (click)="viewWelfare()">
-                <i class="ri-shield-check-line"></i><span>Welfare</span>
+              <button class="action-btn action-pink" (click)="viewWelfare()" *ngIf="hasWelfare">
+                <i class="ri-shield-check-line"></i>
+                <span>Welfare</span>
               </button>
               <button class="action-btn action-teal" (click)="viewAllGiving()"
                 *ngIf="permissionService.isAdmin || permissionService.finance.view">

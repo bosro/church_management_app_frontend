@@ -119,7 +119,8 @@ export class UpgradeModal implements OnInit {
   /** Real yearly saving for a plan, e.g. 60/mo -> 600/yr = 17% */
   getSavingPercent(plan: SubscriptionPlan): number {
     const full = plan.price_monthly * 12;
-    return full > 0 ? Math.round(((full - plan.price_yearly) / full) * 100) : 0;
+    const pct = full > 0 ? Math.round(((full - plan.price_yearly) / full) * 100) : 0;
+    return pct > 0 && pct <= 50 ? pct : 0;   // anything above 50% is almost certainly a typo – hide it
   }
 
   get maxSavingPercent(): number {

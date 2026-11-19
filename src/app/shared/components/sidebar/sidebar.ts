@@ -386,6 +386,14 @@ export class Sidebar implements OnInit {
       ],
     },
     {
+      icon: 'ri-global-line',
+      label: 'Website',
+      route: '/website-builder',
+      active: false,
+      roles: ['church_admin'],
+      excludeRoles: ['super_admin'],
+    },
+    {
       icon: 'ri-settings-3-line',
       label: 'Settings',
       route: '/main/settings',
@@ -407,13 +415,28 @@ export class Sidebar implements OnInit {
   @ViewChild('sidebarNav') sidebarNavRef!: ElementRef<HTMLElement>;
   private savedScrollTop = 0;
 
+
+  /** Extra on/off switches per church (Admin → All Churches → Edit). Top-level items only. */
+  private readonly FLAG_BY_LABEL: Record<string, string> = {
+    'Members': 'members',
+    'Attendance': 'attendance',
+    'Finance': 'finance',
+    'Giving Campaign': 'building_campaign',
+    'Departments/Ministries': 'ministries',
+    'Branches': 'branches',
+    'Cell Groups': 'cell_groups',
+    'Events': 'events',
+    'Communication': 'communications',
+  };
+
   constructor(
     private router: Router,
     public authService: AuthService,
     private sidebarService: SidebarService,
     private userRolesService: UserRolesService,
     public subscriptionService: SubscriptionService,
-  ) {}
+  ) { }
+
 
   ngOnInit(): void {
     this.checkScreenSize();
@@ -522,11 +545,10 @@ export class Sidebar implements OnInit {
     this.filteredMenuItems = this.menuItems
       .filter((item) => {
         if (item.excludeRoles?.includes(this.currentUser!.role)) return false;
-        if (
-          item.featureFlag &&
-          !this.authService.hasChurchFeature(item.featureFlag)
-        )
-          return false;
+
+        // Per-church on/off switch (Admin → All Churches → Edit). Items with no switch are always shown.
+        const flag = item.featureFlag ?? this.FLAG_BY_LABEL[item.label];
+        if (flag && !this.authService.hasChurchFeature(flag)) return false;
 
         const hasRole =
           !item.roles || item.roles.length === 0
@@ -545,6 +567,8 @@ export class Sidebar implements OnInit {
         const filteredChildren = item.children.filter((child) => {
           if (child.excludeRoles?.includes(this.currentUser!.role))
             return false;
+          // children use only their own featureFlag (NOT the label map: the super-admin
+          // "Finance" child would otherwise be hidden because it shares a label)
           if (
             child.featureFlag &&
             !this.authService.hasChurchFeature(child.featureFlag)
@@ -620,5 +644,3 @@ export class Sidebar implements OnInit {
     await this.authService.signOut();
   }
 }
-
-

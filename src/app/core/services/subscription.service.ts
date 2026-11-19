@@ -423,7 +423,7 @@ export class SubscriptionService {
       .select('value')
       .eq('key', 'subscription_grace_days')
       .maybeSingle();
-    const graceDays = parseInt(gs?.value ?? '7', 10) || 7;
+    const graceDays = parseInt(gs?.value ?? '14', 10) || 14;
 
     const tier = await this.getEffectivePlanId(churchId);
     const expiresAt: string | null = data?.subscription_expires_at || null;
@@ -484,6 +484,9 @@ export class SubscriptionService {
     if (st.state === 'grace') {
       const g = this.graceDaysLeft ?? 0;
       return { level: 'danger', text: `Your ${st.plan.name} plan has expired. Renew within ${g} day${g === 1 ? '' : 's'} to avoid moving to Free.` };
+    }
+     if (st.state === 'expired') {
+      return { level: 'danger', text: `Your plan expired and your account is now on the Free plan. Your data is safe — upgrade to restore all features.` };
     }
     return null;
   }

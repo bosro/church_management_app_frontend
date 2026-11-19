@@ -291,7 +291,7 @@ const routes: Routes = [
         path: 'building-campaign',
         canActivate: [PermissionGuard],
         data: {
-          requiresFeature: 'reports',
+          requiresFeature: 'building_campaign',
           permission: 'reports.view',
           roles: [
             'super_admin',

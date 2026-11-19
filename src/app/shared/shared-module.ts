@@ -16,6 +16,8 @@ import { QuotaGuard } from './components/quota-guard/quota-guard';
 import { UpgradeModal } from './components/upgrade-modal/upgrade-modal';
 import { AdBanner } from './components/ad-banner/ad-banner';
 import { ConfirmModal } from './components/confirm-modal/confirm-modal';
+import { SecurityCard } from './components/security-card/security-card';
+import { BrandingCard } from './components/branding-card/branding-card';
 
 @NgModule({
   declarations: [
