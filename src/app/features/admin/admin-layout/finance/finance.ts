@@ -251,7 +251,7 @@ export class Finance implements OnInit, OnDestroy {
     const d: any = fn.data;
     this.live = d?.success
       ? { balance: (d.balances.find((b: any) => b.currency === 'GHS')?.balance) ?? 0, settlements: d.settlements }
-      : { balance: 0, settlements: [], error: d?.error || fn.error?.message || 'Could not reach Paystack' };
+      : { balance: 0, settlements: [], error: d?.error || (fn.error ? 'Paystack check is not set up yet — deploy the paystack-settlements function.' : 'Could not reach Paystack') };
   }
 
 

@@ -10,79 +10,221 @@
   <ng-container *ngIf="!loading">
     <div class="ed">
       <style>
-        .ed label{display:block;font-size:.8rem;font-weight:600;margin:.6rem 0 .2rem}
-        .ed input,.ed textarea,.ed select{width:100%;padding:.55rem;border:1px solid #d1d5db;border-radius:8px;font:inherit}
-        .ed fieldset{border:1px solid #e5e7eb;border-radius:12px;margin:1rem 0;padding:.5rem 1rem 1rem}
-        .ed legend{font-weight:700;padding:0 .4rem}
-        .ed .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:.6rem;align-items:end;border-bottom:1px dashed #e5e7eb;padding-bottom:.6rem}
-        .ed button{padding:.55rem 1rem;border-radius:8px;border:0;background:#4f46e5;color:#fff;cursor:pointer;font:inherit}
-        .ed button.s{background:#e5e7eb;color:#111}
-        .ed button.d{background:#fee2e2;color:#b91c1c}
+        .ed label {
+          display: block;
+          font-size: .8rem;
+          font-weight: 600;
+          margin: .6rem 0 .2rem
+        }
+
+        .ed input,
+        .ed textarea,
+        .ed select {
+          width: 100%;
+          padding: .55rem;
+          border: 1px solid #d1d5db;
+          border-radius: 8px;
+          font: inherit
+        }
+
+        .ed fieldset {
+          border: 1px solid #e5e7eb;
+          border-radius: 12px;
+          margin: 1rem 0;
+          padding: .5rem 1rem 1rem
+        }
+
+        .ed legend {
+          font-weight: 700;
+          padding: 0 .4rem
+        }
+
+        .ed .row {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: .6rem;
+          align-items: end;
+          border-bottom: 1px dashed #e5e7eb;
+          padding-bottom: .6rem
+        }
+
+        .ed button {
+          padding: .55rem 1rem;
+          border-radius: 8px;
+          border: 0;
+          background: #4f46e5;
+          color: #fff;
+          cursor: pointer;
+          font: inherit
+        }
+
+        .ed button.s {
+          background: #e5e7eb;
+          color: #111
+        }
+
+        .ed button.d {
+          background: #fee2e2;
+          color: #b91c1c
+        }
       </style>
 
-      <fieldset><legend>Web address</legend>
+      <fieldset>
+        <legend>Web address</legend>
         <label>Your page</label>
-        <div style="display:flex;align-items:center;gap:.3rem;flex-wrap:wrap"><span>{{ base }}/</span><input style="flex:1;min-width:140px" [(ngModel)]="slug" placeholder="gracechapel"></div>
-        <label><input type="checkbox" style="width:auto" [(ngModel)]="published" [disabled]="!allowed"> Publish (make it public)</label>
+        <div style="display:flex;align-items:center;gap:.3rem;flex-wrap:wrap"><span>{{ base }}/</span><input
+            style="flex:1;min-width:140px" [(ngModel)]="slug" placeholder="gracechapel"></div>
+        <label><input type="checkbox" style="width:auto" [(ngModel)]="published" [disabled]="!allowed"> Publish (make it
+          public)</label>
       </fieldset>
 
-      <fieldset><legend>Look &amp; hero</legend>
+      <fieldset>
+        <legend>1 · Top banner (hero)</legend>
         <label>Headline</label><input [(ngModel)]="c.headline" [placeholder]="'Welcome to ' + churchName">
         <label>Tagline</label><input [(ngModel)]="c.tagline" placeholder="A place to belong">
+        <label>Main button text</label><input [(ngModel)]="c.hero_cta_label" placeholder="Give online">
+        <label>Main button link <small>(empty = your Churchman giving page)</small></label><input
+          [(ngModel)]="c.hero_cta_url" placeholder="https://…">
         <label>Brand colour</label><input type="color" style="height:42px;width:90px;padding:2px" [(ngModel)]="c.color">
-        <label>Banner image</label><input type="file" accept="image/*" (change)="upload($event, c, 'hero_image')">
-        <small *ngIf="uploading === 'hero_image'">Uploading…</small><img *ngIf="c.hero_image" [src]="c.hero_image" style="max-height:90px;border-radius:8px;margin-top:.4rem">
+        <label>Banner photo</label><input type="file" accept="image/*" (change)="upload($event, c, 'hero_image')">
+        <small *ngIf="uploading === 'hero_image'">Uploading…</small><img *ngIf="c.hero_image" [src]="c.hero_image"
+          alt="" style="max-height:80px;border-radius:8px;margin-top:.4rem"> <button class="d" *ngIf="c.hero_image"
+          (click)="c.hero_image = ''">Remove image</button>
       </fieldset>
 
-      <fieldset><legend>About</legend>
-        <label>About your church</label><textarea rows="5" [(ngModel)]="c.about"></textarea>
-        <label>Mission / vision</label><textarea rows="3" [(ngModel)]="c.mission"></textarea>
+      <fieldset>
+        <legend>2 · Events &amp; news strip</legend>
+        <label>Section title</label><input [(ngModel)]="c.events_title" placeholder="Events &amp; news">
+        <p style="font-size:.85rem;color:#6b7280">Shows your upcoming Churchman events (with Register buttons)
+          automatically, then the announcements you add below.</p>
       </fieldset>
 
-      <fieldset><legend>Service times</legend>
+      <fieldset>
+        <legend>3 · Mission (big statement)</legend>
+        <label>Title</label><input [(ngModel)]="c.mission_title" placeholder="Our mission">
+        <label>Text</label><textarea rows="3" [(ngModel)]="c.mission"></textarea>
+        <label>Button text <small>(optional)</small></label><input [(ngModel)]="c.mission_button_label"
+          placeholder="Plan your visit">
+        <label>Button link</label><input [(ngModel)]="c.mission_button_url" placeholder="https://…">
+        <label>Background photo</label><input type="file" accept="image/*"
+          (change)="upload($event, c, 'mission_image')">
+        <small *ngIf="uploading === 'mission_image'">Uploading…</small><img *ngIf="c.mission_image"
+          [src]="c.mission_image" alt="" style="max-height:80px;border-radius:8px;margin-top:.4rem"> <button class="d"
+          *ngIf="c.mission_image" (click)="c.mission_image = ''">Remove image</button>
+      </fieldset>
+
+      <fieldset>
+        <legend>4 · What we believe (big list)</legend>
+        <label>Small heading</label><input [(ngModel)]="c.values_label" placeholder="What we believe">
+        <div class="row" *ngFor="let v of c.values; let i = index; trackBy: trackIdx">
+          <div><label>Item {{ i + 1 }}</label><input [(ngModel)]="c.values[i]" placeholder="Faith"></div>
+          <button class="d" (click)="remove('values', i)">Remove</button>
+        </div>
+        <p><button class="s" (click)="add('values')">+ Add item</button></p>
+        <label>Side photo</label><input type="file" accept="image/*" (change)="upload($event, c, 'values_image')">
+        <small *ngIf="uploading === 'values_image'">Uploading…</small><img *ngIf="c.values_image" [src]="c.values_image"
+          alt="" style="max-height:80px;border-radius:8px;margin-top:.4rem"> <button class="d" *ngIf="c.values_image"
+          (click)="c.values_image = ''">Remove image</button>
+      </fieldset>
+
+      <fieldset>
+        <legend>Service times</legend>
         <div class="row" *ngFor="let s of c.services; let i = index">
           <div><label>Name</label><input [(ngModel)]="s.name" placeholder="Sunday Service"></div>
           <div><label>Day</label><input [(ngModel)]="s.day"></div>
           <div><label>Time</label><input [(ngModel)]="s.time" placeholder="8:00 AM"></div>
-          <div style="grid-column:1/-1"><label>Image (optional)</label><input type="file" accept="image/*" (change)="upload($event, s, 'image')"><img *ngIf="s.image" [src]="s.image" alt="" style="height:60px;margin-top:.4rem;border-radius:8px"></div>
+          <div style="grid-column:1/-1"><label>Image (optional)</label><input type="file" accept="image/*"
+              (change)="upload($event, s, 'image')"><img *ngIf="s.image" [src]="s.image" alt=""
+              style="height:60px;margin-top:.4rem;border-radius:8px"></div>
           <button class="d" (click)="remove('services', i)">Remove</button>
         </div>
         <p><button class="s" (click)="add('services')">+ Add service</button></p>
       </fieldset>
 
-      <fieldset><legend>Leaders</legend>
+      <fieldset>
+        <legend>Leaders</legend>
+        <label>Section title</label><input [(ngModel)]="c.leaders_title" placeholder="Our leaders">
         <div class="row" *ngFor="let l of c.leaders; let i = index">
           <div><label>Name</label><input [(ngModel)]="l.name"></div>
           <div><label>Role</label><input [(ngModel)]="l.role" placeholder="Senior Pastor"></div>
           <div><label>Photo</label><input type="file" accept="image/*" (change)="upload($event, l, 'photo')">
-            <small *ngIf="uploading === 'photo'">Uploading…</small><img *ngIf="l.photo" [src]="l.photo" style="height:48px;border-radius:50%;margin-top:.3rem"></div>
+            <small *ngIf="uploading === 'photo'">Uploading…</small><img *ngIf="l.photo" [src]="l.photo"
+              style="height:48px;border-radius:50%;margin-top:.3rem">
+          </div>
           <button class="d" (click)="remove('leaders', i)">Remove</button>
         </div>
         <p><button class="s" (click)="add('leaders')">+ Add leader</button></p>
       </fieldset>
 
-      <fieldset><legend>News &amp; announcements</legend>
+      <fieldset>
+        <legend>About &amp; community section</legend>
+        <label>Heading</label><input [(ngModel)]="c.community_title" [placeholder]="'About ' + churchName">
+        <label>About your church</label><textarea rows="5" [(ngModel)]="c.community_text"></textarea>
+        <label>Large photo</label><input type="file" accept="image/*" (change)="upload($event, c, 'community_image')">
+        <small *ngIf="uploading === 'community_image'">Uploading…</small><img *ngIf="c.community_image"
+          [src]="c.community_image" alt="" style="max-height:80px;border-radius:8px;margin-top:.4rem"> <button class="d"
+          *ngIf="c.community_image" (click)="c.community_image = ''">Remove image</button>
+        <label>Text on the large photo</label><input [(ngModel)]="c.community_quote"
+          placeholder="Shine your light brightly">
+        <label>Second photo (optional)</label><input type="file" accept="image/*"
+          (change)="upload($event, c, 'community_image2')">
+        <small *ngIf="uploading === 'community_image2'">Uploading…</small><img *ngIf="c.community_image2"
+          [src]="c.community_image2" alt="" style="max-height:80px;border-radius:8px;margin-top:.4rem"> <button
+          class="d" *ngIf="c.community_image2" (click)="c.community_image2 = ''">Remove image</button>
+        <label>Text on second photo</label><input [(ngModel)]="c.community_quote2"
+          placeholder="Share your story with us">
+        <h4 style="margin:1rem 0 .2rem">Numbers (first one appears on the large photo)</h4>
+        <div class="row" *ngFor="let st of c.stats; let i = index; trackBy: trackIdx">
+          <div><label>Number</label><input [(ngModel)]="st.value" placeholder="1.7k"></div>
+          <div><label>Label</label><input [(ngModel)]="st.label" placeholder="members"></div>
+          <div style="grid-column:1/-1"><label>Short note (first one only)</label><input [(ngModel)]="st.text"></div>
+          <button class="d" (click)="remove('stats', i)">Remove</button>
+        </div>
+        <p><button class="s" (click)="add('stats')">+ Add number</button></p>
+      </fieldset>
+
+      <fieldset>
+        <legend>News &amp; announcements</legend>
         <div class="row" *ngFor="let a of c.announcements; let i = index">
           <div><label>Title</label><input [(ngModel)]="a.title"></div>
           <div><label>Date</label><input type="date" [(ngModel)]="a.date"></div>
           <div style="grid-column:1/-1"><label>Text</label><textarea rows="2" [(ngModel)]="a.text"></textarea></div>
-          <div style="grid-column:1/-1"><label>Image (optional)</label><input type="file" accept="image/*" (change)="upload($event, a, 'image')"><img *ngIf="a.image" [src]="a.image" alt="" style="height:60px;margin-top:.4rem;border-radius:8px"></div>
+          <div style="grid-column:1/-1"><label>Image (optional)</label><input type="file" accept="image/*"
+              (change)="upload($event, a, 'image')"><img *ngIf="a.image" [src]="a.image" alt=""
+              style="height:60px;margin-top:.4rem;border-radius:8px"></div>
           <button class="d" (click)="remove('announcements', i)">Remove</button>
         </div>
         <p><button class="s" (click)="add('announcements')">+ Add announcement</button></p>
       </fieldset>
 
-      <fieldset><legend>Contact &amp; links</legend>
+      <fieldset>
+        <legend>Search &amp; sharing (SEO)</legend>
+        <p style="font-size:.85rem;color:#6b7280">Optional. Leave empty and Google/WhatsApp previews are built
+          automatically from your church name, tagline, about text and photos.</p>
+        <label>Page title <small>({{ (c.seo_title || '').length }}/70)</small></label><input maxlength="70"
+          [(ngModel)]="c.seo_title" [placeholder]="churchName + ' – ' + (c.tagline || 'Church')">
+        <label>Description <small>({{ (c.seo_description || '').length }}/158)</small></label><textarea rows="3"
+          maxlength="158" [(ngModel)]="c.seo_description"
+          placeholder="One or two sentences about your church, where you meet and when."></textarea>
+        <label>Share image</label><input type="file" accept="image/*" (change)="upload($event, c, 'seo_image')">
+        <small *ngIf="uploading === 'seo_image'">Uploading…</small><img *ngIf="c.seo_image" [src]="c.seo_image" alt=""
+          style="max-height:80px;border-radius:8px;margin-top:.4rem">
+      </fieldset>
+
+      <fieldset>
+        <legend>Contact &amp; links</legend>
         <label>Address</label><input [(ngModel)]="c.address">
         <label>Phone / WhatsApp</label><input [(ngModel)]="c.phone">
         <label>Email</label><input [(ngModel)]="c.email">
         <label>Facebook</label><input [(ngModel)]="c.facebook"><label>Instagram</label><input [(ngModel)]="c.instagram">
         <label>YouTube</label><input [(ngModel)]="c.youtube">
-        <label>Giving link <small>(leave empty to use your Churchman giving page automatically)</small></label><input [(ngModel)]="c.give_url">
-        <p style="font-size:.85rem;color:#6b7280">Upcoming events and their Register buttons appear on your site automatically.</p>
+        <label>Giving link <small>(leave empty to use your Churchman giving page automatically)</small></label><input
+          [(ngModel)]="c.give_url">
+        <label>Footer note</label><input [(ngModel)]="c.footer_note" [placeholder]="'© ' + churchName">
       </fieldset>
 
-      <p *ngIf="msg" style="color:#15803d">{{ msg }} <a *ngIf="published && allowed" [href]="base + '/' + slug" target="_blank">Open</a></p>
+      <p *ngIf="msg" style="color:#15803d">{{ msg }} <a *ngIf="published && allowed" [href]="base + '/' + slug"
+          target="_blank">Open</a></p>
       <p *ngIf="err" style="color:#b91c1c">{{ err }}</p>
       <button (click)="save()" [disabled]="saving">{{ saving ? 'Saving…' : 'Save' }}</button>
     </div>

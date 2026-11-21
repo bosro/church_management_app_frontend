@@ -314,4 +314,4 @@ export class WelfareList implements OnInit, OnDestroy {
     this.successMessage = msg;
     setTimeout(() => (this.successMessage = ''), 5000);
   }
-}
+} 

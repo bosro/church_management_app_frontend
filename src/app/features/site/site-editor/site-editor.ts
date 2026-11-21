@@ -5,7 +5,7 @@ import { SupabaseService } from '../../../core/services/supabase';
 export class SiteEditor implements OnInit {
   loading = true; saving = false; churchId = ''; uploading = ''; allowed = true; msg = ''; err = '';
   slug = ''; published = false; churchName = '';
-  c: any = { services: [], leaders: [], announcements: [], color: '#4f46e5' };
+  c: any = { services: [], leaders: [], announcements: [], values: [], stats: [], color: '#4f46e5' };
   base = location.origin;
   constructor(private supabase: SupabaseService) { }
 
@@ -14,11 +14,22 @@ export class SiteEditor implements OnInit {
     this.loading = false;
     if (error || !data) { this.err = error?.message || 'Could not load'; return; }
     this.churchId = data.church_id; this.allowed = data.allowed; this.slug = data.slug; this.published = data.published; this.churchName = data.church_name;
-    this.c = { services: [], leaders: [], announcements: [], color: '#4f46e5', ...(data.content || {}) };
+    this.c = { services: [], leaders: [], announcements: [], values: [], stats: [], color: '#4f46e5', ...(data.content || {}) };
+    // older saved sites used `about`; show it in the new About box
+    if (!this.c.community_text && this.c.about) this.c.community_text = this.c.about;
   }
-  add(list: 'services' | 'leaders' | 'announcements') {
-    this.c[list].push(list === 'services' ? { name: '', day: 'Sunday', time: '', image: '' } : list === 'leaders' ? { name: '', role: '', photo: '' } : { title: '', date: new Date().toISOString().slice(0, 10), text: '', image: '' });
+  add(list: 'services' | 'leaders' | 'announcements' | 'values' | 'stats') {
+    if (!this.c[list]) this.c[list] = [];
+    const blank: any = {
+      services: { name: '', day: 'Sunday', time: '', image: '' },
+      leaders: { name: '', role: '', photo: '' },
+      announcements: { title: '', date: new Date().toISOString().slice(0, 10), text: '', image: '' },
+      values: '',
+      stats: { value: '', label: '', text: '' },
+    };
+    this.c[list].push(blank[list]);
   }
+  trackIdx(i: number) { return i; }
   remove(list: string, i: number) { this.c[list].splice(i, 1); }
 
   /** Upload a photo to the church-media bucket and put its URL into `obj[key]` */

@@ -1,210 +1,175 @@
-<div *ngIf="loading" style="padding:4rem;text-align:center;font-family:sans-serif">Loading…</div>
-<div *ngIf="notFound" style="padding:4rem 1rem;text-align:center;font-family:sans-serif">
+<div *ngIf="loading" class="cs-msg">Loading…</div>
+<div *ngIf="notFound" class="cs-msg">
     <h2>This page isn’t available</h2>
     <p>The church website may not be published yet.</p>
 </div>
 
 <div *ngIf="site" class="cs" [style.--c]="color">
-    <style>
-        .cs {
-            font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-            color: #1f2937;
-            line-height: 1.6
-        }
 
-        .cs * {
-            box-sizing: border-box
-        }
+    <!-- NAV -->
+    <div class="cs-bar">
+        <header class="cs-nav">
+            <a class="cs-brand" href="javascript:void(0)" (click)="go('top')">
+                <img *ngIf="site.logo_url" [src]="site.logo_url" alt=""> {{ site.church_name }}
+            </a>
+            <nav class="cs-menu" [class.open]="menuOpen">
+                <a href="javascript:void(0)" (click)="go('about')"
+                    *ngIf="c.about || c.community_text || stats.length">About</a>
+                <a href="javascript:void(0)" (click)="go('events')" *ngIf="slides.length">Events &amp; News</a>
+                <a href="javascript:void(0)" (click)="go('times')" *ngIf="c.services?.length">Services</a>
+                <a href="javascript:void(0)" (click)="go('values')" *ngIf="values.length">Beliefs</a>
+                <a href="javascript:void(0)" (click)="go('leaders')" *ngIf="c.leaders?.length">Leaders</a>
+                <a href="javascript:void(0)" (click)="go('contact')">Contact</a>
+            </nav>
+            <div class="cs-right">
+                <a class="cs-pill" [href]="giveUrl">Give</a>
+                <button class="cs-burger" aria-label="Menu" (click)="menuOpen = !menuOpen">☰</button>
+            </div>
+        </header>
+    </div>
 
-        .cs nav {
-            position: sticky;
-            top: 0;
-            background: #fff;
-            box-shadow: 0 1px 6px #0001;
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            padding: .75rem 1rem;
-            z-index: 5;
-            flex-wrap: wrap
-        }
-
-        .cs nav img {
-            height: 36px;
-            width: 36px;
-            border-radius: 8px;
-            object-fit: cover
-        }
-
-        .cs nav b {
-            flex: 1;
-            min-width: 120px
-        }
-
-        .cs nav a {
-            color: #374151;
-            text-decoration: none;
-            font-size: .9rem
-        }
-
-        .cs .hero {
-            background: linear-gradient(135deg, var(--c), #111827);
-            color: #fff;
-            text-align: center;
-            padding: 4rem 1rem
-        }
-
-        .cs .hero.img {
-            background-size: cover;
-            background-position: center
-        }
-
-        .cs .hero h1 {
-            font-size: clamp(1.8rem, 6vw, 3.2rem);
-            margin: 0 0 .5rem
-        }
-
-        .cs .hero p {
-            opacity: .9;
-            margin: 0 auto 1.5rem;
-            max-width: 640px
-        }
-
-        .cs .btn {
-            display: inline-block;
-            background: #fff;
-            color: var(--c);
-            font-weight: 700;
-            padding: .7rem 1.4rem;
-            border-radius: 999px;
-            text-decoration: none;
-            margin: .25rem
-        }
-
-        .cs .btn.o {
-            background: transparent;
-            color: #fff;
-            border: 2px solid #fff
-        }
-
-        .cs section {
-            max-width: 1000px;
-            margin: auto;
-            padding: 2.5rem 1rem
-        }
-
-        .cs h2 {
-            color: var(--c);
-            margin: 0 0 1rem
-        }
-
-        .cs .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 1rem
-        }
-
-        .cs .card {
-            background: #f9fafb;
-            border-radius: 14px;
-            padding: 1.1rem;
-            border: 1px solid #e5e7eb
-        }
-
-        .cs .card img {
-            width: 100%;
-            height: 180px;
-            object-fit: cover;
-            border-radius: 10px;
-            margin-bottom: .5rem
-        }
-
-        .cs footer {
-            background: #111827;
-            color: #d1d5db;
-            text-align: center;
-            padding: 2rem 1rem;
-            font-size: .9rem
-        }
-
-        .cs footer a {
-            color: #fff
-        }
-    </style>
-
-    <nav>
-        <img *ngIf="site.logo_url" [src]="site.logo_url" alt="">
-        <b>{{ site.church_name }}</b>
-        <a href="#about" *ngIf="c.about">About</a><a href="#times" *ngIf="c.services?.length">Services</a>
-        <a href="#leaders" *ngIf="c.leaders?.length">Leaders</a><a href="#events"
-            *ngIf="site.events?.length">Events</a><a href="#news" *ngIf="c.announcements?.length">News</a>
-        <a href="#contact">Contact</a>
-    </nav>
-
-    <header class="hero" [class.img]="c.hero_image"
-        [style.background-image]="c.hero_image ? 'linear-gradient(#0008,#0008),url(' + c.hero_image + ')' : null">
-        <h1>{{ c.headline || ('Welcome to ' + site.church_name) }}</h1>
-        <p>{{ c.tagline }}</p>
-        <a class="btn" *ngIf="c.address" [href]="mapUrl()" target="_blank">Visit us</a>
-        <a class="btn o" [href]="giveUrl">Give online</a>
-        <a class="btn o" *ngIf="c.register_url" [href]="c.register_url" target="_blank">Register</a>
-    </header>
-
-    <section id="about" *ngIf="c.about">
-        <h2>About us</h2>
-        <p style="white-space:pre-line">{{ c.about }}</p>
-        <p *ngIf="c.mission" style="white-space:pre-line"><b>Our mission:</b> {{ c.mission }}</p>
-    </section>
-
-    <section id="times" *ngIf="c.services?.length">
-        <h2>Service times</h2>
-        <div class="grid">
-            <div class="card" *ngFor="let s of c.services"><img *ngIf="s.image" [src]="s.image" alt=""><b>{{ s.name
-                    }}</b><br>{{ s.day }} · {{ s.time }}</div>
-        </div>
-    </section>
-
-    <section id="leaders" *ngIf="c.leaders?.length">
-        <h2>Our leaders</h2>
-        <div class="grid">
-            <div class="card" *ngFor="let l of c.leaders"><img *ngIf="l.photo" [src]="l.photo" alt=""><b>{{ l.name
-                    }}</b><br>{{ l.role }}</div>
-        </div>
-    </section>
-
-    <section id="events" *ngIf="site.events?.length">
-        <h2>Upcoming events</h2>
-        <div class="grid">
-            <div class="card" *ngFor="let e of site.events"><img *ngIf="e.banner_url" [src]="e.banner_url" alt="">
-                <b>{{ e.title }}</b><br><small>{{ e.start_date | date:'EEE d MMM, h:mm a' }}<span *ngIf="e.location"> ·
-                        {{ e.location }}</span></small>
-                <p *ngIf="e.registration_required"><a class="btn" style="background:var(--c);color:#fff;margin:0"
-                        [href]="regUrl(e.id)">Register</a></p>
+    <!-- HERO -->
+    <section class="cs-shell" id="top">
+        <div class="cs-hero"
+            [style.background-image]="c.hero_image ? 'linear-gradient(180deg,rgba(0,0,0,.25),rgba(0,0,0,.65)),url(' + c.hero_image + ')' : null"
+            [class.noimg]="!c.hero_image">
+            <h1>{{ c.headline || ('Welcome to ' + site.church_name) }}</h1>
+            <p class="cs-tag" *ngIf="c.tagline">{{ c.tagline }}</p>
+            <a class="cs-pill cs-cta" [href]="heroCtaUrl">{{ heroCtaLabel }}</a>
+            <div class="cs-next" *ngIf="nextService">
+                <small>Join us</small>
+                <div class="cs-vid"
+                    [style.background-image]="nextService.image ? 'linear-gradient(rgba(0,0,0,.35),rgba(0,0,0,.6)),url(' + nextService.image + ')' : null">
+                    <b>{{ nextService.name }}</b><span>{{ nextService.day }} · {{ nextService.time }}</span>
+                    <a *ngIf="c.address" class="cs-watch" [href]="mapUrl()" target="_blank">Directions</a>
+                </div>
             </div>
         </div>
     </section>
 
-    <section id="news" *ngIf="c.announcements?.length">
-        <h2>News &amp; announcements</h2>
-        <div class="grid">
-            <div class="card" *ngFor="let a of c.announcements"><img *ngIf="a.image" [src]="a.image" alt=""><b>{{
-                    a.title }}</b><br><small>{{ a.date }}</small>
-                <p>{{ a.text }}</p>
+    <!-- EVENTS & NEWS carousel -->
+    <section class="cs-events" id="events" *ngIf="slides.length">
+        <div class="cs-ehead">
+            <h2>{{ c.events_title || 'Events & news' }}</h2>
+            <div class="cs-arrows"><button aria-label="Previous" (click)="scrollTrack(-1)">‹</button><button
+                    aria-label="Next" (click)="scrollTrack(1)">›</button></div>
+        </div>
+        <div class="cs-track" id="cs-track" (scroll)="onTrackScroll($event)">
+            <article class="cs-card" *ngFor="let s of slides"
+                [style.background-image]="s.img ? 'url(' + s.img + ')' : null" [class.noimg]="!s.img">
+                <small>{{ s.kind }}</small>
+                <h3>{{ s.title }}</h3>
+                <p *ngIf="s.sub">{{ s.sub }}</p>
+                <p *ngIf="s.text" class="t">{{ s.text }}</p>
+                <a *ngIf="s.link" class="cs-pill sm" [href]="s.link">{{ s.linkLabel }}</a>
+            </article>
+        </div>
+        <div class="cs-dots"><i *ngFor="let d of dots" [class.on]="d === dot"></i></div>
+    </section>
+
+    <!-- MISSION -->
+    <section class="cs-master" id="mission" *ngIf="c.mission || c.mission_title"
+        [style.background-image]="c.mission_image ? 'linear-gradient(rgba(0,0,0,.45),rgba(0,0,0,.45)),url(' + c.mission_image + ')' : null"
+        [class.noimg]="!c.mission_image">
+        <div class="in">
+            <h2>{{ c.mission_title || 'Our mission' }}</h2>
+            <p style="white-space:pre-line">{{ c.mission }}</p>
+            <a *ngIf="c.mission_button_label" class="cs-pill" [href]="c.mission_button_url || giveUrl">{{
+                c.mission_button_label }}</a>
+        </div>
+    </section>
+
+    <!-- VALUES / BELIEFS -->
+    <section class="cs-pillars" id="values" *ngIf="values.length">
+        <div class="cs-shell grid">
+            <div>
+                <div class="lab">{{ c.values_label || 'What we believe' }}</div>
+                <ul>
+                    <li *ngFor="let v of values">{{ v }}</li>
+                </ul>
+            </div>
+            <div class="photo" *ngIf="c.values_image" [style.background-image]="'url(' + c.values_image + ')'"></div>
+        </div>
+    </section>
+
+    <!-- SERVICE TIMES -->
+    <section class="cs-dark" id="times" *ngIf="c.services?.length">
+        <div class="cs-wrap">
+            <h2>Service times</h2>
+            <div class="cs-grid">
+                <div class="cs-tile" *ngFor="let s of c.services"
+                    [style.background-image]="s.image ? 'linear-gradient(rgba(0,0,0,.35),rgba(0,0,0,.75)),url(' + s.image + ')' : null">
+                    <b>{{ s.name }}</b><span>{{ s.day }}</span><span>{{ s.time }}</span>
+                </div>
             </div>
         </div>
     </section>
 
-    <section id="contact">
-        <h2>Contact &amp; location</h2>
-        <p *ngIf="c.address">📍 {{ c.address }} — <a [href]="mapUrl()" target="_blank">Get directions</a></p>
-        <p *ngIf="c.phone">📞 <a [href]="'tel:' + c.phone">{{ c.phone }}</a> · <a [href]="wa()"
-                target="_blank">WhatsApp</a></p>
-        <p *ngIf="c.email">✉️ <a [href]="'mailto:' + c.email">{{ c.email }}</a></p>
-        <p>
-            <a *ngIf="c.facebook" [href]="c.facebook" target="_blank">Facebook</a>
-            <a *ngIf="c.instagram" [href]="c.instagram" target="_blank"> · Instagram</a>
-            <a *ngIf="c.youtube" [href]="c.youtube" target="_blank"> · YouTube</a>
-        </p>
+    <!-- LEADERS -->
+    <section class="cs-light" id="leaders" *ngIf="c.leaders?.length">
+        <div class="cs-wrap">
+            <h2>{{ c.leaders_title || 'Our leaders' }}</h2>
+            <div class="cs-grid people">
+                <div class="cs-person" *ngFor="let l of c.leaders">
+                    <div class="av" [style.background-image]="l.photo ? 'url(' + l.photo + ')' : null"><span
+                            *ngIf="!l.photo">{{ (l.name || '?').charAt(0) }}</span></div>
+                    <b>{{ l.name }}</b><small>{{ l.role }}</small>
+                </div>
+            </div>
+        </div>
     </section>
-    <footer>© {{ site.church_name }} · Powered by <a href="https://churchman.org">Churchman</a></footer>
+
+    <!-- COMMUNITY / ABOUT -->
+    <section class="cs-cp" id="about" *ngIf="c.about || c.community_text || c.community_title || stats.length">
+        <div class="cs-cpwrap">
+            <h2 class="cs-h1">{{ c.community_title || ('About ' + site.church_name) }}</h2>
+            <div class="cs-cpgrid">
+                <div class="cs-cpleft">
+                    <p style="white-space:pre-line">{{ c.community_text || c.about }}</p>
+                    <div class="cs-stat" *ngFor="let s of stats.slice(1)">
+                        <div class="t"><span>{{ s.value }}</span><small>{{ s.label }}</small></div>
+                    </div>
+                    <div class="cs-cardimg choir" *ngIf="c.community_image2"
+                        [style.background-image]="'url(' + c.community_image2 + ')'">
+                        <div class="cs-cppill" *ngIf="c.community_quote2">{{ c.community_quote2 }}</div>
+                    </div>
+                </div>
+                <div class="cs-cardimg hero" [class.noimg]="!c.community_image"
+                    [style.background-image]="c.community_image ? 'url(' + c.community_image + ')' : null">
+                    <div class="cs-float" *ngIf="stats.length">
+                        <div class="num"><span>{{ stats[0].value }}</span><small>{{ stats[0].label }}</small></div>
+                        <p *ngIf="stats[0].text">{{ stats[0].text }}</p>
+                    </div>
+                    <div class="cs-cppill bottom" *ngIf="c.community_quote">{{ c.community_quote }}</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CONTACT -->
+    <section class="cs-dark" id="contact">
+        <div class="cs-wrap">
+            <h2>Contact &amp; location</h2>
+            <div class="cs-contact">
+                <p *ngIf="c.address">📍 {{ c.address }} — <a [href]="mapUrl()" target="_blank">Get directions</a></p>
+                <p *ngIf="c.phone">📞 <a [href]="'tel:' + c.phone">{{ c.phone }}</a> · <a [href]="wa()"
+                        target="_blank">WhatsApp</a></p>
+                <p *ngIf="c.email">✉️ <a [href]="'mailto:' + c.email">{{ c.email }}</a></p>
+                <p class="soc">
+                    <a *ngIf="c.facebook" [href]="c.facebook" target="_blank">Facebook</a>
+                    <a *ngIf="c.instagram" [href]="c.instagram" target="_blank">Instagram</a>
+                    <a *ngIf="c.youtube" [href]="c.youtube" target="_blank">YouTube</a>
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <footer class="cs-foot">
+        <div class="in">
+            <a class="cs-brand" href="javascript:void(0)" (click)="go('top')">{{ site.church_name }}</a>
+            <a class="cs-pill" [href]="giveUrl">Give</a>
+            <small>{{ c.footer_note || ('© ' + site.church_name) }} · Powered by <a
+                    href="https://churchman.org">Churchman</a></small>
+        </div>
+    </footer>
 </div>

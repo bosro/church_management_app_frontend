@@ -1,76 +1,29 @@
-// src/app/app-routing.module.ts
-// FIXED VERSION - Clearer routing hierarchy
-
+// src/app/app-routing-module.ts  — COMPLETE FILE
+// Order matters: the church-website route ('' + ':slug') matches ANY single word,
+// so 'two-factor' (and every other fixed route) must come BEFORE it.
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { AuthGuard } from './core/guards/auth-guard';
 import { Unauthorized } from './shared/components/unauthorized/unauthorized';
 import { AccountPaused } from './shared/components/account-paused/account-paused';
-import { MemberRegistration } from './features/public/member-registration/member-registration';
-import { LinkCheckin } from './features/public/link-checkin/link-checkin';
 
 const routes: Routes = [
-  // Default: redirect to auth
-  {
-    path: '',
-    redirectTo: 'main',
-    pathMatch: 'full',
-  },
-  // Auth routes (login, signup, etc.)
-  {
-    path: 'auth',
-    loadChildren: () => import('./auth/auth-module').then((m) => m.AuthModule),
-  },
-  {
-    path: 'public',
-    loadChildren: () =>
-      import('./features/public/public.module').then((m) => m.PublicModule),
-  },
+  { path: '', redirectTo: 'main', pathMatch: 'full' },
+  { path: 'auth', loadChildren: () => import('./auth/auth-module').then((m) => m.AuthModule) },
+  { path: 'public', loadChildren: () => import('./features/public/public.module').then((m) => m.PublicModule) },
+  { path: 'main', loadChildren: () => import('./features/features-module').then((m) => m.FeaturesModule), canActivate: [AuthGuard] },
+  { path: 'two-factor', loadChildren: () => import('./features/two-factor/two-factor-module').then((m) => m.TwoFactorModule) },
+  { path: 'unauthorized', component: Unauthorized },
+  { path: 'account-paused', component: AccountPaused },
 
-  // Protected main app routes
-  {
-    path: 'main',
-    loadChildren: () =>
-      import('./features/features-module').then((m) => m.FeaturesModule),
-    canActivate: [AuthGuard],
-  },
+  // Church websites: /website-builder and /<church-slug>  (keep AFTER all fixed routes above)
+  { path: '', loadChildren: () => import('./features/site/site-module').then((m) => m.SiteModule) },
 
-  { path: '', loadChildren: () => import('./features/site/site-module').then(m => m.SiteModule) },
-{
-    path: 'two-factor',
-    loadChildren: () => import('./features/two-factor/two-factor-module').then((m) => m.TwoFactorModule),
-  },
-  {
-    path: '',
-    loadChildren: () => import('./features/site/site-module').then((m) => m.SiteModule),
-  },
-  {
-    path: 'unauthorized',
-    component: Unauthorized,
-  },
-  {
-    path: 'account-paused',
-    component: AccountPaused,
-  },
-  // Catch-all: redirect to auth instead of creating a loop
-  {
-    path: '**',
-    redirectTo: 'main',
-  },
+  { path: '**', redirectTo: 'main' },
 ];
 
 @NgModule({
-  imports: [
-    RouterModule.forRoot(routes, {
-      useHash: false,
-      scrollPositionRestoration: 'enabled', // restores position on back/forward, doesn't force-reset on new nav
-      enableTracing: false,
-    }),
-  ],
+  imports: [RouterModule.forRoot(routes, { useHash: false, scrollPositionRestoration: 'enabled', enableTracing: false })],
   exports: [RouterModule],
 })
 export class AppRoutingModule { }
-
-
-
-

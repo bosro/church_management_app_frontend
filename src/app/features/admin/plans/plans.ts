@@ -107,6 +107,16 @@ export class Plans implements OnInit {
     return full > 0 ? Math.round(((full - plan.price_yearly) / full) * 100) : 0;
   }
 
+  /** Warn when the yearly price is not a sensible multiple of the monthly price */
+get yearlyWarning(): string {
+  const m = Number(this.planForm.price_monthly) || 0;
+  const y = Number(this.planForm.price_yearly) || 0;
+  if (m <= 0 || y <= 0) return '';
+  if (y < m * 6) return `Yearly price (${y}) is less than 6 months of the monthly price (${m * 6}). Customers would save over 50% — did you mean about ${Math.round(m * 10)}?`;
+  if (y > m * 12) return `Yearly price (${y}) is more than 12 months at the monthly price (${m * 12}). Yearly should normally be cheaper.`;
+  return '';
+}
+
   smsLabel(plan: SubscriptionPlan): string {
     if (!plan.can_send_communications) return 'No SMS';
     return plan.sms_monthly_limit === null || plan.sms_monthly_limit === undefined

@@ -1424,3 +1424,24 @@ table td {
 select {
   min-width: 110px;
 }
+
+.sa-finance {
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+.sa-finance .table-wrapper,
+.sa-finance .requests-table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.sa-finance .page-header {
+  flex-wrap: wrap;
+  gap: .75rem;
+}
+
+.sa-finance .stat-card {
+  min-width: 0;
+}
